@@ -1,6 +1,6 @@
-// Health check endpoint — to be implemented in step 8
 import type { RequestHandler } from './$types';
+import { success } from '$lib/server/responses';
 
 export const GET: RequestHandler = async () => {
-	return new Response('not implemented', { status: 501 });
+	return success({ status: 'ok', timestamp: new Date().toISOString() });
 };
