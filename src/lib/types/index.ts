@@ -28,6 +28,13 @@ export type {
 	NewSetupTool
 } from '$lib/server/db/schema';
 
+export type LayoutUser = {
+	id: string;
+	username: string;
+	avatarUrl: string;
+	bio: string | null;
+};
+
 import { z } from 'zod';
 
 export const apiSuccessSchema = <T extends z.ZodType>(dataSchema: T) =>

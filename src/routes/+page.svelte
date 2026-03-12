@@ -2,7 +2,7 @@
 	import { Button } from '$lib/components/ui/button';
 </script>
 
-<div class="flex min-h-screen flex-col items-center justify-center gap-6">
+<div class="flex flex-col items-center justify-center gap-6 py-24">
 	<h1 class="text-3xl font-bold">Welcome to Magpie</h1>
 	<p class="text-muted-foreground">A platform for sharing AI coding workflows.</p>
 	<div class="flex gap-3">

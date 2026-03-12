@@ -39,6 +39,12 @@ importers:
       '@eslint/js':
         specifier: ^9.39.2
         version: 9.39.4
+      '@internationalized/date':
+        specifier: ^3.12.0
+        version: 3.12.0
+      '@lucide/svelte':
+        specifier: ^0.561.0
+        version: 0.561.0(svelte@5.53.11)
       '@playwright/test':
         specifier: ^1.58.2
         version: 1.58.2
@@ -666,6 +672,11 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@lucide/svelte@0.561.0':
+    resolution: {integrity: sha512-vofKV2UFVrKE6I4ewKJ3dfCXSV6iP6nWVmiM83MLjsU91EeJcEg7LoWUABLp/aOTxj1HQNbJD1f3g3L0JQgH9A==}
+    peerDependencies:
+      svelte: ^5
 
   '@oslojs/asn1@1.0.0':
     resolution: {integrity: sha512-zw/wn0sj0j0QKbIXfIlnEcTviaCzYOY3V5rAyjR6YtOByFtJiT574+8p9Wlach0lZH9fddD4yb9laEAIl4vXQA==}
@@ -2425,6 +2436,10 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@lucide/svelte@0.561.0(svelte@5.53.11)':
+    dependencies:
+      svelte: 5.53.11
 
   '@oslojs/asn1@1.0.0':
     dependencies:

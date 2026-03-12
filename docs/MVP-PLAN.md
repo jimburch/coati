@@ -23,9 +23,9 @@
 - [x] Build health check API endpoint (`/api/v1/health`)
 - [x] Add consistent API response helpers (`success` / `error`)
 - [x] Verify full stack works (dev server + health endpoint + all tests pass)
-- [ ] Set up Lucia Auth v3 + Arctic
-- [ ] Implement GitHub OAuth flow (web): login + callback routes
-- [ ] Create `hooks.server.ts` for session validation
+- [x] Set up auth (Copenhagen Book + Arctic)
+- [x] Implement GitHub OAuth flow (web): login + callback routes
+- [x] Create `hooks.server.ts` for session validation
 - [ ] Build basic layout: navbar (logo, search bar, login/avatar), footer
 - [ ] User profile page (read-only): `(public)/[username]/+page.svelte`
 - [ ] Setup CRUD API routes:
