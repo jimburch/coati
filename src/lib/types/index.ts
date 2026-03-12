@@ -28,4 +28,34 @@ export type {
 	NewSetupTool
 } from '$lib/server/db/schema';
 
-// Zod schemas — to be implemented in steps 7-9
+import { z } from 'zod';
+
+export const apiSuccessSchema = <T extends z.ZodType>(dataSchema: T) =>
+	z.object({ data: dataSchema });
+
+export const apiErrorSchema = z.object({
+	error: z.string(),
+	code: z.string()
+});
+
+export const createSetupSchema = z.object({
+	name: z.string().min(1).max(100),
+	slug: z
+		.string()
+		.min(1)
+		.max(100)
+		.regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+	description: z.string().max(300),
+	version: z.string().regex(/^\d+\.\d+\.\d+$/)
+});
+
+export const createCommentSchema = z.object({
+	body: z.string().min(1).max(5000),
+	parentId: z.string().uuid().optional()
+});
+
+export const usernameSchema = z
+	.string()
+	.min(2)
+	.max(50)
+	.regex(/^[a-z0-9]+(-[a-z0-9]+)*$/);
