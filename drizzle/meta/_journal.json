@@ -8,6 +8,13 @@
       "when": 1773342817773,
       "tag": "0000_lyrical_scarecrow",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1773351228875,
+      "tag": "0001_cuddly_shadow_king",
+      "breakpoints": true
     }
   ]
 }

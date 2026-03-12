@@ -5,6 +5,7 @@ import {
 	uuid,
 	text,
 	integer,
+	boolean,
 	varchar,
 	timestamp,
 	primaryKey,
@@ -38,6 +39,7 @@ export const users = pgTable('users', {
 	setupsCount: integer('setups_count').default(0).notNull(),
 	followersCount: integer('followers_count').default(0).notNull(),
 	followingCount: integer('following_count').default(0).notNull(),
+	isAdmin: boolean('is_admin').default(false).notNull(),
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 	updatedAt: timestamp('updated_at', { withTimezone: true })
 		.defaultNow()
