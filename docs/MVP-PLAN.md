@@ -28,12 +28,12 @@
 - [x] Create `hooks.server.ts` for session validation
 - [x] Build basic layout: navbar (logo, search bar, login/avatar), footer
 - [x] User profile page (read-only): `(public)/[username]/+page.svelte`
-- [ ] Setup CRUD API routes:
+- [x] Setup CRUD API routes:
   - `POST /api/v1/setups` — create
   - `GET /api/v1/setups/:owner/:slug` — read
-  - `PATCH /api/v1/setups/:id` — update
-  - `DELETE /api/v1/setups/:id` — delete
-- [ ] Setup files API: `GET /api/v1/setups/:id/files`
+  - `PATCH /api/v1/setups/:owner/:slug` — update
+  - `DELETE /api/v1/setups/:owner/:slug` — delete
+- [x] Setup files API: `GET /api/v1/setups/:owner/:slug/files`
 
 ### Milestone: Can log in with GitHub, create a setup via API, view it at a URL
 

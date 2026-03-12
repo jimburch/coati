@@ -69,6 +69,36 @@ export const createSetupSchema = z.object({
 	version: z.string().regex(/^\d+\.\d+\.\d+$/)
 });
 
+export const createSetupFileSchema = z.object({
+	source: z.string().min(1),
+	target: z.string().min(1),
+	placement: z.enum(['global', 'project', 'relative']),
+	description: z.string().optional(),
+	content: z.string().min(1)
+});
+
+export const createSetupWithFilesSchema = createSetupSchema.extend({
+	readmePath: z.string().optional(),
+	files: z.array(createSetupFileSchema).optional()
+});
+
+export const updateSetupSchema = z.object({
+	name: z.string().min(1).max(100).optional(),
+	slug: z
+		.string()
+		.min(1)
+		.max(100)
+		.regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)
+		.optional(),
+	description: z.string().max(300).optional(),
+	version: z
+		.string()
+		.regex(/^\d+\.\d+\.\d+$/)
+		.optional(),
+	readmePath: z.string().nullable().optional(),
+	files: z.array(createSetupFileSchema).optional()
+});
+
 export const createCommentSchema = z.object({
 	body: z.string().min(1).max(5000),
 	parentId: z.string().uuid().optional()
