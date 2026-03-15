@@ -154,7 +154,7 @@ If you run a staging environment (e.g. `staging.magpie.dev`):
 
 - [x] Verify `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` are set in `.env`
 - [x] Test GitHub OAuth web flow: click "Sign in with GitHub" -> authorize -> redirected back, session created
-- [ ] Test returning user: sign in again -> same account, profile fields updated
+- [x] Test returning user: sign in again -> same account, profile fields updated
 - [ ] Test logout: `POST /auth/logout` -> session invalidated, cookie deleted
 - [ ] Test CLI device flow: `POST /api/v1/auth/device` -> poll -> token returned
 - [ ] Test auth guards: unauthenticated request to protected page -> redirect to `/auth/login/github`

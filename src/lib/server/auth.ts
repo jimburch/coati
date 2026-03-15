@@ -4,6 +4,7 @@ import { db } from '$lib/server/db';
 import { sessions, users } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET } from '$env/static/private';
+import { dev } from '$app/environment';
 import type { Cookies } from '@sveltejs/kit';
 
 // ─── Arctic GitHub Provider ────────────────────────────────────────────────
@@ -78,7 +79,7 @@ export async function invalidateAllUserSessions(userId: string): Promise<void> {
 export function setSessionCookie(cookies: Cookies, token: string): void {
 	cookies.set(COOKIE_NAME, token, {
 		httpOnly: true,
-		secure: true,
+		secure: !dev,
 		sameSite: 'lax',
 		path: '/',
 		maxAge: SESSION_DURATION_MS / 1000
@@ -88,7 +89,7 @@ export function setSessionCookie(cookies: Cookies, token: string): void {
 export function deleteSessionCookie(cookies: Cookies): void {
 	cookies.set(COOKIE_NAME, '', {
 		httpOnly: true,
-		secure: true,
+		secure: !dev,
 		sameSite: 'lax',
 		path: '/',
 		maxAge: 0
