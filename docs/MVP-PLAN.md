@@ -35,7 +35,7 @@
   - `DELETE /api/v1/setups/:owner/:slug` — delete
 - [x] Setup files API: `GET /api/v1/setups/:owner/:slug/files`
 
-### Milestone: Can log in with GitHub, create a setup via API, view it at a URL
+### Milestone: Can log in with GitHub, create a setup via API, view it at a URL (COMPLETE)
 
 ---
 

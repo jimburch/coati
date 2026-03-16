@@ -1,0 +1,193 @@
+<script lang="ts">
+	import { Avatar, AvatarImage, AvatarFallback } from '$lib/components/ui/avatar';
+	import { Button } from '$lib/components/ui/button';
+	import { Separator } from '$lib/components/ui/separator';
+	import { timeAgo } from '$lib/utils';
+
+	const { data } = $props();
+
+	let copied = $state(false);
+	const cloneCommand = $derived(`magpie clone ${data.setup.ownerUsername}/${data.setup.slug}`);
+
+	function copyCloneCommand() {
+		navigator.clipboard.writeText(cloneCommand);
+		copied = true;
+		setTimeout(() => (copied = false), 2000);
+	}
+</script>
+
+<svelte:head>
+	<title>{data.setup.name} by {data.setup.ownerUsername} - Magpie</title>
+	<meta name="description" content={data.setup.description} />
+</svelte:head>
+
+<div class="mx-auto max-w-5xl px-4 py-8">
+	<!-- Header -->
+	<div class="mb-6">
+		<div class="flex items-start justify-between gap-4">
+			<div class="min-w-0">
+				<h1 class="text-2xl font-bold md:text-3xl">{data.setup.name}</h1>
+				<p class="mt-1 text-muted-foreground">{data.setup.description}</p>
+			</div>
+			<span
+				class="shrink-0 rounded-md bg-secondary px-2.5 py-0.5 text-sm font-medium text-secondary-foreground"
+			>
+				v{data.setup.version}
+			</span>
+		</div>
+	</div>
+
+	<Separator class="mb-8" />
+
+	<!-- Two-column layout -->
+	<div class="flex flex-col gap-8 lg:flex-row">
+		<!-- Main content -->
+		<div class="min-w-0 flex-1">
+			{#if data.readmeHtml}
+				<div class="prose dark:prose-invert max-w-none">
+					{@html data.readmeHtml}
+				</div>
+			{:else}
+				<div class="rounded-lg border border-border bg-card p-8 text-center">
+					<p class="text-muted-foreground">No README found for this setup.</p>
+				</div>
+			{/if}
+		</div>
+
+		<!-- Sidebar -->
+		<div class="w-full shrink-0 lg:w-72">
+			<div class="space-y-6">
+				<!-- Author -->
+				<div>
+					<h3 class="mb-2 text-sm font-semibold text-muted-foreground">Author</h3>
+					<a href="/{data.setup.ownerUsername}" class="flex items-center gap-2 hover:underline">
+						<Avatar class="size-6">
+							<AvatarImage src={data.setup.ownerAvatarUrl} alt={data.setup.ownerUsername} />
+							<AvatarFallback>{data.setup.ownerUsername[0].toUpperCase()}</AvatarFallback>
+						</Avatar>
+						<span class="text-sm font-medium">{data.setup.ownerUsername}</span>
+					</a>
+				</div>
+
+				<!-- Star button -->
+				<div>
+					<form method="POST" action="?/star">
+						<Button type="submit" variant="outline" class="w-full gap-2">
+							{#if data.isStarred}
+								<svg class="size-4 fill-yellow-500 text-yellow-500" viewBox="0 0 16 16">
+									<path
+										d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25z"
+									/>
+								</svg>
+								Starred
+							{:else}
+								<svg class="size-4" viewBox="0 0 16 16" fill="currentColor">
+									<path
+										d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Zm0 2.445L6.615 5.5a.75.75 0 0 1-.564.41l-3.097.45 2.24 2.184a.75.75 0 0 1 .216.664l-.528 3.084 2.769-1.456a.75.75 0 0 1 .698 0l2.77 1.456-.53-3.084a.75.75 0 0 1 .216-.664l2.24-2.183-3.096-.45a.75.75 0 0 1-.564-.41L8 2.694Z"
+									/>
+								</svg>
+								Star
+							{/if}
+							<span class="text-muted-foreground">{data.setup.starsCount}</span>
+						</Button>
+					</form>
+				</div>
+
+				<!-- Stats -->
+				<div>
+					<h3 class="mb-2 text-sm font-semibold text-muted-foreground">Stats</h3>
+					<div class="space-y-1 text-sm">
+						<div class="flex items-center justify-between">
+							<span class="text-muted-foreground">Stars</span>
+							<span>{data.setup.starsCount}</span>
+						</div>
+						<div class="flex items-center justify-between">
+							<span class="text-muted-foreground">Clones</span>
+							<span>{data.setup.clonesCount}</span>
+						</div>
+						<div class="flex items-center justify-between">
+							<span class="text-muted-foreground">Updated</span>
+							<span>{timeAgo(data.setup.updatedAt)}</span>
+						</div>
+					</div>
+				</div>
+
+				<!-- Tools -->
+				{#if data.tools.length > 0}
+					<div>
+						<h3 class="mb-2 text-sm font-semibold text-muted-foreground">Tools</h3>
+						<div class="flex flex-wrap gap-1.5">
+							{#each data.tools as tool (tool.id)}
+								<span
+									class="rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground"
+								>
+									{tool.name}
+								</span>
+							{/each}
+						</div>
+					</div>
+				{/if}
+
+				<!-- Tags -->
+				{#if data.tags.length > 0}
+					<div>
+						<h3 class="mb-2 text-sm font-semibold text-muted-foreground">Tags</h3>
+						<div class="flex flex-wrap gap-1.5">
+							{#each data.tags as tag (tag.id)}
+								<span class="rounded-md bg-accent px-2 py-0.5 text-xs text-accent-foreground">
+									{tag.name}
+								</span>
+							{/each}
+						</div>
+					</div>
+				{/if}
+
+				<!-- Clone command -->
+				<div>
+					<h3 class="mb-2 text-sm font-semibold text-muted-foreground">Clone</h3>
+					<div class="flex items-center gap-1 rounded-md border border-border bg-muted p-2">
+						<code class="flex-1 truncate text-xs">{cloneCommand}</code>
+						<button
+							onclick={copyCloneCommand}
+							class="shrink-0 rounded p-1 hover:bg-accent"
+							aria-label="Copy clone command"
+						>
+							{#if copied}
+								<svg class="size-4 text-green-500" viewBox="0 0 16 16" fill="currentColor">
+									<path
+										d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"
+									/>
+								</svg>
+							{:else}
+								<svg class="size-4 text-muted-foreground" viewBox="0 0 16 16" fill="currentColor">
+									<path
+										d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"
+									/>
+									<path
+										d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"
+									/>
+								</svg>
+							{/if}
+						</button>
+					</div>
+				</div>
+
+				<!-- Files link -->
+				<div>
+					<h3 class="mb-2 text-sm font-semibold text-muted-foreground">Files</h3>
+					<a
+						href="/{data.setup.ownerUsername}/{data.setup.slug}/files"
+						class="inline-flex items-center gap-1.5 text-sm text-foreground hover:underline"
+					>
+						<svg class="size-4" viewBox="0 0 16 16" fill="currentColor">
+							<path
+								d="M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75Z"
+							/>
+						</svg>
+						Browse {data.files.length} file{data.files.length !== 1 ? 's' : ''}
+					</a>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>

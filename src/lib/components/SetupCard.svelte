@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { Setup } from '$lib/types';
+	import type { SetupCardProps } from '$lib/types';
 	import { timeAgo } from '$lib/utils';
 
 	type Props = {
-		setup: Setup;
+		setup: SetupCardProps;
 		username: string;
 		showAuthor?: boolean;
 	};

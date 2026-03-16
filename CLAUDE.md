@@ -239,41 +239,38 @@ export const actions = {
 - Don't create separate API and frontend projects — SvelteKit handles both
 - Don't implement email/password auth — GitHub OAuth only for MVP
 
-## Claude Code's First 10 Steps
+## UI Testing Workflow
 
-Project Summary
+After **every UI change**, you must visually verify the result using Playwright screenshots before considering the work done.
 
-Magpie is a GitHub-like platform for sharing, discovering, and cloning AI coding workflows
-(Claude Code, Cursor, Copilot setups, etc.). It has two surfaces: a SvelteKit web app for
-browsing/profiles/social features, and a CLI tool (magpie) for cloning/publishing setups to
-local machines. The core value loop is: publish a setup via CLI or web, others discover it
-via search/trending, then install it with magpie clone which writes config files to the
-right locations.
+### Screenshot Verification
 
-First 10 Steps: Empty Repo to Health Check
+1. Start the dev server (`pnpm dev`) if not already running
+2. Use the Playwright CLI to take screenshots at both viewports:
+   - **Desktop**: 1280x720 (Playwright's `Desktop Chrome` device)
+   - **Mobile**: 430x932 (iPhone 14 Pro Max equivalent)
+3. Save screenshots to `screenshots/` (gitignored) with descriptive names, e.g. `setup-detail-desktop.png`, `setup-detail-mobile.png`
+4. Review the screenshots visually (read the image files) to confirm the layout, spacing, and content match the plan
+5. Fix any visual issues before moving on
 
-1. Initialize SvelteKit project — npx sv create with TypeScript, install dependencies,
-   verify pnpm dev works
-2. Install and configure Tailwind CSS — add Tailwind via the SvelteKit integration, set up
-   app.css with base/components/utilities directives
-3. Install shadcn-svelte — initialize shadcn-svelte with the default theme, verify a test
-   component renders
-4. Install and configure Drizzle ORM — add drizzle-orm and drizzle-kit, create
-   drizzle.config.ts pointing to a local PostgreSQL database, create
-   src/lib/server/db/index.ts with the Drizzle client
-5. Create the database schema — write src/lib/server/db/schema.ts with all tables (users,
-   sessions, setups, setup_files, stars, follows, comments, activities) using Drizzle's
-   pgTable definitions
-6. Generate and run the initial migration — npx drizzle-kit generate then npx drizzle-kit
-   migrate to create all tables in PostgreSQL
-7. Add shared types and Zod validation schemas — create src/lib/types/index.ts with
-   TypeScript types derived from the schema via $inferSelect/$inferInsert, and a basic Zod
-   schema for API error/success responses
-8. Build the health check API endpoint — create src/routes/api/v1/health/+server.ts that
-   returns { data: { status: "ok", timestamp: ... } } and verifies the DB connection with a
-   simple query
-9. Add the consistent API response helpers — create a small utility in src/lib/server/ for
-   the standard { data: T } / { error, code } JSON response format, use it in the health
-   endpoint
-10. Verify the full stack works — run pnpm dev, hit localhost:5173/api/v1/health in a
-    browser, confirm it returns the JSON response with a successful DB check
+Example Playwright CLI commands:
+
+```bash
+# Desktop screenshot
+npx playwright screenshot --viewport-size=1280,720 http://localhost:5173/some/page screenshots/page-name-desktop.png
+
+# Mobile screenshot
+npx playwright screenshot --viewport-size=430,932 http://localhost:5173/some/page screenshots/page-name-mobile.png
+```
+
+### Interactive Testing
+
+For pages with user interactions (buttons, forms, toggles, copy actions):
+
+1. First test ad-hoc using Playwright CLI or a quick script to verify behavior in real time
+2. Once confirmed working, write a persistent e2e test file colocated with the route (e.g. `page.svelte.e2e.ts`) for regression testing
+3. E2e tests should run against both desktop and mobile projects (configured in `playwright.config.ts`)
+
+### Playwright Config
+
+The `playwright.config.ts` defines two projects: `desktop` (Desktop Chrome) and `mobile` (430x932 viewport with `isMobile: true`). All e2e test files match the pattern `**/*.e2e.{ts,js}`.

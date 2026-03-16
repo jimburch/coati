@@ -35,6 +35,16 @@ export type LayoutUser = {
 	bio: string | null;
 };
 
+export type SetupCardProps = {
+	id: string;
+	name: string;
+	slug: string;
+	description: string;
+	starsCount: number;
+	clonesCount: number;
+	updatedAt: Date;
+};
+
 export type ProfileUser = {
 	id: string;
 	username: string;

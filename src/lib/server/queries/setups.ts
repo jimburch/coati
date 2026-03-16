@@ -1,6 +1,15 @@
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { setups, setupFiles, users } from '$lib/server/db/schema';
+import {
+	setups,
+	setupFiles,
+	setupTags,
+	setupTools,
+	tags,
+	tools,
+	stars,
+	users
+} from '$lib/server/db/schema';
 import type { z } from 'zod';
 import type { createSetupWithFilesSchema, updateSetupSchema } from '$lib/types';
 
@@ -139,4 +148,73 @@ export async function getSetupFiles(setupId: string) {
 		.from(setupFiles)
 		.where(eq(setupFiles.setupId, setupId))
 		.orderBy(setupFiles.source);
+}
+
+export async function getSetupTags(setupId: string) {
+	return db
+		.select({ id: tags.id, name: tags.name })
+		.from(setupTags)
+		.innerJoin(tags, eq(setupTags.tagId, tags.id))
+		.where(eq(setupTags.setupId, setupId));
+}
+
+export async function getSetupTools(setupId: string) {
+	return db
+		.select({ id: tools.id, name: tools.name, slug: tools.slug })
+		.from(setupTools)
+		.innerJoin(tools, eq(setupTools.toolId, tools.id))
+		.where(eq(setupTools.setupId, setupId));
+}
+
+export async function isSetupStarredByUser(setupId: string, userId: string) {
+	const result = await db
+		.select({ id: stars.id })
+		.from(stars)
+		.where(and(eq(stars.setupId, setupId), eq(stars.userId, userId)))
+		.limit(1);
+	return result.length > 0;
+}
+
+export async function toggleStar(userId: string, setupId: string) {
+	return db.transaction(async (tx) => {
+		const existing = await tx
+			.select({ id: stars.id })
+			.from(stars)
+			.where(and(eq(stars.userId, userId), eq(stars.setupId, setupId)))
+			.limit(1);
+
+		if (existing.length > 0) {
+			await tx.delete(stars).where(eq(stars.id, existing[0].id));
+			await tx
+				.update(setups)
+				.set({ starsCount: sql`${setups.starsCount} - 1` })
+				.where(eq(setups.id, setupId));
+			return false;
+		} else {
+			await tx.insert(stars).values({ userId, setupId });
+			await tx
+				.update(setups)
+				.set({ starsCount: sql`${setups.starsCount} + 1` })
+				.where(eq(setups.id, setupId));
+			return true;
+		}
+	});
+}
+
+export async function getRecentSetups(limit = 12) {
+	return db
+		.select({
+			id: setups.id,
+			name: setups.name,
+			slug: setups.slug,
+			description: setups.description,
+			starsCount: setups.starsCount,
+			clonesCount: setups.clonesCount,
+			updatedAt: setups.updatedAt,
+			ownerUsername: users.username
+		})
+		.from(setups)
+		.innerJoin(users, eq(setups.userId, users.id))
+		.orderBy(desc(setups.createdAt))
+		.limit(limit);
 }
