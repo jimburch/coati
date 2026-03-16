@@ -30,7 +30,23 @@ vi.mock('$lib/server/db/schema', async () => {
 	return actual;
 });
 
-import { generateSessionToken, createSession, validateSessionToken, invalidateSession } from './auth';
+vi.mock('$app/environment', () => ({ dev: true }));
+
+// Mock global fetch for upsertGithubUser tests
+const mockFetch = vi.fn();
+vi.stubGlobal('fetch', mockFetch);
+
+import {
+	generateSessionToken,
+	createSession,
+	validateSessionToken,
+	invalidateSession,
+	invalidateAllUserSessions,
+	setSessionCookie,
+	deleteSessionCookie,
+	getSessionToken,
+	upsertGithubUser
+} from './auth';
 
 describe('auth module', () => {
 	beforeEach(() => {
@@ -175,6 +191,130 @@ describe('auth module', () => {
 			mockDelete.mockResolvedValueOnce(undefined);
 			await invalidateSession('session-id');
 			expect(mockDelete).toHaveBeenCalledTimes(1);
+		});
+	});
+
+	describe('invalidateAllUserSessions', () => {
+		it('deletes all sessions for a given user', async () => {
+			mockDelete.mockResolvedValueOnce(undefined);
+			await invalidateAllUserSessions('user-1');
+			expect(mockDelete).toHaveBeenCalledTimes(1);
+		});
+	});
+
+	describe('cookie helpers', () => {
+		function makeCookies() {
+			const store = new Map<string, string>();
+			const lastSetCall: { name?: string; value?: string; opts?: Record<string, unknown> } = {};
+			return {
+				store,
+				lastSetCall,
+				get: (name: string) => store.get(name),
+				set: (name: string, value: string, opts: Record<string, unknown>) => {
+					store.set(name, value);
+					lastSetCall.name = name;
+					lastSetCall.value = value;
+					lastSetCall.opts = opts;
+				}
+			};
+		}
+
+		it('setSessionCookie sets cookie with correct name and options', () => {
+			const cookies = makeCookies();
+			setSessionCookie(cookies as never, 'my-token');
+			expect(cookies.lastSetCall.name).toBe('magpie_session');
+			expect(cookies.lastSetCall.value).toBe('my-token');
+			expect(cookies.lastSetCall.opts?.httpOnly).toBe(true);
+			expect(cookies.lastSetCall.opts?.sameSite).toBe('lax');
+			expect(cookies.lastSetCall.opts?.path).toBe('/');
+			expect((cookies.lastSetCall.opts?.maxAge as number)).toBeGreaterThan(0);
+		});
+
+		it('deleteSessionCookie sets maxAge to 0', () => {
+			const cookies = makeCookies();
+			deleteSessionCookie(cookies as never);
+			expect(cookies.lastSetCall.name).toBe('magpie_session');
+			expect(cookies.lastSetCall.value).toBe('');
+			expect(cookies.lastSetCall.opts?.maxAge).toBe(0);
+		});
+
+		it('getSessionToken returns token from cookie', () => {
+			const cookies = makeCookies();
+			cookies.store.set('magpie_session', 'stored-token');
+			expect(getSessionToken(cookies as never)).toBe('stored-token');
+		});
+
+		it('getSessionToken returns undefined when no cookie', () => {
+			const cookies = makeCookies();
+			expect(getSessionToken(cookies as never)).toBeUndefined();
+		});
+	});
+
+	describe('upsertGithubUser', () => {
+		const ghUser = {
+			id: 12345,
+			login: 'octocat',
+			email: 'octocat@github.com',
+			avatar_url: 'https://avatar.url',
+			bio: 'Hello',
+			blog: 'https://blog.url'
+		};
+		const ghEmails = [
+			{ email: 'primary@example.com', primary: true, verified: true },
+			{ email: 'other@example.com', primary: false, verified: true }
+		];
+
+		function mockGitHubApi(user = ghUser, emails = ghEmails) {
+			mockFetch.mockImplementation((url: string) => {
+				if (url.includes('/user/emails')) {
+					return Promise.resolve({ ok: true, json: () => Promise.resolve(emails) });
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve(user) });
+			});
+		}
+
+		it('creates new user when no existing user found', async () => {
+			mockGitHubApi();
+			mockFindFirst.mockResolvedValueOnce(null); // no existing user
+			mockInsert.mockResolvedValueOnce([{ id: 'new-user-id' }]);
+
+			const userId = await upsertGithubUser('gh-access-token');
+			expect(userId).toBe('new-user-id');
+			expect(mockInsert).toHaveBeenCalledTimes(1);
+			const inserted = mockInsert.mock.calls[0][0];
+			expect(inserted.githubId).toBe(12345);
+			expect(inserted.username).toBe('octocat');
+		});
+
+		it('updates existing user and returns their ID', async () => {
+			mockGitHubApi();
+			mockFindFirst.mockResolvedValueOnce({ id: 'existing-id', bio: 'old bio', websiteUrl: null });
+			mockUpdate.mockResolvedValueOnce(undefined);
+
+			const userId = await upsertGithubUser('gh-access-token');
+			expect(userId).toBe('existing-id');
+			expect(mockUpdate).toHaveBeenCalledTimes(1);
+			expect(mockInsert).not.toHaveBeenCalled();
+		});
+
+		it('falls back to primary verified email when user.email is null', async () => {
+			mockGitHubApi({ ...ghUser, email: null });
+			mockFindFirst.mockResolvedValueOnce(null);
+			mockInsert.mockResolvedValueOnce([{ id: 'new-id' }]);
+
+			await upsertGithubUser('gh-access-token');
+			const inserted = mockInsert.mock.calls[0][0];
+			expect(inserted.email).toBe('primary@example.com');
+		});
+
+		it('throws when no email is available', async () => {
+			mockGitHubApi({ ...ghUser, email: null }, []);
+			await expect(upsertGithubUser('gh-access-token')).rejects.toThrow('No email found');
+		});
+
+		it('throws on GitHub API error', async () => {
+			mockFetch.mockResolvedValue({ ok: false, status: 401, statusText: 'Unauthorized' });
+			await expect(upsertGithubUser('bad-token')).rejects.toThrow('GitHub API error: 401');
 		});
 	});
 });
