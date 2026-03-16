@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { SetupCardProps } from '$lib/types';
+	import { Avatar, AvatarImage, AvatarFallback } from '$lib/components/ui/avatar';
 	import { timeAgo } from '$lib/utils';
 
 	type Props = {
@@ -9,6 +10,10 @@
 	};
 
 	const { setup, username, showAuthor = false }: Props = $props();
+
+	const MAX_TOOLS = 3;
+	const visibleTools = $derived(setup.tools?.slice(0, MAX_TOOLS) ?? []);
+	const overflowCount = $derived(Math.max(0, (setup.tools?.length ?? 0) - MAX_TOOLS));
 </script>
 
 <a
@@ -21,8 +26,17 @@
 		<p class="mt-1 line-clamp-2 text-sm text-muted-foreground">{setup.description}</p>
 	{/if}
 
-	{#if showAuthor}
-		<p class="mt-2 text-xs text-muted-foreground">by {username}</p>
+	{#if visibleTools.length > 0}
+		<div class="mt-2 flex flex-wrap items-center gap-1.5">
+			{#each visibleTools as tool (tool.id)}
+				<span class="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
+					{tool.name}
+				</span>
+			{/each}
+			{#if overflowCount > 0}
+				<span class="text-xs text-muted-foreground">+{overflowCount}</span>
+			{/if}
+		</div>
 	{/if}
 
 	<div class="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
@@ -47,6 +61,18 @@
 			{setup.clonesCount}
 		</span>
 
-		<span class="ml-auto">{timeAgo(setup.updatedAt)}</span>
+		{#if showAuthor}
+			<span class="ml-auto inline-flex items-center gap-1.5">
+				<Avatar class="size-4 text-[8px]">
+					{#if setup.ownerAvatarUrl}
+						<AvatarImage src={setup.ownerAvatarUrl} alt={username} />
+					{/if}
+					<AvatarFallback>{username[0].toUpperCase()}</AvatarFallback>
+				</Avatar>
+				{username}
+			</span>
+		{:else}
+			<span class="ml-auto">{timeAgo(setup.updatedAt)}</span>
+		{/if}
 	</div>
 </a>

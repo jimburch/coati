@@ -1,4 +1,4 @@
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import {
 	setups,
@@ -211,7 +211,8 @@ export async function getRecentSetups(limit = 12) {
 			starsCount: setups.starsCount,
 			clonesCount: setups.clonesCount,
 			updatedAt: setups.updatedAt,
-			ownerUsername: users.username
+			ownerUsername: users.username,
+			ownerAvatarUrl: users.avatarUrl
 		})
 		.from(setups)
 		.innerJoin(users, eq(setups.userId, users.id))
@@ -295,10 +296,11 @@ export async function searchSetups(filters: {
 			clones_count: number;
 			updated_at: Date;
 			owner_username: string;
+			owner_avatar_url: string;
 		}>(
 			sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
 				${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
-				${users.username} AS owner_username
+				${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
 				FROM ${setups}
 				INNER JOIN ${users} ON ${setups.userId} = ${users.id}
 				${whereClause}
@@ -323,11 +325,34 @@ export async function searchSetups(filters: {
 			starsCount: row.stars_count,
 			clonesCount: row.clones_count,
 			updatedAt: new Date(row.updated_at),
-			ownerUsername: row.owner_username
+			ownerUsername: row.owner_username,
+			ownerAvatarUrl: row.owner_avatar_url
 		})),
 		total,
 		page,
 		pageSize: PAGE_SIZE,
 		totalPages: Math.ceil(total / PAGE_SIZE)
 	};
+}
+
+export async function getToolsForSetups(setupIds: string[]) {
+	if (setupIds.length === 0) return {};
+
+	const rows = await db
+		.select({
+			setupId: setupTools.setupId,
+			id: tools.id,
+			name: tools.name,
+			slug: tools.slug
+		})
+		.from(setupTools)
+		.innerJoin(tools, eq(setupTools.toolId, tools.id))
+		.where(inArray(setupTools.setupId, setupIds));
+
+	const map: Record<string, { id: string; name: string; slug: string }[]> = {};
+	for (const row of rows) {
+		if (!map[row.setupId]) map[row.setupId] = [];
+		map[row.setupId].push({ id: row.id, name: row.name, slug: row.slug });
+	}
+	return map;
 }

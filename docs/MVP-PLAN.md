@@ -50,18 +50,18 @@
   - Metadata sidebar: tools, tags, star count, clone count, author
   - "Clone this setup" section showing CLI command
   - Link to author profile
-- [ ] File browser component:
+- [x] File browser component:
   - File tree (left sidebar or tab list)
   - File content viewer with syntax highlighting (shiki)
   - Target path displayed per file
-- [ ] Explore page (`(public)/explore/+page.svelte`):
+- [x] Explore page (`(public)/explore/+page.svelte`):
   - Search bar (PostgreSQL full-text search)
   - Filter by tool (dropdown/chips)
   - Filter by tag
   - Sort: trending, most stars, most clones, newest
   - Paginated results grid (SetupCard components)
-- [ ] SetupCard component: name, description, tools icons, star count, clone count, author avatar
-- [ ] Landing page (`(public)/+page.svelte`):
+- [x] SetupCard component: name, description, tools icons, star count, clone count, author avatar
+- [x] Landing page (`(public)/+page.svelte`):
   - Hero: tagline + CTA
   - Trending setups grid
   - "How it works" section (share → discover → clone)

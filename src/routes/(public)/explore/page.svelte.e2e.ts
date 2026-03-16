@@ -135,6 +135,8 @@ test('setup cards show author name', async ({ page }) => {
 	const cards = page.locator('main .grid a');
 	const count = await cards.count();
 	if (count > 0) {
-		await expect(cards.first().getByText(/^by /)).toBeVisible();
+		// Author is shown as avatar + username in the stats footer
+		const authorSpan = cards.first().locator('span.ml-auto img, span.ml-auto span');
+		await expect(authorSpan.first()).toBeVisible();
 	}
 });

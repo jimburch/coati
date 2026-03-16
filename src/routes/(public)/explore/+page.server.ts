@@ -1,6 +1,11 @@
 import type { PageServerLoad } from './$types';
 import type { ExploreSort } from '$lib/types';
-import { searchSetups, getAllTools, getAllTags } from '$lib/server/queries/setups';
+import {
+	searchSetups,
+	getAllTools,
+	getAllTags,
+	getToolsForSetups
+} from '$lib/server/queries/setups';
 
 const VALID_SORTS: ExploreSort[] = ['trending', 'stars', 'clones', 'newest'];
 
@@ -20,8 +25,14 @@ export const load: PageServerLoad = async ({ url }) => {
 		getAllTags()
 	]);
 
+	const toolsMap = await getToolsForSetups(results.items.map((s) => s.id));
+
 	return {
 		...results,
+		items: results.items.map((s) => ({
+			...s,
+			tools: toolsMap[s.id] ?? []
+		})),
 		q,
 		tool,
 		tag,

@@ -45,6 +45,8 @@ export type SetupCardProps = {
 	starsCount: number;
 	clonesCount: number;
 	updatedAt: Date;
+	tools?: { id: string; name: string; slug: string }[];
+	ownerAvatarUrl?: string;
 };
 
 export type ProfileUser = {
