@@ -45,7 +45,7 @@
 
 ### Tasks
 
-- [ ] Setup detail page (`(public)/[username]/[slug]/+page.svelte`):
+- [x] Setup detail page (`(public)/[username]/[slug]/+page.svelte`):
   - README rendered as markdown (mdsvex + shiki)
   - Metadata sidebar: tools, tags, star count, clone count, author
   - "Clone this setup" section showing CLI command

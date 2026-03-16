@@ -41,6 +41,43 @@ export async function renderMarkdown(content: string): Promise<string> {
 	});
 }
 
+const EXT_TO_LANG: Record<string, string> = {
+	js: 'javascript',
+	mjs: 'javascript',
+	cjs: 'javascript',
+	ts: 'typescript',
+	mts: 'typescript',
+	cts: 'typescript',
+	json: 'json',
+	yaml: 'yaml',
+	yml: 'yaml',
+	toml: 'toml',
+	sh: 'bash',
+	bash: 'bash',
+	zsh: 'bash',
+	md: 'markdown',
+	py: 'python'
+};
+
+export async function highlightCode(content: string, filename: string): Promise<string> {
+	const ext = filename.split('.').pop()?.toLowerCase() ?? '';
+	const lang = EXT_TO_LANG[ext];
+
+	if (!lang) {
+		return `<pre><code>${escapeHtml(content)}</code></pre>`;
+	}
+
+	try {
+		const highlighter = await getHighlighter();
+		return highlighter.codeToHtml(content, {
+			lang,
+			themes: { light: 'github-light', dark: 'github-dark' }
+		});
+	} catch {
+		return `<pre><code>${escapeHtml(content)}</code></pre>`;
+	}
+}
+
 function escapeHtml(text: string): string {
 	return text
 		.replace(/&/g, '&amp;')
