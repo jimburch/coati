@@ -35,6 +35,8 @@ export type LayoutUser = {
 	bio: string | null;
 };
 
+export type ExploreSort = 'trending' | 'stars' | 'clones' | 'newest';
+
 export type SetupCardProps = {
 	id: string;
 	name: string;

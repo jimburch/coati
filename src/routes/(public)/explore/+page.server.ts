@@ -1,7 +1,32 @@
 import type { PageServerLoad } from './$types';
-import { getRecentSetups } from '$lib/server/queries/setups';
+import type { ExploreSort } from '$lib/types';
+import { searchSetups, getAllTools, getAllTags } from '$lib/server/queries/setups';
 
-export const load: PageServerLoad = async () => {
-	const setups = await getRecentSetups(50);
-	return { setups };
+const VALID_SORTS: ExploreSort[] = ['trending', 'stars', 'clones', 'newest'];
+
+export const load: PageServerLoad = async ({ url }) => {
+	const q = url.searchParams.get('q') || undefined;
+	const tool = url.searchParams.get('tool') || undefined;
+	const tag = url.searchParams.get('tag') || undefined;
+	const sortParam = url.searchParams.get('sort') || 'newest';
+	const sort: ExploreSort = VALID_SORTS.includes(sortParam as ExploreSort)
+		? (sortParam as ExploreSort)
+		: 'newest';
+	const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
+
+	const [results, allTools, allTags] = await Promise.all([
+		searchSetups({ q, toolSlug: tool, tagName: tag, sort, page }),
+		getAllTools(),
+		getAllTags()
+	]);
+
+	return {
+		...results,
+		q,
+		tool,
+		tag,
+		sort,
+		allTools,
+		allTags
+	};
 };

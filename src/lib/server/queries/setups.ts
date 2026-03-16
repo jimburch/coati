@@ -11,7 +11,7 @@ import {
 	users
 } from '$lib/server/db/schema';
 import type { z } from 'zod';
-import type { createSetupWithFilesSchema, updateSetupSchema } from '$lib/types';
+import type { createSetupWithFilesSchema, updateSetupSchema, ExploreSort } from '$lib/types';
 
 type CreateSetupInput = z.infer<typeof createSetupWithFilesSchema>;
 type UpdateSetupInput = z.infer<typeof updateSetupSchema>;
@@ -217,4 +217,117 @@ export async function getRecentSetups(limit = 12) {
 		.innerJoin(users, eq(setups.userId, users.id))
 		.orderBy(desc(setups.createdAt))
 		.limit(limit);
+}
+
+export async function getAllTools() {
+	return db.select().from(tools).orderBy(tools.name);
+}
+
+export async function getAllTags() {
+	return db.select().from(tags).orderBy(tags.name);
+}
+
+const PAGE_SIZE = 12;
+
+export async function searchSetups(filters: {
+	q?: string;
+	toolSlug?: string;
+	tagName?: string;
+	sort: ExploreSort;
+	page: number;
+}) {
+	const { q, toolSlug, tagName, sort, page } = filters;
+	const offset = (page - 1) * PAGE_SIZE;
+
+	const conditions: ReturnType<typeof sql>[] = [];
+
+	if (q) {
+		conditions.push(sql`${setups}.search_vector @@ websearch_to_tsquery('english', ${q})`);
+	}
+
+	if (toolSlug) {
+		conditions.push(
+			sql`${setups.id} IN (
+				SELECT ${setupTools.setupId} FROM ${setupTools}
+				INNER JOIN ${tools} ON ${setupTools.toolId} = ${tools.id}
+				WHERE ${tools.slug} = ${toolSlug}
+			)`
+		);
+	}
+
+	if (tagName) {
+		conditions.push(
+			sql`${setups.id} IN (
+				SELECT ${setupTags.setupId} FROM ${setupTags}
+				INNER JOIN ${tags} ON ${setupTags.tagId} = ${tags.id}
+				WHERE ${tags.name} = ${tagName}
+			)`
+		);
+	}
+
+	const whereClause =
+		conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
+
+	let orderClause: ReturnType<typeof sql>;
+	if (q && sort === 'newest') {
+		orderClause = sql`ORDER BY ts_rank(${setups}.search_vector, websearch_to_tsquery('english', ${q})) DESC, ${setups.createdAt} DESC`;
+	} else if (sort === 'stars') {
+		orderClause = sql`ORDER BY ${setups.starsCount} DESC, ${setups.createdAt} DESC`;
+	} else if (sort === 'clones') {
+		orderClause = sql`ORDER BY ${setups.clonesCount} DESC, ${setups.createdAt} DESC`;
+	} else if (sort === 'trending') {
+		orderClause = sql`ORDER BY (
+			SELECT COUNT(*) FROM ${stars}
+			WHERE ${stars.setupId} = ${setups.id}
+			AND ${stars.createdAt} > NOW() - INTERVAL '7 days'
+		) DESC, ${setups.createdAt} DESC`;
+	} else {
+		orderClause = sql`ORDER BY ${setups.createdAt} DESC`;
+	}
+
+	const [items, countResult] = await Promise.all([
+		db.execute<{
+			id: string;
+			name: string;
+			slug: string;
+			description: string;
+			stars_count: number;
+			clones_count: number;
+			updated_at: Date;
+			owner_username: string;
+		}>(
+			sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
+				${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
+				${users.username} AS owner_username
+				FROM ${setups}
+				INNER JOIN ${users} ON ${setups.userId} = ${users.id}
+				${whereClause}
+				${orderClause}
+				LIMIT ${PAGE_SIZE} OFFSET ${offset}`
+		),
+		db.execute<{ count: string }>(
+			sql`SELECT COUNT(*) AS count FROM ${setups}
+				INNER JOIN ${users} ON ${setups.userId} = ${users.id}
+				${whereClause}`
+		)
+	]);
+
+	const total = Number(countResult[0].count);
+
+	return {
+		items: items.map((row) => ({
+			id: row.id,
+			name: row.name,
+			slug: row.slug,
+			description: row.description,
+			starsCount: row.stars_count,
+			clonesCount: row.clones_count,
+			updatedAt: new Date(row.updated_at),
+			ownerUsername: row.owner_username
+		})),
+		total,
+		page,
+		pageSize: PAGE_SIZE,
+		totalPages: Math.ceil(total / PAGE_SIZE)
+	};
 }

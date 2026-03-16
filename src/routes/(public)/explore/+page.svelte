@@ -1,7 +1,59 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import SetupCard from '$lib/components/SetupCard.svelte';
+	import Pagination from '$lib/components/Pagination.svelte';
+	import { Input } from '$lib/components/ui/input';
+	import type { ExploreSort } from '$lib/types';
 
 	const { data } = $props();
+
+	// eslint-disable-next-line svelte/prefer-writable-derived -- needs two-way binding for search input
+	let searchInput = $state(data.q ?? '');
+	$effect(() => {
+		searchInput = data.q ?? '';
+	});
+
+	const sortLabels: Record<ExploreSort, string> = {
+		newest: 'Newest',
+		trending: 'Trending',
+		stars: 'Most Stars',
+		clones: 'Most Clones'
+	};
+
+	function buildUrl(overrides: Record<string, string | number | undefined> = {}): string {
+		const merged = {
+			q: data.q,
+			tool: data.tool,
+			tag: data.tag,
+			sort: data.sort,
+			page: data.page,
+			...overrides
+		};
+
+		const parts: string[] = [];
+		if (merged.q) parts.push(`q=${encodeURIComponent(String(merged.q))}`);
+		if (merged.tool) parts.push(`tool=${encodeURIComponent(String(merged.tool))}`);
+		if (merged.tag) parts.push(`tag=${encodeURIComponent(String(merged.tag))}`);
+		if (merged.sort && merged.sort !== 'newest') parts.push(`sort=${String(merged.sort)}`);
+		if (merged.page && Number(merged.page) > 1) parts.push(`page=${String(merged.page)}`);
+
+		return `/explore${parts.length > 0 ? `?${parts.join('&')}` : ''}`;
+	}
+
+	function buildPageUrl(p: number): string {
+		return buildUrl({ page: p });
+	}
+
+	function handleSearch(e: SubmitEvent) {
+		e.preventDefault();
+		goto(buildUrl({ q: searchInput || undefined, page: 1 }));
+	}
+
+	function handleFilterChange(key: string, value: string) {
+		goto(buildUrl({ [key]: value || undefined, page: 1 }));
+	}
+
+	const hasFilters = $derived(!!data.q || !!data.tool || !!data.tag || data.sort !== 'newest');
 </script>
 
 <svelte:head>
@@ -10,15 +62,137 @@
 </svelte:head>
 
 <div class="mx-auto max-w-7xl px-4 py-8">
-	<h1 class="mb-6 text-2xl font-bold">Explore Setups</h1>
+	<div class="mb-6 flex items-baseline justify-between">
+		<h1 class="text-2xl font-bold">Explore Setups</h1>
+		<span class="text-sm text-muted-foreground">
+			{data.total}
+			{data.total === 1 ? 'setup' : 'setups'}
+		</span>
+	</div>
 
-	{#if data.setups.length > 0}
+	<!-- Search bar -->
+	<form onsubmit={handleSearch} class="mb-4">
+		<div class="relative">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				class="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+				stroke-width="2"
+			>
+				<circle cx="11" cy="11" r="8" />
+				<path d="m21 21-4.3-4.3" />
+			</svg>
+			<Input
+				type="search"
+				name="q"
+				placeholder="Search setups..."
+				class="h-10 w-full pl-10"
+				bind:value={searchInput}
+			/>
+		</div>
+	</form>
+
+	<!-- Filter/sort bar -->
+	<div class="mb-6 flex flex-wrap items-center gap-3">
+		<select
+			class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+			value={data.tool ?? ''}
+			onchange={(e) => handleFilterChange('tool', e.currentTarget.value)}
+		>
+			<option value="">All Tools</option>
+			{#each data.allTools as tool (tool.id)}
+				<option value={tool.slug}>{tool.name}</option>
+			{/each}
+		</select>
+
+		<select
+			class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+			value={data.tag ?? ''}
+			onchange={(e) => handleFilterChange('tag', e.currentTarget.value)}
+		>
+			<option value="">All Tags</option>
+			{#each data.allTags as tag (tag.id)}
+				<option value={tag.name}>{tag.name}</option>
+			{/each}
+		</select>
+
+		<select
+			class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+			value={data.sort}
+			onchange={(e) => handleFilterChange('sort', e.currentTarget.value)}
+		>
+			{#each Object.entries(sortLabels) as [value, label] (value)}
+				<option {value}>{label}</option>
+			{/each}
+		</select>
+
+		<!-- Active filter chips -->
+		{#if hasFilters}
+			<div class="flex flex-wrap items-center gap-2">
+				{#if data.q}
+					<a
+						href={buildUrl({ q: undefined, page: 1 })}
+						class="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/80"
+					>
+						&ldquo;{data.q}&rdquo;
+						<span aria-label="Remove search">&times;</span>
+					</a>
+				{/if}
+				{#if data.tool}
+					<a
+						href={buildUrl({ tool: undefined, page: 1 })}
+						class="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/80"
+					>
+						{data.allTools.find((t) => t.slug === data.tool)?.name ?? data.tool}
+						<span aria-label="Remove tool filter">&times;</span>
+					</a>
+				{/if}
+				{#if data.tag}
+					<a
+						href={buildUrl({ tag: undefined, page: 1 })}
+						class="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/80"
+					>
+						{data.tag}
+						<span aria-label="Remove tag filter">&times;</span>
+					</a>
+				{/if}
+				{#if data.sort !== 'newest'}
+					<a
+						href={buildUrl({ sort: undefined, page: 1 })}
+						class="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/80"
+					>
+						{sortLabels[data.sort]}
+						<span aria-label="Remove sort">&times;</span>
+					</a>
+				{/if}
+				<a href="/explore" class="text-xs text-muted-foreground hover:text-foreground">
+					Clear all
+				</a>
+			</div>
+		{/if}
+	</div>
+
+	<!-- Results grid -->
+	{#if data.items.length > 0}
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-			{#each data.setups as setup (setup.id)}
+			{#each data.items as setup (setup.id)}
 				<SetupCard {setup} username={setup.ownerUsername} showAuthor />
 			{/each}
 		</div>
+
+		<div class="mt-8">
+			<Pagination page={data.page} totalPages={data.totalPages} buildUrl={buildPageUrl} />
+		</div>
 	{:else}
-		<p class="text-muted-foreground">No setups yet. Be the first to share one!</p>
+		<div class="py-12 text-center">
+			<p class="text-muted-foreground">No setups match your filters.</p>
+			{#if hasFilters}
+				<a href="/explore" class="mt-2 inline-block text-sm text-primary hover:underline">
+					Clear filters
+				</a>
+			{/if}
+		</div>
 	{/if}
 </div>
