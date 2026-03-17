@@ -81,7 +81,7 @@
 
 ### Tasks
 
-- [ ] Star system:
+- [x] Star system:
   - StarButton component (optimistic UI)
   - Form action in setup detail page
   - API route: `POST/DELETE /api/v1/setups/:id/star`
