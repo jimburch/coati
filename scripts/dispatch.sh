@@ -4,8 +4,8 @@ set -eo pipefail
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
-echo "Fetching open issues labeled 'ralph'..."
-ISSUES=$(gh issue list --label ralph --state open --json number,title,body,labels,comments --limit 100)
+echo "Fetching open issues labeled 'ralph' by jimburch..."
+ISSUES=$(gh issue list --label ralph --state open --author jimburch --json number,title,body,labels,comments --limit 100)
 
 ISSUE_COUNT=$(echo "$ISSUES" | jq 'length')
 echo "Found $ISSUE_COUNT open ralph issues."
@@ -15,59 +15,24 @@ if [ "$ISSUE_COUNT" -eq 0 ]; then
   exit 0
 fi
 
-echo "Fetching open RALPH PRs..."
-OPEN_PRS=$(gh pr list --state open --json number,title,body,headRefName --limit 100 | jq '[.[] | select(.headRefName | startswith("claude/"))]')
-OPEN_PR_COUNT=$(echo "$OPEN_PRS" | jq 'length')
-echo "Found $OPEN_PR_COUNT open RALPH PRs."
+echo "Checking for in-progress workflow runs..."
+IN_PROGRESS_RUNS=$(gh run list --workflow=claude-work.yml --status=in_progress --json databaseId -q 'length' 2>/dev/null || echo "0")
+QUEUED_RUNS=$(gh run list --workflow=claude-work.yml --status=queued --json databaseId -q 'length' 2>/dev/null || echo "0")
 
-echo "Fetching in-progress workflow runs..."
-REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-IN_PROGRESS_RUNS=$(gh run list --workflow=claude-work.yml --status=in_progress --json databaseId -q '.[].databaseId' 2>/dev/null || true)
-QUEUED_RUNS=$(gh run list --workflow=claude-work.yml --status=queued --json databaseId -q '.[].databaseId' 2>/dev/null || true)
-ALL_RUN_IDS=$(echo -e "${IN_PROGRESS_RUNS}\n${QUEUED_RUNS}" | grep -v '^$' || true)
-
-IN_PROGRESS_TASKS="[]"
-if [ -n "$ALL_RUN_IDS" ]; then
-  IN_PROGRESS_TASKS="["
-  FIRST=true
-  while read -r run_id; do
-    INPUTS=$(gh api "repos/$REPO/actions/runs/$run_id" --jq '.inputs // empty')
-    if [ -n "$INPUTS" ]; then
-      if [ "$FIRST" = true ]; then
-        FIRST=false
-      else
-        IN_PROGRESS_TASKS="${IN_PROGRESS_TASKS},"
-      fi
-      IN_PROGRESS_TASKS="${IN_PROGRESS_TASKS}${INPUTS}"
-    fi
-  done <<< "$ALL_RUN_IDS"
-  IN_PROGRESS_TASKS="${IN_PROGRESS_TASKS}]"
+if [ "$IN_PROGRESS_RUNS" -gt 0 ] || [ "$QUEUED_RUNS" -gt 0 ]; then
+  echo "Ralph is already running ($IN_PROGRESS_RUNS in progress, $QUEUED_RUNS queued). Skipping dispatch."
+  exit 0
 fi
 
-IN_PROGRESS_COUNT=$(echo "$IN_PROGRESS_TASKS" | jq 'length')
-echo "Found $IN_PROGRESS_COUNT in-progress/queued tasks."
-
 echo ""
-echo "Asking orchestrator to analyze issues and plan tasks..."
+echo "Asking orchestrator to analyze and order issues..."
 echo ""
 
 PROMPT="$(cat "$REPO_ROOT/scripts/dispatch-prompt.md")
 
 ## Open Issues
 
-$ISSUES
-
-## Currently In-Progress Tasks
-
-These tasks are already running or queued on GitHub Actions. Do NOT dispatch work that conflicts with or duplicates these.
-
-$IN_PROGRESS_TASKS
-
-## Open RALPH PRs
-
-These PRs were created by previous RALPH runs and are still open (awaiting review/merge). Do NOT dispatch work that duplicates or conflicts with these.
-
-$OPEN_PRS"
+$ISSUES"
 
 RESULT=$(echo "$PROMPT" | claude -p \
   --model sonnet \
@@ -91,28 +56,23 @@ TASK_COUNT=$(echo "$TASKS" | jq 'length')
 
 if [ "$TASK_COUNT" -eq 0 ]; then
   echo ""
-  echo "Orchestrator found no tasks to dispatch."
+  echo "Orchestrator found no actionable tasks."
   exit 0
 fi
 
 echo ""
-echo "Dispatching $TASK_COUNT tasks:"
+echo "Dispatching $TASK_COUNT tasks (sequential processing):"
 echo ""
 
 echo "$TASKS" | jq -c '.[]' | while read -r task; do
-  BRANCH_NAME=$(echo "$task" | jq -r '.branch_name')
-  ISSUE_NUMBERS=$(echo "$task" | jq -c '.issue_numbers')
-  PROMPT=$(echo "$task" | jq -r '.prompt')
-
-  echo "  -> $BRANCH_NAME"
-  echo "     Issues: $ISSUE_NUMBERS"
-  echo "     Prompt: ${PROMPT:0:100}..."
-  echo ""
-
-  gh workflow run claude-work.yml \
-    -f branch_name="$BRANCH_NAME" \
-    -f issue_numbers="$ISSUE_NUMBERS" \
-    -f prompt="$PROMPT"
+  ISSUE_NUM=$(echo "$task" | jq -r '.issue_number')
+  TASK_PROMPT=$(echo "$task" | jq -r '.prompt')
+  echo "  $ISSUE_NUM. ${TASK_PROMPT:0:100}..."
 done
 
-echo "All tasks dispatched. Run 'gh run list --workflow=claude-work.yml' to monitor."
+echo ""
+
+gh workflow run claude-work.yml \
+  -f tasks="$(echo "$TASKS" | jq -c '.')"
+
+echo "Dispatched. Run 'gh run list --workflow=claude-work.yml' to monitor."

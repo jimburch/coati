@@ -3,16 +3,8 @@ name: Claude Worker
 on:
   workflow_dispatch:
     inputs:
-      branch_name:
-        description: 'Branch name for the worker (e.g. claude/fix-auth-1234567890)'
-        required: true
-        type: string
-      issue_numbers:
-        description: 'JSON array of issue numbers (e.g. [42])'
-        required: true
-        type: string
-      prompt:
-        description: 'Task prompt for the worker'
+      tasks:
+        description: 'JSON array of ordered tasks, each with issue_number and prompt'
         required: true
         type: string
 
@@ -22,7 +14,6 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write
-      pull-requests: write
       issues: write
       id-token: write
 
@@ -30,6 +21,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: develop
           fetch-depth: 0
 
       - name: Set up Node.js
@@ -53,43 +45,27 @@ jobs:
           git config user.name "Claude"
           git config user.email "noreply@anthropic.com"
 
-      - name: Run worker
+      - name: Create ralph branch from develop
+        run: |
+          git checkout -b ralph
+          git push -u origin ralph
+
+      - name: Process tasks sequentially
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WORKER_PROMPT: ${{ inputs.prompt }}
+          TASKS_JSON: ${{ inputs.tasks }}
         run: |
           chmod +x scripts/worker-run.sh
-          ./scripts/worker-run.sh \
-            "${{ inputs.branch_name }}" \
-            '${{ inputs.issue_numbers }}'
+          ./scripts/worker-run.sh
 
-      - name: Push branch
+      - name: Merge ralph into develop
         run: |
-          # Force-push in case Claude already pushed during execution
-          # or the branch exists from a previous run
-          git push --force-with-lease origin "${{ inputs.branch_name }}" 2>/dev/null \
-            || git push --force origin "${{ inputs.branch_name }}"
+          git checkout develop
+          git merge ralph --no-edit
+          git push origin develop
 
-      - name: Create Pull Request
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Delete ralph branch
         run: |
-          PR_TITLE=$(cat /tmp/pr_title.txt)
-          PR_BODY=$(cat /tmp/pr_description.txt)
-
-          gh pr create \
-            --title "$PR_TITLE" \
-            --body "$PR_BODY" \
-            --base main \
-            --head "${{ inputs.branch_name }}"
-
-      - name: Label issues as in-review
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Create label if it doesn't exist
-          gh label create "in-review" --color "D4C5F9" --description "PR open, awaiting review" 2>/dev/null || true
-          for num in $(echo '${{ inputs.issue_numbers }}' | jq -r '.[]'); do
-            gh issue edit "$num" --add-label "in-review" --remove-label "ralph" || true
-          done
+          git push origin --delete ralph 2>/dev/null || true
+          git branch -d ralph 2>/dev/null || true
