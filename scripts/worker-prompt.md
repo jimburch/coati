@@ -80,3 +80,4 @@ After committing, output a PR title and description wrapped in XML tags. The wor
 - Do NOT modify CLAUDE.md or any configuration files unless the task specifically requires it.
 - If the task cannot be completed (missing dependencies, unclear requirements), commit what you have and explain the blocker in the PR description.
 - Use `pnpm` as the package manager (never npm).
+- Do NOT push your commits. The CI workflow handles pushing the branch after you finish. Only commit locally.

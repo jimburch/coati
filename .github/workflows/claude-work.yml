@@ -65,7 +65,11 @@ jobs:
             "${{ inputs.prompt }}"
 
       - name: Push branch
-        run: git push --force-with-lease origin "${{ inputs.branch_name }}"
+        run: |
+          # Force-push in case Claude already pushed during execution
+          # or the branch exists from a previous run
+          git push --force-with-lease origin "${{ inputs.branch_name }}" 2>/dev/null \
+            || git push --force origin "${{ inputs.branch_name }}"
 
       - name: Create Pull Request
         env:
