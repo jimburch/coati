@@ -18,6 +18,13 @@ export class InvalidParentError extends Error {
 	}
 }
 
+export class InvalidBodyError extends Error {
+	code = 'INVALID_BODY';
+	constructor(message: string) {
+		super(message);
+	}
+}
+
 export class ForbiddenError extends Error {
 	code = 'FORBIDDEN';
 	constructor() {
@@ -100,6 +107,13 @@ export async function createComment(
 	body: string,
 	parentId?: string
 ): Promise<{ id: string }> {
+	if (!body || body.trim().length === 0) {
+		throw new InvalidBodyError('Body cannot be empty');
+	}
+	if (body.length > 5000) {
+		throw new InvalidBodyError('Body cannot exceed 5000 characters');
+	}
+
 	return db.transaction(async (tx) => {
 		if (parentId) {
 			const parent = await tx
