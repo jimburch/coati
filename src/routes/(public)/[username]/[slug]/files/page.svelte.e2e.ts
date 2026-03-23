@@ -83,7 +83,7 @@ test('mobile toggle reveals and hides file tree', async ({ page, isMobile }) => 
 test('directory expand/collapse works', async ({ page }) => {
 	await page.goto(FILES_URL);
 	// The hooks directory should be visible and expanded by default
-	const hooksDir = page.getByRole('button', { hasText: 'hooks' });
+	const hooksDir = page.getByRole('button').filter({ hasText: 'hooks' });
 	if (await hooksDir.isVisible()) {
 		// Click to collapse
 		await hooksDir.click();

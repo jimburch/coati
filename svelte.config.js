@@ -9,7 +9,7 @@ const config = {
 		adapter: adapter()
 	},
 	vitePlugin: {
-		dynamicCompileOptions: ({ filename }) => ({ runes: true })
+		dynamicCompileOptions: () => ({ runes: true })
 	}
 };
 

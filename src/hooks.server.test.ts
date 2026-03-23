@@ -36,7 +36,7 @@ function makeEvent(opts: { cookie?: string; bearerToken?: string } = {}) {
 }
 
 function makeResolve() {
-	return vi.fn().mockImplementation((event: unknown) => new Response('ok'));
+	return vi.fn().mockImplementation(() => new Response('ok'));
 }
 
 describe('hooks.server handle', () => {

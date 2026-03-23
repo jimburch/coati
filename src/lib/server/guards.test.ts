@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { requireAuth, requireApiAuth, requireAdmin } from './guards';
-import { redirect } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
 
 function makeEvent(user: unknown = null): RequestEvent {

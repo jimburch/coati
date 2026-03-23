@@ -227,7 +227,7 @@ describe('auth module', () => {
 			expect(cookies.lastSetCall.opts?.httpOnly).toBe(true);
 			expect(cookies.lastSetCall.opts?.sameSite).toBe('lax');
 			expect(cookies.lastSetCall.opts?.path).toBe('/');
-			expect((cookies.lastSetCall.opts?.maxAge as number)).toBeGreaterThan(0);
+			expect(cookies.lastSetCall.opts?.maxAge as number).toBeGreaterThan(0);
 		});
 
 		it('deleteSessionCookie sets maxAge to 0', () => {
@@ -251,7 +251,14 @@ describe('auth module', () => {
 	});
 
 	describe('upsertGithubUser', () => {
-		const ghUser = {
+		const ghUser: {
+			id: number;
+			login: string;
+			email: string | null;
+			avatar_url: string;
+			bio: string;
+			blog: string;
+		} = {
 			id: 12345,
 			login: 'octocat',
 			email: 'octocat@github.com',
