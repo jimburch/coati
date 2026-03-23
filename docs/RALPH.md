@@ -85,19 +85,27 @@ pnpm dispatch
 - `priority:low` — Low priority (green)
 - `AFK` — Can be implemented autonomously (blue)
 - `HITL` — Requires human-in-the-loop (yellow)
+- `in-review` — PR created, awaiting human review (purple, auto-created by workflow)
 
-## First Test Run — Issue #2
+## Test Runs
 
-Created issue [#2: Star button UI doesn't update until page refresh](https://github.com/jimburch/magpie/issues/2) as a test. Dispatched successfully. The worker completed its work and pushed to `claude/fix-star-button-optimistic-ui-1742342400`, but the PR creation step failed due to a repo permissions setting.
+### Run 1 — Issue #2 (first attempt)
 
-### What was fixed during the test run:
+Created issue [#2: Star button UI doesn't update until page refresh](https://github.com/jimburch/magpie/issues/2) as a test. Worker completed but PR creation failed due to repo permissions.
 
-- **Repo setting**: "Allow GitHub Actions to create and approve pull requests" needed to be enabled in repo Settings > Actions
-- **Push conflict**: Worker (Claude Code) pushed the branch during execution, then the explicit push step in the workflow tried to push again and got a non-fast-forward rejection. Fixed by changing to `git push --force-with-lease`.
+**Fixed:** Enabled "Allow GitHub Actions to create and approve pull requests" in repo Settings > Actions.
 
-### Still pending from test run:
+### Run 2 — Issue #2 (successful)
 
-- The branch `claude/fix-star-button-optimistic-ui-1742342400` exists with a commit but no PR was created. Need to either create the PR manually from the existing branch or delete the branch and re-dispatch.
+Re-dispatched after fixes. Worker completed in ~6 minutes, pushed branch `claude/fix-star-button-optimistic-ui-1774310400`, created [PR #3](https://github.com/jimburch/magpie/pull/3), which was merged and auto-closed issue #2.
+
+**Issues discovered and fixed after this run:**
+- **Prompt shell escaping**: Backticks and parentheses in the prompt were interpreted by bash when passed as `"${{ inputs.prompt }}"` in the workflow. Fixed by passing via `WORKER_PROMPT` env var instead.
+- **Worker push duplication**: Claude pushed during execution, then workflow push step failed. Fixed by adding "do not push" to worker prompt + force-push fallback in workflow.
+- **Pre-existing gate failures**: Worker spent time investigating pre-existing lint/check failures in files it didn't touch. Added guidance to worker prompt to only fix failures in changed code.
+- **Playwright screenshots**: Worker tried to take screenshots but browser binaries and DB aren't available in CI. Added rule to skip screenshots in worker prompt.
+- **Issue lifecycle**: Added `in-review` label step — workflow now swaps `ralph` → `in-review` after PR creation.
+- **Git author**: Changed from `Ralph (Claude)` / `ralph-claude@users.noreply.github.com` to `Claude` / `noreply@anthropic.com` to avoid duplicate contributors.
 
 ## Known Issues & Things to Figure Out
 

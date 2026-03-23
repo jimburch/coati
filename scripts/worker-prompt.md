@@ -39,6 +39,8 @@ pnpm test:unit --run  # vitest
 
 Do NOT commit if any gate fails. Fix the issues first, then re-run the gates.
 
+**Note:** Some pre-existing failures may exist in files you didn't touch (e.g., lint issues in unrelated files, missing env vars for DB-dependent checks). Only fix failures in code you changed. If a gate fails ONLY on pre-existing issues unrelated to your work, you may proceed.
+
 ### 4. Commit
 
 Make a git commit. The commit message MUST follow this format:
@@ -81,3 +83,4 @@ After committing, output a PR title and description wrapped in XML tags. The wor
 - If the task cannot be completed (missing dependencies, unclear requirements), commit what you have and explain the blocker in the PR description.
 - Use `pnpm` as the package manager (never npm).
 - Do NOT push your commits. The CI workflow handles pushing the branch after you finish. Only commit locally.
+- Skip Playwright screenshots — browser binaries and a database are not available in CI. Visual verification is done during PR review.

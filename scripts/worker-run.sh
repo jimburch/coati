@@ -1,18 +1,20 @@
 #!/bin/bash
 set -eo pipefail
 
-# Usage: worker-run.sh <branch_name> <issue_numbers_json> <task_prompt>
+# Usage: worker-run.sh <branch_name> <issue_numbers_json>
 #
 # Environment variables required:
 #   CLAUDE_CODE_OAUTH_TOKEN - Claude Code OAuth token (from GitHub App)
 #   GH_TOKEN                - GitHub token for reading issues and creating PRs
+#   WORKER_PROMPT           - Task prompt for the worker (passed via env to avoid shell escaping issues)
 
 BRANCH_NAME="$1"
 ISSUE_NUMBERS="$2"
-TASK_PROMPT="$3"
+TASK_PROMPT="$WORKER_PROMPT"
 
 if [ -z "$BRANCH_NAME" ] || [ -z "$ISSUE_NUMBERS" ] || [ -z "$TASK_PROMPT" ]; then
-  echo "Usage: $0 <branch_name> <issue_numbers_json> <task_prompt>"
+  echo "Usage: $0 <branch_name> <issue_numbers_json>"
+  echo "WORKER_PROMPT env var must be set"
   exit 1
 fi
 

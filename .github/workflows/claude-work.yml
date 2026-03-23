@@ -50,19 +50,19 @@ jobs:
 
       - name: Configure git
         run: |
-          git config user.name "Ralph (Claude)"
-          git config user.email "ralph-claude@users.noreply.github.com"
+          git config user.name "Claude"
+          git config user.email "noreply@anthropic.com"
 
       - name: Run worker
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKER_PROMPT: ${{ inputs.prompt }}
         run: |
           chmod +x scripts/worker-run.sh
           ./scripts/worker-run.sh \
             "${{ inputs.branch_name }}" \
-            '${{ inputs.issue_numbers }}' \
-            "${{ inputs.prompt }}"
+            '${{ inputs.issue_numbers }}'
 
       - name: Push branch
         run: |
@@ -83,3 +83,13 @@ jobs:
             --body "$PR_BODY" \
             --base main \
             --head "${{ inputs.branch_name }}"
+
+      - name: Label issues as in-review
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create label if it doesn't exist
+          gh label create "in-review" --color "D4C5F9" --description "PR open, awaiting review" 2>/dev/null || true
+          for num in $(echo '${{ inputs.issue_numbers }}' | jq -r '.[]'); do
+            gh issue edit "$num" --add-label "in-review" --remove-label "ralph" || true
+          done
