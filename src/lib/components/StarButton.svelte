@@ -6,9 +6,10 @@
 		isStarred: boolean;
 		starsCount: number;
 		formAction?: string;
+		onoptimisticchange?: (count: number) => void;
 	}
 
-	const { isStarred, starsCount, formAction = '?/star' }: Props = $props();
+	const { isStarred, starsCount, formAction = '?/star', onoptimisticchange }: Props = $props();
 
 	let pending = $state<{ starred: boolean; count: number } | null>(null);
 
@@ -20,15 +21,20 @@
 	method="POST"
 	action={formAction}
 	use:enhance={() => {
+		const optimisticCount = isStarred ? starsCount - 1 : starsCount + 1;
 		pending = {
 			starred: !isStarred,
-			count: isStarred ? starsCount - 1 : starsCount + 1
+			count: optimisticCount
 		};
+		onoptimisticchange?.(optimisticCount);
 
-		return async ({ result }) => {
+		return async ({ result, update }) => {
 			if (result.type === 'failure' || result.type === 'error') {
 				pending = null;
+				onoptimisticchange?.(starsCount);
 			} else {
+				// Keep pending until revalidation completes so UI doesn't flicker back
+				await update({ reset: false });
 				pending = null;
 			}
 		};

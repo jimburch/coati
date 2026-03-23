@@ -9,6 +9,16 @@
 	let copied = $state(false);
 	const cloneCommand = $derived(`magpie clone ${data.setup.ownerUsername}/${data.setup.slug}`);
 
+	// Optimistic override for stars count — set on button click, cleared when server data refreshes.
+	let starsCountOverride = $state<number | null>(null);
+	const localStarsCount = $derived(starsCountOverride ?? data.setup.starsCount);
+	$effect(() => {
+		// When revalidation brings fresh server data, drop the optimistic override.
+		// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+		data.setup.starsCount;
+		starsCountOverride = null;
+	});
+
 	function copyCloneCommand() {
 		navigator.clipboard.writeText(cloneCommand);
 		copied = true;
@@ -71,7 +81,13 @@
 
 				<!-- Star button -->
 				<div>
-					<StarButton isStarred={data.isStarred} starsCount={data.setup.starsCount} />
+					<StarButton
+						isStarred={data.isStarred}
+						starsCount={data.setup.starsCount}
+						onoptimisticchange={(count) => {
+							starsCountOverride = count;
+						}}
+					/>
 				</div>
 
 				<!-- Stats -->
@@ -80,7 +96,7 @@
 					<div class="space-y-1 text-sm">
 						<div class="flex items-center justify-between">
 							<span class="text-muted-foreground">Stars</span>
-							<span>{data.setup.starsCount}</span>
+							<span>{localStarsCount}</span>
 						</div>
 						<div class="flex items-center justify-between">
 							<span class="text-muted-foreground">Clones</span>
