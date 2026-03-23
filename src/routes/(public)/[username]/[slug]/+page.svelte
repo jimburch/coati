@@ -2,6 +2,7 @@
 	import { Avatar, AvatarImage, AvatarFallback } from '$lib/components/ui/avatar';
 	import { Separator } from '$lib/components/ui/separator';
 	import StarButton from '$lib/components/StarButton.svelte';
+	import CommentThread from '$lib/components/CommentThread.svelte';
 	import { timeAgo } from '$lib/utils';
 
 	const { data } = $props();
@@ -187,4 +188,9 @@
 			</div>
 		</div>
 	</div>
+
+	<Separator class="my-8" />
+
+	<!-- Comments -->
+	<CommentThread comments={data.comments} isLoggedIn={!!data.user} />
 </div>
