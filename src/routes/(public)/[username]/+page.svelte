@@ -49,7 +49,13 @@
 								d="M4.75 3.5a.25.25 0 0 0-.25.25v8.5c0 .138.112.25.25.25h6.5a.25.25 0 0 0 .25-.25v-5.5h-2.25A1.75 1.75 0 0 1 7.5 5V2.75H4.75zM9 2.32v2.18c0 .138.112.25.25.25h2.18L9 2.32zM3 3.75C3 2.784 3.784 2 4.75 2h3.5a.75.75 0 0 1 .53.22l3.5 3.5a.75.75 0 0 1 .22.53v6A1.75 1.75 0 0 1 10.75 14h-6A1.75 1.75 0 0 1 3 12.25v-8.5z"
 							/>
 						</svg>
-						{new URL(data.profile.websiteUrl).hostname}
+						{(() => {
+							try {
+								return new URL(data.profile.websiteUrl).hostname;
+							} catch {
+								return data.profile.websiteUrl;
+							}
+						})()}
 					</a>
 				{/if}
 
