@@ -2,6 +2,7 @@
 	import { Avatar, AvatarImage, AvatarFallback } from '$lib/components/ui/avatar';
 	import { Separator } from '$lib/components/ui/separator';
 	import SetupCard from '$lib/components/SetupCard.svelte';
+	import FollowButton from '$lib/components/FollowButton.svelte';
 
 	const { data } = $props();
 
@@ -11,6 +12,14 @@
 			year: 'numeric'
 		})
 	);
+
+	let followersCount = $state(data.profile.followersCount);
+	$effect(() => {
+		followersCount = data.profile.followersCount;
+	});
+
+	const isOwnProfile = $derived(data.currentUserId === data.profile.id);
+	const showFollowButton = $derived(data.currentUserId !== null && !isOwnProfile);
 </script>
 
 <svelte:head>
@@ -30,7 +39,18 @@
 		</Avatar>
 
 		<div class="min-w-0 flex-1">
-			<h1 class="text-2xl font-bold">{data.profile.username}</h1>
+			<div class="flex flex-wrap items-center gap-3">
+				<h1 class="text-2xl font-bold">{data.profile.username}</h1>
+				{#if showFollowButton}
+					<FollowButton
+						isFollowing={data.isFollowing}
+						{followersCount}
+						onoptimisticchange={(following) => {
+							followersCount = following ? followersCount + 1 : followersCount - 1;
+						}}
+					/>
+				{/if}
+			</div>
 
 			{#if data.profile.bio}
 				<p class="mt-1 text-muted-foreground">{data.profile.bio}</p>
@@ -80,7 +100,7 @@
 	<div class="mt-4 text-sm text-muted-foreground">
 		<span>{data.profile.setupsCount} setups</span>
 		<span class="mx-1">&middot;</span>
-		<span>{data.profile.followersCount} followers</span>
+		<span>{followersCount} followers</span>
 		<span class="mx-1">&middot;</span>
 		<span>{data.profile.followingCount} following</span>
 	</div>
