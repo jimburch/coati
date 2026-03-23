@@ -292,6 +292,39 @@ echo "=========================================="
 echo ""
 cat "$SUMMARY_FILE"
 
+# --- Close parent PRD issues if all child issues are done ---
+
+echo ""
+echo "Checking for completed PRD issues..."
+
+# Find all PRD issues (labeled 'prd' and open)
+PRD_ISSUES=$(gh issue list --label "prd" --state open --json number -q '.[].number' 2>/dev/null || echo "")
+
+for PRD_NUM in $PRD_ISSUES; do
+  # Get the PRD issue body
+  PRD_BODY=$(gh issue view "$PRD_NUM" --json body -q '.body' 2>/dev/null || echo "")
+
+  # Find all issues that reference this PRD as parent (look for "#<PRD_NUM>" in "Parent PRD" section)
+  CHILD_ISSUES=$(gh issue list --state all --limit 100 --json number,body,state -q \
+    "[.[] | select(.body | test(\"Parent PRD\\\\s*\\\\n\\\\s*#${PRD_NUM}(\\\\s|$)\"))]" 2>/dev/null || echo "[]")
+
+  CHILD_COUNT=$(echo "$CHILD_ISSUES" | jq 'length')
+
+  if [ "$CHILD_COUNT" -eq 0 ]; then
+    continue
+  fi
+
+  # Check if all child issues are closed
+  OPEN_CHILDREN=$(echo "$CHILD_ISSUES" | jq '[.[] | select(.state == "OPEN")] | length')
+
+  if [ "$OPEN_CHILDREN" -eq 0 ]; then
+    echo "All $CHILD_COUNT child issues for PRD #$PRD_NUM are closed. Closing PRD..."
+    gh issue close "$PRD_NUM" --comment "All implementation issues are complete. Closing PRD."
+  else
+    echo "PRD #$PRD_NUM has $OPEN_CHILDREN/$CHILD_COUNT child issues still open. Skipping."
+  fi
+done
+
 # --- Write summary to file for workflow to pick up ---
 
 cp "$SUMMARY_FILE" /tmp/ralph_summary.txt

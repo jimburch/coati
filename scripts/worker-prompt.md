@@ -41,7 +41,20 @@ Do NOT commit if any gate fails. Fix the issues first, then re-run the gates.
 
 **Note:** Some pre-existing failures may exist in files you didn't touch (e.g., lint issues in unrelated files, missing env vars for DB-dependent checks). Only fix failures in code you changed. If a gate fails ONLY on pre-existing issues unrelated to your work, you may proceed.
 
-### 4. Commit
+### 4. Update Acceptance Criteria
+
+As you complete each piece of work, check off the corresponding acceptance criteria in the GitHub issue. Use `gh issue edit` to update the issue body, replacing `- [ ]` with `- [x]` for each criterion you've satisfied.
+
+```bash
+# Example: check off a criterion
+BODY=$(gh issue view <issue-number> --json body -q '.body')
+UPDATED=$(echo "$BODY" | sed 's/- \[ \] Criterion text/- [x] Criterion text/')
+gh issue edit <issue-number> --body "$UPDATED"
+```
+
+Do this incrementally as you work, not all at once at the end. This gives visibility into progress.
+
+### 5. Commit
 
 **Only commit if all quality gates pass.** If gates fail and you cannot fix them, **do not commit**. Instead, explain what's blocking you in your output so the runner can retry with that context.
 
@@ -57,7 +70,7 @@ RALPH: <short description> (#<issue-number>)
 
 Keep it concise but informative.
 
-### 5. Testing Instructions
+### 6. Testing Instructions
 
 After committing, output manual testing instructions wrapped in XML tags. These tell the reviewer how to verify your changes work correctly.
 

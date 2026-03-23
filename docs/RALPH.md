@@ -44,6 +44,7 @@ pnpm dispatch
                                               │   ├─ On success: push, close issue
                                               │   └─ On failure: comment, swap AFK→HITL
                                               │
+                                              ├─ Closes parent PRD issues if all children done
                                               ├─ Merges ralph → develop
                                               └─ Deletes ralph branch
 ```
@@ -80,7 +81,9 @@ ralph (ephemeral, created fresh from develop per dispatch)
 | Worker permissions            | `--dangerously-skip-permissions` (ephemeral CI runner, safe)                |
 | Branch strategy               | `ralph` branch from `develop`, auto-merge after all tasks, delete branch    |
 | Commit convention             | `RALPH:` prefix with description and issue reference                        |
+| Acceptance criteria tracking   | Worker checks off `- [ ]` → `- [x]` in issue body incrementally as it works |
 | Issue lifecycle               | Worker closes issue via `gh issue close` after successful commit + push     |
+| PRD auto-close                | After all tasks, script checks open `prd`-labeled issues; closes if all child issues are closed |
 | Quality gates                 | Worker runs internally + script verifies externally after each attempt       |
 | Retry strategy                | Up to 3 attempts per task, 10min timeout each. Retry prompt includes gate errors + git diff |
 | Failure policy                | Rollback changes, comment on issue, swap AFK→HITL label, continue to next task |

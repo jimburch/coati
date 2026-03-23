@@ -86,7 +86,7 @@
   - Form action in setup detail page
   - API route: `POST/DELETE /api/v1/setups/:id/star`
   - Denormalized count update in transaction
-- [ ] Follow system:
+- [x] Follow system:
   - FollowButton component
   - API route: `POST/DELETE /api/v1/users/:username/follow`
   - Followers/following counts on user profile
