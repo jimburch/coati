@@ -29,34 +29,34 @@ Takes a PRD issue and breaks it into independently-grabbable implementation issu
 
 Create these labels on your GitHub repo (Ralph uses them for classification and priority):
 
-| Label             | Color  | Purpose                                    |
-| ----------------- | ------ | ------------------------------------------ |
-| `ralph`           | —      | Issue is ready for Ralph to process        |
-| `prd`             | —      | Issue is a PRD (parent of implementation)  |
-| `AFK`             | blue   | Can be implemented autonomously            |
-| `HITL`            | yellow | Requires human-in-the-loop                 |
-| `priority:high`   | red    | Processed first within dependency tier     |
-| `priority:medium` | yellow | Processed second                           |
-| `priority:low`    | green  | Processed last                             |
+| Label             | Color  | Purpose                                   |
+| ----------------- | ------ | ----------------------------------------- |
+| `ralph`           | —      | Issue is ready for Ralph to process       |
+| `prd`             | —      | Issue is a PRD (parent of implementation) |
+| `AFK`             | blue   | Can be implemented autonomously           |
+| `HITL`            | yellow | Requires human-in-the-loop                |
+| `priority:high`   | red    | Processed first within dependency tier    |
+| `priority:medium` | yellow | Processed second                          |
+| `priority:low`    | green  | Processed last                            |
 
 ## 3. Set Up the Ralph Scripts
 
 Ralph has four files that work together. See the actual files in this repo for the full implementation:
 
-| File                         | What it does                                                                                          |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------- |
+| File                         | What it does                                                                                                                                    |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `scripts/dispatch.sh`        | Local orchestrator — fetches open `ralph` issues, calls Sonnet to build a dependency-ordered task queue, dispatches the GitHub Actions workflow |
-| `scripts/dispatch-prompt.md` | Prompt for the Sonnet orchestrator — classification rules, dependency graph logic, JSON output format  |
-| `scripts/worker-run.sh`      | CI worker runner — loops through tasks sequentially, invokes Opus per task, runs quality gates externally, retries up to 3 times |
-| `scripts/worker-prompt.md`   | Prompt for the Opus worker — codebase exploration, implementation, internal quality gates, commit format |
+| `scripts/dispatch-prompt.md` | Prompt for the Sonnet orchestrator — classification rules, dependency graph logic, JSON output format                                           |
+| `scripts/worker-run.sh`      | CI worker runner — loops through tasks sequentially, invokes Opus per task, runs quality gates externally, retries up to 3 times                |
+| `scripts/worker-prompt.md`   | Prompt for the Opus worker — codebase exploration, implementation, internal quality gates, commit format                                        |
 
 Add a convenience script to `package.json`:
 
 ```json
 {
-  "scripts": {
-    "dispatch": "./scripts/dispatch.sh"
-  }
+	"scripts": {
+		"dispatch": "./scripts/dispatch.sh"
+	}
 }
 ```
 
@@ -186,13 +186,13 @@ E2E tests (Playwright) are **not** run in CI — they require a running app and 
 
 ## Failure Modes
 
-| What happens                         | Ralph's response                                                        |
-| ------------------------------------ | ----------------------------------------------------------------------- |
-| Quality gates fail (attempt 1 or 2)  | Reset commit, retry with error context in prompt                        |
-| All 3 attempts exhausted             | Rollback, comment on issue, relabel AFK → HITL, continue to next task   |
-| Blocked dependency not yet closed    | Dispatcher skips the issue (it stays in the queue for next dispatch)     |
-| Workflow timeout (60 min)            | GitHub kills the job; `ralph` branch may be left behind (manual cleanup)|
-| HITL issue in queue                  | Dispatcher skips it (only AFK issues are dispatched)                    |
+| What happens                        | Ralph's response                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------ |
+| Quality gates fail (attempt 1 or 2) | Reset commit, retry with error context in prompt                         |
+| All 3 attempts exhausted            | Rollback, comment on issue, relabel AFK → HITL, continue to next task    |
+| Blocked dependency not yet closed   | Dispatcher skips the issue (it stays in the queue for next dispatch)     |
+| Workflow timeout (60 min)           | GitHub kills the job; `ralph` branch may be left behind (manual cleanup) |
+| HITL issue in queue                 | Dispatcher skips it (only AFK issues are dispatched)                     |
 
 ## Tips
 
