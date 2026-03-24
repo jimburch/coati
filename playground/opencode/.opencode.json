@@ -1,0 +1,27 @@
+{
+  "provider": {
+    "default": "anthropic",
+    "anthropic": {
+      "model": "claude-sonnet-4-20250514"
+    }
+  },
+  "mcpServers": {
+    "filesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "./src"]
+    },
+    "fetch": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch"]
+    }
+  },
+  "contextPaths": [
+    "opencode.md",
+    ".cursor/rules/"
+  ],
+  "shell": {
+    "allowed": ["npm run *", "npx vitest *", "npx eslint *"]
+  }
+}

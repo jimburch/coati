@@ -1,0 +1,46 @@
+# Codex project configuration
+#
+# This file configures the OpenAI Codex CLI for this project.
+# Docs: https://github.com/openai/codex
+
+# Default model for all interactions
+model = "o4-mini"
+
+# Approval policy: "suggest" shows diffs for approval, "auto-edit" applies
+# file changes automatically, "full-auto" also runs commands without asking.
+approval_policy = "suggest"
+
+# Sandbox configuration
+[sandbox]
+type = "docker"
+# Mount the project root read-write inside the sandbox
+writable_paths = ["./"]
+# Network access needed for fetching npm packages during builds
+allow_network = true
+
+# Environment variables injected into the sandbox
+[sandbox.env]
+NODE_ENV = "development"
+LOG_LEVEL = "debug"
+
+# MCP server: filesystem access scoped to src/
+[mcp_servers.filesystem]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-filesystem", "./src"]
+
+# MCP server: HTTP fetch for pulling documentation or API specs
+[mcp_servers.fetch]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-fetch"]
+
+# MCP server: PostgreSQL for inspecting the dev database schema
+[mcp_servers.postgres]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-postgres"]
+
+[mcp_servers.postgres.env]
+DATABASE_URL = "postgresql://localhost:5432/myapp_dev"
+
+# Project-specific instructions appended to every prompt
+[instructions]
+preamble = "Always follow the conventions in AGENTS.md. Prefer small, focused changes."

@@ -1,0 +1,11 @@
+{
+  "allow": [
+    "registry.npmjs.org",
+    "api.github.com",
+    "nodejs.org",
+    "deno.land"
+  ],
+  "deny": [
+    "*"
+  ]
+}

@@ -1,0 +1,44 @@
+[command]
+name = "review"
+description = "Review code changes for quality, correctness, and adherence to project conventions"
+
+[command.steps]
+
+[command.steps.1]
+action = "shell"
+command = "git diff --name-only HEAD~1"
+description = "Identify changed files in the latest commit"
+
+[command.steps.2]
+action = "read_files"
+source = "changed_files"
+description = "Read all changed files to understand the full context"
+
+[command.steps.3]
+action = "prompt"
+text = """
+Review the code changes with the following checklist:
+
+1. **Type Safety** — Are there any uses of `any`? Are return types explicit?
+2. **Error Handling** — Do all async functions use try/catch? Are errors logged with structured metadata?
+3. **Naming** — Are variables, functions, and files named clearly and consistently?
+4. **Testing** — Do changed service functions have corresponding test updates?
+5. **Security** — Are inputs validated? Any hardcoded secrets or credentials?
+6. **Performance** — Any obvious N+1 queries, unnecessary allocations, or blocking calls?
+7. **Style** — Does the code follow conventions in GEMINI.md?
+
+For each issue found, provide:
+- File path and line number
+- Severity: error | warning | suggestion
+- Description of the issue
+- Suggested fix with code snippet
+"""
+
+[command.steps.4]
+action = "shell"
+command = "npx eslint src/ --format=compact"
+description = "Run ESLint to catch any linting violations"
+
+[command.steps.5]
+action = "prompt"
+text = "Summarize the review: total issues found by severity, overall code quality assessment, and whether the changes are ready to merge."

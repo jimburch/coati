@@ -29,3 +29,7 @@ screenshots
 # Serena
 .serena/cache
 .serena/project.local.yml
+
+# Playground — gitignore CLI-generated artifacts
+playground/*/setup.json
+playground/*/.magpie/

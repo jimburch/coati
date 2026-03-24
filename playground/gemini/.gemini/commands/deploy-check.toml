@@ -1,0 +1,48 @@
+[command]
+name = "deploy-check"
+description = "Verify the project is ready for deployment by running a comprehensive pre-deploy checklist"
+
+[command.steps]
+
+[command.steps.1]
+action = "shell"
+command = "npx tsc --noEmit"
+description = "Type-check the entire project without emitting files"
+
+[command.steps.2]
+action = "shell"
+command = "npx eslint src/ --max-warnings=0"
+description = "Ensure zero lint warnings — strict mode for production"
+
+[command.steps.3]
+action = "shell"
+command = "npx vitest run"
+description = "Run the full test suite and ensure all tests pass"
+
+[command.steps.4]
+action = "shell"
+command = "npm run build"
+description = "Verify the TypeScript build completes without errors"
+
+[command.steps.5]
+action = "read_files"
+paths = ["package.json", "tsconfig.json"]
+description = "Read configuration files to check for common deployment issues"
+
+[command.steps.6]
+action = "prompt"
+text = """
+Perform a deployment readiness assessment:
+
+1. **Build Artifacts** — Confirm `dist/` output exists and contains expected entry points
+2. **Dependencies** — Check that package.json has no missing or extraneous dependencies
+3. **Environment Variables** — Scan source for `process.env.*` references and list every
+   required env var. Flag any that lack defaults or validation.
+4. **Health Check** — Verify a `/health` endpoint exists and returns appropriate status
+5. **Security** — Check for hardcoded secrets, debug flags left enabled, or verbose error
+   messages that could leak internals
+6. **Node Version** — Confirm the engines field in package.json matches the target runtime
+
+Output a deploy readiness scorecard: PASS / WARN / FAIL for each category,
+with details for any WARN or FAIL items.
+"""

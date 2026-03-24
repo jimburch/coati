@@ -1,0 +1,42 @@
+---
+description: TypeScript coding standards for this project
+alwaysApply: true
+---
+
+# TypeScript Conventions
+
+## Strict Mode
+- The project uses `strict: true` in tsconfig.json — never loosen strictness
+- Enable `noUncheckedIndexedAccess` to catch potential undefined array/object accesses
+- All function parameters and return types should be inferable or explicitly typed
+
+## Type Safety
+- Never use `any` — use `unknown` for truly unknown data, then narrow with type guards
+- Prefer `as const` assertions over literal type annotations for constant values
+- Use `satisfies` operator to validate types without widening
+- Avoid type assertions (`as`) except when interfacing with untyped libraries
+
+## Interfaces vs Types
+- Use `interface` for object shapes that may be extended or implemented
+- Use `type` for unions, intersections, mapped types, and conditional types
+- Prefix generic type parameters descriptively: `TResult`, `TInput` not just `T`, `U`
+
+## Null Handling
+- Use optional chaining (`?.`) and nullish coalescing (`??`) over manual checks
+- Prefer `undefined` over `null` for optional values in application code
+- Use `null` only when interfacing with APIs or databases that return `null`
+- Model absent values explicitly in types: `{ user: User | undefined }` not `{ user?: User }`
+
+## Enums and Constants
+- Avoid TypeScript `enum` — use `as const` objects or union literal types instead
+- Group related constants in a single `as const` object for namespacing
+
+## Imports
+- Use explicit named imports; avoid wildcard `import *`
+- Organize imports: external packages first, then internal modules, then relative paths
+- Use the `type` keyword for type-only imports: `import type { User } from './types'`
+
+## Functions
+- Prefer arrow functions for callbacks and inline functions
+- Use regular function declarations for top-level named functions (hoisting benefits)
+- Keep function signatures narrow — accept the minimum type needed

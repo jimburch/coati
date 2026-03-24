@@ -1,0 +1,30 @@
+# Large generated files — exclude from Cursor's codebase index
+# (These are still visible to the AI, just not indexed for search)
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Coverage
+coverage/
+
+# Lock files (large, not useful for context)
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Source maps
+*.map
+
+# Generated types
+*.d.ts
+!src/**/*.d.ts
+
+# Test snapshots
+__snapshots__/
+
+# Logs
+*.log
