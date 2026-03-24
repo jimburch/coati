@@ -106,7 +106,7 @@ export async function writeSetupFiles(
 				// Non-interactive mode: skip conflicts rather than hanging on a prompt.
 				resolution = 'skip';
 			} else {
-				resolution = await resolveConflict(resolvedPath);
+				resolution = await resolveConflict(resolvedPath, file.content);
 			}
 
 			if (resolution === 'skip') {

@@ -8,7 +8,8 @@ import { resolveTargetPath, writeSetupFiles, type FileToWrite } from './files.js
 
 const { mockIsJsonMode, mockResolveConflict } = vi.hoisted(() => ({
 	mockIsJsonMode: vi.fn(() => false),
-	mockResolveConflict: vi.fn<(filePath: string) => Promise<'overwrite' | 'skip' | 'backup'>>()
+	mockResolveConflict:
+		vi.fn<(filePath: string, incomingContent: string) => Promise<'overwrite' | 'skip' | 'backup'>>()
 }));
 
 vi.mock('./output.js', () => ({

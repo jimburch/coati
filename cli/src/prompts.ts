@@ -1,4 +1,6 @@
+import fs from 'fs';
 import readline from 'readline';
+import { generateDiff } from './diff.js';
 import { isJsonMode } from './output.js';
 
 function requiresInteractivity(label: string): never {
@@ -73,15 +75,29 @@ export async function input(question: string, defaultValue?: string): Promise<st
 }
 
 export type ConflictResolution = 'overwrite' | 'skip' | 'backup';
+type ConflictChoice = ConflictResolution | 'show-diff';
 
-/** Prompt the user to resolve a file conflict. */
-export async function resolveConflict(filePath: string): Promise<ConflictResolution> {
+/** Prompt the user to resolve a file conflict. When "Show diff" is selected,
+ *  prints a colorized unified diff and re-prompts with the same 4 options. */
+export async function resolveConflict(
+	filePath: string,
+	incomingContent: string
+): Promise<ConflictResolution> {
 	process.stdout.write(`\n⚠ Conflict: ${filePath} already exists\n`);
-	return select<ConflictResolution>('How do you want to handle this?', [
-		{ label: 'Overwrite', value: 'overwrite' },
-		{ label: 'Skip', value: 'skip' },
-		{ label: `Backup existing (→ ${filePath}.bak)`, value: 'backup' }
-	]);
+
+	for (;;) {
+		const choice = await select<ConflictChoice>('How do you want to handle this?', [
+			{ label: 'Overwrite', value: 'overwrite' },
+			{ label: 'Skip', value: 'skip' },
+			{ label: `Backup existing (→ ${filePath}.bak)`, value: 'backup' },
+			{ label: 'Show diff', value: 'show-diff' }
+		]);
+
+		if (choice !== 'show-diff') return choice;
+
+		const existingContent = fs.readFileSync(filePath, 'utf-8');
+		process.stdout.write('\n' + generateDiff(existingContent, incomingContent, filePath) + '\n');
+	}
 }
 
 export type InstallDestination = 'current' | 'global';
