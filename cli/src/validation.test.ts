@@ -1,0 +1,258 @@
+import { describe, expect, it } from 'vitest';
+import {
+	manifestCategorySchema,
+	manifestFileComponentTypeSchema,
+	manifestFileEntrySchema,
+	manifestFilePlacementSchema,
+	manifestSchema,
+	zodPathToField
+} from './validation.js';
+
+const VALID_FILE = {
+	source: 'claude/settings.json',
+	target: '~/.claude/settings.json',
+	placement: 'global' as const
+};
+
+const VALID_MANIFEST = {
+	name: 'my-setup',
+	version: '1.0.0',
+	description: 'A test setup',
+	files: [VALID_FILE]
+};
+
+// ─── zodPathToField ───────────────────────────────────────────────────────────
+
+describe('zodPathToField', () => {
+	it('returns empty string for empty path', () => {
+		expect(zodPathToField([])).toBe('');
+	});
+
+	it('returns simple field name for single string segment', () => {
+		expect(zodPathToField(['name'])).toBe('name');
+	});
+
+	it('uses dot notation for nested string segments', () => {
+		expect(zodPathToField(['a', 'b', 'c'])).toBe('a.b.c');
+	});
+
+	it('uses bracket notation for numeric segments', () => {
+		expect(zodPathToField(['files', 0, 'source'])).toBe('files[0].source');
+	});
+
+	it('handles multiple numeric segments', () => {
+		expect(zodPathToField(['matrix', 1, 2])).toBe('matrix[1][2]');
+	});
+});
+
+// ─── manifestFilePlacementSchema ──────────────────────────────────────────────
+
+describe('manifestFilePlacementSchema', () => {
+	it.each(['global', 'project', 'relative'])('accepts "%s"', (value) => {
+		expect(manifestFilePlacementSchema.safeParse(value).success).toBe(true);
+	});
+
+	it('rejects unknown placement', () => {
+		expect(manifestFilePlacementSchema.safeParse('nowhere').success).toBe(false);
+	});
+});
+
+// ─── manifestFileComponentTypeSchema ─────────────────────────────────────────
+
+describe('manifestFileComponentTypeSchema', () => {
+	it.each(['instruction', 'command', 'skill', 'mcp_server', 'hook'])('accepts "%s"', (value) => {
+		expect(manifestFileComponentTypeSchema.safeParse(value).success).toBe(true);
+	});
+
+	it('rejects unknown componentType', () => {
+		expect(manifestFileComponentTypeSchema.safeParse('widget').success).toBe(false);
+	});
+});
+
+// ─── manifestCategorySchema ───────────────────────────────────────────────────
+
+describe('manifestCategorySchema', () => {
+	it.each(['web-dev', 'mobile', 'data-science', 'devops', 'systems', 'general'])(
+		'accepts "%s"',
+		(value) => {
+			expect(manifestCategorySchema.safeParse(value).success).toBe(true);
+		}
+	);
+
+	it('rejects unknown category', () => {
+		expect(manifestCategorySchema.safeParse('robotics').success).toBe(false);
+	});
+});
+
+// ─── manifestFileEntrySchema ──────────────────────────────────────────────────
+
+describe('manifestFileEntrySchema', () => {
+	it('accepts a valid file entry', () => {
+		expect(manifestFileEntrySchema.safeParse(VALID_FILE).success).toBe(true);
+	});
+
+	it('accepts optional componentType', () => {
+		const result = manifestFileEntrySchema.safeParse({ ...VALID_FILE, componentType: 'skill' });
+		expect(result.success).toBe(true);
+	});
+
+	it('accepts optional description', () => {
+		const result = manifestFileEntrySchema.safeParse({
+			...VALID_FILE,
+			description: 'My file'
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it('rejects missing source', () => {
+		const result = manifestFileEntrySchema.safeParse({
+			target: VALID_FILE.target,
+			placement: VALID_FILE.placement
+		});
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues.some((i) => i.path.includes('source'))).toBe(true);
+		}
+	});
+
+	it('rejects empty source', () => {
+		const result = manifestFileEntrySchema.safeParse({ ...VALID_FILE, source: '' });
+		expect(result.success).toBe(false);
+	});
+
+	it('rejects missing target', () => {
+		const result = manifestFileEntrySchema.safeParse({
+			source: VALID_FILE.source,
+			placement: VALID_FILE.placement
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it('rejects invalid placement', () => {
+		const result = manifestFileEntrySchema.safeParse({ ...VALID_FILE, placement: 'nowhere' });
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues.some((i) => i.path.includes('placement'))).toBe(true);
+		}
+	});
+
+	it('rejects invalid componentType', () => {
+		const result = manifestFileEntrySchema.safeParse({
+			...VALID_FILE,
+			componentType: 'widget'
+		});
+		expect(result.success).toBe(false);
+	});
+});
+
+// ─── manifestSchema ───────────────────────────────────────────────────────────
+
+describe('manifestSchema', () => {
+	it('accepts a minimal valid manifest', () => {
+		expect(manifestSchema.safeParse(VALID_MANIFEST).success).toBe(true);
+	});
+
+	it('accepts a manifest with all optional fields', () => {
+		const full = {
+			...VALID_MANIFEST,
+			category: 'devops',
+			license: 'MIT',
+			minToolVersion: '1.0',
+			postInstall: ['chmod +x script.sh'],
+			prerequisites: ['node >= 18'],
+			readme: 'README.md',
+			tools: ['claude-code'],
+			tags: ['typescript', 'mcp']
+		};
+		expect(manifestSchema.safeParse(full).success).toBe(true);
+	});
+
+	it('rejects null', () => {
+		expect(manifestSchema.safeParse(null).success).toBe(false);
+	});
+
+	it('rejects missing name', () => {
+		const result = manifestSchema.safeParse({
+			version: VALID_MANIFEST.version,
+			description: VALID_MANIFEST.description,
+			files: VALID_MANIFEST.files
+		});
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues.some((i) => i.path[0] === 'name')).toBe(true);
+		}
+	});
+
+	it('rejects name with invalid slug format', () => {
+		const result = manifestSchema.safeParse({ ...VALID_MANIFEST, name: 'My Setup!' });
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues.some((i) => i.path[0] === 'name')).toBe(true);
+		}
+	});
+
+	it('rejects name exceeding 100 chars', () => {
+		const result = manifestSchema.safeParse({ ...VALID_MANIFEST, name: 'a'.repeat(101) });
+		expect(result.success).toBe(false);
+	});
+
+	it('rejects version without semver format', () => {
+		const result = manifestSchema.safeParse({ ...VALID_MANIFEST, version: 'v1.0' });
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues.some((i) => i.path[0] === 'version')).toBe(true);
+		}
+	});
+
+	it('rejects description exceeding 300 chars', () => {
+		const result = manifestSchema.safeParse({
+			...VALID_MANIFEST,
+			description: 'x'.repeat(301)
+		});
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues.some((i) => i.path[0] === 'description')).toBe(true);
+		}
+	});
+
+	it('rejects empty files array', () => {
+		const result = manifestSchema.safeParse({ ...VALID_MANIFEST, files: [] });
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues.some((i) => i.path[0] === 'files')).toBe(true);
+		}
+	});
+
+	it('rejects file with invalid placement producing path files[0].placement', () => {
+		const result = manifestSchema.safeParse({
+			...VALID_MANIFEST,
+			files: [{ source: 'foo', target: '~/.foo', placement: 'nowhere' }]
+		});
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			const paths = result.error.issues.map((i) => i.path);
+			expect(paths.some((p) => p[0] === 'files' && p[1] === 0 && p[2] === 'placement')).toBe(true);
+		}
+	});
+
+	it('rejects unknown category', () => {
+		const result = manifestSchema.safeParse({ ...VALID_MANIFEST, category: 'robotics' });
+		expect(result.success).toBe(false);
+	});
+
+	it('rejects license exceeding 50 chars', () => {
+		const result = manifestSchema.safeParse({
+			...VALID_MANIFEST,
+			license: 'L'.repeat(51)
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it('rejects minToolVersion exceeding 20 chars', () => {
+		const result = manifestSchema.safeParse({
+			...VALID_MANIFEST,
+			minToolVersion: '1'.repeat(21)
+		});
+		expect(result.success).toBe(false);
+	});
+});
