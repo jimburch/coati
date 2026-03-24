@@ -7,6 +7,7 @@
 
 	const { data } = $props();
 
+	// @svelte-ignore state_referenced_locally
 	// eslint-disable-next-line svelte/prefer-writable-derived -- needs two-way binding for search input
 	let searchInput = $state(data.q ?? '');
 	$effect(() => {

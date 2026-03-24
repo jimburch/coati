@@ -13,6 +13,7 @@
 		})
 	);
 
+	// @svelte-ignore state_referenced_locally
 	// eslint-disable-next-line svelte/prefer-writable-derived -- needs mutable state for optimistic follow count updates
 	let followersCount = $state(data.profile.followersCount);
 	$effect(() => {
