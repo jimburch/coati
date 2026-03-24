@@ -5,18 +5,21 @@ Review the provided code for quality, security, and maintainability. Evaluate ea
 ## Checklist
 
 ### Correctness
+
 - Does the code do what it claims to do?
 - Are edge cases handled (null, undefined, empty arrays, zero-length strings)?
 - Are async operations properly awaited?
 - Are error paths handled — what happens when a dependency fails?
 
 ### Type Safety
+
 - Are there any uses of `any` that should be narrowed?
 - Are function return types explicitly declared?
 - Are union types properly discriminated before access?
 - Could `readonly` be applied to immutable data structures?
 
 ### Security
+
 - Is user input validated before use (Zod schemas, bounds checks)?
 - Are SQL queries parameterized (no string interpolation in queries)?
 - Are secrets kept out of code and logs?
@@ -24,12 +27,14 @@ Review the provided code for quality, security, and maintainability. Evaluate ea
 - Is sensitive data excluded from API responses (passwords, tokens, internal IDs)?
 
 ### Performance
+
 - Are there N+1 query patterns that should be batched?
 - Are large datasets paginated?
 - Are expensive computations cached where appropriate?
 - Could any synchronous file operations be replaced with async versions?
 
 ### Maintainability
+
 - Does naming clearly communicate intent?
 - Are functions small and single-purpose (under 30 lines preferred)?
 - Is there duplicated logic that should be extracted into a utility?

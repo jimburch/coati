@@ -15,6 +15,7 @@ Review the selected code for quality, correctness, and adherence to project conv
 ## Output Format
 
 For each issue found, provide:
+
 - **File and line**: where the issue is
 - **Severity**: critical / warning / suggestion
 - **Description**: what the problem is

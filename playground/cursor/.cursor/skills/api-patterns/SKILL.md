@@ -15,19 +15,22 @@ import { sendSuccess, sendError } from '../../lib/responses';
 const router = Router();
 
 const CreateItemSchema = z.object({
-  name: z.string().min(1).max(255),
-  description: z.string().optional(),
+	name: z.string().min(1).max(255),
+	description: z.string().optional()
 });
 
-router.post('/', asyncHandler(async (req, res) => {
-  const parsed = CreateItemSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return sendError(res, 'Invalid request body', 'VALIDATION_ERROR', 400);
-  }
+router.post(
+	'/',
+	asyncHandler(async (req, res) => {
+		const parsed = CreateItemSchema.safeParse(req.body);
+		if (!parsed.success) {
+			return sendError(res, 'Invalid request body', 'VALIDATION_ERROR', 400);
+		}
 
-  const item = await itemService.create(parsed.data);
-  return sendSuccess(res, item, 201);
-}));
+		const item = await itemService.create(parsed.data);
+		return sendSuccess(res, item, 201);
+	})
+);
 
 export default router;
 ```
@@ -63,8 +66,8 @@ For list endpoints, accept `page` and `limit` query params:
 
 ```typescript
 const PaginationSchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+	page: z.coerce.number().int().positive().default(1),
+	limit: z.coerce.number().int().min(1).max(100).default(20)
 });
 ```
 
@@ -72,8 +75,8 @@ Return pagination metadata in the response:
 
 ```typescript
 sendSuccess(res, {
-  items,
-  pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+	items,
+	pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
 });
 ```
 

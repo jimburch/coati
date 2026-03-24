@@ -32,15 +32,19 @@ gaps and suggest improvements.
 4. **Produce a report** with the following sections:
 
 ### Coverage Summary
+
 A brief table showing overall line, branch, and function coverage percentages.
 
 ### Gaps
+
 For each under-covered file, list:
+
 - The file path and current coverage percentage
 - The specific functions or branches that are untested
 - Why they matter (e.g., "this handles the error path for invalid input")
 
 ### Suggested Tests
+
 For each gap, write a concrete test description (the `it("...")` string) that
 would cover it. Group by file. Example:
 
@@ -49,6 +53,7 @@ would cover it. Group by file. Example:
   - `it("returns empty array when no tasks match the filter")`
 
 ### Quick Wins
+
 Highlight any files where a single additional test would meaningfully improve
 coverage (e.g., testing an error branch bumps a file from 70% to 95%).
 

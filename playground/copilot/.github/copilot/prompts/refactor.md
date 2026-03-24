@@ -13,18 +13,23 @@ Refactor the provided code to improve clarity, reduce duplication, and align wit
 ## Process
 
 ### Step 1 — Identify Issues
+
 List each refactoring opportunity with:
+
 - What the current code does
 - Why it's a problem (readability, duplication, fragility)
 - What the improved version looks like
 
 ### Step 2 — Plan Changes
+
 Describe the changes in order. Call out:
+
 - New functions or types being introduced
 - Functions being renamed or moved
 - Any changes to the public API (there should ideally be none)
 
 ### Step 3 — Apply Refactoring
+
 Produce the refactored code in full. Do not leave `// ...` placeholders — output complete, runnable files.
 
 ## Rules
@@ -47,6 +52,7 @@ Produce the refactored code in full. Do not leave `// ...` placeholders — outp
 ## Output Format
 
 Provide:
+
 1. A summary of all changes made (bulleted list)
 2. The complete refactored file(s)
 3. Notes on any bugs or design concerns discovered during the refactor (but not fixed)

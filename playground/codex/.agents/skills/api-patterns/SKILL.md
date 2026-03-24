@@ -10,27 +10,31 @@ description: Conventions for writing Express API route handlers in this project
 Every route handler follows this pattern:
 
 ```typescript
-import { Router, Request, Response, NextFunction } from "express";
-import { z } from "zod";
-import { validate } from "../middleware/validate.js";
-import { TaskService } from "../services/taskService.js";
+import { Router, Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
+import { validate } from '../middleware/validate.js';
+import { TaskService } from '../services/taskService.js';
 
 const router = Router();
 
 const createTaskSchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().optional(),
-  assigneeId: z.string().uuid().optional(),
+	title: z.string().min(1).max(200),
+	description: z.string().optional(),
+	assigneeId: z.string().uuid().optional()
 });
 
-router.post("/", validate(createTaskSchema), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const task = await TaskService.create(req.body);
-    res.status(201).json({ data: task });
-  } catch (err) {
-    next(err);
-  }
-});
+router.post(
+	'/',
+	validate(createTaskSchema),
+	async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+		try {
+			const task = await TaskService.create(req.body);
+			res.status(201).json({ data: task });
+		} catch (err) {
+			next(err);
+		}
+	}
+);
 ```
 
 ## Key Rules

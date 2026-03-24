@@ -6,16 +6,16 @@ correctly discovers, parses, and packages Claude Code configuration files.
 
 ## What's Here
 
-| File / Directory | Purpose |
-|---|---|
-| `package.json` | Project manifest for a TypeScript/Express app |
-| `CLAUDE.md` | Project instructions that Claude Code reads for context |
-| `.claude/settings.json` | Project-level permissions and model preferences |
-| `.claude/commands/review.md` | Custom `/review` slash command for code review |
-| `.claude/commands/test-coverage.md` | Custom `/test-coverage` slash command for coverage analysis |
-| `.claude/skills/api-patterns/SKILL.md` | Skill teaching Claude the project's API conventions |
-| `.claude/hooks/pre-commit.sh` | Pre-commit hook running lint, type-check, and tests |
-| `.mcp.json` | MCP server configuration (filesystem, fetch, sqlite) |
+| File / Directory                       | Purpose                                                     |
+| -------------------------------------- | ----------------------------------------------------------- |
+| `package.json`                         | Project manifest for a TypeScript/Express app               |
+| `CLAUDE.md`                            | Project instructions that Claude Code reads for context     |
+| `.claude/settings.json`                | Project-level permissions and model preferences             |
+| `.claude/commands/review.md`           | Custom `/review` slash command for code review              |
+| `.claude/commands/test-coverage.md`    | Custom `/test-coverage` slash command for coverage analysis |
+| `.claude/skills/api-patterns/SKILL.md` | Skill teaching Claude the project's API conventions         |
+| `.claude/hooks/pre-commit.sh`          | Pre-commit hook running lint, type-check, and tests         |
+| `.mcp.json`                            | MCP server configuration (filesystem, fetch, sqlite)        |
 
 ## Usage with Magpie CLI
 

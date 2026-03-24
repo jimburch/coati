@@ -3,12 +3,8 @@
 	"version": "1.0.0",
 	"description": "Magpie monorepo",
 	"category": "general",
-	"tools": [
-		"claude-code"
-	],
-	"tags": [
-		"magpie"
-	],
+	"tools": ["claude-code"],
+	"tags": ["magpie"],
 	"files": [
 		{
 			"source": "CLAUDE.md",

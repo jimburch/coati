@@ -1,19 +1,19 @@
 {
-  "version": 1,
-  "hooks": {
-    "afterFileEdit": [
-      {
-        "command": "npx eslint --fix ${file}",
-        "type": "command",
-        "timeout": 10000
-      }
-    ],
-    "beforeShellExecution": [
-      {
-        "command": "echo 'Running: ${command}'",
-        "type": "command",
-        "timeout": 5000
-      }
-    ]
-  }
+	"version": 1,
+	"hooks": {
+		"afterFileEdit": [
+			{
+				"command": "npx eslint --fix ${file}",
+				"type": "command",
+				"timeout": 10000
+			}
+		],
+		"beforeShellExecution": [
+			{
+				"command": "echo 'Running: ${command}'",
+				"type": "command",
+				"timeout": 5000
+			}
+		]
+	}
 }

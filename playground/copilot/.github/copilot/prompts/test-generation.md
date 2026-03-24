@@ -5,7 +5,7 @@ Generate comprehensive Vitest tests for the provided code. Follow the project's 
 ## Setup
 
 ```typescript
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 ```
 
 Mock all external dependencies at the top of the file using `vi.mock()`. Reset mocks in a `beforeEach` block with `vi.clearAllMocks()`.
@@ -50,13 +50,13 @@ Generate a factory helper at the top of the test file:
 
 ```typescript
 function createUser(overrides: Partial<User> = {}): User {
-  return {
-    id: crypto.randomUUID(),
-    name: "Test User",
-    email: "test@example.com",
-    createdAt: new Date("2025-01-01"),
-    ...overrides,
-  };
+	return {
+		id: crypto.randomUUID(),
+		name: 'Test User',
+		email: 'test@example.com',
+		createdAt: new Date('2025-01-01'),
+		...overrides
+	};
 }
 ```
 

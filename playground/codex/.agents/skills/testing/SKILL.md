@@ -18,65 +18,59 @@ We use **Vitest** for all tests. Configuration lives in `vitest.config.ts` at th
 ## Unit Test Template
 
 ```typescript
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { TaskService } from "./taskService.js";
-import * as db from "../db/client.js";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { TaskService } from './taskService.js';
+import * as db from '../db/client.js';
 
-vi.mock("../db/client.js");
+vi.mock('../db/client.js');
 
-describe("TaskService.getById", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+describe('TaskService.getById', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
 
-  it("returns the task when it exists", async () => {
-    const mockTask = { id: "1", title: "Test task", done: false };
-    vi.mocked(db.query).mockResolvedValueOnce([mockTask]);
+	it('returns the task when it exists', async () => {
+		const mockTask = { id: '1', title: 'Test task', done: false };
+		vi.mocked(db.query).mockResolvedValueOnce([mockTask]);
 
-    const result = await TaskService.getById("1");
+		const result = await TaskService.getById('1');
 
-    expect(result).toEqual(mockTask);
-    expect(db.query).toHaveBeenCalledWith("tasks", { id: "1" });
-  });
+		expect(result).toEqual(mockTask);
+		expect(db.query).toHaveBeenCalledWith('tasks', { id: '1' });
+	});
 
-  it("returns null when the task does not exist", async () => {
-    vi.mocked(db.query).mockResolvedValueOnce([]);
+	it('returns null when the task does not exist', async () => {
+		vi.mocked(db.query).mockResolvedValueOnce([]);
 
-    const result = await TaskService.getById("nonexistent");
+		const result = await TaskService.getById('nonexistent');
 
-    expect(result).toBeNull();
-  });
+		expect(result).toBeNull();
+	});
 });
 ```
 
 ## Integration Test Template
 
 ```typescript
-import { describe, it, expect } from "vitest";
-import request from "supertest";
-import { createApp } from "../app.js";
+import { describe, it, expect } from 'vitest';
+import request from 'supertest';
+import { createApp } from '../app.js';
 
 const app = createApp();
 
-describe("POST /api/tasks", () => {
-  it("creates a task and returns 201", async () => {
-    const res = await request(app)
-      .post("/api/tasks")
-      .send({ title: "New task" })
-      .expect(201);
+describe('POST /api/tasks', () => {
+	it('creates a task and returns 201', async () => {
+		const res = await request(app).post('/api/tasks').send({ title: 'New task' }).expect(201);
 
-    expect(res.body.data).toMatchObject({ title: "New task" });
-  });
+		expect(res.body.data).toMatchObject({ title: 'New task' });
+	});
 
-  it("returns 400 when title is missing", async () => {
-    const res = await request(app)
-      .post("/api/tasks")
-      .send({})
-      .expect(400);
+	it('returns 400 when title is missing', async () => {
+		const res = await request(app).post('/api/tasks').send({}).expect(400);
 
-    expect(res.body).toHaveProperty("error");
-    expect(res.body).toHaveProperty("code", "VALIDATION_ERROR");
-  });
+		expect(res.body).toHaveProperty('error');
+		expect(res.body).toHaveProperty('code', 'VALIDATION_ERROR');
+	});
 });
 ```
 

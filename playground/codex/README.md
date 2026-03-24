@@ -4,15 +4,15 @@ This directory simulates a real TypeScript project that uses the **OpenAI Codex 
 
 ## What's Here
 
-| File / Directory | Purpose |
-|---|---|
-| `package.json` | Standard Node.js/TypeScript project manifest with build, dev, test, and lint scripts |
-| `AGENTS.md` | Project-level instructions for Codex (equivalent to Claude's `CLAUDE.md`) — coding conventions, architecture, testing patterns, do's and don'ts |
-| `.codex/config.toml` | Codex project configuration — model selection, sandbox settings, MCP server definitions |
-| `.codex/agents/reviewer.toml` | Custom subagent specialized in code review |
-| `.codex/agents/test-writer.toml` | Custom subagent specialized in writing test suites |
-| `.agents/skills/api-patterns/SKILL.md` | Skill file teaching Codex how to write API route handlers following project conventions |
-| `.agents/skills/testing/SKILL.md` | Skill file teaching Codex the project's testing patterns and rules |
+| File / Directory                       | Purpose                                                                                                                                         |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `package.json`                         | Standard Node.js/TypeScript project manifest with build, dev, test, and lint scripts                                                            |
+| `AGENTS.md`                            | Project-level instructions for Codex (equivalent to Claude's `CLAUDE.md`) — coding conventions, architecture, testing patterns, do's and don'ts |
+| `.codex/config.toml`                   | Codex project configuration — model selection, sandbox settings, MCP server definitions                                                         |
+| `.codex/agents/reviewer.toml`          | Custom subagent specialized in code review                                                                                                      |
+| `.codex/agents/test-writer.toml`       | Custom subagent specialized in writing test suites                                                                                              |
+| `.agents/skills/api-patterns/SKILL.md` | Skill file teaching Codex how to write API route handlers following project conventions                                                         |
+| `.agents/skills/testing/SKILL.md`      | Skill file teaching Codex the project's testing patterns and rules                                                                              |
 
 ## How Codex Uses These Files
 

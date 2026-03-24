@@ -12,6 +12,7 @@ Analyze the selected code and propose a step-by-step refactoring plan.
 ## Refactoring Plan
 
 For each proposed change:
+
 1. **What**: describe the refactoring (extract function, introduce interface, simplify conditional, etc.)
 2. **Why**: explain the benefit (readability, testability, type safety, performance)
 3. **How**: show the before and after code

@@ -45,12 +45,15 @@ You are performing a code review on this project. Be thorough but pragmatic.
 Organize your findings into three sections:
 
 ### Issues (must fix)
+
 Bugs, security problems, or convention violations that need to be addressed.
 
 ### Suggestions (should consider)
+
 Improvements to readability, performance, or maintainability.
 
 ### Praise
+
 Call out anything well-done — clean abstractions, good test coverage, clear naming.
 
 If everything looks good, say so concisely. Don't manufacture issues.

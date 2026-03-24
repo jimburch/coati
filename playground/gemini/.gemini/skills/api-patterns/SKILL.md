@@ -12,24 +12,24 @@ layer, return a consistent response shape, and let the error middleware handle
 failures.
 
 ```typescript
-import { Router, Request, Response, NextFunction } from "express";
-import { validateBody } from "../middleware/validate.js";
-import { createTaskSchema } from "../types/index.js";
-import { TaskService } from "../services/taskService.js";
+import { Router, Request, Response, NextFunction } from 'express';
+import { validateBody } from '../middleware/validate.js';
+import { createTaskSchema } from '../types/index.js';
+import { TaskService } from '../services/taskService.js';
 
 const router = Router();
 
 router.post(
-  "/tasks",
-  validateBody(createTaskSchema),
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const task = await TaskService.create(req.body);
-      res.status(201).json({ data: task });
-    } catch (err) {
-      next(err);
-    }
-  }
+	'/tasks',
+	validateBody(createTaskSchema),
+	async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+		try {
+			const task = await TaskService.create(req.body);
+			res.status(201).json({ data: task });
+		} catch (err) {
+			next(err);
+		}
+	}
 );
 
 export { router as taskRouter };
@@ -40,11 +40,13 @@ export { router as taskRouter };
 All endpoints return JSON in one of two shapes:
 
 **Success:**
+
 ```json
 { "data": { "id": "abc", "title": "My task", "done": false } }
 ```
 
 **Error:**
+
 ```json
 { "error": "Task not found", "code": "TASK_NOT_FOUND" }
 ```
@@ -58,22 +60,22 @@ handler executes. The middleware returns a 400 with a structured error if valida
 fails, so handlers can trust that `req.body` is already the correct shape.
 
 ```typescript
-import { z } from "zod";
-import { Request, Response, NextFunction } from "express";
+import { z } from 'zod';
+import { Request, Response, NextFunction } from 'express';
 
 export const validateBody = (schema: z.ZodSchema) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const result = schema.safeParse(req.body);
-    if (!result.success) {
-      res.status(400).json({
-        error: result.error.issues.map((i) => i.message).join("; "),
-        code: "VALIDATION_ERROR",
-      });
-      return;
-    }
-    req.body = result.data;
-    next();
-  };
+	return (req: Request, res: Response, next: NextFunction): void => {
+		const result = schema.safeParse(req.body);
+		if (!result.success) {
+			res.status(400).json({
+				error: result.error.issues.map((i) => i.message).join('; '),
+				code: 'VALIDATION_ERROR'
+			});
+			return;
+		}
+		req.body = result.data;
+		next();
+	};
 };
 ```
 
@@ -84,23 +86,23 @@ and let the centralized error middleware format the response.
 
 ```typescript
 // middleware/errorHandler.ts
-import { Request, Response, NextFunction } from "express";
-import { AppError } from "../types/index.js";
-import { logger } from "../utils/logger.js";
+import { Request, Response, NextFunction } from 'express';
+import { AppError } from '../types/index.js';
+import { logger } from '../utils/logger.js';
 
 export const errorHandler = (
-  err: Error,
-  _req: Request,
-  res: Response,
-  _next: NextFunction
+	err: Error,
+	_req: Request,
+	res: Response,
+	_next: NextFunction
 ): void => {
-  if (err instanceof AppError) {
-    res.status(err.statusCode).json({ error: err.message, code: err.code });
-    return;
-  }
+	if (err instanceof AppError) {
+		res.status(err.statusCode).json({ error: err.message, code: err.code });
+		return;
+	}
 
-  logger.error("Unhandled error", { error: err.message, stack: err.stack });
-  res.status(500).json({ error: "Internal server error", code: "INTERNAL_ERROR" });
+	logger.error('Unhandled error', { error: err.message, stack: err.stack });
+	res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' });
 };
 ```
 
@@ -111,13 +113,13 @@ metadata alongside the data array:
 
 ```json
 {
-  "data": [{ "id": "1" }, { "id": "2" }],
-  "pagination": {
-    "page": 1,
-    "limit": 20,
-    "total": 47,
-    "totalPages": 3
-  }
+	"data": [{ "id": "1" }, { "id": "2" }],
+	"pagination": {
+		"page": 1,
+		"limit": 20,
+		"total": 47,
+		"totalPages": 3
+	}
 }
 ```
 

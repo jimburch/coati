@@ -4,21 +4,21 @@ This is a test environment for the **Magpie CLI** that simulates a real TypeScri
 
 ## Config Files Present
 
-| File | Purpose |
-|------|---------|
-| `package.json` | Node.js/TypeScript project manifest |
-| `.cursorrules` | **Legacy** root-level rules file (predates MDC format) |
-| `.cursor/rules/typescript.mdc` | MDC rule: TypeScript conventions (`alwaysApply: true`) |
-| `.cursor/rules/api-patterns.mdc` | MDC rule: Express API patterns (glob-scoped to routes/controllers) |
-| `.cursor/rules/testing.mdc` | MDC rule: Vitest testing conventions (glob-scoped to test files) |
-| `.cursor/mcp.json` | MCP server configuration (filesystem + fetch servers) |
-| `.cursor/hooks.json` | Agent lifecycle hooks (eslint auto-fix, shell logging) |
-| `.cursor/commands/review.md` | Custom slash command: code review checklist |
-| `.cursor/commands/test-coverage.md` | Custom slash command: test coverage analysis |
-| `.cursor/commands/refactor.md` | Custom slash command: guided refactoring |
-| `.cursor/skills/api-patterns/SKILL.md` | Skill: API endpoint writing instructions |
-| `.cursorignore` | Excludes sensitive files from AI access |
-| `.cursorindexingignore` | Excludes large generated files from codebase indexing |
+| File                                   | Purpose                                                            |
+| -------------------------------------- | ------------------------------------------------------------------ |
+| `package.json`                         | Node.js/TypeScript project manifest                                |
+| `.cursorrules`                         | **Legacy** root-level rules file (predates MDC format)             |
+| `.cursor/rules/typescript.mdc`         | MDC rule: TypeScript conventions (`alwaysApply: true`)             |
+| `.cursor/rules/api-patterns.mdc`       | MDC rule: Express API patterns (glob-scoped to routes/controllers) |
+| `.cursor/rules/testing.mdc`            | MDC rule: Vitest testing conventions (glob-scoped to test files)   |
+| `.cursor/mcp.json`                     | MCP server configuration (filesystem + fetch servers)              |
+| `.cursor/hooks.json`                   | Agent lifecycle hooks (eslint auto-fix, shell logging)             |
+| `.cursor/commands/review.md`           | Custom slash command: code review checklist                        |
+| `.cursor/commands/test-coverage.md`    | Custom slash command: test coverage analysis                       |
+| `.cursor/commands/refactor.md`         | Custom slash command: guided refactoring                           |
+| `.cursor/skills/api-patterns/SKILL.md` | Skill: API endpoint writing instructions                           |
+| `.cursorignore`                        | Excludes sensitive files from AI access                            |
+| `.cursorindexingignore`                | Excludes large generated files from codebase indexing              |
 
 ## MDC Rule Format
 
@@ -60,6 +60,7 @@ magpie search "cursor typescript"
 ## Purpose
 
 This playground exists to test how the Magpie CLI handles:
+
 - Detecting and cataloging Cursor config files
 - Parsing MDC frontmatter (YAML + Markdown body)
 - Handling the legacy `.cursorrules` format alongside modern `.cursor/rules/` MDC files

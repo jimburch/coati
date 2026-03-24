@@ -74,13 +74,13 @@ When multiple overrides are set, the CLI resolves the API base in this order (fi
 
 ## Commands
 
-| Command    | Description                                      |
-| ---------- | ------------------------------------------------ |
-| `login`    | Authenticate via GitHub Device Flow              |
-| `logout`   | Remove stored credentials                        |
-| `clone`    | Clone and install a setup to your local machine  |
-| `init`     | Scaffold a `setup.json` manifest                 |
-| `publish`  | Publish or update a setup from the current dir   |
+| Command   | Description                                     |
+| --------- | ----------------------------------------------- |
+| `login`   | Authenticate via GitHub Device Flow             |
+| `logout`  | Remove stored credentials                       |
+| `clone`   | Clone and install a setup to your local machine |
+| `init`    | Scaffold a `setup.json` manifest                |
+| `publish` | Publish or update a setup from the current dir  |
 
 Run `magpie <command> --help` for command-specific options.
 

@@ -17,32 +17,32 @@ Use `describe` blocks named after the function or module under test. Use `it`
 block when they test the same behavior.
 
 ```typescript
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { TaskService } from "./taskService.js";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { TaskService } from './taskService.js';
 
-describe("TaskService.create", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+describe('TaskService.create', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
 
-  it("creates a task with valid input and returns the new task", async () => {
-    const input = { title: "Write tests", priority: "high" };
-    const result = await TaskService.create(input);
+	it('creates a task with valid input and returns the new task', async () => {
+		const input = { title: 'Write tests', priority: 'high' };
+		const result = await TaskService.create(input);
 
-    expect(result).toMatchObject({
-      title: "Write tests",
-      priority: "high",
-      done: false,
-    });
-    expect(result.id).toBeDefined();
-    expect(result.createdAt).toBeInstanceOf(Date);
-  });
+		expect(result).toMatchObject({
+			title: 'Write tests',
+			priority: 'high',
+			done: false
+		});
+		expect(result.id).toBeDefined();
+		expect(result.createdAt).toBeInstanceOf(Date);
+	});
 
-  it("throws an AppError when the title is empty", async () => {
-    await expect(TaskService.create({ title: "", priority: "low" }))
-      .rejects
-      .toThrow("Title is required");
-  });
+	it('throws an AppError when the title is empty', async () => {
+		await expect(TaskService.create({ title: '', priority: 'low' })).rejects.toThrow(
+			'Title is required'
+		);
+	});
 });
 ```
 
@@ -52,42 +52,40 @@ Mock external dependencies at the module level with `vi.mock()`. Prefer mocking
 the dependency boundary (e.g., the database client) rather than internal functions.
 
 ```typescript
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi } from 'vitest';
 
-vi.mock("../utils/db.js", () => ({
-  db: {
-    query: vi.fn(),
-  },
+vi.mock('../utils/db.js', () => ({
+	db: {
+		query: vi.fn()
+	}
 }));
 
-import { db } from "../utils/db.js";
-import { TaskService } from "./taskService.js";
+import { db } from '../utils/db.js';
+import { TaskService } from './taskService.js';
 
-describe("TaskService.findById", () => {
-  it("returns the task when found", async () => {
-    const mockTask = { id: "1", title: "Test", done: false };
-    vi.mocked(db.query).mockResolvedValueOnce({ rows: [mockTask] });
+describe('TaskService.findById', () => {
+	it('returns the task when found', async () => {
+		const mockTask = { id: '1', title: 'Test', done: false };
+		vi.mocked(db.query).mockResolvedValueOnce({ rows: [mockTask] });
 
-    const result = await TaskService.findById("1");
-    expect(result).toEqual(mockTask);
-    expect(db.query).toHaveBeenCalledWith(
-      expect.stringContaining("SELECT"),
-      ["1"]
-    );
-  });
+		const result = await TaskService.findById('1');
+		expect(result).toEqual(mockTask);
+		expect(db.query).toHaveBeenCalledWith(expect.stringContaining('SELECT'), ['1']);
+	});
 
-  it("returns null when the task does not exist", async () => {
-    vi.mocked(db.query).mockResolvedValueOnce({ rows: [] });
+	it('returns null when the task does not exist', async () => {
+		vi.mocked(db.query).mockResolvedValueOnce({ rows: [] });
 
-    const result = await TaskService.findById("missing");
-    expect(result).toBeNull();
-  });
+		const result = await TaskService.findById('missing');
+		expect(result).toBeNull();
+	});
 });
 ```
 
 ## What to Test
 
 Every service function needs at minimum:
+
 - One happy-path test confirming correct output and side effects
 - One error-path test confirming proper error handling
 
@@ -112,14 +110,14 @@ literals across tests:
 
 ```typescript
 function makeTask(overrides: Partial<Task> = {}): Task {
-  return {
-    id: "test-id",
-    title: "Default task",
-    priority: "medium",
-    done: false,
-    createdAt: new Date("2025-01-01"),
-    ...overrides,
-  };
+	return {
+		id: 'test-id',
+		title: 'Default task',
+		priority: 'medium',
+		done: false,
+		createdAt: new Date('2025-01-01'),
+		...overrides
+	};
 }
 ```
 

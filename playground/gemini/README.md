@@ -8,23 +8,23 @@ configuration. It serves as a test environment for the Magpie CLI's `clone` and
 
 ### Project Files
 
-| File | Purpose |
-|------|---------|
-| `package.json` | Standard Node.js/TypeScript project manifest |
-| `GEMINI.md` | Project instructions for Gemini CLI (equivalent to CLAUDE.md) |
-| `.geminiignore` | Tells Gemini CLI which files/directories to skip |
+| File            | Purpose                                                       |
+| --------------- | ------------------------------------------------------------- |
+| `package.json`  | Standard Node.js/TypeScript project manifest                  |
+| `GEMINI.md`     | Project instructions for Gemini CLI (equivalent to CLAUDE.md) |
+| `.geminiignore` | Tells Gemini CLI which files/directories to skip              |
 
 ### Gemini Configuration (`.gemini/`)
 
-| File | Purpose |
-|------|---------|
-| `.gemini/settings.json` | Project-level settings: MCP servers, tool permissions, context window config |
-| `.gemini/commands/review.toml` | Custom `/review` slash command for code review |
-| `.gemini/commands/test-coverage.toml` | Custom `/test-coverage` slash command for coverage analysis |
-| `.gemini/commands/deploy-check.toml` | Custom `/deploy-check` slash command for deployment readiness |
-| `.gemini/skills/api-patterns/SKILL.md` | Skill teaching Gemini the project's API route patterns |
-| `.gemini/skills/testing/SKILL.md` | Skill teaching Gemini the project's testing conventions |
-| `.gemini/policies/shell.toml` | Policy controlling which shell commands are allowed, need confirmation, or are denied |
+| File                                   | Purpose                                                                               |
+| -------------------------------------- | ------------------------------------------------------------------------------------- |
+| `.gemini/settings.json`                | Project-level settings: MCP servers, tool permissions, context window config          |
+| `.gemini/commands/review.toml`         | Custom `/review` slash command for code review                                        |
+| `.gemini/commands/test-coverage.toml`  | Custom `/test-coverage` slash command for coverage analysis                           |
+| `.gemini/commands/deploy-check.toml`   | Custom `/deploy-check` slash command for deployment readiness                         |
+| `.gemini/skills/api-patterns/SKILL.md` | Skill teaching Gemini the project's API route patterns                                |
+| `.gemini/skills/testing/SKILL.md`      | Skill teaching Gemini the project's testing conventions                               |
+| `.gemini/policies/shell.toml`          | Policy controlling which shell commands are allowed, need confirmation, or are denied |
 
 ## How Magpie Uses This
 

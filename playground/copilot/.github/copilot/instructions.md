@@ -20,7 +20,7 @@ Within each group, sort alphabetically by module path.
 - **Constants**: UPPER_SNAKE_CASE for true constants (`MAX_RETRY_COUNT`, `DEFAULT_PAGE_SIZE`)
 - **Enums**: PascalCase name, PascalCase members (`enum Status { Active, Inactive }`)
 - **Route parameters**: camelCase in code, kebab-case in URLs (`/user-profiles/:userId`)
-- **Environment variables**: UPPER_SNAKE_CASE, prefixed with `APP_` (`APP_DATABASE_URL`)
+- **Environment variables**: UPPER*SNAKE_CASE, prefixed with `APP*` (`APP_DATABASE_URL`)
 
 ## Error Handling Patterns
 
@@ -29,23 +29,21 @@ When generating error handling code, follow these patterns:
 ```typescript
 // Custom errors extend AppError
 export class NotFoundError extends AppError {
-  constructor(resource: string, id: string) {
-    super(`${resource} with id ${id} not found`, 404, "NOT_FOUND");
-  }
+	constructor(resource: string, id: string) {
+		super(`${resource} with id ${id} not found`, 404, 'NOT_FOUND');
+	}
 }
 
 // Service functions return Result types for expected failures
-type Result<T, E = AppError> =
-  | { ok: true; value: T }
-  | { ok: false; error: E };
+type Result<T, E = AppError> = { ok: true; value: T } | { ok: false; error: E };
 
 // Use early returns for validation
 export function createUser(input: unknown): Result<User> {
-  const parsed = CreateUserSchema.safeParse(input);
-  if (!parsed.success) {
-    return { ok: false, error: new ValidationError(parsed.error) };
-  }
-  // ... proceed with valid data
+	const parsed = CreateUserSchema.safeParse(input);
+	if (!parsed.success) {
+		return { ok: false, error: new ValidationError(parsed.error) };
+	}
+	// ... proceed with valid data
 }
 ```
 
@@ -73,6 +71,7 @@ Never return raw arrays or primitives at the top level.
 ## Function Documentation
 
 Add JSDoc comments to all exported functions. Include:
+
 - A one-line summary
 - `@param` for each parameter (with description)
 - `@returns` describing the return value
@@ -87,7 +86,7 @@ Add JSDoc comments to all exported functions. Include:
  * @throws DatabaseError if the query fails
  */
 export async function findUserById(userId: string): Promise<User | undefined> {
-  // ...
+	// ...
 }
 ```
 

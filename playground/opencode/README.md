@@ -7,14 +7,14 @@ to detect, parse, and clone.
 
 ## What's inside
 
-| File | Purpose |
-|------|---------|
-| `package.json` | Standard Node.js/TypeScript project manifest |
-| `opencode.md` | Project instructions for OpenCode (coding conventions, architecture, testing patterns) |
-| `.opencode.json` | OpenCode project configuration (provider, MCP servers, context paths, shell allowlist) |
-| `.opencode/commands/review.md` | Custom slash command: code review (`project:review`) |
-| `.opencode/commands/test-coverage.md` | Custom slash command: test coverage analysis (`project:test-coverage`) |
-| `.opencode/commands/deploy-check.md` | Custom slash command: deployment readiness check (`project:deploy-check`) |
+| File                                  | Purpose                                                                                |
+| ------------------------------------- | -------------------------------------------------------------------------------------- |
+| `package.json`                        | Standard Node.js/TypeScript project manifest                                           |
+| `opencode.md`                         | Project instructions for OpenCode (coding conventions, architecture, testing patterns) |
+| `.opencode.json`                      | OpenCode project configuration (provider, MCP servers, context paths, shell allowlist) |
+| `.opencode/commands/review.md`        | Custom slash command: code review (`project:review`)                                   |
+| `.opencode/commands/test-coverage.md` | Custom slash command: test coverage analysis (`project:test-coverage`)                 |
+| `.opencode/commands/deploy-check.md`  | Custom slash command: deployment readiness check (`project:deploy-check`)              |
 
 ## How Magpie uses this
 
