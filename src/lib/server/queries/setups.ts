@@ -361,6 +361,13 @@ export async function searchSetups(filters: {
 	};
 }
 
+export async function recordClone(setupId: string): Promise<void> {
+	await db
+		.update(setups)
+		.set({ clonesCount: sql`${setups.clonesCount} + 1` })
+		.where(eq(setups.id, setupId));
+}
+
 export async function getToolsForSetups(setupIds: string[]) {
 	if (setupIds.length === 0) return {};
 
