@@ -1,9 +1,11 @@
 import os from 'os';
 import path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { Command } from 'commander';
 import { get, post, ApiError } from '../api.js';
 import { writeSetupFiles } from '../files.js';
-import { promptDestination } from '../prompts.js';
+import { promptDestination, confirmPostInstall, pickFiles } from '../prompts.js';
 import {
 	setOutputMode,
 	isJsonMode,
@@ -16,6 +18,8 @@ import {
 } from '../output.js';
 import type { ManifestPlacement } from '../manifest.js';
 
+const execAsync = promisify(exec);
+
 interface SetupMeta {
 	id: string;
 	name: string;
@@ -24,6 +28,7 @@ interface SetupMeta {
 	ownerUsername: string;
 	clonesCount: number;
 	starsCount: number;
+	postInstall?: string | null;
 }
 
 interface SetupFileRecord {
@@ -40,7 +45,11 @@ interface CloneOptions {
 	json?: boolean;
 	dryRun?: boolean;
 	force?: boolean;
+	pick?: boolean;
+	/** false when --no-post-install is passed; true (default) otherwise */
+	postInstall?: boolean;
 	projectDir?: string;
+	dir?: string;
 }
 
 export function registerClone(program: Command): void {
@@ -52,6 +61,7 @@ export function registerClone(program: Command): void {
 		.option('--force', 'Overwrite all conflicts without prompting')
 		.option('--pick', 'Interactively select which files to install')
 		.option('--no-post-install', 'Skip post-install commands')
+		.option('--dir <path>', 'Override destination directory for project-scoped files')
 		.option('--project-dir <path>', 'Project directory for project-scoped files (default: cwd)')
 		.option('--json', 'Output results as JSON')
 		.action(async (ownerSlug: string, opts: CloneOptions) => {
@@ -110,18 +120,37 @@ export function registerClone(program: Command): void {
 				process.exit(0);
 			}
 
-			// Prompt for install destination (interactive only)
-			let destination: 'current' | 'global' = 'current';
-			if (!isJsonMode()) {
-				destination = await promptDestination();
+			// --pick: interactive file selection (skip in JSON mode — use all files)
+			if (opts.pick && !isJsonMode()) {
+				const selectedIndices = await pickFiles(files);
+				if (selectedIndices.length === 0) {
+					warning('No files selected. Nothing to install.');
+					process.exit(0);
+				}
+				files = selectedIndices.map((i) => files[i]!);
 			}
 
 			// Resolve project directory
+			// --dir bypasses the destination prompt and directly sets projectDir
 			let projectDir: string;
-			if (destination === 'global') {
-				projectDir = path.join(os.homedir(), '.magpie', 'setups', owner, slug);
+			let destination: 'current' | 'global' | 'dir' = 'current';
+
+			if (opts.dir) {
+				projectDir = path.resolve(opts.dir);
+				destination = 'dir';
 			} else {
-				projectDir = opts.projectDir ? path.resolve(opts.projectDir) : process.cwd();
+				// Prompt for install destination (interactive only)
+				let dest: 'current' | 'global' = 'current';
+				if (!isJsonMode()) {
+					dest = await promptDestination();
+				}
+				destination = dest;
+
+				if (dest === 'global') {
+					projectDir = path.join(os.homedir(), '.magpie', 'setups', owner, slug);
+				} else {
+					projectDir = opts.projectDir ? path.resolve(opts.projectDir) : process.cwd();
+				}
 			}
 
 			if (!isJsonMode()) {
@@ -157,6 +186,42 @@ export function registerClone(program: Command): void {
 				}
 			}
 
+			// Post-install execution
+			// opts.postInstall is false when --no-post-install is passed; true (default) otherwise
+			const shouldRunPostInstall =
+				!opts.dryRun &&
+				opts.postInstall !== false &&
+				!isJsonMode() &&
+				setup.postInstall != null &&
+				setup.postInstall.trim() !== '';
+
+			let postInstallResult: { ran: boolean; command?: string; output?: string; error?: string } = {
+				ran: false
+			};
+
+			if (shouldRunPostInstall) {
+				const cmd = setup.postInstall!;
+				print('');
+				info(`Post-install: ${cmd}`);
+				const confirmed = await confirmPostInstall(cmd);
+				if (confirmed) {
+					try {
+						const { stdout, stderr } = await execAsync(cmd, { cwd: projectDir });
+						if (stdout) print(stdout.trimEnd());
+						if (stderr) print(stderr.trimEnd());
+						success('Post-install command completed.');
+						postInstallResult = { ran: true, command: cmd, output: stdout };
+					} catch (err) {
+						const msg = err instanceof Error ? err.message : String(err);
+						error(`Post-install failed: ${msg}`);
+						postInstallResult = { ran: false, command: cmd, error: msg };
+					}
+				} else {
+					info('Post-install skipped.');
+					postInstallResult = { ran: false, command: cmd };
+				}
+			}
+
 			// Output summary
 			if (isJsonMode()) {
 				json({
@@ -167,7 +232,8 @@ export function registerClone(program: Command): void {
 					written: writeResult.written,
 					skipped: writeResult.skipped,
 					backedUp: writeResult.backedUp,
-					files: writeResult.files
+					files: writeResult.files,
+					postInstall: postInstallResult
 				});
 			} else {
 				print('');

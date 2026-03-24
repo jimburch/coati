@@ -139,3 +139,44 @@ export async function confirmFileList(files: string[]): Promise<boolean> {
 export async function confirmPostInstall(command: string): Promise<boolean> {
 	return confirm(`Run post-install command: ${command}?`);
 }
+
+export interface PickableFile {
+	source: string;
+	target: string;
+	placement: string;
+}
+
+/**
+ * Present a numbered file list and let the user select which files to install.
+ * Returns the indices (0-based) of selected files.
+ * Pressing Enter with no input selects all files.
+ */
+export async function pickFiles(files: PickableFile[]): Promise<number[]> {
+	if (isJsonMode()) requiresInteractivity('file picker');
+
+	process.stdout.write('\nFiles available to install:\n');
+	files.forEach((f, i) => {
+		process.stdout.write(`  ${i + 1}. ${f.source} → ${f.target} (${f.placement})\n`);
+	});
+
+	return new Promise((resolve) => {
+		const rl = createRl();
+		rl.question(
+			'\nEnter file numbers to install (space-separated), or press Enter for all: ',
+			(answer) => {
+				rl.close();
+				const trimmed = answer.trim();
+				if (trimmed === '') {
+					resolve(files.map((_, i) => i));
+				} else {
+					const indices = trimmed
+						.split(/\s+/)
+						.map((n) => parseInt(n, 10) - 1)
+						.filter((n) => n >= 0 && n < files.length);
+					const unique = [...new Set(indices)].sort((a, b) => a - b);
+					resolve(unique);
+				}
+			}
+		);
+	});
+}
