@@ -88,7 +88,7 @@ const DEFAULT_METADATA = {
 	name: 'my-setup',
 	description: 'A test setup',
 	category: 'general',
-	tools: ['claude'],
+	agents: ['claude'],
 	tags: ['test']
 };
 

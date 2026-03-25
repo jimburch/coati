@@ -60,7 +60,18 @@ describe('manifestFilePlacementSchema', () => {
 // ─── manifestFileComponentTypeSchema ─────────────────────────────────────────
 
 describe('manifestFileComponentTypeSchema', () => {
-	it.each(['instruction', 'command', 'skill', 'mcp_server', 'hook'])('accepts "%s"', (value) => {
+	it.each([
+		'instruction',
+		'command',
+		'skill',
+		'mcp_server',
+		'hook',
+		'config',
+		'policy',
+		'agent_def',
+		'ignore',
+		'setup_script'
+	])('accepts "%s"', (value) => {
 		expect(manifestFileComponentTypeSchema.safeParse(value).success).toBe(true);
 	});
 
@@ -102,6 +113,19 @@ describe('manifestFileEntrySchema', () => {
 			description: 'My file'
 		});
 		expect(result.success).toBe(true);
+	});
+
+	it('accepts optional agent field', () => {
+		const result = manifestFileEntrySchema.safeParse({ ...VALID_FILE, agent: 'claude-code' });
+		expect(result.success).toBe(true);
+	});
+
+	it('accepts file entry without agent field (agent-agnostic)', () => {
+		const result = manifestFileEntrySchema.safeParse(VALID_FILE);
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.agent).toBeUndefined();
+		}
 	});
 
 	it('rejects missing source', () => {
@@ -161,10 +185,34 @@ describe('manifestSchema', () => {
 			postInstall: ['chmod +x script.sh'],
 			prerequisites: ['node >= 18'],
 			readme: 'README.md',
-			tools: ['claude-code'],
+			agents: ['claude-code'],
 			tags: ['typescript', 'mcp']
 		};
 		expect(manifestSchema.safeParse(full).success).toBe(true);
+	});
+
+	it('accepts file entries with agent field', () => {
+		const result = manifestSchema.safeParse({
+			...VALID_MANIFEST,
+			files: [{ ...VALID_FILE, agent: 'cursor' }]
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it('accepts file entries without agent field (agent-agnostic)', () => {
+		const result = manifestSchema.safeParse(VALID_MANIFEST);
+		expect(result.success).toBe(true);
+	});
+
+	it('accepts all expanded componentType values on file entries', () => {
+		const newTypes = ['config', 'policy', 'agent_def', 'ignore', 'setup_script'];
+		for (const ct of newTypes) {
+			const result = manifestSchema.safeParse({
+				...VALID_MANIFEST,
+				files: [{ ...VALID_FILE, componentType: ct }]
+			});
+			expect(result.success, `Expected componentType "${ct}" to be accepted`).toBe(true);
+		}
 	});
 
 	it('rejects null', () => {

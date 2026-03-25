@@ -3,18 +3,25 @@
  *
  * These schemas mirror the server's `createSetupSchema` and `createSetupFileSchema`
  * defined in src/lib/types/index.ts. Keep in sync when server schemas change.
+ * Cross-reference: src/lib/types/index.ts → createSetupWithFilesSchema, createSetupFileSchema
  */
 
 import { z } from 'zod';
 
 export const manifestFilePlacementSchema = z.enum(['global', 'project', 'relative']);
 
+// Cross-reference: src/lib/types/index.ts → componentTypeEnum (schema.ts)
 export const manifestFileComponentTypeSchema = z.enum([
 	'instruction',
 	'command',
 	'skill',
 	'mcp_server',
-	'hook'
+	'hook',
+	'config',
+	'policy',
+	'agent_def',
+	'ignore',
+	'setup_script'
 ]);
 
 export const manifestCategorySchema = z.enum([
@@ -31,7 +38,8 @@ export const manifestFileEntrySchema = z.object({
 	target: z.string().min(1, 'Required, must be a non-empty string'),
 	placement: manifestFilePlacementSchema,
 	componentType: manifestFileComponentTypeSchema.optional(),
-	description: z.string().optional()
+	description: z.string().optional(),
+	agent: z.string().optional()
 });
 
 export const manifestSchema = z.object({
@@ -56,7 +64,7 @@ export const manifestSchema = z.object({
 	postInstall: z.array(z.string()).optional(),
 	prerequisites: z.array(z.string()).optional(),
 	readme: z.string().optional(),
-	tools: z.array(z.string()).optional(),
+	agents: z.array(z.string()).optional(),
 	tags: z.array(z.string()).optional()
 });
 

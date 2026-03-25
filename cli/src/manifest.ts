@@ -3,7 +3,17 @@ import path from 'path';
 import { manifestSchema, zodPathToField } from './validation.js';
 
 export type ManifestPlacement = 'global' | 'project' | 'relative';
-export type ManifestComponentType = 'instruction' | 'command' | 'skill' | 'mcp_server' | 'hook';
+export type ManifestComponentType =
+	| 'instruction'
+	| 'command'
+	| 'skill'
+	| 'mcp_server'
+	| 'hook'
+	| 'config'
+	| 'policy'
+	| 'agent_def'
+	| 'ignore'
+	| 'setup_script';
 export type ManifestCategory =
 	| 'web-dev'
 	| 'mobile'
@@ -18,6 +28,7 @@ export interface ManifestFileEntry {
 	placement: ManifestPlacement;
 	componentType?: ManifestComponentType;
 	description?: string;
+	agent?: string;
 }
 
 export interface Manifest {
@@ -25,7 +36,7 @@ export interface Manifest {
 	name: string;
 	version: string;
 	description: string;
-	tools?: string[];
+	agents?: string[];
 	tags?: string[];
 	category?: ManifestCategory;
 	license?: string;

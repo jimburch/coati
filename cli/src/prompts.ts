@@ -114,7 +114,7 @@ export interface SetupMetadata {
 	name: string;
 	description: string;
 	category: string;
-	tools: string[];
+	agents: string[];
 	tags: string[];
 }
 
@@ -126,10 +126,10 @@ export async function promptMetadata(): Promise<SetupMetadata> {
 		'Category (web-dev, mobile, data-science, devops, systems, general)',
 		'general'
 	);
-	const toolsRaw = await input('Tools (comma-separated, e.g. claude-code, cursor)', '');
+	const agentsRaw = await input('Agents (comma-separated, e.g. claude-code, cursor)', '');
 	const tagsRaw = await input('Tags (comma-separated)', '');
 
-	const tools = toolsRaw
+	const agents = agentsRaw
 		.split(',')
 		.map((t) => t.trim())
 		.filter(Boolean);
@@ -138,7 +138,7 @@ export async function promptMetadata(): Promise<SetupMetadata> {
 		.map((t) => t.trim())
 		.filter(Boolean);
 
-	return { name, description, category, tools, tags };
+	return { name, description, category, agents, tags };
 }
 
 /** Show a numbered file list and ask for confirmation. */

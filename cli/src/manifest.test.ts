@@ -176,7 +176,7 @@ describe('writeManifest + readManifest roundtrip', () => {
 			category: 'devops',
 			license: 'MIT',
 			tags: ['typescript', 'mcp'],
-			tools: ['claude-code'],
+			agents: ['claude-code'],
 			postInstall: ['chmod +x script.sh'],
 			readme: 'README.md'
 		};
@@ -185,7 +185,31 @@ describe('writeManifest + readManifest roundtrip', () => {
 		expect(read.category).toBe('devops');
 		expect(read.license).toBe('MIT');
 		expect(read.tags).toEqual(['typescript', 'mcp']);
+		expect(read.agents).toEqual(['claude-code']);
 		expect(read.postInstall).toEqual(['chmod +x script.sh']);
+	});
+
+	it('preserves agent field on file entries through the roundtrip', () => {
+		const withAgent: Manifest = {
+			...VALID_MANIFEST,
+			files: [
+				{
+					source: 'claude/settings.json',
+					target: '~/.claude/settings.json',
+					placement: 'global',
+					agent: 'claude-code'
+				}
+			]
+		};
+		writeManifest(tmpDir, withAgent);
+		const read = readManifest(tmpDir);
+		expect(read.files[0]!.agent).toBe('claude-code');
+	});
+
+	it('accepts undefined agent on file entries (agent-agnostic)', () => {
+		writeManifest(tmpDir, VALID_MANIFEST);
+		const read = readManifest(tmpDir);
+		expect(read.files[0]!.agent).toBeUndefined();
 	});
 });
 

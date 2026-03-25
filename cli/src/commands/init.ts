@@ -100,7 +100,7 @@ export async function runInitFlow(cwd: string): Promise<boolean> {
 		version: '1.0.0',
 		description: metadata.description,
 		...(category !== undefined && { category }),
-		...(metadata.tools.length > 0 && { tools: metadata.tools }),
+		...(metadata.agents.length > 0 && { agents: metadata.agents }),
 		...(metadata.tags.length > 0 && { tags: metadata.tags }),
 		files: filesToInclude.map((f) => ({
 			source: f.source,
