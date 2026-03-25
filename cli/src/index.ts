@@ -7,6 +7,8 @@ import { registerLogout } from './commands/logout.js';
 import { registerClone } from './commands/clone.js';
 import { registerInit } from './commands/init.js';
 import { registerPublish } from './commands/publish.js';
+import { registerSearch } from './commands/search.js';
+import { registerView } from './commands/view.js';
 import { setApiBaseOverride, isNonProductionApi, getEffectiveApiBase } from './api.js';
 
 const DEV_API_BASE = 'http://localhost:5173/api/v1';
@@ -43,5 +45,7 @@ registerLogout(program);
 registerClone(program);
 registerInit(program);
 registerPublish(program);
+registerSearch(program);
+registerView(program);
 
 program.parse(process.argv);
