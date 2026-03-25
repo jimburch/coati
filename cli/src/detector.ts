@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { AGENTS, matchesGlob } from '@magpie/agents-registry';
 import type { ManifestComponentType, ManifestPlacement } from './manifest.js';
 
 export interface DetectedFile {
@@ -7,143 +8,10 @@ export interface DetectedFile {
 	target: string;
 	placement: ManifestPlacement;
 	componentType: ManifestComponentType;
+	/** Agent slug from @magpie/agents-registry (e.g. 'claude-code', 'cursor'). */
 	tool: string;
 	description: string;
 }
-
-interface FilePattern {
-	tool: string;
-	description: (relativePath: string) => string;
-	matches: (relativePath: string) => boolean;
-	getTarget: (relativePath: string) => string;
-	placement: ManifestPlacement;
-	componentType: ManifestComponentType;
-}
-
-/**
- * Registry of known AI config file patterns.
- * To add support for a new AI tool, add entries here — no detection logic changes needed.
- */
-const PATTERNS: FilePattern[] = [
-	// ─── Claude Code ─────────────────────────────────────────────────────────
-
-	{
-		tool: 'claude-code',
-		description: () => 'Claude Code settings',
-		matches: (p) => p === '.claude/settings.json',
-		getTarget: () => '~/.claude/settings.json',
-		placement: 'global',
-		componentType: 'instruction'
-	},
-	{
-		tool: 'claude-code',
-		description: () => 'Claude Code global instructions',
-		matches: (p) => p === '.claude/CLAUDE.md',
-		getTarget: () => '~/.claude/CLAUDE.md',
-		placement: 'global',
-		componentType: 'instruction'
-	},
-	{
-		tool: 'claude-code',
-		description: () => 'Claude Code project instructions',
-		matches: (p) => p === 'CLAUDE.md',
-		getTarget: () => 'CLAUDE.md',
-		placement: 'project',
-		componentType: 'instruction'
-	},
-	{
-		tool: 'claude-code',
-		description: (p) => `Claude Code command: ${path.basename(p, path.extname(p))}`,
-		matches: (p) => p.startsWith('.claude/commands/') && p.endsWith('.md'),
-		getTarget: (p) => `~/.claude/commands/${p.slice('.claude/commands/'.length)}`,
-		placement: 'global',
-		componentType: 'command'
-	},
-	{
-		tool: 'claude-code',
-		description: (p) => `Claude Code skill: ${path.basename(p, path.extname(p))}`,
-		matches: (p) => p.startsWith('.claude/skills/') && p.endsWith('.md'),
-		getTarget: (p) => `~/.claude/skills/${p.slice('.claude/skills/'.length)}`,
-		placement: 'global',
-		componentType: 'skill'
-	},
-	{
-		tool: 'claude-code',
-		description: (p) => `Claude Code hook: ${path.basename(p)}`,
-		matches: (p) => p.startsWith('.claude/hooks/'),
-		getTarget: (p) => `~/.claude/hooks/${p.slice('.claude/hooks/'.length)}`,
-		placement: 'global',
-		componentType: 'hook'
-	},
-
-	// ─── Cursor ───────────────────────────────────────────────────────────────
-
-	{
-		tool: 'cursor',
-		description: (p) => `Cursor rule: ${path.basename(p)}`,
-		matches: (p) => p.startsWith('.cursor/rules/') && (p.endsWith('.md') || p.endsWith('.mdc')),
-		getTarget: (p) => `.cursor/rules/${p.slice('.cursor/rules/'.length)}`,
-		placement: 'project',
-		componentType: 'instruction'
-	},
-	{
-		tool: 'cursor',
-		description: () => 'Cursor rules (legacy)',
-		matches: (p) => p === '.cursorrules',
-		getTarget: () => '.cursorrules',
-		placement: 'project',
-		componentType: 'instruction'
-	},
-
-	// ─── MCP ─────────────────────────────────────────────────────────────────
-
-	{
-		tool: 'mcp',
-		description: () => 'MCP server configuration',
-		matches: (p) => p === '.mcp.json',
-		getTarget: () => '.mcp.json',
-		placement: 'project',
-		componentType: 'mcp_server'
-	},
-	{
-		tool: 'mcp',
-		description: () => 'MCP server configuration',
-		matches: (p) => p === 'mcp.json',
-		getTarget: () => 'mcp.json',
-		placement: 'project',
-		componentType: 'mcp_server'
-	},
-
-	// ─── GitHub Copilot ───────────────────────────────────────────────────────
-
-	{
-		tool: 'github-copilot',
-		description: () => 'GitHub Copilot instructions',
-		matches: (p) => p === '.github/copilot-instructions.md',
-		getTarget: () => '.github/copilot-instructions.md',
-		placement: 'project',
-		componentType: 'instruction'
-	},
-	{
-		tool: 'github-copilot',
-		description: (p) => `GitHub Copilot instruction: ${path.basename(p)}`,
-		matches: (p) => p.startsWith('.github/copilot/') && p.endsWith('.md'),
-		getTarget: (p) => `.github/copilot/${p.slice('.github/copilot/'.length)}`,
-		placement: 'project',
-		componentType: 'instruction'
-	},
-
-	// ─── OpenAI Agents ────────────────────────────────────────────────────────
-
-	{
-		tool: 'openai-agents',
-		description: () => 'OpenAI Agents instructions',
-		matches: (p) => p === 'AGENTS.md',
-		getTarget: () => 'AGENTS.md',
-		placement: 'project',
-		componentType: 'instruction'
-	}
-];
 
 /** Directories to skip during recursive scanning. */
 const SKIP_DIRS = new Set([
@@ -180,26 +48,88 @@ function walkDir(dir: string, baseDir: string): string[] {
 	return results;
 }
 
+function makeDescription(
+	filePath: string,
+	componentType: ManifestComponentType,
+	agentName: string
+): string {
+	const basename = path.basename(filePath, path.extname(filePath));
+	switch (componentType) {
+		case 'command':
+			return `${agentName} command: ${basename}`;
+		case 'skill':
+			return `${agentName} skill: ${basename}`;
+		case 'hook':
+			return `${agentName} hook: ${path.basename(filePath)}`;
+		case 'mcp_server':
+			return `${agentName} MCP server configuration`;
+		default:
+			return `${agentName} ${componentType}`;
+	}
+}
+
 /**
- * Scan `dir` for known AI config files and return detected files with
- * suggested target paths, placements, and component types.
+ * Scan `dir` for known AI agent config files using the shared @magpie/agents-registry.
+ *
+ * Detection strategy for each file:
+ *   1. Check each agent's globalGlobs — files that belong in the user's home dir.
+ *      If matched: placement='global', target='~/<path>'.
+ *   2. Check each agent's projectGlobs — only if no global match already recorded
+ *      for that (file, agent) pair.
+ *      If matched: placement='project', target='<path>'.
+ *
+ * A single file may produce multiple DetectedFile entries when it matches
+ * globs from more than one agent (e.g. a shared MCP config).
  */
 export function detectFiles(dir: string): DetectedFile[] {
 	const allFiles = walkDir(dir, dir);
 	const detected: DetectedFile[] = [];
 
 	for (const relativePath of allFiles) {
-		for (const pattern of PATTERNS) {
-			if (pattern.matches(relativePath)) {
-				detected.push({
-					source: relativePath,
-					target: pattern.getTarget(relativePath),
-					placement: pattern.placement,
-					componentType: pattern.componentType,
-					tool: pattern.tool,
-					description: pattern.description(relativePath)
-				});
-				break; // First matching pattern wins
+		// Track which (source, agentSlug) pairs have already been emitted so that
+		// a file matching both globalGlobs and projectGlobs for the same agent
+		// only produces one entry (global wins).
+		const emittedForAgent = new Set<string>();
+
+		for (const agent of AGENTS) {
+			const agentKey = `${relativePath}::${agent.slug}`;
+
+			// ── 1. globalGlobs: files that install to the user's home directory ────
+			for (const mapping of agent.globalGlobs) {
+				if (matchesGlob(relativePath, mapping.glob)) {
+					if (!emittedForAgent.has(agentKey)) {
+						emittedForAgent.add(agentKey);
+						const ct = mapping.componentType as ManifestComponentType;
+						detected.push({
+							source: relativePath,
+							target: `~/${relativePath}`,
+							placement: 'global',
+							componentType: ct,
+							tool: agent.slug,
+							description: makeDescription(relativePath, ct, agent.displayName)
+						});
+					}
+					break; // first matching glob wins within an agent's globalGlobs
+				}
+			}
+
+			// ── 2. projectGlobs: files that install inside the project directory ──
+			if (!emittedForAgent.has(agentKey)) {
+				for (const mapping of agent.projectGlobs) {
+					if (matchesGlob(relativePath, mapping.glob)) {
+						emittedForAgent.add(agentKey);
+						const ct = mapping.componentType as ManifestComponentType;
+						detected.push({
+							source: relativePath,
+							target: relativePath,
+							placement: 'project',
+							componentType: ct,
+							tool: agent.slug,
+							description: makeDescription(relativePath, ct, agent.displayName)
+						});
+						break; // first matching glob wins within an agent's projectGlobs
+					}
+				}
 			}
 		}
 	}
