@@ -1,4 +1,4 @@
-# Coati 🐦‍⬛
+# Coati 🦝
 
 Share, discover, and clone AI coding workflows.
 

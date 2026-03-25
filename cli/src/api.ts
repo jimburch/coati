@@ -18,7 +18,7 @@ export function getEffectiveApiBase(perCallOverride?: string): string {
 	return (
 		perCallOverride ??
 		apiBaseOverride ??
-		process.env.MAGPIE_API_BASE ??
+		process.env.COATI_API_BASE ??
 		getConfig().apiBase ??
 		PRODUCTION_API_BASE
 	);

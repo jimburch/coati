@@ -53,12 +53,12 @@ Point at any arbitrary URL (e.g. a different port or staging server):
 npx tsx src/index.ts --api-base http://localhost:3000/api/v1 login
 ```
 
-### Alternative: `MAGPIE_API_BASE` environment variable
+### Alternative: `COATI_API_BASE` environment variable
 
 Useful for shell aliases or CI scripts:
 
 ```bash
-export MAGPIE_API_BASE=http://localhost:5173/api/v1
+export COATI_API_BASE=http://localhost:5173/api/v1
 npx tsx src/index.ts login
 ```
 
@@ -68,7 +68,7 @@ When multiple overrides are set, the CLI resolves the API base in this order (fi
 
 1. `--api-base <url>` flag
 2. `--dev` flag
-3. `MAGPIE_API_BASE` environment variable
+3. `COATI_API_BASE` environment variable
 4. `apiBase` in `~/.coati/config.json`
 5. Hardcoded default (`https://coati.sh/api/v1`)
 
