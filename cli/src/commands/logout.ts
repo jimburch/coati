@@ -29,7 +29,11 @@ export function registerLogout(program: Command): void {
 			}
 
 			// Step 2: Best-effort server session invalidation
-			await serverLogout();
+			try {
+				await serverLogout();
+			} catch {
+				// Swallow — logout is best-effort
+			}
 
 			// Step 3: Clear local credentials
 			clearCredentials();
