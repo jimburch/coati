@@ -9,15 +9,15 @@ export interface Config {
 }
 
 const DEFAULT_CONFIG: Config = {
-	apiBase: 'https://magpie.sh/api/v1'
+	apiBase: 'https://coati.sh/api/v1'
 };
 
 /** The config directory. Centralised here so it's easy to rename the product. */
-export let configDir = path.join(os.homedir(), '.magpie');
+export let configDir = path.join(os.homedir(), '.coati');
 
 /**
  * Override the config directory. Intended for tests only — pass a temp dir
- * so tests never touch the real ~/.magpie directory.
+ * so tests never touch the real ~/.coati directory.
  */
 export function setConfigDir(dir: string): void {
 	configDir = dir;
@@ -40,7 +40,7 @@ export function getConfig(): Config {
 /**
  * Merge `partial` into the existing config and persist it.
  *
- * - Creates ~/.magpie/ on first write.
+ * - Creates ~/.coati/ on first write.
  * - Writes atomically via a temp file + fs.rename.
  * - Sets file permissions to 0o600.
  */

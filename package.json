@@ -1,5 +1,5 @@
 {
-	"name": "magpie",
+	"name": "coati",
 	"private": true,
 	"version": "0.0.1",
 	"type": "module",
@@ -50,7 +50,7 @@
 		"vitest-browser-svelte": "^2.0.2"
 	},
 	"dependencies": {
-		"@magpie/agents-registry": "workspace:*",
+		"@coati/agents-registry": "workspace:*",
 		"@tailwindcss/typography": "^0.5.19",
 		"arctic": "^3.7.0",
 		"bits-ui": "^2.16.3",

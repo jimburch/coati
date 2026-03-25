@@ -12,7 +12,7 @@
 </script>
 
 <svelte:head>
-	<title>Files - {data.setup.name} - Magpie</title>
+	<title>Files - {data.setup.name} - Coati</title>
 </svelte:head>
 
 <div class="mx-auto max-w-7xl px-4 py-8">

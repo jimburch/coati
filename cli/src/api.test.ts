@@ -29,7 +29,7 @@ function mockFetchReject(err: Error): void {
 let tmpDir: string;
 
 beforeEach(() => {
-	tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'magpie-api-test-'));
+	tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'coati-api-test-'));
 	setConfigDir(tmpDir);
 	clearConfig();
 });
@@ -49,7 +49,7 @@ describe('get', () => {
 
 		expect(result).toEqual({ id: 1, name: 'hello' });
 		expect(vi.mocked(fetch)).toHaveBeenCalledWith(
-			'https://magpie.sh/api/v1/setups',
+			'https://coati.sh/api/v1/setups',
 			expect.objectContaining({ method: 'GET' })
 		);
 	});
@@ -60,7 +60,7 @@ describe('get', () => {
 		await get('/setups');
 
 		const [, init] = vi.mocked(fetch).mock.calls[0]!;
-		expect((init?.headers as Record<string, string>)['User-Agent']).toMatch(/^@magpie\/cli\//);
+		expect((init?.headers as Record<string, string>)['User-Agent']).toMatch(/^@coati\/cli\//);
 	});
 });
 
@@ -179,6 +179,6 @@ describe('network failure', () => {
 		const err = await get('/setups').catch((e) => e);
 		expect(err).toBeInstanceOf(Error);
 		expect(err.message).toMatch(/Network error/);
-		expect(err.message).toMatch(/magpie\.sh/);
+		expect(err.message).toMatch(/coati\.sh/);
 	});
 });

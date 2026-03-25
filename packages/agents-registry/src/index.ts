@@ -1,5 +1,5 @@
 /**
- * @magpie/agents-registry
+ * @coati/agents-registry
  *
  * Definitions for all supported AI coding agents: metadata, file detection
  * globs, machine detection rules, valid scopes, and component type mappings.

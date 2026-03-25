@@ -36,7 +36,7 @@ export async function pollForToken(
 
 	while (true) {
 		if (Date.now() >= deadline) {
-			throw new Error('Device code expired. Please run `magpie login` again.');
+			throw new Error('Device code expired. Please run `coati login` again.');
 		}
 
 		await sleep(currentInterval * 1000);
@@ -66,7 +66,7 @@ export async function pollForToken(
 
 				// Server-side expiry
 				if (isApiErrorWithCode(err, 'EXPIRED')) {
-					throw new Error('Device code expired. Please run `magpie login` again.');
+					throw new Error('Device code expired. Please run `coati login` again.');
 				}
 
 				// Transient network error — silent retry (up to 3 times)

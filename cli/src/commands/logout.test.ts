@@ -38,8 +38,8 @@ vi.mock('../output.js', () => ({
 // ── mock config module ────────────────────────────────────────────────────────
 
 vi.mock('../config.js', () => ({
-	configDir: '/home/testuser/.magpie',
-	getConfig: vi.fn(() => ({ apiBase: 'https://magpie.sh/api/v1' })),
+	configDir: '/home/testuser/.coati',
+	getConfig: vi.fn(() => ({ apiBase: 'https://coati.sh/api/v1' })),
 	setConfig: vi.fn(),
 	clearConfig: vi.fn()
 }));
@@ -80,7 +80,7 @@ describe('not logged in', () => {
 			throw new Error('process.exit called');
 		});
 
-		await expect(program.parseAsync(['node', 'magpie', 'logout'])).rejects.toThrow(
+		await expect(program.parseAsync(['node', 'coati', 'logout'])).rejects.toThrow(
 			'process.exit called'
 		);
 
@@ -99,7 +99,7 @@ describe('not logged in', () => {
 			throw new Error('process.exit called');
 		});
 
-		await expect(program.parseAsync(['node', 'magpie', 'logout', '--json'])).rejects.toThrow(
+		await expect(program.parseAsync(['node', 'coati', 'logout', '--json'])).rejects.toThrow(
 			'process.exit called'
 		);
 
@@ -115,7 +115,7 @@ describe('logged in', () => {
 		mockIsLoggedIn.mockReturnValue(true);
 
 		const program = makeProgram();
-		await program.parseAsync(['node', 'magpie', 'logout']);
+		await program.parseAsync(['node', 'coati', 'logout']);
 
 		expect(mockServerLogout).toHaveBeenCalledTimes(1);
 		expect(mockClearCredentials).toHaveBeenCalledTimes(1);
@@ -128,7 +128,7 @@ describe('logged in', () => {
 
 		const program = makeProgram();
 		// serverLogout errors are swallowed in auth.ts, so this should not throw
-		await program.parseAsync(['node', 'magpie', 'logout']);
+		await program.parseAsync(['node', 'coati', 'logout']);
 
 		expect(mockClearCredentials).toHaveBeenCalledTimes(1);
 		expect(mockSuccess).toHaveBeenCalledWith(expect.stringContaining('Logged out'));
@@ -139,7 +139,7 @@ describe('logged in', () => {
 		mockIsJsonMode.mockReturnValue(true);
 
 		const program = makeProgram();
-		await program.parseAsync(['node', 'magpie', 'logout', '--json']);
+		await program.parseAsync(['node', 'coati', 'logout', '--json']);
 
 		expect(mockJson).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
 		expect(mockClearCredentials).toHaveBeenCalledTimes(1);

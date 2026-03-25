@@ -1,8 +1,8 @@
-# Magpie 🐦‍⬛
+# Coati 🐦‍⬛
 
 Share, discover, and clone AI coding workflows.
 
-Magpie is a platform where developers publish and install complete AI coding setups — config files, hooks, skills, commands, and scripts — packaged as shareable, installable units. Think GitHub, but for your Claude Code, Cursor, or Copilot configuration.
+Coati is a platform where developers publish and install complete AI coding setups — config files, hooks, skills, commands, and scripts — packaged as shareable, installable units. Think GitHub, but for your Claude Code, Cursor, or Copilot configuration.
 
 ## How it works
 
@@ -15,7 +15,7 @@ A "setup" is the core entity: a manifest (`setup.json`) plus the config files, s
 ## Surfaces
 
 - **Web app** — browse setups, explore trending configs, follow creators, star your favorites
-- **CLI (`magpie`)** — clone and install setups locally, publish your own, search and interact from the terminal
+- **CLI (`coati`)** — clone and install setups locally, publish your own, search and interact from the terminal
 
 ## Tech stack
 
@@ -66,11 +66,11 @@ pnpm run dev
 ## Project structure
 
 ```
-magpie/
+coati/
 ├── src/
 │   ├── lib/           # Shared code (components, server, utils, types)
 │   └── routes/        # SvelteKit pages and API endpoints
-├── cli/               # CLI tool (published to npm as `magpie`)
+├── cli/               # CLI tool (published to npm as `coati`)
 ├── docs/              # Architecture, data model, CLI spec, MVP plan
 └── drizzle/           # Database migrations
 ```

@@ -6,16 +6,16 @@
 
 ---
 
-# CLAUDE.md — Magpie 🐦‍⬛
+# CLAUDE.md — Coati 🐦‍⬛
 
 ## Project Overview
 
-Magpie is a GitHub-like platform for developers to share, discover, and clone their AI coding workflows and setups. A "setup" is a first-class entity (like a repo on GitHub) that packages config files, scripts, hooks, skills, commands, documentation, and a manifest into a shareable, installable unit.
+Coati is a GitHub-like platform for developers to share, discover, and clone their AI coding workflows and setups. A "setup" is a first-class entity (like a repo on GitHub) that packages config files, scripts, hooks, skills, commands, documentation, and a manifest into a shareable, installable unit.
 
 The platform has two surfaces:
 
 1. **Web app** — discovery, profiles, social features, setup browsing/creation
-2. **CLI tool (`magpie`)** — clone/install setups to local machines, publish setups, search/star/follow from terminal
+2. **CLI tool (`coati`)** — clone/install setups to local machines, publish setups, search/star/follow from terminal
 
 ## Tech Stack
 
@@ -28,12 +28,12 @@ The platform has two surfaces:
 - **Markdown rendering:** mdsvex + shiki for syntax highlighting
 - **SSR Strategy:** Hybrid — SSR for public routes, SPA for authenticated routes
 - **Deployment:** adapter-node → PM2 behind Caddy on DigitalOcean
-- **CLI framework:** commander (published to npm as `magpie`)
+- **CLI framework:** commander (published to npm as `coati`)
 
 ## Project Structure
 
 ```
-magpie/
+coati/
 ├── CLAUDE.md
 ├── package.json
 ├── svelte.config.js
@@ -113,7 +113,7 @@ magpie/
 │           ├── login/github/+server.ts
 │           └── callback/github/+server.ts
 ├── cli/                           # CLI tool (separate package)
-│   ├── package.json               # Published as `magpie` on npm
+│   ├── package.json               # Published as `coati` on npm
 │   ├── tsconfig.json
 │   ├── src/
 │   │   ├── index.ts               # Entry point
@@ -126,12 +126,12 @@ magpie/
 │   │   │   ├── publish.ts
 │   │   │   ├── star.ts
 │   │   │   └── follow.ts
-│   │   ├── api.ts                 # HTTP client for Magpie API
+│   │   ├── api.ts                 # HTTP client for Coati API
 │   │   ├── auth.ts                # Token storage + device flow
 │   │   ├── files.ts               # File writing + conflict resolution
-│   │   └── config.ts              # CLI config (~/.magpie/config.json)
+│   │   └── config.ts              # CLI config (~/.coati/config.json)
 │   └── bin/
-│       └── magpie.js              # Bin entry
+│       └── coati.js              # Bin entry
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   ├── DATA-MODEL.md
@@ -168,11 +168,11 @@ magpie/
 
 ### CLI (GitHub Device Flow)
 
-1. User runs `magpie login`
+1. User runs `coati login`
 2. CLI requests device code from `/api/v1/auth/device`
 3. User visits GitHub URL, enters code
 4. CLI polls for access token
-5. Token stored locally at `~/.magpie/config.json`
+5. Token stored locally at `~/.coati/config.json`
 6. CLI sends token as `Authorization: Bearer <token>` on API requests
 
 ## SSR Strategy

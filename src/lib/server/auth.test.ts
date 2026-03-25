@@ -222,7 +222,7 @@ describe('auth module', () => {
 		it('setSessionCookie sets cookie with correct name and options', () => {
 			const cookies = makeCookies();
 			setSessionCookie(cookies as never, 'my-token');
-			expect(cookies.lastSetCall.name).toBe('magpie_session');
+			expect(cookies.lastSetCall.name).toBe('coati_session');
 			expect(cookies.lastSetCall.value).toBe('my-token');
 			expect(cookies.lastSetCall.opts?.httpOnly).toBe(true);
 			expect(cookies.lastSetCall.opts?.sameSite).toBe('lax');
@@ -233,14 +233,14 @@ describe('auth module', () => {
 		it('deleteSessionCookie sets maxAge to 0', () => {
 			const cookies = makeCookies();
 			deleteSessionCookie(cookies as never);
-			expect(cookies.lastSetCall.name).toBe('magpie_session');
+			expect(cookies.lastSetCall.name).toBe('coati_session');
 			expect(cookies.lastSetCall.value).toBe('');
 			expect(cookies.lastSetCall.opts?.maxAge).toBe(0);
 		});
 
 		it('getSessionToken returns token from cookie', () => {
 			const cookies = makeCookies();
-			cookies.store.set('magpie_session', 'stored-token');
+			cookies.store.set('coati_session', 'stored-token');
 			expect(getSessionToken(cookies as never)).toBe('stored-token');
 		});
 

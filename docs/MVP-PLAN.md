@@ -99,16 +99,16 @@
   - `cli/` directory with its own `package.json`
   - Commander setup with command structure
   - API client module (`api.ts`)
-  - Config module (`config.ts` — read/write `~/.magpie/config.json`)
+  - Config module (`config.ts` — read/write `~/.coati/config.json`)
 - [x] CLI auth:
   - GitHub Device Flow endpoint: `POST /api/v1/auth/device`
   - Polling endpoint: `POST /api/v1/auth/device/poll`
-  - `magpie login` command
-  - `magpie logout` command
+  - `coati login` command
+  - `coati logout` command
 - ~CLI search (descoped — discovery features belong on web, not CLI):~
-  - ~`magpie search <query>`~
-  - ~`magpie trending`~
-  - ~`magpie view <owner>/<slug>`~
+  - ~`coati search <query>`~
+  - ~`coati trending`~
+  - ~`coati view <owner>/<slug>`~
 
 ### Milestone: Can star/follow/comment on web. CLI can login. (COMPLETE)
 
@@ -120,7 +120,7 @@
 
 ### Tasks
 
-- [x] `magpie clone <owner>/<slug>`:
+- [x] `coati clone <owner>/<slug>`:
   - Fetch setup + files from API
   - Interactive prompt: install to current directory or globally
   - Resolve target paths (expand `~`, `./`)
@@ -130,17 +130,17 @@
   - Post-install command execution (with confirmation)
   - Clone event recording (API call)
   - `--dry-run`, `--force`, `--pick`, `--dir` flags
-- [x] `magpie init`:
+- [x] `coati init`:
   - Auto-detect existing AI config files in cwd (`.claude/`, `.cursor/`, etc.)
   - Confirm detected files with user, prompt for name/description/tools/tags
   - Generate `setup.json` manifest from detected files
-- [x] `magpie publish`:
+- [x] `coati publish`:
   - Auto-run `init` flow if no `setup.json` exists
   - Read and validate `setup.json` (Zod schema)
   - Collect referenced files
   - Create or update setup on platform (determined by owner/slug match)
   - `POST /api/v1/setups` for new, `PATCH` for existing
-- ~`magpie star/unstar` and `magpie follow/unfollow` (descoped — social features are web-only)~
+- ~`coati star/unstar` and `coati follow/unfollow` (descoped — social features are web-only)~
 - [x] Validate `setup.json` schema with Zod (shared between CLI and server)
 
 ### Milestone: Full publish → discover → clone loop works end-to-end
@@ -192,7 +192,7 @@
   - SCP build output to droplet
   - Restart PM2 process
 - [ ] Database backup cron job
-- [ ] Publish `magpie` CLI to npm
+- [ ] Publish `coati` CLI to npm
 - [ ] Seed platform with 5-10 real setups:
   - Your own Claude Code setup
   - A minimal starter setup

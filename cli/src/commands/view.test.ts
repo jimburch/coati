@@ -119,7 +119,7 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-describe('magpie view', () => {
+describe('coati view', () => {
 	it('fetches setup and files by owner/slug', async () => {
 		mockGet.mockResolvedValueOnce(makeSetup()).mockResolvedValueOnce([]);
 		await makeProgram().parseAsync(['view', 'alice/my-setup'], { from: 'user' });

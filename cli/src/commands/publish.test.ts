@@ -45,7 +45,7 @@ vi.mock('../api.js', () => ({
 
 // ── mock agents-registry ──────────────────────────────────────────────────────
 
-vi.mock('@magpie/agents-registry', () => ({
+vi.mock('@coati/agents-registry', () => ({
 	AGENTS_BY_SLUG: {
 		'claude-code': { slug: 'claude-code', displayName: 'Claude Code' },
 		cursor: { slug: 'cursor', displayName: 'Cursor' },
@@ -140,7 +140,7 @@ function makeProgram(): Command {
 const MOCK_CONFIG = {
 	token: 'test-token',
 	username: 'alice',
-	apiBase: 'https://magpie.sh/api/v1'
+	apiBase: 'https://coati.sh/api/v1'
 };
 
 const MOCK_MANIFEST = {
@@ -196,8 +196,8 @@ describe('authentication', () => {
 			throw new Error('process.exit');
 		});
 
-		await expect(program.parseAsync(['node', 'magpie', 'publish'])).rejects.toThrow('process.exit');
-		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('magpie login'));
+		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
+		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('coati login'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 });
@@ -216,7 +216,7 @@ describe('missing setup.json', () => {
 			throw new Error('process.exit');
 		});
 
-		await expect(program.parseAsync(['node', 'magpie', 'publish', '--json'])).rejects.toThrow(
+		await expect(program.parseAsync(['node', 'coati', 'publish', '--json'])).rejects.toThrow(
 			'process.exit'
 		);
 		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('setup.json'));
@@ -226,7 +226,7 @@ describe('missing setup.json', () => {
 	it('auto-runs init flow in text mode', async () => {
 		mockRunInitFlow.mockResolvedValue(true);
 		const program = makeProgram();
-		await program.parseAsync(['node', 'magpie', 'publish']);
+		await program.parseAsync(['node', 'coati', 'publish']);
 
 		expect(mockRunInitFlow).toHaveBeenCalled();
 		expect(mockPost).toHaveBeenCalled();
@@ -239,7 +239,7 @@ describe('missing setup.json', () => {
 			throw new Error('process.exit');
 		});
 
-		await expect(program.parseAsync(['node', 'magpie', 'publish'])).rejects.toThrow('process.exit');
+		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
 		expect(exitSpy).toHaveBeenCalledWith(0);
 	});
 
@@ -250,7 +250,7 @@ describe('missing setup.json', () => {
 			throw new Error('process.exit');
 		});
 
-		await expect(program.parseAsync(['node', 'magpie', 'publish'])).rejects.toThrow('process.exit');
+		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
 		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('Setup name is required'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
@@ -261,7 +261,7 @@ describe('missing setup.json', () => {
 describe('create new setup', () => {
 	it('calls POST /setups when setup does not exist', async () => {
 		const program = makeProgram();
-		await program.parseAsync(['node', 'magpie', 'publish']);
+		await program.parseAsync(['node', 'coati', 'publish']);
 
 		expect(mockPost).toHaveBeenCalledWith(
 			'/setups',
@@ -286,7 +286,7 @@ describe('create new setup', () => {
 
 	it('displays success message with setup URL', async () => {
 		const program = makeProgram();
-		await program.parseAsync(['node', 'magpie', 'publish']);
+		await program.parseAsync(['node', 'coati', 'publish']);
 
 		expect(mockSuccess).toHaveBeenCalledWith(expect.stringContaining('published'));
 		expect(mockPrint).toHaveBeenCalledWith(expect.stringContaining('alice/my-setup'));
@@ -302,7 +302,7 @@ describe('update existing setup', () => {
 
 	it('calls PATCH /setups/{owner}/{slug} when setup exists', async () => {
 		const program = makeProgram();
-		await program.parseAsync(['node', 'magpie', 'publish']);
+		await program.parseAsync(['node', 'coati', 'publish']);
 
 		expect(mockPatch).toHaveBeenCalledWith(
 			'/setups/alice/my-setup',
@@ -316,7 +316,7 @@ describe('update existing setup', () => {
 
 	it('displays updated message with setup URL', async () => {
 		const program = makeProgram();
-		await program.parseAsync(['node', 'magpie', 'publish']);
+		await program.parseAsync(['node', 'coati', 'publish']);
 
 		expect(mockSuccess).toHaveBeenCalledWith(expect.stringContaining('updated'));
 		expect(mockPrint).toHaveBeenCalledWith(expect.stringContaining('alice/my-setup'));
@@ -328,7 +328,7 @@ describe('update existing setup', () => {
 describe('--json mode', () => {
 	it('calls setOutputMode("json") when --json is passed', async () => {
 		const program = makeProgram();
-		await program.parseAsync(['node', 'magpie', 'publish', '--json']);
+		await program.parseAsync(['node', 'coati', 'publish', '--json']);
 
 		expect(mockSetOutputMode).toHaveBeenCalledWith('json');
 	});
@@ -336,7 +336,7 @@ describe('--json mode', () => {
 	it('outputs structured JSON on successful create', async () => {
 		mockIsJsonMode.mockReturnValue(true);
 		const program = makeProgram();
-		await program.parseAsync(['node', 'magpie', 'publish', '--json']);
+		await program.parseAsync(['node', 'coati', 'publish', '--json']);
 
 		expect(mockJsonOutput).toHaveBeenCalledWith({
 			action: 'created',
@@ -350,7 +350,7 @@ describe('--json mode', () => {
 		mockIsJsonMode.mockReturnValue(true);
 		mockGet.mockResolvedValue(MOCK_SETUP_RESPONSE);
 		const program = makeProgram();
-		await program.parseAsync(['node', 'magpie', 'publish', '--json']);
+		await program.parseAsync(['node', 'coati', 'publish', '--json']);
 
 		expect(mockJsonOutput).toHaveBeenCalledWith({
 			action: 'updated',
@@ -522,7 +522,7 @@ describe('agent validation during publish', () => {
 			throw new Error('process.exit');
 		});
 
-		await expect(program.parseAsync(['node', 'magpie', 'publish'])).rejects.toThrow('process.exit');
+		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
 		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('nonexistent-agent'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 		expect(mockPost).not.toHaveBeenCalled();
@@ -543,7 +543,7 @@ describe('agent validation during publish', () => {
 			]
 		});
 		const program = makeProgram();
-		await program.parseAsync(['node', 'magpie', 'publish']);
+		await program.parseAsync(['node', 'coati', 'publish']);
 
 		expect(mockConfirm).toHaveBeenCalledWith(expect.stringContaining('cursor'), true);
 		expect(mockPost).toHaveBeenCalled();
@@ -564,7 +564,7 @@ describe('agent validation during publish', () => {
 			]
 		});
 		const program = makeProgram();
-		await program.parseAsync(['node', 'magpie', 'publish']);
+		await program.parseAsync(['node', 'coati', 'publish']);
 
 		expect(mockPost).toHaveBeenCalled();
 	});
@@ -582,7 +582,7 @@ describe('error handling', () => {
 			throw new Error('process.exit');
 		});
 
-		await expect(program.parseAsync(['node', 'magpie', 'publish'])).rejects.toThrow('process.exit');
+		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
 		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('.claude/commands/foo.md'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
@@ -596,7 +596,7 @@ describe('error handling', () => {
 			throw new Error('process.exit');
 		});
 
-		await expect(program.parseAsync(['node', 'magpie', 'publish'])).rejects.toThrow('process.exit');
+		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
 		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('Invalid setup.json'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
@@ -608,8 +608,8 @@ describe('error handling', () => {
 			throw new Error('process.exit');
 		});
 
-		await expect(program.parseAsync(['node', 'magpie', 'publish'])).rejects.toThrow('process.exit');
-		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('magpie login'));
+		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
+		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('coati login'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 
@@ -620,7 +620,7 @@ describe('error handling', () => {
 			throw new Error('process.exit');
 		});
 
-		await expect(program.parseAsync(['node', 'magpie', 'publish'])).rejects.toThrow('process.exit');
+		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
 		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('Validation error'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
@@ -632,7 +632,7 @@ describe('error handling', () => {
 			throw new Error('process.exit');
 		});
 
-		await expect(program.parseAsync(['node', 'magpie', 'publish'])).rejects.toThrow('process.exit');
+		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
 		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('Network error'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});

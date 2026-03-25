@@ -25,7 +25,7 @@ function hashToken(token: string): string {
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const SESSION_REFRESH_THRESHOLD_MS = 15 * 24 * 60 * 60 * 1000; // 15 days
-const COOKIE_NAME = 'magpie_session';
+const COOKIE_NAME = 'coati_session';
 
 export async function createSession(token: string, userId: string) {
 	const id = hashToken(token);
@@ -163,7 +163,7 @@ async function fetchGitHubJson<T>(url: string, accessToken: string): Promise<T> 
 		headers: {
 			Authorization: `Bearer ${accessToken}`,
 			Accept: 'application/json',
-			'User-Agent': 'Magpie'
+			'User-Agent': 'Coati'
 		}
 	});
 	if (!res.ok) {

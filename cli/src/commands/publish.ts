@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Command } from 'commander';
-import { AGENTS_BY_SLUG } from '@magpie/agents-registry';
+import { AGENTS_BY_SLUG } from '@coati/agents-registry';
 import { get, post, patch, ApiError } from '../api.js';
 import { readManifest, writeManifest, MANIFEST_FILENAME, type Manifest } from '../manifest.js';
 import { getConfig } from '../config.js';
@@ -53,7 +53,7 @@ export async function validateAgentRefs(manifest: Manifest, cwd: string): Promis
 	// Block on unknown slugs
 	if (unknownSlugs.length > 0) {
 		for (const slug of unknownSlugs) {
-			error(`Unknown agent slug "${slug}". Run \`magpie agents\` to see valid slugs.`);
+			error(`Unknown agent slug "${slug}". Run \`coati agents\` to see valid slugs.`);
 		}
 		return null;
 	}
@@ -108,7 +108,7 @@ export function registerPublish(program: Command): void {
 
 			// Require authentication
 			if (!isLoggedIn()) {
-				error('Not logged in. Run `magpie login` to authenticate.');
+				error('Not logged in. Run `coati login` to authenticate.');
 				process.exit(1);
 				return;
 			}
@@ -119,11 +119,11 @@ export function registerPublish(program: Command): void {
 			const manifestPath = path.join(cwd, MANIFEST_FILENAME);
 			if (!fs.existsSync(manifestPath)) {
 				if (isJsonMode()) {
-					error('No setup.json found. Run `magpie init` first.');
+					error('No setup.json found. Run `coati init` first.');
 					process.exit(1);
 					return;
 				}
-				info('No setup.json found. Running `magpie init` to create one...\n');
+				info('No setup.json found. Running `coati init` to create one...\n');
 				let initialized: boolean;
 				try {
 					initialized = await runInitFlow(cwd);
@@ -230,7 +230,7 @@ export function registerPublish(program: Command): void {
 			} catch (e) {
 				if (e instanceof ApiError) {
 					if (e.status === 401 || e.status === 403) {
-						error(`${e.message}. Run \`magpie login\` to re-authenticate.`);
+						error(`${e.message}. Run \`coati login\` to re-authenticate.`);
 					} else if (e.status === 422 || e.status === 400) {
 						error(`Validation error: ${e.message}`);
 					} else {

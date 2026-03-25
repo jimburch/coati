@@ -1,6 +1,6 @@
 # Cursor IDE Playground
 
-This is a test environment for the **Magpie CLI** that simulates a real TypeScript project with a full Cursor IDE setup. It contains realistic configuration files covering every Cursor feature surface.
+This is a test environment for the **Coati CLI** that simulates a real TypeScript project with a full Cursor IDE setup. It contains realistic configuration files covering every Cursor feature surface.
 
 ## Config Files Present
 
@@ -38,32 +38,32 @@ globs: ["src/**/*.ts"]     # Or apply only when matching files are referenced
 - `globs` rules activate only when the user is working with matching files
 - The legacy `.cursorrules` file at the project root applies globally but lacks the scoping features of MDC
 
-## Example Magpie CLI Usage
+## Example Coati CLI Usage
 
 ```bash
-# Clone this setup from Magpie
-magpie clone @jim/cursor-typescript-setup
+# Clone this setup from Coati
+coati clone @jim/cursor-typescript-setup
 
 # Initialize a new setup from this directory
-magpie init
+coati init
 
-# Publish this setup to Magpie
-magpie publish
+# Publish this setup to Coati
+coati publish
 
 # View a setup's details
-magpie view @jim/cursor-typescript-setup
+coati view @jim/cursor-typescript-setup
 
 # Search for Cursor setups
-magpie search "cursor typescript"
+coati search "cursor typescript"
 ```
 
 ## Purpose
 
-This playground exists to test how the Magpie CLI handles:
+This playground exists to test how the Coati CLI handles:
 
 - Detecting and cataloging Cursor config files
 - Parsing MDC frontmatter (YAML + Markdown body)
 - Handling the legacy `.cursorrules` format alongside modern `.cursor/rules/` MDC files
 - Packaging MCP server configs, hooks, commands, and skills
 - Generating `setup.json` manifests from existing project files
-- Resolving file conflicts during `magpie clone`
+- Resolving file conflicts during `coati clone`

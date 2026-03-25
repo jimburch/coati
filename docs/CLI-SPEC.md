@@ -1,28 +1,28 @@
-# CLI Specification — `magpie`
+# CLI Specification — `coati`
 
 ## Overview
 
-`magpie` is a Node.js CLI tool published to npm. It lets developers search, clone, publish, and interact with Magpie from their terminal. It's the primary way setups get installed onto local machines.
+`coati` is a Node.js CLI tool published to npm. It lets developers search, clone, publish, and interact with Coati from their terminal. It's the primary way setups get installed onto local machines.
 
 ## Installation
 
 ```bash
-npm install -g magpie
+npm install -g coati
 ```
 
 ## Command Reference
 
-### `magpie login`
+### `coati login`
 
-Authenticate with Magpie using GitHub Device Flow.
+Authenticate with Coati using GitHub Device Flow.
 
 ```
-$ magpie login
+$ coati login
 → Opening GitHub authorization page...
 → Enter this code: ABCD-1234
 → Waiting for authorization... ✓
 → Logged in as alice (alice@github)
-→ Token saved to ~/.magpie/config.json
+→ Token saved to ~/.coati/config.json
 ```
 
 **Flow:**
@@ -30,23 +30,23 @@ $ magpie login
 1. CLI sends `POST /api/v1/auth/device` to get a device code + verification URL
 2. Opens browser to GitHub verification URL (or prints it if browser can't open)
 3. Polls `POST /api/v1/auth/device/poll` until authorized
-4. Receives platform token, stores at `~/.magpie/config.json`
+4. Receives platform token, stores at `~/.coati/config.json`
 
-### `magpie logout`
+### `coati logout`
 
 Remove stored credentials.
 
 ```
-$ magpie logout
-→ Logged out. Token removed from ~/.magpie/config.json
+$ coati logout
+→ Logged out. Token removed from ~/.coati/config.json
 ```
 
-### `magpie search <query>`
+### `coati search <query>`
 
 Search for setups by keyword. Supports tool and tag filters.
 
 ```
-$ magpie search "claude mcp typescript"
+$ coati search "claude mcp typescript"
 
   1. alice/mcp-power-setup        ★ 142  ↓ 89
      Claude Code + 8 MCP servers for TypeScript fullstack
@@ -68,12 +68,12 @@ $ magpie search "claude mcp typescript"
 - `--sort <field>` — sort by `stars`, `clones`, `recent` (default: relevance)
 - `--limit <n>` — results to show (default: 10)
 
-### `magpie trending`
+### `coati trending`
 
 Show trending setups.
 
 ```
-$ magpie trending
+$ coati trending
 
   Trending setups this week:
 
@@ -82,12 +82,12 @@ $ magpie trending
   ...
 ```
 
-### `magpie view <owner>/<slug>`
+### `coati view <owner>/<slug>`
 
 View details of a specific setup.
 
 ```
-$ magpie view alice/mcp-power-setup
+$ coati view alice/mcp-power-setup
 
   alice/mcp-power-setup  v1.2.0
   ★ 142 stars  ↓ 89 clones
@@ -105,15 +105,15 @@ $ magpie view alice/mcp-power-setup
     hooks/pre-commit.sh        → .claude/hooks/pre-commit.sh
     skills/deep-research.md    → ~/.claude/skills/deep-research.md
 
-  View on web: https://magpie.sh/alice/mcp-power-setup
+  View on web: https://coati.sh/alice/mcp-power-setup
 ```
 
-### `magpie clone <owner>/<slug>`
+### `coati clone <owner>/<slug>`
 
 Clone and install a setup to local machine. This is the flagship command.
 
 ```
-$ magpie clone alice/mcp-power-setup
+$ coati clone alice/mcp-power-setup
 
   🐦‍⬛ Cloning alice/mcp-power-setup v1.2.0...
 
@@ -162,14 +162,14 @@ $ magpie clone alice/mcp-power-setup
 8. Send `POST /api/v1/setups/:id/clone` to record the clone event
 9. Print summary
 
-### `magpie init`
+### `coati init`
 
 Scaffold a `setup.json` manifest in the current directory.
 
 ```
-$ magpie init
+$ coati init
 
-  🐦‍⬛ Initializing new Magpie setup...
+  🐦‍⬛ Initializing new Coati setup...
 
   ? Setup name: my-awesome-workflow
   ? Description: My Claude Code + Cursor setup for React dev
@@ -192,7 +192,7 @@ $ magpie init
   Next steps:
     1. Edit setup.json to refine file mappings
     2. Add a README.md describing your workflow
-    3. Run `magpie publish` to share it
+    3. Run `coati publish` to share it
 ```
 
 **Auto-detection:** The CLI scans common paths for AI config files:
@@ -202,54 +202,54 @@ $ magpie init
 - `AGENTS.md`, `.github/copilot-instructions.md`
 - `.claude/hooks/`, `.claude/skills/`, `.claude/commands/`
 
-### `magpie publish`
+### `coati publish`
 
 Publish or update a setup from the current directory.
 
 ```
-$ magpie publish
+$ coati publish
 
   Reading setup.json...
   Validating manifest... ✓
   Collecting 6 files (12.4 KB total)...
 
   Publishing alice/my-awesome-workflow v1.0.0...
-  ✓ Published! View at: https://magpie.sh/alice/my-awesome-workflow
+  ✓ Published! View at: https://coati.sh/alice/my-awesome-workflow
 ```
 
 **For updates:**
 
 ```
-$ magpie publish --update
+$ coati publish --update
 
   Updating alice/my-awesome-workflow to v1.1.0...
   Changed files: 2 modified, 1 added
-  ✓ Updated! View at: https://magpie.sh/alice/my-awesome-workflow
+  ✓ Updated! View at: https://coati.sh/alice/my-awesome-workflow
 ```
 
-### `magpie star <owner>/<slug>`
+### `coati star <owner>/<slug>`
 
 Star a setup.
 
 ```
-$ magpie star alice/mcp-power-setup
+$ coati star alice/mcp-power-setup
 → ★ Starred alice/mcp-power-setup
 ```
 
-### `magpie unstar <owner>/<slug>`
+### `coati unstar <owner>/<slug>`
 
 Remove a star.
 
-### `magpie follow <username>`
+### `coati follow <username>`
 
 Follow a user.
 
 ```
-$ magpie follow alice
+$ coati follow alice
 → ✓ Following alice
 ```
 
-### `magpie unfollow <username>`
+### `coati unfollow <username>`
 
 Unfollow a user.
 
@@ -259,7 +259,7 @@ Every setup has a `setup.json` at its root. This is the platform's core standard
 
 ```json
 {
-	"$schema": "https://magpie.sh/schema/setup.v1.json",
+	"$schema": "https://coati.sh/schema/setup.v1.json",
 	"name": "my-fullstack-workflow",
 	"version": "1.2.0",
 	"description": "My Claude Code + Cursor setup for TypeScript fullstack dev",
@@ -331,12 +331,12 @@ Users can specify any string, but recognized tools get icons and filter support.
 
 ## Config File Location
 
-CLI config stored at `~/.magpie/config.json`:
+CLI config stored at `~/.coati/config.json`:
 
 ```json
 {
 	"token": "mg_abc123...",
-	"apiBase": "https://magpie.sh/api/v1",
+	"apiBase": "https://coati.sh/api/v1",
 	"username": "alice"
 }
 ```

@@ -1,7 +1,7 @@
 {
 	"info": {
-		"name": "Magpie API",
-		"description": "Full API collection for Magpie — a platform for sharing AI coding workflows.\n\nSetup:\n1. Sign in via browser at {{baseUrl}}/auth/login/github\n2. Copy the `auth_session` cookie from browser dev tools\n3. Paste it into the collection variable `sessionToken`\n4. Replace `{{owner}}` and `{{slug}}` variables as needed\n\nAuth: The API accepts both Cookie (`auth_session={{sessionToken}}`) and Bearer token (`Authorization: Bearer <token>` from device flow). Authenticated requests in this collection use Cookie auth by default.",
+		"name": "Coati API",
+		"description": "Full API collection for Coati — a platform for sharing AI coding workflows.\n\nSetup:\n1. Sign in via browser at {{baseUrl}}/auth/login/github\n2. Copy the `auth_session` cookie from browser dev tools\n3. Paste it into the collection variable `sessionToken`\n4. Replace `{{owner}}` and `{{slug}}` variables as needed\n\nAuth: The API accepts both Cookie (`auth_session={{sessionToken}}`) and Bearer token (`Authorization: Bearer <token>` from device flow). Authenticated requests in this collection use Cookie auth by default.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -227,7 +227,7 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "v1", "setups", "{{owner}}", "{{slug}}", "files"]
 						},
-						"description": "Get all files for a setup. Public, no auth needed.\n\nUsed by the CLI's `magpie clone` command.\n\nReturns: { data: [{ id, source, target, placement, componentType, description, content, createdAt, updatedAt }] }"
+						"description": "Get all files for a setup. Public, no auth needed.\n\nUsed by the CLI's `coati clone` command.\n\nReturns: { data: [{ id, source, target, placement, componentType, description, content, createdAt, updatedAt }] }"
 					}
 				}
 			]

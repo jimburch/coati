@@ -1,7 +1,7 @@
 # Gemini CLI Playground
 
 This directory simulates a real TypeScript project with a complete Gemini CLI
-configuration. It serves as a test environment for the Magpie CLI's `clone` and
+configuration. It serves as a test environment for the Coati CLI's `clone` and
 `init` commands to verify correct handling of Gemini CLI setups.
 
 ## What's Inside
@@ -26,11 +26,11 @@ configuration. It serves as a test environment for the Magpie CLI's `clone` and
 | `.gemini/skills/testing/SKILL.md`      | Skill teaching Gemini the project's testing conventions                               |
 | `.gemini/policies/shell.toml`          | Policy controlling which shell commands are allowed, need confirmation, or are denied |
 
-## How Magpie Uses This
+## How Coati Uses This
 
-When a user publishes a Gemini CLI setup to Magpie, the platform packages these
+When a user publishes a Gemini CLI setup to Coati, the platform packages these
 configuration files into a shareable, installable unit. Another user can then
-`magpie clone` that setup to bootstrap their own project with the same Gemini CLI
+`coati clone` that setup to bootstrap their own project with the same Gemini CLI
 configuration.
 
 This playground lets us test that:

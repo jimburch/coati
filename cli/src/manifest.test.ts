@@ -26,7 +26,7 @@ const VALID_MANIFEST: Manifest = {
 let tmpDir: string;
 
 beforeEach(() => {
-	tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'magpie-manifest-test-'));
+	tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'coati-manifest-test-'));
 });
 
 afterEach(() => {

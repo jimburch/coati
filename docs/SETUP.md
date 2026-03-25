@@ -6,7 +6,7 @@ A **setup** is a publishable, installable package of AI coding tool configuratio
 
 Think of it like a GitHub repo, but for your AI assistant's brain.
 
-For the MVP, Magpie targets **Claude Code** exclusively. The data model is designed so that additional tools (Cursor, Codex, Windsurf, etc.) can be added without structural changes.
+For the MVP, Coati targets **Claude Code** exclusively. The data model is designed so that additional tools (Cursor, Codex, Windsurf, etc.) can be added without structural changes.
 
 ## 2. Setup Components (Claude Code)
 
@@ -362,7 +362,7 @@ Array of paths to image files within the setup. Displayed on the setup detail pa
 
 ## 5. Creation Flow
 
-### CLI: `magpie init`
+### CLI: `coati init`
 
 1. **Auto-detection** — Scans the current directory for Claude Code configuration files:
    - `CLAUDE.md` (root and subdirectories)
@@ -381,14 +381,14 @@ Array of paths to image files within the setup. Displayed on the setup detail pa
 
 4. **Review** — Prints a summary of what was detected and lets the user confirm or edit before writing.
 
-### CLI: `magpie publish`
+### CLI: `coati publish`
 
 1. Reads `setup.json` from the current directory
 2. Validates the manifest (required fields, valid JSON, files exist)
-3. Authenticates via stored token (or prompts `magpie login`)
-4. Uploads manifest + all referenced files to the Magpie API
+3. Authenticates via stored token (or prompts `coati login`)
+4. Uploads manifest + all referenced files to the Coati API
 5. Creates or updates the setup on the platform
-6. Returns the URL: `https://magpie.dev/<username>/<slug>`
+6. Returns the URL: `https://coati.dev/<username>/<slug>`
 
 ### Web UI
 
@@ -396,7 +396,7 @@ After publishing, users can edit metadata (description, tags, category, readme) 
 
 ## 6. Clone/Install Flow
 
-### CLI: `magpie clone <owner>/<setup-name>`
+### CLI: `coati clone <owner>/<setup-name>`
 
 #### Step 1: Fetch
 
@@ -404,10 +404,10 @@ Downloads the setup manifest and all component files from the API.
 
 #### Step 2: Backup
 
-Before writing any files, backs up existing configuration to `.magpie/backups/<timestamp>/`:
+Before writing any files, backs up existing configuration to `.coati/backups/<timestamp>/`:
 
 ```
-.magpie/backups/
+.coati/backups/
   2025-03-15T14-30-00/
     CLAUDE.md
     .claude/
@@ -475,10 +475,10 @@ Each component type has specific merge behavior:
 
 ### Auto-Backup
 
-Every `magpie clone` automatically creates a timestamped backup before modifying files. Backups are stored locally in `.magpie/backups/` and are never uploaded to the platform.
+Every `coati clone` automatically creates a timestamped backup before modifying files. Backups are stored locally in `.coati/backups/` and are never uploaded to the platform.
 
 ```
-.magpie/backups/
+.coati/backups/
   2025-03-15T14-30-00/
     manifest.json          # Records what setup was cloned and what was backed up
     files/
@@ -496,13 +496,13 @@ The `manifest.json` records:
 
 ```bash
 # Restore the most recent backup
-magpie revert
+coati revert
 
 # List all available backups
-magpie revert --list
+coati revert --list
 
 # Restore a specific backup by timestamp
-magpie revert 2025-03-15T14-30-00
+coati revert 2025-03-15T14-30-00
 ```
 
 Revert restores all backed-up files to their original locations, effectively undoing the most recent clone operation.
@@ -567,7 +567,7 @@ The setup model extends to other AI coding tools by defining tool-specific compo
 Each tool registers its own:
 
 - **Component type definitions** — what config files it uses and where they live
-- **Detection rules** — how `magpie init` finds existing config for that tool
+- **Detection rules** — how `coati init` finds existing config for that tool
 - **Clone behavior** — per-component-type merge/write strategy
 
 The `tool` field in `setup.json` determines which set of rules apply. A single setup targets one tool. Users who want to share configs for multiple tools publish separate setups.

@@ -18,7 +18,7 @@ vi.mock('$env/static/private', () => ({
 	DATABASE_URL:
 		process.env.DATABASE_URL_TEST ??
 		process.env.DATABASE_URL ??
-		'postgresql://magpie:magpie@localhost:5432/magpie_dev',
+		'postgresql://coati:coati@localhost:5432/coati_dev',
 	GITHUB_CLIENT_ID: 'test',
 	GITHUB_CLIENT_SECRET: 'test'
 }));

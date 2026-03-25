@@ -7,21 +7,21 @@ import { clearConfig, getConfig, setConfig, setConfigDir } from './config.js';
 let tmpDir: string;
 
 beforeEach(() => {
-	// Create a fresh temp directory for each test so tests never touch ~/.magpie
-	tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'magpie-config-test-'));
+	// Create a fresh temp directory for each test so tests never touch ~/.coati
+	tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'coati-config-test-'));
 	setConfigDir(tmpDir);
 });
 
 afterEach(() => {
 	// Restore to real home dir and clean up temp directory
-	setConfigDir(path.join(os.homedir(), '.magpie'));
+	setConfigDir(path.join(os.homedir(), '.coati'));
 	fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
 describe('getConfig', () => {
 	it('returns default config when no file exists', () => {
 		const config = getConfig();
-		expect(config).toEqual({ apiBase: 'https://magpie.sh/api/v1' });
+		expect(config).toEqual({ apiBase: 'https://coati.sh/api/v1' });
 		expect(config.token).toBeUndefined();
 		expect(config.username).toBeUndefined();
 	});
@@ -33,7 +33,7 @@ describe('setConfig + getConfig roundtrip', () => {
 		const config = getConfig();
 		expect(config.token).toBe('abc123');
 		expect(config.username).toBe('alice');
-		expect(config.apiBase).toBe('https://magpie.sh/api/v1');
+		expect(config.apiBase).toBe('https://coati.sh/api/v1');
 	});
 
 	it('creates the config directory if it does not exist', () => {
@@ -51,7 +51,7 @@ describe('partial update', () => {
 		const config = getConfig();
 		expect(config.token).toBe('new-token');
 		expect(config.username).toBe('bob');
-		expect(config.apiBase).toBe('https://magpie.sh/api/v1');
+		expect(config.apiBase).toBe('https://coati.sh/api/v1');
 	});
 
 	it('can override apiBase', () => {
@@ -79,7 +79,7 @@ describe('clearConfig', () => {
 		setConfig({ token: 'tok', username: 'carol' });
 		clearConfig();
 		const config = getConfig();
-		expect(config).toEqual({ apiBase: 'https://magpie.sh/api/v1' });
+		expect(config).toEqual({ apiBase: 'https://coati.sh/api/v1' });
 	});
 });
 

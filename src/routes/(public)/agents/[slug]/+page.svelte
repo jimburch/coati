@@ -8,10 +8,10 @@
 </script>
 
 <svelte:head>
-	<title>{agent.displayName} Setups - Magpie</title>
+	<title>{agent.displayName} Setups - Coati</title>
 	<meta
 		name="description"
-		content="Browse {agent.displayName} AI coding workflows and setups on Magpie."
+		content="Browse {agent.displayName} AI coding workflows and setups on Coati."
 	/>
 </svelte:head>
 

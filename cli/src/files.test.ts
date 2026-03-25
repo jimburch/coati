@@ -39,7 +39,7 @@ vi.mock('./prompts.js', () => ({
 let tmpDir: string;
 
 beforeEach(() => {
-	tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'magpie-files-test-'));
+	tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'coati-files-test-'));
 	vi.clearAllMocks();
 	mockIsJsonMode.mockReturnValue(false);
 });
@@ -122,7 +122,7 @@ describe('writeSetupFiles — basic write', () => {
 			projectDir: tmpDir
 		});
 
-		expect(fs.existsSync(path.join(tmpDir, 'atomic.txt.magpie-tmp'))).toBe(false);
+		expect(fs.existsSync(path.join(tmpDir, 'atomic.txt.coati-tmp'))).toBe(false);
 		expect(fs.existsSync(path.join(tmpDir, 'atomic.txt'))).toBe(true);
 	});
 
@@ -194,7 +194,7 @@ describe('writeSetupFiles — conflict: skip', () => {
 });
 
 describe('writeSetupFiles — conflict: backup', () => {
-	it('copies existing file to .magpie-backup then writes new file', async () => {
+	it('copies existing file to .coati-backup then writes new file', async () => {
 		const filePath = path.join(tmpDir, 'back.md');
 		fs.writeFileSync(filePath, 'old');
 		mockResolveConflict.mockResolvedValue('backup');
@@ -205,9 +205,9 @@ describe('writeSetupFiles — conflict: backup', () => {
 
 		expect(result.backedUp).toBe(1);
 		expect(result.files[0]!.outcome).toBe('backed-up');
-		expect(result.files[0]!.backupPath).toBe(filePath + '.magpie-backup');
+		expect(result.files[0]!.backupPath).toBe(filePath + '.coati-backup');
 		expect(fs.readFileSync(filePath, 'utf-8')).toBe('new');
-		expect(fs.readFileSync(filePath + '.magpie-backup', 'utf-8')).toBe('old');
+		expect(fs.readFileSync(filePath + '.coati-backup', 'utf-8')).toBe('old');
 	});
 });
 

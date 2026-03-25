@@ -3,7 +3,7 @@ import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { Command } from 'commander';
-import { AGENTS_BY_SLUG } from '@magpie/agents-registry';
+import { AGENTS_BY_SLUG } from '@coati/agents-registry';
 import { get, post, ApiError } from '../api.js';
 import { writeSetupFiles } from '../files.js';
 import {
@@ -205,7 +205,7 @@ export function registerClone(program: Command): void {
 				destination = dest;
 
 				if (dest === 'global') {
-					projectDir = path.join(os.homedir(), '.magpie', 'setups', owner, slug);
+					projectDir = path.join(os.homedir(), '.coati', 'setups', owner, slug);
 				} else {
 					projectDir = opts.projectDir ? path.resolve(opts.projectDir) : process.cwd();
 				}

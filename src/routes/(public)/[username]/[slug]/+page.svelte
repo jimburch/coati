@@ -9,7 +9,7 @@
 	const { data } = $props();
 
 	let copied = $state(false);
-	const cloneCommand = $derived(`magpie clone ${data.setup.ownerUsername}/${data.setup.slug}`);
+	const cloneCommand = $derived(`coati clone ${data.setup.ownerUsername}/${data.setup.slug}`);
 
 	// Optimistic override for stars count — set on button click, cleared when server data refreshes.
 	let starsCountOverride = $state<number | null>(null);
@@ -43,7 +43,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.setup.name} by {data.setup.ownerUsername} - Magpie</title>
+	<title>{data.setup.name} by {data.setup.ownerUsername} - Coati</title>
 	<meta name="description" content={data.setup.description} />
 </svelte:head>
 

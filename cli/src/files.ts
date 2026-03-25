@@ -75,7 +75,7 @@ export function resolveTargetPath(
  * - Writes atomically (temp file + rename).
  * - Prompts for per-file conflict resolution (overwrite / skip / backup) unless
  *   --force is set or JSON mode is active (JSON mode auto-skips conflicts).
- * - Backup copies are written to `<target>.magpie-backup`.
+ * - Backup copies are written to `<target>.coati-backup`.
  */
 export async function writeSetupFiles(
 	files: FileToWrite[],
@@ -113,7 +113,7 @@ export async function writeSetupFiles(
 				shouldWrite = false;
 				outcome = 'skipped';
 			} else if (resolution === 'backup') {
-				backupPath = resolvedPath + '.magpie-backup';
+				backupPath = resolvedPath + '.coati-backup';
 				fs.copyFileSync(resolvedPath, backupPath);
 				outcome = 'backed-up';
 			}
@@ -125,7 +125,7 @@ export async function writeSetupFiles(
 			fs.mkdirSync(dir, { recursive: true });
 
 			// Atomic write: write to a temp file then rename into place.
-			const tmpPath = resolvedPath + '.magpie-tmp';
+			const tmpPath = resolvedPath + '.coati-tmp';
 			try {
 				fs.writeFileSync(tmpPath, file.content, 'utf-8');
 				fs.renameSync(tmpPath, resolvedPath);

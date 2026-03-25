@@ -25,10 +25,10 @@
 </script>
 
 <svelte:head>
-	<title>{data.profile.username} - Magpie</title>
+	<title>{data.profile.username} - Coati</title>
 	<meta
 		name="description"
-		content={data.profile.bio ?? `${data.profile.username}'s AI coding setups on Magpie`}
+		content={data.profile.bio ?? `${data.profile.username}'s AI coding setups on Coati`}
 	/>
 </svelte:head>
 

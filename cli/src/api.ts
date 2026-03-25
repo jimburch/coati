@@ -1,9 +1,9 @@
 import { getConfig } from './config.js';
 
 const VERSION = '0.1.0';
-const USER_AGENT = `@magpie/cli/${VERSION}`;
+const USER_AGENT = `@coati/cli/${VERSION}`;
 
-const PRODUCTION_API_BASE = 'https://magpie.sh/api/v1';
+const PRODUCTION_API_BASE = 'https://coati.sh/api/v1';
 
 /** Module-level override set by CLI flags (--dev, --api-base). */
 let apiBaseOverride: string | undefined;

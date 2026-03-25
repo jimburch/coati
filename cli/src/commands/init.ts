@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Command } from 'commander';
-import { AGENTS_BY_SLUG } from '@magpie/agents-registry';
+import { AGENTS_BY_SLUG } from '@coati/agents-registry';
 import { detectFiles } from '../detector.js';
 import {
 	writeManifest,
@@ -88,9 +88,7 @@ export async function runInitFlow(cwd: string): Promise<boolean> {
 	if (detected.length === 0) {
 		// Edge case: no files detected
 		warning('No AI config files detected in this directory.');
-		print(
-			'Add your config files (e.g. .claude/commands/, .cursorrules) then re-run `magpie init`.'
-		);
+		print('Add your config files (e.g. .claude/commands/, .cursorrules) then re-run `coati init`.');
 		const continueAnyway = await confirm(
 			'Continue and create a setup.json scaffold anyway?',
 			false

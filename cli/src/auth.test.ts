@@ -48,7 +48,7 @@ function makeNetworkError(message = 'Network error: unable to reach server'): Er
 let tmpDir: string;
 
 beforeEach(() => {
-	tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'magpie-auth-test-'));
+	tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'coati-auth-test-'));
 	setConfigDir(tmpDir);
 	clearConfig();
 	mockPost.mockReset();
@@ -58,7 +58,7 @@ beforeEach(() => {
 
 afterEach(() => {
 	vi.useRealTimers();
-	setConfigDir(path.join(os.homedir(), '.magpie'));
+	setConfigDir(path.join(os.homedir(), '.coati'));
 	fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
@@ -172,7 +172,7 @@ describe('pollForToken — expiry', () => {
 		mockPost.mockRejectedValueOnce(makeApiError('Device code expired', 'EXPIRED', 410));
 
 		const promise = pollForToken('dc_abc', 5, 900);
-		const assertion = expect(promise).rejects.toThrow('magpie login');
+		const assertion = expect(promise).rejects.toThrow('coati login');
 		await vi.advanceTimersByTimeAsync(5000);
 		await assertion;
 	});

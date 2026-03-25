@@ -1,7 +1,7 @@
 {
-	"name": "@magpie/agents-registry",
+	"name": "@coati/agents-registry",
 	"version": "0.1.0",
-	"description": "Agent definitions, file detection globs, and component type mappings for Magpie",
+	"description": "Agent definitions, file detection globs, and component type mappings for Coati",
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts"

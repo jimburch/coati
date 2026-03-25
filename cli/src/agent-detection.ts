@@ -1,7 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { AGENTS_BY_SLUG } from '@magpie/agents-registry';
+import { AGENTS_BY_SLUG } from '@coati/agents-registry';
 
 /**
  * Check whether a home-relative path exists (e.g. ".claude" → ~/.claude/).

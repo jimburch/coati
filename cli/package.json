@@ -1,11 +1,11 @@
 {
-	"name": "magpie",
+	"name": "coati",
 	"version": "0.1.0",
-	"description": "Magpie CLI — clone, publish, and manage AI coding setups",
+	"description": "Coati CLI — clone, publish, and manage AI coding setups",
 	"type": "module",
 	"main": "dist/index.js",
 	"bin": {
-		"magpie": "bin/magpie.js"
+		"coati": "bin/coati.js"
 	},
 	"scripts": {
 		"build": "tsup src/index.ts --format esm --dts --outDir dist",
@@ -14,7 +14,7 @@
 		"test:unit": "vitest run"
 	},
 	"dependencies": {
-		"@magpie/agents-registry": "workspace:*",
+		"@coati/agents-registry": "workspace:*",
 		"commander": "^12.1.0",
 		"diff": "^8.0.4",
 		"open": "^11.0.0",

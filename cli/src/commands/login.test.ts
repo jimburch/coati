@@ -83,7 +83,7 @@ describe('already logged in guard', () => {
 			throw new Error('process.exit called');
 		});
 
-		await expect(program.parseAsync(['node', 'magpie', 'login'])).rejects.toThrow(
+		await expect(program.parseAsync(['node', 'coati', 'login'])).rejects.toThrow(
 			'process.exit called'
 		);
 
@@ -96,7 +96,7 @@ describe('already logged in guard', () => {
 		mockIsLoggedIn.mockReturnValue(true);
 
 		const program = makeProgram();
-		await program.parseAsync(['node', 'magpie', 'login', '--force']);
+		await program.parseAsync(['node', 'coati', 'login', '--force']);
 
 		expect(mockRequestDeviceCode).toHaveBeenCalled();
 		expect(mockStoreCredentials).toHaveBeenCalledWith('tok_123', 'testuser');
@@ -106,7 +106,7 @@ describe('already logged in guard', () => {
 		mockIsLoggedIn.mockReturnValue(false);
 
 		const program = makeProgram();
-		await program.parseAsync(['node', 'magpie', 'login']);
+		await program.parseAsync(['node', 'coati', 'login']);
 
 		expect(mockRequestDeviceCode).toHaveBeenCalled();
 		expect(mockStoreCredentials).toHaveBeenCalledWith('tok_123', 'testuser');
@@ -120,7 +120,7 @@ describe('--force flag', () => {
 		mockIsLoggedIn.mockReturnValue(true);
 
 		const program = makeProgram();
-		await program.parseAsync(['node', 'magpie', 'login', '--force']);
+		await program.parseAsync(['node', 'coati', 'login', '--force']);
 
 		expect(mockRequestDeviceCode).toHaveBeenCalledTimes(1);
 		expect(mockPollForToken).toHaveBeenCalledWith('dc_test', 5, 900);

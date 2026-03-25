@@ -1,10 +1,10 @@
 {
-	"name": "magpie",
+	"name": "coati",
 	"version": "1.0.0",
-	"description": "Magpie monorepo",
+	"description": "Coati monorepo",
 	"category": "general",
 	"tools": ["claude-code"],
-	"tags": ["magpie"],
+	"tags": ["coati"],
 	"files": [
 		{
 			"source": "CLAUDE.md",

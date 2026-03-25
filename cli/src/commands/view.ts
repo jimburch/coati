@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { AGENTS_BY_SLUG } from '@magpie/agents-registry';
+import { AGENTS_BY_SLUG } from '@coati/agents-registry';
 import { get, ApiError } from '../api.js';
 import { setOutputMode, isJsonMode, json, print, error, info } from '../output.js';
 

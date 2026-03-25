@@ -1,6 +1,6 @@
-# Magpie CLI
+# Coati CLI
 
-Command-line tool for cloning, publishing, and managing AI coding setups on [Magpie](https://magpie.sh).
+Command-line tool for cloning, publishing, and managing AI coding setups on [Coati](https://coati.sh).
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@ pnpm install
 
 ## Running locally
 
-The CLI defaults to the production API (`https://magpie.sh/api/v1`). For local development, point it at your local SvelteKit dev server instead.
+The CLI defaults to the production API (`https://coati.sh/api/v1`). For local development, point it at your local SvelteKit dev server instead.
 
 ### 1. Start the web app
 
@@ -69,8 +69,8 @@ When multiple overrides are set, the CLI resolves the API base in this order (fi
 1. `--api-base <url>` flag
 2. `--dev` flag
 3. `MAGPIE_API_BASE` environment variable
-4. `apiBase` in `~/.magpie/config.json`
-5. Hardcoded default (`https://magpie.sh/api/v1`)
+4. `apiBase` in `~/.coati/config.json`
+5. Hardcoded default (`https://coati.sh/api/v1`)
 
 ## Commands
 
@@ -82,15 +82,15 @@ When multiple overrides are set, the CLI resolves the API base in this order (fi
 | `init`    | Scaffold a `setup.json` manifest                |
 | `publish` | Publish or update a setup from the current dir  |
 
-Run `magpie <command> --help` for command-specific options.
+Run `coati <command> --help` for command-specific options.
 
 ## Auth & config
 
-Credentials are stored in `~/.magpie/config.json` (mode `0600`). The same config file is used for both dev and production.
+Credentials are stored in `~/.coati/config.json` (mode `0600`). The same config file is used for both dev and production.
 
 ```bash
 # Check current config
-cat ~/.magpie/config.json
+cat ~/.coati/config.json
 ```
 
 ## Tests
@@ -105,4 +105,4 @@ pnpm test
 pnpm build
 ```
 
-Outputs to `dist/`. The published npm package uses the built files via `bin/magpie.js`.
+Outputs to `dist/`. The published npm package uses the built files via `bin/coati.js`.

@@ -10,7 +10,7 @@
 </script>
 
 <svelte:head>
-	<title>Magpie - Share AI Coding Workflows</title>
+	<title>Coati - Share AI Coding Workflows</title>
 	<meta
 		name="description"
 		content="Discover, share, and clone AI coding workflows and setups for Claude Code, Cursor, Copilot, and more."

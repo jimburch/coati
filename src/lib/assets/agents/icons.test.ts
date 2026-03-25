@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync } from 'fs';
 import { resolve } from 'path';
-import { AGENTS } from '@magpie/agents-registry';
+import { AGENTS } from '@coati/agents-registry';
 
 describe('agent SVG icons', () => {
 	it('has an SVG file for every agent in the registry', () => {

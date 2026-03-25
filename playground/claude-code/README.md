@@ -1,7 +1,7 @@
 # Claude Code Playground
 
 This directory simulates a real TypeScript project with a full Claude Code setup.
-It is a **test environment for the Magpie CLI** — use it to verify that Magpie
+It is a **test environment for the Coati CLI** — use it to verify that Coati
 correctly discovers, parses, and packages Claude Code configuration files.
 
 ## What's Here
@@ -17,13 +17,13 @@ correctly discovers, parses, and packages Claude Code configuration files.
 | `.claude/hooks/pre-commit.sh`          | Pre-commit hook running lint, type-check, and tests         |
 | `.mcp.json`                            | MCP server configuration (filesystem, fetch, sqlite)        |
 
-## Usage with Magpie CLI
+## Usage with Coati CLI
 
-From this directory, you can test Magpie commands like:
+From this directory, you can test Coati commands like:
 
 ```bash
-# Initialize a Magpie setup from this project's config
-magpie init
+# Initialize a Coati setup from this project's config
+coati init
 
 # Verify the generated setup.json includes all detected files
 cat setup.json
@@ -31,6 +31,6 @@ cat setup.json
 
 ## Not Included
 
-- `setup.json` — intentionally omitted so you can test `magpie init` generating it
+- `setup.json` — intentionally omitted so you can test `coati init` generating it
 - `node_modules/` — this is a simulated project, no need to install dependencies
 - `src/` — source code is not needed; the playground focuses on config files only

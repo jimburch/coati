@@ -85,5 +85,5 @@ test('desktop layout shows agent header', async ({ page, isMobile }) => {
 test('page has correct meta title', async ({ page }) => {
 	await page.goto(AGENT_URL);
 	const title = await page.title();
-	expect(title).toMatch(/Setups.*Magpie/);
+	expect(title).toMatch(/Setups.*Coati/);
 });

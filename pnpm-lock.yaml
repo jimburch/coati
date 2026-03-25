@@ -8,7 +8,7 @@ importers:
 
   .:
     dependencies:
-      '@magpie/agents-registry':
+      '@coati/agents-registry':
         specifier: workspace:*
         version: link:packages/agents-registry
       '@tailwindcss/typography':
@@ -135,7 +135,7 @@ importers:
 
   cli:
     dependencies:
-      '@magpie/agents-registry':
+      '@coati/agents-registry':
         specifier: workspace:*
         version: link:../packages/agents-registry
       commander:

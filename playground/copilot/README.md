@@ -1,10 +1,10 @@
 # GitHub Copilot Playground
 
-A test environment for the Magpie CLI that simulates a real TypeScript project with a full GitHub Copilot configuration.
+A test environment for the Coati CLI that simulates a real TypeScript project with a full GitHub Copilot configuration.
 
 ## Purpose
 
-This playground is used to test Magpie's `init` and `clone` commands against a realistic project structure. It represents how a team would configure GitHub Copilot across all its supported configuration surfaces.
+This playground is used to test Coati's `init` and `clone` commands against a realistic project structure. It represents how a team would configure GitHub Copilot across all its supported configuration surfaces.
 
 ## Configuration Files
 
@@ -44,13 +44,13 @@ copilot/
     └── settings.json
 ```
 
-## Usage with Magpie
+## Usage with Coati
 
 ```bash
-# Initialize a Magpie setup from this directory
+# Initialize a Coati setup from this directory
 cd playground/copilot
-magpie init
+coati init
 
 # Clone this setup into another project
-magpie clone <username>/copilot-setup --target /path/to/project
+coati clone <username>/copilot-setup --target /path/to/project
 ```

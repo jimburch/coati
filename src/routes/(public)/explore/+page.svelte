@@ -76,8 +76,8 @@
 </script>
 
 <svelte:head>
-	<title>Explore Setups - Magpie</title>
-	<meta name="description" content="Browse AI coding workflows and setups on Magpie." />
+	<title>Explore Setups - Coati</title>
+	<meta name="description" content="Browse AI coding workflows and setups on Coati." />
 </svelte:head>
 
 <div class="mx-auto max-w-7xl px-4 py-8">

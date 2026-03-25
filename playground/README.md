@@ -1,33 +1,33 @@
 # Playground
 
-Reference implementations for each supported AI coding agent. Used for testing the CLI's file detection, `node ../../cli/bin/magpie.js init`, `node ../../cli/bin/magpie.js clone`, and `node ../../cli/bin/magpie.js publish` workflows.
+Reference implementations for each supported AI coding agent. Used for testing the CLI's file detection, `node ../../cli/bin/coati.js init`, `node ../../cli/bin/coati.js clone`, and `node ../../cli/bin/coati.js publish` workflows.
 
 ## Setup
 
 All commands below assume you're running the local CLI from within a playground subdirectory. From any playground directory, the CLI entry point is:
 
 ```bash
-node ../../cli/bin/magpie.js <command>
+node ../../cli/bin/coati.js <command>
 ```
 
 ## Single-Agent Directories
 
-Each directory contains a realistic project-level setup for one agent. **None of these have a `setup.json`** — they're designed for testing `node ../../cli/bin/magpie.js init` auto-detection.
+Each directory contains a realistic project-level setup for one agent. **None of these have a `setup.json`** — they're designed for testing `node ../../cli/bin/coati.js init` auto-detection.
 
-| Directory | Agent | Key Config Files |
-|-----------|-------|-----------------|
-| `claude-code/` | Claude Code | `CLAUDE.md`, `.claude/`, `.mcp.json` |
-| `codex/` | Codex CLI | `AGENTS.md`, `.codex/`, `.agents/` |
-| `copilot/` | GitHub Copilot | `.github/copilot-instructions.md`, `.github/copilot/` |
-| `cursor/` | Cursor | `.cursorrules`, `.cursor/rules/*.mdc`, `.cursor/` |
-| `gemini/` | Gemini CLI | `GEMINI.md`, `.gemini/`, `.geminiignore` |
-| `opencode/` | OpenCode | `opencode.md`, `.opencode.json`, `.opencode/` |
+| Directory      | Agent          | Key Config Files                                      |
+| -------------- | -------------- | ----------------------------------------------------- |
+| `claude-code/` | Claude Code    | `CLAUDE.md`, `.claude/`, `.mcp.json`                  |
+| `codex/`       | Codex CLI      | `AGENTS.md`, `.codex/`, `.agents/`                    |
+| `copilot/`     | GitHub Copilot | `.github/copilot-instructions.md`, `.github/copilot/` |
+| `cursor/`      | Cursor         | `.cursorrules`, `.cursor/rules/*.mdc`, `.cursor/`     |
+| `gemini/`      | Gemini CLI     | `GEMINI.md`, `.gemini/`, `.geminiignore`              |
+| `opencode/`    | OpenCode       | `opencode.md`, `.opencode.json`, `.opencode/`         |
 
-### Testing `node ../../cli/bin/magpie.js init`
+### Testing `node ../../cli/bin/coati.js init`
 
 ```bash
 cd playground/claude-code   # or any single-agent directory
-node ../../cli/bin/magpie.js init
+node ../../cli/bin/coati.js init
 ```
 
 Expected behavior:
@@ -48,7 +48,7 @@ Verify: the generated `setup.json` should list only the one agent and tag every 
 ```bash
 cd playground/multi
 rm setup.json              # remove the reference manifest
-node ../../cli/bin/magpie.js init
+node ../../cli/bin/coati.js init
 ```
 
 Expected behavior:
@@ -61,7 +61,7 @@ Expected behavior:
 ### Testing multi-agent clone
 
 ```bash
-node ../../cli/bin/magpie.js clone <owner>/multi-setup
+node ../../cli/bin/coati.js clone <owner>/multi-setup
 ```
 
 Expected behavior:
@@ -78,7 +78,7 @@ Expected behavior:
 ### Testing global clone behavior
 
 ```bash
-node ../../cli/bin/magpie.js clone <owner>/user-setup
+node ../../cli/bin/coati.js clone <owner>/user-setup
 ```
 
 Expected behavior:
@@ -88,13 +88,13 @@ Expected behavior:
 3. Prompts for installation scope — default should be "global" (from manifest `placement`)
 4. Installs files to home directory paths (e.g., `~/.claude/settings.json`)
 
-## Testing `node ../../cli/bin/magpie.js publish` validation
+## Testing `node ../../cli/bin/coati.js publish` validation
 
 From any directory with a `setup.json`:
 
 ```bash
 cd playground/multi
-node ../../cli/bin/magpie.js publish
+node ../../cli/bin/coati.js publish
 ```
 
 The publish command validates agent references before uploading:

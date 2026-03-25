@@ -152,7 +152,7 @@ describe('POST /api/v1/auth/device/poll', () => {
 		mockUpsertGithubUser.mockResolvedValue('user-uuid-456');
 		mockGenerateSessionToken.mockReturnValue('my-token');
 		mockCreateSession.mockResolvedValue(undefined);
-		mockFindFirstUser.mockResolvedValue({ id: 'user-uuid-456', username: 'magpieuser' });
+		mockFindFirstUser.mockResolvedValue({ id: 'user-uuid-456', username: 'coatiuser' });
 
 		const { POST } = await import('./+server');
 		const res = await POST(makeRequest({ deviceCode: 'device-code-123' }));

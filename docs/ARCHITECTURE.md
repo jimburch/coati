@@ -2,7 +2,7 @@
 
 ## System Overview
 
-Magpie is a monolithic SvelteKit application backed by PostgreSQL, with a separate CLI package that communicates with the app's API routes.
+Coati is a monolithic SvelteKit application backed by PostgreSQL, with a separate CLI package that communicates with the app's API routes.
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -11,7 +11,7 @@ Magpie is a monolithic SvelteKit application backed by PostgreSQL, with a separa
            │                    │
            ▼                    ▼
 ┌──────────────────┐  ┌──────────────────┐
-│   Web Browser    │  │   magpie CLI     │
+│   Web Browser    │  │   coati CLI     │
 │  (SvelteKit SSR  │  │  (Node.js npm    │
 │   + client JS)   │  │   package)       │
 └────────┬─────────┘  └────────┬──────────┘
@@ -76,8 +76,8 @@ Magpie is a monolithic SvelteKit application backed by PostgreSQL, with a separa
 
 ### CLI: Cloning a Setup
 
-1. User runs `magpie clone alice/my-claude-workflow`
-2. CLI reads auth token from `~/.magpie/config.json`
+1. User runs `coati clone alice/my-claude-workflow`
+2. CLI reads auth token from `~/.coati/config.json`
 3. CLI sends `GET /api/v1/setups/alice/my-claude-workflow` with Bearer token
 4. API returns setup metadata + manifest
 5. CLI sends `GET /api/v1/setups/{id}/files` to fetch all file contents
@@ -90,7 +90,7 @@ Magpie is a monolithic SvelteKit application backed by PostgreSQL, with a separa
 ### CLI: Publishing a Setup
 
 1. User creates a `setup.json` manifest in their project directory
-2. User runs `magpie publish`
+2. User runs `coati publish`
 3. CLI reads and validates `setup.json`
 4. CLI collects all files referenced in the manifest
 5. CLI sends `POST /api/v1/setups` with metadata + files as JSON payload
@@ -111,7 +111,7 @@ Magpie is a monolithic SvelteKit application backed by PostgreSQL, with a separa
 - CLI initiates GitHub device flow via platform's `/api/v1/auth/device` endpoint
 - User authorizes on GitHub in their browser
 - CLI receives GitHub access token, exchanges it for a platform session token
-- Token stored at `~/.magpie/config.json`
+- Token stored at `~/.coati/config.json`
 - Sent as `Authorization: Bearer <token>` on all CLI API requests
 - Server validates CLI tokens against the same sessions table
 

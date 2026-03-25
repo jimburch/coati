@@ -43,18 +43,18 @@ In `setup.json`, every file entry has `"placement": "global"` and a target start
 }
 ```
 
-When `magpie clone` installs a global setup, it expands `~` to the user's home directory
+When `coati clone` installs a global setup, it expands `~` to the user's home directory
 and places each file there, rather than in the current project directory.
 
-## Usage with Magpie CLI
+## Usage with Coati CLI
 
 ```bash
 # Clone this global setup to your home directory
-magpie clone @jim/global-ai-coding-setup
+coati clone @jim/global-ai-coding-setup
 
 # Initialize a new setup from your existing home-directory configs
-magpie init
+coati init
 
 # Publish your personal global setup
-magpie publish
+coati publish
 ```

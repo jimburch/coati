@@ -20,8 +20,8 @@ const pkg = require(join(__dirname, '../package.json')) as { version: string };
 const program = new Command();
 
 program
-	.name('magpie')
-	.description('Magpie CLI — clone, publish, and manage AI coding setups')
+	.name('coati')
+	.description('Coati CLI — clone, publish, and manage AI coding setups')
 	.version(pkg.version)
 	.option('--dev', `Use local dev server (${DEV_API_BASE})`)
 	.option('--api-base <url>', 'Override API base URL');

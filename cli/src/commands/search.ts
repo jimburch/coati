@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { AGENTS_BY_SLUG } from '@magpie/agents-registry';
+import { AGENTS_BY_SLUG } from '@coati/agents-registry';
 import { get, ApiError } from '../api.js';
 import { setOutputMode, isJsonMode, json, print, error, info } from '../output.js';
 
@@ -27,7 +27,7 @@ function formatAgents(agents: string[] | undefined): string {
 export function registerSearch(program: Command): void {
 	program
 		.command('search')
-		.description('Search for setups on Magpie')
+		.description('Search for setups on Coati')
 		.argument('[query]', 'Search query')
 		.option('--agent <slug>', 'Filter results by agent slug (e.g. claude-code)')
 		.option('--json', 'Output results as JSON')

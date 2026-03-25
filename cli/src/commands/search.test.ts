@@ -96,7 +96,7 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-describe('magpie search', () => {
+describe('coati search', () => {
 	it('calls GET /setups with no params when no query or agent', async () => {
 		mockGet.mockResolvedValue([]);
 		await makeProgram().parseAsync(['search'], { from: 'user' });

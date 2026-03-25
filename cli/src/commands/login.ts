@@ -44,7 +44,7 @@ interface LoginOptions {
 export function registerLogin(program: Command): void {
 	program
 		.command('login')
-		.description('Authenticate with Magpie using GitHub Device Flow')
+		.description('Authenticate with Coati using GitHub Device Flow')
 		.option('--force', 'Re-authenticate even if already logged in')
 		.option('--no-browser', 'Do not auto-open the browser')
 		.option('--json', 'Output structured JSON')

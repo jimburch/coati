@@ -7,7 +7,7 @@ import { detectFiles, type DetectedFile } from './detector.js';
 let tmpDir: string;
 
 beforeEach(() => {
-	tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'magpie-detector-test-'));
+	tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'coati-detector-test-'));
 });
 
 afterEach(() => {

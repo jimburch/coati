@@ -1,8 +1,8 @@
 # OpenCode Playground
 
-This directory is a test environment for the **Magpie CLI**. It simulates a
+This directory is a test environment for the **Coati CLI**. It simulates a
 realistic TypeScript project that uses [OpenCode](https://opencode.ai) as its
-AI coding assistant, providing a complete set of configuration files for Magpie
+AI coding assistant, providing a complete set of configuration files for Coati
 to detect, parse, and clone.
 
 ## What's inside
@@ -16,9 +16,9 @@ to detect, parse, and clone.
 | `.opencode/commands/test-coverage.md` | Custom slash command: test coverage analysis (`project:test-coverage`)                 |
 | `.opencode/commands/deploy-check.md`  | Custom slash command: deployment readiness check (`project:deploy-check`)              |
 
-## How Magpie uses this
+## How Coati uses this
 
-When running `magpie init` in this directory, the CLI should detect the OpenCode
+When running `coati init` in this directory, the CLI should detect the OpenCode
 configuration files and offer to create a `setup.json` manifest from them. This
 playground lets you test that detection and initialization flow against realistic
 file contents rather than minimal stubs.

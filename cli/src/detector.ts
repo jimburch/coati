@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { AGENTS, matchesGlob } from '@magpie/agents-registry';
+import { AGENTS, matchesGlob } from '@coati/agents-registry';
 import type { ManifestComponentType, ManifestPlacement } from './manifest.js';
 
 export interface DetectedFile {
@@ -8,7 +8,7 @@ export interface DetectedFile {
 	target: string;
 	placement: ManifestPlacement;
 	componentType: ManifestComponentType;
-	/** Agent slug from @magpie/agents-registry (e.g. 'claude-code', 'cursor'). */
+	/** Agent slug from @coati/agents-registry (e.g. 'claude-code', 'cursor'). */
 	tool: string;
 	description: string;
 }
@@ -69,7 +69,7 @@ function makeDescription(
 }
 
 /**
- * Scan `dir` for known AI agent config files using the shared @magpie/agents-registry.
+ * Scan `dir` for known AI agent config files using the shared @coati/agents-registry.
  *
  * Detection strategy for each file:
  *   1. Check each agent's globalGlobs — files that belong in the user's home dir.

@@ -2,7 +2,7 @@
 
 This directory demonstrates a **multi-agent setup** — the same Express + TypeScript + SQLite project configured for both **Claude Code** and **Cursor** side by side.
 
-It is a test environment for the Magpie CLI and platform, showing how a single `setup.json` can bundle config files for multiple AI coding agents, with per-file `agent` fields identifying which tool each file belongs to.
+It is a test environment for the Coati CLI and platform, showing how a single `setup.json` can bundle config files for multiple AI coding agents, with per-file `agent` fields identifying which tool each file belongs to.
 
 ## Config Files
 
@@ -59,17 +59,17 @@ In `setup.json`, each file entry has an optional `agent` field:
 - **With `agent`**: installed only when the user has that agent, or when explicitly requested
 - **Without `agent`**: shared file, always installed regardless of which agents the user has
 
-## Usage with Magpie CLI
+## Usage with Coati CLI
 
 ```bash
 # Clone this multi-agent setup
-magpie clone @jim/typescript-express-multi-agent
+coati clone @jim/typescript-express-multi-agent
 
 # Initialize a new setup from an existing multi-agent project
-magpie init
+coati init
 
 # Publish a multi-agent setup
-magpie publish
+coati publish
 ```
 
 ## Not Included

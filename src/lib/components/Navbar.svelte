@@ -11,7 +11,7 @@
 <header class="bg-background/80 sticky top-0 z-50 border-b backdrop-blur">
 	<div class="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
 		<div class="flex items-center gap-6">
-			<a href="/" class="text-lg font-bold">Magpie</a>
+			<a href="/" class="text-lg font-bold">Coati</a>
 			<a
 				href="/explore"
 				class="text-sm text-muted-foreground transition-colors hover:text-foreground">Explore</a
