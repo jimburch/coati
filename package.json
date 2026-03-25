@@ -13,7 +13,7 @@
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
 		"test:unit": "vitest",
-		"test": "npm run test:unit -- --run && npm run test:e2e",
+		"test": "pnpm run test:unit -- --run && pnpm run test:e2e",
 		"test:e2e": "playwright test",
 		"db:up": "docker compose up -d",
 		"db:down": "docker compose down",
@@ -50,6 +50,7 @@
 		"vitest-browser-svelte": "^2.0.2"
 	},
 	"dependencies": {
+		"@magpie/agents-registry": "workspace:*",
 		"@tailwindcss/typography": "^0.5.19",
 		"arctic": "^3.7.0",
 		"bits-ui": "^2.16.3",
