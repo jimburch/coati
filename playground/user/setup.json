@@ -1,0 +1,50 @@
+{
+	"name": "global-ai-coding-setup",
+	"version": "1.0.0",
+	"description": "Personal global config for Claude Code, Gemini CLI, and Codex — installs to your home directory and applies to all projects on your machine",
+	"category": "general",
+	"agents": ["claude-code", "gemini", "codex"],
+	"tags": ["global", "user-level", "claude-code", "gemini", "codex", "multi-agent"],
+	"files": [
+		{
+			"source": ".claude/settings.json",
+			"target": "~/.claude/settings.json",
+			"placement": "global",
+			"componentType": "instruction",
+			"agent": "claude-code",
+			"description": "Global Claude Code preferences: model, permissions, and behavior defaults"
+		},
+		{
+			"source": ".claude/CLAUDE.md",
+			"target": "~/.claude/CLAUDE.md",
+			"placement": "global",
+			"componentType": "instruction",
+			"agent": "claude-code",
+			"description": "Global instructions Claude Code reads for every project"
+		},
+		{
+			"source": ".claude/commands/commit.md",
+			"target": "~/.claude/commands/commit.md",
+			"placement": "global",
+			"componentType": "command",
+			"agent": "claude-code",
+			"description": "Global /commit slash command: generates conventional commit messages"
+		},
+		{
+			"source": ".gemini/settings.json",
+			"target": "~/.gemini/settings.json",
+			"placement": "global",
+			"componentType": "instruction",
+			"agent": "gemini",
+			"description": "Global Gemini CLI preferences: model, sandbox, and display settings"
+		},
+		{
+			"source": ".codex/config.toml",
+			"target": "~/.codex/config.toml",
+			"placement": "global",
+			"componentType": "instruction",
+			"agent": "codex",
+			"description": "Global Codex configuration: model, approval mode, and history settings"
+		}
+	]
+}

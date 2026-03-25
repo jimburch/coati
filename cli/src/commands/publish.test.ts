@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Command } from 'commander';
+import type { Manifest } from '../manifest.js';
 
 // ── hoisted class definitions ─────────────────────────────────────────────────
 
@@ -42,12 +43,24 @@ vi.mock('../api.js', () => ({
 	ApiError: MockApiError
 }));
 
+// ── mock agents-registry ──────────────────────────────────────────────────────
+
+vi.mock('@magpie/agents-registry', () => ({
+	AGENTS_BY_SLUG: {
+		'claude-code': { slug: 'claude-code', displayName: 'Claude Code' },
+		cursor: { slug: 'cursor', displayName: 'Cursor' },
+		codex: { slug: 'codex', displayName: 'Codex' }
+	}
+}));
+
 // ── mock manifest ─────────────────────────────────────────────────────────────
 
 const mockReadManifest = vi.fn();
+const mockWriteManifest = vi.fn();
 
 vi.mock('../manifest.js', () => ({
 	readManifest: (dir: string) => mockReadManifest(dir),
+	writeManifest: (dir: string, data: unknown) => mockWriteManifest(dir, data),
 	MANIFEST_FILENAME: 'setup.json'
 }));
 
@@ -76,6 +89,7 @@ const mockPrint = vi.fn();
 const mockSuccess = vi.fn();
 const mockError = vi.fn();
 const mockInfo = vi.fn();
+const mockWarning = vi.fn();
 
 vi.mock('../output.js', () => ({
 	setOutputMode: (mode: string) => mockSetOutputMode(mode),
@@ -85,7 +99,21 @@ vi.mock('../output.js', () => ({
 	success: (msg: string) => mockSuccess(msg),
 	error: (msg: string) => mockError(msg),
 	info: (msg: string) => mockInfo(msg),
-	warning: vi.fn()
+	warning: (msg: string) => mockWarning(msg)
+}));
+
+// ── mock prompts ──────────────────────────────────────────────────────────────
+
+const mockConfirm = vi.fn<[string, boolean?], Promise<boolean>>();
+
+vi.mock('../prompts.js', () => ({
+	confirm: (question: string, defaultValue?: boolean) => mockConfirm(question, defaultValue),
+	resolveConflict: vi.fn(),
+	promptDestination: vi.fn(),
+	promptMetadata: vi.fn(),
+	confirmFileList: vi.fn(),
+	confirmPostInstall: vi.fn(),
+	pickFiles: vi.fn()
 }));
 
 // ── mock init ─────────────────────────────────────────────────────────────────
@@ -98,7 +126,7 @@ vi.mock('./init.js', () => ({
 }));
 
 // Import publish command after all mocks are set up
-const { registerPublish } = await import('./publish.js');
+const { registerPublish, validateAgentRefs } = await import('./publish.js');
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -151,6 +179,7 @@ beforeEach(() => {
 	mockPost.mockResolvedValue(MOCK_SETUP_RESPONSE);
 	mockPatch.mockResolvedValue(MOCK_SETUP_RESPONSE);
 	mockRunInitFlow.mockResolvedValue(true);
+	mockConfirm.mockResolvedValue(true);
 });
 
 afterEach(() => {
@@ -329,6 +358,215 @@ describe('--json mode', () => {
 			slug: 'my-setup',
 			url: expect.stringContaining('alice/my-setup')
 		});
+	});
+});
+
+// ── agent validation ──────────────────────────────────────────────────────────
+
+describe('validateAgentRefs', () => {
+	const CWD = '/fake/cwd';
+
+	function makeManifest(overrides: Partial<Manifest> = {}): Manifest {
+		return {
+			name: 'my-setup',
+			version: '1.0.0',
+			description: 'test',
+			files: [],
+			...overrides
+		};
+	}
+
+	it('returns manifest unchanged when no files have agent fields', async () => {
+		const manifest = makeManifest({
+			files: [{ source: 'README.md', target: 'README.md', placement: 'project' }]
+		});
+		const result = await validateAgentRefs(manifest, CWD);
+		expect(result).toEqual(manifest);
+		expect(mockError).not.toHaveBeenCalled();
+	});
+
+	it('returns manifest unchanged when all file agents are in agents array', async () => {
+		const manifest = makeManifest({
+			agents: ['claude-code'],
+			files: [
+				{
+					source: 'CLAUDE.md',
+					target: 'CLAUDE.md',
+					placement: 'project',
+					agent: 'claude-code'
+				}
+			]
+		});
+		const result = await validateAgentRefs(manifest, CWD);
+		expect(result).toEqual(manifest);
+		expect(mockError).not.toHaveBeenCalled();
+		expect(mockConfirm).not.toHaveBeenCalled();
+	});
+
+	it('returns null and errors for unknown agent slug', async () => {
+		const manifest = makeManifest({
+			files: [{ source: '.foo', target: '.foo', placement: 'project', agent: 'totally-unknown' }]
+		});
+		const result = await validateAgentRefs(manifest, CWD);
+		expect(result).toBeNull();
+		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('totally-unknown'));
+	});
+
+	it('returns null for multiple unknown agent slugs', async () => {
+		const manifest = makeManifest({
+			files: [
+				{ source: '.foo', target: '.foo', placement: 'project', agent: 'bad-agent-1' },
+				{ source: '.bar', target: '.bar', placement: 'project', agent: 'bad-agent-2' }
+			]
+		});
+		const result = await validateAgentRefs(manifest, CWD);
+		expect(result).toBeNull();
+		expect(mockError).toHaveBeenCalledTimes(2);
+	});
+
+	it('warns and offers to add missing agent when not in agents array', async () => {
+		mockConfirm.mockResolvedValue(false);
+		const manifest = makeManifest({
+			agents: [],
+			files: [
+				{ source: '.cursorrules', target: '.cursorrules', placement: 'project', agent: 'cursor' }
+			]
+		});
+		const result = await validateAgentRefs(manifest, CWD);
+		expect(result).not.toBeNull();
+		expect(mockError).not.toHaveBeenCalled();
+		expect(mockWarning).toHaveBeenCalledWith(expect.stringContaining('cursor'));
+		expect(mockConfirm).toHaveBeenCalledWith(expect.stringContaining('cursor'), true);
+	});
+
+	it('adds agent to agents array when user confirms auto-fix', async () => {
+		mockConfirm.mockResolvedValue(true);
+		const manifest = makeManifest({
+			agents: [],
+			files: [
+				{ source: '.cursorrules', target: '.cursorrules', placement: 'project', agent: 'cursor' }
+			]
+		});
+		const result = await validateAgentRefs(manifest, CWD);
+		expect(result).not.toBeNull();
+		expect(result!.agents).toContain('cursor');
+		expect(mockWriteManifest).toHaveBeenCalledWith(
+			CWD,
+			expect.objectContaining({ agents: expect.arrayContaining(['cursor']) })
+		);
+	});
+
+	it('does not update agents array when user declines auto-fix', async () => {
+		mockConfirm.mockResolvedValue(false);
+		const manifest = makeManifest({
+			agents: [],
+			files: [
+				{ source: '.cursorrules', target: '.cursorrules', placement: 'project', agent: 'cursor' }
+			]
+		});
+		const result = await validateAgentRefs(manifest, CWD);
+		expect(result).not.toBeNull();
+		expect(result!.agents).not.toContain('cursor');
+		expect(mockWriteManifest).not.toHaveBeenCalled();
+	});
+
+	it('handles multiple missing agents with mixed confirm/decline', async () => {
+		mockConfirm
+			.mockResolvedValueOnce(true) // accept claude-code
+			.mockResolvedValueOnce(false); // decline cursor
+		const manifest = makeManifest({
+			agents: [],
+			files: [
+				{ source: 'CLAUDE.md', target: 'CLAUDE.md', placement: 'project', agent: 'claude-code' },
+				{ source: '.cursorrules', target: '.cursorrules', placement: 'project', agent: 'cursor' }
+			]
+		});
+		const result = await validateAgentRefs(manifest, CWD);
+		expect(result).not.toBeNull();
+		expect(result!.agents).toContain('claude-code');
+		expect(result!.agents).not.toContain('cursor');
+	});
+
+	it('skips auto-fix prompts in JSON mode', async () => {
+		mockIsJsonMode.mockReturnValue(true);
+		const manifest = makeManifest({
+			agents: [],
+			files: [
+				{ source: '.cursorrules', target: '.cursorrules', placement: 'project', agent: 'cursor' }
+			]
+		});
+		const result = await validateAgentRefs(manifest, CWD);
+		expect(result).not.toBeNull();
+		expect(mockConfirm).not.toHaveBeenCalled();
+	});
+});
+
+// ── agent validation via publish command ──────────────────────────────────────
+
+describe('agent validation during publish', () => {
+	it('blocks publish when a file references an unknown agent slug', async () => {
+		mockReadManifest.mockReturnValue({
+			...MOCK_MANIFEST,
+			files: [
+				{
+					source: '.claude/commands/foo.md',
+					target: '.claude/commands/foo.md',
+					placement: 'global',
+					componentType: 'command',
+					agent: 'nonexistent-agent'
+				}
+			]
+		});
+		const program = makeProgram();
+		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+			throw new Error('process.exit');
+		});
+
+		await expect(program.parseAsync(['node', 'magpie', 'publish'])).rejects.toThrow('process.exit');
+		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('nonexistent-agent'));
+		expect(exitSpy).toHaveBeenCalledWith(1);
+		expect(mockPost).not.toHaveBeenCalled();
+	});
+
+	it('offers auto-fix when file agent is missing from agents array, and publishes after accepting', async () => {
+		mockConfirm.mockResolvedValue(true);
+		mockReadManifest.mockReturnValue({
+			...MOCK_MANIFEST,
+			agents: [],
+			files: [
+				{
+					source: '.cursorrules',
+					target: '.cursorrules',
+					placement: 'project',
+					agent: 'cursor'
+				}
+			]
+		});
+		const program = makeProgram();
+		await program.parseAsync(['node', 'magpie', 'publish']);
+
+		expect(mockConfirm).toHaveBeenCalledWith(expect.stringContaining('cursor'), true);
+		expect(mockPost).toHaveBeenCalled();
+	});
+
+	it('still publishes when user declines auto-fix for missing agent', async () => {
+		mockConfirm.mockResolvedValue(false);
+		mockReadManifest.mockReturnValue({
+			...MOCK_MANIFEST,
+			agents: [],
+			files: [
+				{
+					source: '.cursorrules',
+					target: '.cursorrules',
+					placement: 'project',
+					agent: 'cursor'
+				}
+			]
+		});
+		const program = makeProgram();
+		await program.parseAsync(['node', 'magpie', 'publish']);
+
+		expect(mockPost).toHaveBeenCalled();
 	});
 });
 

@@ -102,12 +102,36 @@ export async function resolveConflict(
 
 export type InstallDestination = 'current' | 'global';
 
-/** Ask where the user wants to install a setup. */
-export async function promptDestination(): Promise<InstallDestination> {
-	return select<InstallDestination>('Where would you like to install?', [
-		{ label: 'Install to current directory', value: 'current' },
-		{ label: 'Install globally (~/.magpie/setups/)', value: 'global' }
+/** Ask where the user wants to install a setup.
+ *  Pass `defaultScope` (derived from the setup's file placements) to surface
+ *  a [recommended] hint next to the most appropriate choice. */
+export async function promptDestination(
+	defaultScope: InstallDestination = 'current'
+): Promise<InstallDestination> {
+	const projectLabel =
+		'Install to this project (current directory)' +
+		(defaultScope === 'current' ? ' [recommended]' : '');
+	const globalLabel =
+		'Install globally (home directory)' + (defaultScope === 'global' ? ' [recommended]' : '');
+
+	if (defaultScope === 'global') {
+		return select<InstallDestination>('Install scope?', [
+			{ label: globalLabel, value: 'global' },
+			{ label: projectLabel, value: 'current' }
+		]);
+	}
+	return select<InstallDestination>('Install scope?', [
+		{ label: projectLabel, value: 'current' },
+		{ label: globalLabel, value: 'global' }
 	]);
+}
+
+/** Ask the user to pick one agent from a list of candidates. */
+export async function promptAgentSelection(
+	agents: { slug: string; displayName: string }[]
+): Promise<string> {
+	const choices = agents.map((a) => ({ label: a.displayName, value: a.slug }));
+	return select<string>('Install files for which agent?', choices);
 }
 
 export interface SetupMetadata {
@@ -118,15 +142,20 @@ export interface SetupMetadata {
 	tags: string[];
 }
 
-/** Interactively collect setup metadata from the user. */
-export async function promptMetadata(): Promise<SetupMetadata> {
+/** Interactively collect setup metadata from the user.
+ *  Pass `prefilledAgents` to pre-populate the agents field from auto-detection. */
+export async function promptMetadata(prefilledAgents: string[] = []): Promise<SetupMetadata> {
 	const name = await input('Setup name');
 	const description = await input('Description');
 	const category = await input(
 		'Category (web-dev, mobile, data-science, devops, systems, general)',
 		'general'
 	);
-	const agentsRaw = await input('Agents (comma-separated, e.g. claude-code, cursor)', '');
+	const agentsDefault = prefilledAgents.join(', ');
+	const agentsRaw = await input(
+		'Agents (comma-separated, e.g. claude-code, cursor)',
+		agentsDefault
+	);
 	const tagsRaw = await input('Tags (comma-separated)', '');
 
 	const agents = agentsRaw

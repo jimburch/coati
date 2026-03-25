@@ -22,7 +22,7 @@ const mockPromptMetadata = vi.fn();
 vi.mock('../prompts.js', () => ({
 	confirm: (msg: string, def: boolean) => mockConfirm(msg, def),
 	confirmFileList: (labels: string[]) => mockConfirmFileList(labels),
-	promptMetadata: () => mockPromptMetadata(),
+	promptMetadata: (prefilledAgents?: string[]) => mockPromptMetadata(prefilledAgents),
 	promptDestination: vi.fn(),
 	confirmPostInstall: vi.fn(),
 	pickFiles: vi.fn(),
@@ -61,7 +61,7 @@ vi.mock('../output.js', () => ({
 }));
 
 // Import after mocks are registered
-const { runInitFlow } = await import('./init.js');
+const { runInitFlow, computeDetectedAgents } = await import('./init.js');
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -71,16 +71,51 @@ const DETECTED_FILES = [
 		target: 'CLAUDE.md',
 		placement: 'project' as const,
 		componentType: 'instruction' as const,
-		tool: 'claude',
+		tool: 'claude-code',
 		description: 'Claude instruction file'
 	},
 	{
 		source: '.claude/settings.json',
 		target: '~/.claude/settings.json',
 		placement: 'global' as const,
-		componentType: 'instruction' as const,
-		tool: 'claude',
+		componentType: 'config' as const,
+		tool: 'claude-code',
 		description: 'Claude settings'
+	}
+];
+
+const MULTI_AGENT_FILES = [
+	{
+		source: 'CLAUDE.md',
+		target: 'CLAUDE.md',
+		placement: 'project' as const,
+		componentType: 'instruction' as const,
+		tool: 'claude-code',
+		description: 'Claude instruction file'
+	},
+	{
+		source: '.claude/settings.json',
+		target: '~/.claude/settings.json',
+		placement: 'global' as const,
+		componentType: 'config' as const,
+		tool: 'claude-code',
+		description: 'Claude settings'
+	},
+	{
+		source: '.cursor/rules/main.mdc',
+		target: '.cursor/rules/main.mdc',
+		placement: 'project' as const,
+		componentType: 'instruction' as const,
+		tool: 'cursor',
+		description: 'Cursor rule'
+	},
+	{
+		source: 'README.md',
+		target: 'README.md',
+		placement: 'project' as const,
+		componentType: 'instruction' as const,
+		tool: '',
+		description: 'Shared README'
 	}
 ];
 
@@ -88,7 +123,7 @@ const DEFAULT_METADATA = {
 	name: 'my-setup',
 	description: 'A test setup',
 	category: 'general',
-	agents: ['claude'],
+	agents: [] as string[],
 	tags: ['test']
 };
 
@@ -239,5 +274,182 @@ describe('runInitFlow — invalid slug', () => {
 		mockPromptMetadata.mockResolvedValue({ ...DEFAULT_METADATA, name: '!!!' });
 
 		await expect(runInitFlow(CWD)).rejects.toThrow('Setup name is required');
+	});
+});
+
+// ── agent auto-detection ──────────────────────────────────────────────────────
+
+describe('computeDetectedAgents', () => {
+	it('returns empty map for empty files', () => {
+		const counts = computeDetectedAgents([]);
+		expect(counts.size).toBe(0);
+	});
+
+	it('counts files per agent slug', () => {
+		const counts = computeDetectedAgents(DETECTED_FILES);
+		expect(counts.get('claude-code')).toBe(2);
+		expect(counts.size).toBe(1);
+	});
+
+	it('handles multiple agents', () => {
+		const counts = computeDetectedAgents(MULTI_AGENT_FILES);
+		expect(counts.get('claude-code')).toBe(2);
+		expect(counts.get('cursor')).toBe(1);
+		expect(counts.size).toBe(2);
+	});
+
+	it('ignores files with empty tool string', () => {
+		const counts = computeDetectedAgents(MULTI_AGENT_FILES);
+		expect(counts.has('')).toBe(false);
+	});
+});
+
+describe('runInitFlow — agents array auto-populated', () => {
+	it('populates agents from detected files', async () => {
+		await runInitFlow(CWD);
+
+		expect(mockWriteManifest).toHaveBeenCalledWith(
+			CWD,
+			expect.objectContaining({
+				agents: expect.arrayContaining(['claude-code'])
+			})
+		);
+	});
+
+	it('passes auto-detected agents to promptMetadata as prefilledAgents', async () => {
+		await runInitFlow(CWD);
+
+		expect(mockPromptMetadata).toHaveBeenCalledWith(['claude-code']);
+	});
+
+	it('merges user-provided agents from metadata with auto-detected agents', async () => {
+		mockPromptMetadata.mockResolvedValue({ ...DEFAULT_METADATA, agents: ['cursor'] });
+
+		await runInitFlow(CWD);
+
+		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
+		expect(writtenManifest.agents).toContain('claude-code');
+		expect(writtenManifest.agents).toContain('cursor');
+	});
+
+	it('deduplicates agents when user confirms the pre-filled value', async () => {
+		mockPromptMetadata.mockResolvedValue({ ...DEFAULT_METADATA, agents: ['claude-code'] });
+
+		await runInitFlow(CWD);
+
+		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
+		const claudeCount = (writtenManifest.agents as string[]).filter(
+			(a) => a === 'claude-code'
+		).length;
+		expect(claudeCount).toBe(1);
+	});
+
+	it('reports detected agents to the user', async () => {
+		await runInitFlow(CWD);
+
+		const printCalls = mockPrint.mock.calls.map((c) => c[0] as string);
+		const agentReport = printCalls.find((msg) => msg.includes('Found config files for:'));
+		expect(agentReport).toBeDefined();
+		// AGENTS_BY_SLUG['claude-code'].displayName is 'Claude Code'
+		expect(agentReport).toMatch(/Claude Code/i);
+	});
+
+	it('does not show agent report when no files detected', async () => {
+		mockDetectFiles.mockReturnValue([]);
+		mockConfirm.mockResolvedValue(true);
+
+		await runInitFlow(CWD);
+
+		const printCalls = mockPrint.mock.calls.map((c) => c[0] as string);
+		const agentReport = printCalls.find((msg) => msg.includes('Found config files for:'));
+		expect(agentReport).toBeUndefined();
+	});
+
+	it('omits agents key from manifest when none detected and user provides none', async () => {
+		mockDetectFiles.mockReturnValue([]);
+		mockConfirm.mockResolvedValue(true);
+		mockPromptMetadata.mockResolvedValue({ ...DEFAULT_METADATA, agents: [] });
+
+		await runInitFlow(CWD);
+
+		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
+		expect(writtenManifest.agents).toBeUndefined();
+	});
+});
+
+// ── file tagging (agent field) ────────────────────────────────────────────────
+
+describe('runInitFlow — file tagging', () => {
+	it('sets agent field on each file entry matching an agent', async () => {
+		await runInitFlow(CWD);
+
+		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
+		const claudeFile = (writtenManifest.files as Array<{ source: string; agent?: string }>).find(
+			(f) => f.source === 'CLAUDE.md'
+		);
+		expect(claudeFile).toBeDefined();
+		expect(claudeFile!.agent).toBe('claude-code');
+	});
+
+	it('sets agent field on global placement files too', async () => {
+		await runInitFlow(CWD);
+
+		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
+		const settingsFile = (writtenManifest.files as Array<{ source: string; agent?: string }>).find(
+			(f) => f.source === '.claude/settings.json'
+		);
+		expect(settingsFile).toBeDefined();
+		expect(settingsFile!.agent).toBe('claude-code');
+	});
+
+	it('does not set agent field on shared files with empty tool', async () => {
+		mockDetectFiles.mockReturnValue(MULTI_AGENT_FILES);
+		mockPromptMetadata.mockResolvedValue({ ...DEFAULT_METADATA, agents: [] });
+
+		await runInitFlow(CWD);
+
+		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
+		const sharedFile = (writtenManifest.files as Array<{ source: string; agent?: string }>).find(
+			(f) => f.source === 'README.md'
+		);
+		expect(sharedFile).toBeDefined();
+		expect(sharedFile!.agent).toBeUndefined();
+	});
+
+	it('tags each file correctly in a multi-agent project', async () => {
+		mockDetectFiles.mockReturnValue(MULTI_AGENT_FILES);
+		mockPromptMetadata.mockResolvedValue({ ...DEFAULT_METADATA, agents: [] });
+
+		await runInitFlow(CWD);
+
+		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
+		const cursorFile = (writtenManifest.files as Array<{ source: string; agent?: string }>).find(
+			(f) => f.source === '.cursor/rules/main.mdc'
+		);
+		expect(cursorFile).toBeDefined();
+		expect(cursorFile!.agent).toBe('cursor');
+	});
+});
+
+// ── confirmation flow shows agent info ───────────────────────────────────────
+
+describe('runInitFlow — confirmation flow', () => {
+	it('includes agent tag in file labels shown to user', async () => {
+		await runInitFlow(CWD);
+
+		const fileLabels = mockConfirmFileList.mock.calls[0]![0] as string[];
+		const hasAgentTag = fileLabels.some((label) => label.includes('[agent: claude-code]'));
+		expect(hasAgentTag).toBe(true);
+	});
+
+	it('does not include agent tag for shared files with no tool', async () => {
+		mockDetectFiles.mockReturnValue(MULTI_AGENT_FILES);
+
+		await runInitFlow(CWD);
+
+		const fileLabels = mockConfirmFileList.mock.calls[0]![0] as string[];
+		const readmeLabel = fileLabels.find((l) => l.includes('README.md'));
+		expect(readmeLabel).toBeDefined();
+		expect(readmeLabel).not.toContain('[agent:');
 	});
 });

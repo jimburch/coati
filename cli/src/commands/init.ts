@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Command } from 'commander';
+import { AGENTS_BY_SLUG } from '@magpie/agents-registry';
 import { detectFiles } from '../detector.js';
 import {
 	writeManifest,
@@ -28,6 +29,22 @@ function toSlug(name: string): string {
 }
 
 /**
+ * Compute the set of unique agent slugs present in the detected files,
+ * and how many files each agent contributed.
+ */
+export function computeDetectedAgents(
+	detected: ReturnType<typeof detectFiles>
+): Map<string, number> {
+	const counts = new Map<string, number>();
+	for (const f of detected) {
+		if (f.tool) {
+			counts.set(f.tool, (counts.get(f.tool) ?? 0) + 1);
+		}
+	}
+	return counts;
+}
+
+/**
  * Run the init flow in the given directory.
  * Returns true if setup.json was successfully written, false if the user cancelled.
  * Throws on unrecoverable errors (e.g. invalid slug).
@@ -49,6 +66,23 @@ export async function runInitFlow(cwd: string): Promise<boolean> {
 	print('Scanning for AI config files...\n');
 	const detected = detectFiles(cwd);
 
+	// Compute agent summary from detected files
+	const agentFileCounts = computeDetectedAgents(detected);
+	const autoDetectedAgents = [...agentFileCounts.keys()];
+
+	// Report detected agents to the user
+	if (autoDetectedAgents.length > 0) {
+		const agentSummary = autoDetectedAgents
+			.map((slug) => {
+				const agent = AGENTS_BY_SLUG[slug];
+				const count = agentFileCounts.get(slug)!;
+				const name = agent?.displayName ?? slug;
+				return `${name} (${count} file${count === 1 ? '' : 's'})`;
+			})
+			.join(', ');
+		print(`Found config files for: ${agentSummary}\n`);
+	}
+
 	let filesToInclude = detected;
 
 	if (detected.length === 0) {
@@ -66,8 +100,11 @@ export async function runInitFlow(cwd: string): Promise<boolean> {
 		}
 		filesToInclude = [];
 	} else {
-		// Show detected files and ask user to confirm
-		const fileLabels = detected.map((f) => `${f.source}  →  ${f.target}  [${f.componentType}]`);
+		// Show detected files (with agent tags) and ask user to confirm
+		const fileLabels = detected.map((f) => {
+			const agentTag = f.tool ? `  [agent: ${f.tool}]` : '';
+			return `${f.source}  →  ${f.target}  [${f.componentType}]${agentTag}`;
+		});
 		const confirmed = await confirmFileList(fileLabels);
 		if (!confirmed) {
 			print('Exiting without changes.');
@@ -75,9 +112,9 @@ export async function runInitFlow(cwd: string): Promise<boolean> {
 		}
 	}
 
-	// Prompt for setup metadata
+	// Prompt for setup metadata (agents pre-filled from detection)
 	print('\nSetup metadata:\n');
-	const metadata = await promptMetadata();
+	const metadata = await promptMetadata(autoDetectedAgents);
 
 	// Derive and validate the slug from the name
 	const slug = toSlug(metadata.name);
@@ -94,19 +131,23 @@ export async function runInitFlow(cwd: string): Promise<boolean> {
 			? (metadata.category as ManifestCategory)
 			: undefined;
 
-	// Build the manifest
+	// Merge auto-detected agents with any user-provided ones from metadata
+	const allAgents = [...new Set([...autoDetectedAgents, ...metadata.agents])];
+
+	// Build the manifest — auto-tag each file with its agent field
 	const manifest: Manifest = {
 		name: slug,
 		version: '1.0.0',
 		description: metadata.description,
 		...(category !== undefined && { category }),
-		...(metadata.agents.length > 0 && { agents: metadata.agents }),
+		...(allAgents.length > 0 && { agents: allAgents }),
 		...(metadata.tags.length > 0 && { tags: metadata.tags }),
 		files: filesToInclude.map((f) => ({
 			source: f.source,
 			target: f.target,
 			placement: f.placement,
-			componentType: f.componentType
+			componentType: f.componentType,
+			...(f.tool && { agent: f.tool })
 		}))
 	};
 

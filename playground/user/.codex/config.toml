@@ -1,0 +1,17 @@
+# Codex global configuration
+# This file lives at ~/.codex/config.toml and applies to all projects.
+
+model = "o4-mini"
+approval_mode = "suggest"
+
+[notify]
+on_apply = true
+on_error = true
+
+[history]
+persist = true
+max_entries = 200
+
+[sandbox]
+enabled = true
+network = false

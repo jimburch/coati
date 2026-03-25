@@ -1,0 +1,176 @@
+{
+	"name": "typescript-express-multi-agent",
+	"version": "1.0.0",
+	"description": "Express + TypeScript + SQLite project config for both Claude Code and Cursor — demonstrates multi-agent setup sharing on the same project",
+	"category": "web-dev",
+	"agents": ["claude-code", "cursor"],
+	"tags": ["typescript", "express", "sqlite", "multi-agent", "claude-code", "cursor"],
+	"files": [
+		{
+			"source": "package.json",
+			"target": "package.json",
+			"placement": "project",
+			"componentType": "config",
+			"description": "Node.js project manifest — shared between all agents"
+		},
+		{
+			"source": "README.md",
+			"target": "README.md",
+			"placement": "project",
+			"componentType": "instruction",
+			"description": "Project README — shared between all agents"
+		},
+		{
+			"source": "CLAUDE.md",
+			"target": "CLAUDE.md",
+			"placement": "project",
+			"componentType": "instruction",
+			"agent": "claude-code",
+			"description": "Project instructions for Claude Code"
+		},
+		{
+			"source": ".claude/settings.json",
+			"target": ".claude/settings.json",
+			"placement": "project",
+			"componentType": "instruction",
+			"agent": "claude-code",
+			"description": "Claude Code project-level permissions and model preferences"
+		},
+		{
+			"source": ".claude/commands/review.md",
+			"target": ".claude/commands/review.md",
+			"placement": "project",
+			"componentType": "command",
+			"agent": "claude-code",
+			"description": "Claude Code /review slash command"
+		},
+		{
+			"source": ".claude/commands/test-coverage.md",
+			"target": ".claude/commands/test-coverage.md",
+			"placement": "project",
+			"componentType": "command",
+			"agent": "claude-code",
+			"description": "Claude Code /test-coverage slash command"
+		},
+		{
+			"source": ".claude/hooks/pre-commit.sh",
+			"target": ".claude/hooks/pre-commit.sh",
+			"placement": "project",
+			"componentType": "hook",
+			"agent": "claude-code",
+			"description": "Pre-commit hook: lint, type-check, and test staged files"
+		},
+		{
+			"source": ".claude/skills/api-patterns/SKILL.md",
+			"target": ".claude/skills/api-patterns/SKILL.md",
+			"placement": "project",
+			"componentType": "skill",
+			"agent": "claude-code",
+			"description": "Teaches Claude Code the project's Express API conventions"
+		},
+		{
+			"source": ".mcp.json",
+			"target": ".mcp.json",
+			"placement": "project",
+			"componentType": "mcp_server",
+			"agent": "claude-code",
+			"description": "MCP server config for Claude Code (filesystem, fetch, sqlite)"
+		},
+		{
+			"source": ".cursorrules",
+			"target": ".cursorrules",
+			"placement": "project",
+			"componentType": "instruction",
+			"agent": "cursor",
+			"description": "Legacy Cursor root-level rules (kept for backward compatibility)"
+		},
+		{
+			"source": ".cursorignore",
+			"target": ".cursorignore",
+			"placement": "project",
+			"componentType": "ignore",
+			"agent": "cursor",
+			"description": "Files excluded from Cursor AI access"
+		},
+		{
+			"source": ".cursorindexingignore",
+			"target": ".cursorindexingignore",
+			"placement": "project",
+			"componentType": "ignore",
+			"agent": "cursor",
+			"description": "Large generated files excluded from Cursor's codebase index"
+		},
+		{
+			"source": ".cursor/rules/typescript.mdc",
+			"target": ".cursor/rules/typescript.mdc",
+			"placement": "project",
+			"componentType": "instruction",
+			"agent": "cursor",
+			"description": "MDC rule: TypeScript conventions (always applied)"
+		},
+		{
+			"source": ".cursor/rules/api-patterns.mdc",
+			"target": ".cursor/rules/api-patterns.mdc",
+			"placement": "project",
+			"componentType": "instruction",
+			"agent": "cursor",
+			"description": "MDC rule: Express API patterns (scoped to routes/controllers)"
+		},
+		{
+			"source": ".cursor/rules/testing.mdc",
+			"target": ".cursor/rules/testing.mdc",
+			"placement": "project",
+			"componentType": "instruction",
+			"agent": "cursor",
+			"description": "MDC rule: Vitest testing conventions (scoped to test files)"
+		},
+		{
+			"source": ".cursor/mcp.json",
+			"target": ".cursor/mcp.json",
+			"placement": "project",
+			"componentType": "mcp_server",
+			"agent": "cursor",
+			"description": "MCP server config for Cursor (filesystem, fetch)"
+		},
+		{
+			"source": ".cursor/hooks.json",
+			"target": ".cursor/hooks.json",
+			"placement": "project",
+			"componentType": "hook",
+			"agent": "cursor",
+			"description": "Cursor lifecycle hooks (eslint auto-fix, shell logging)"
+		},
+		{
+			"source": ".cursor/commands/review.md",
+			"target": ".cursor/commands/review.md",
+			"placement": "project",
+			"componentType": "command",
+			"agent": "cursor",
+			"description": "Cursor /review slash command"
+		},
+		{
+			"source": ".cursor/commands/test-coverage.md",
+			"target": ".cursor/commands/test-coverage.md",
+			"placement": "project",
+			"componentType": "command",
+			"agent": "cursor",
+			"description": "Cursor /test-coverage slash command"
+		},
+		{
+			"source": ".cursor/commands/refactor.md",
+			"target": ".cursor/commands/refactor.md",
+			"placement": "project",
+			"componentType": "command",
+			"agent": "cursor",
+			"description": "Cursor /refactor slash command"
+		},
+		{
+			"source": ".cursor/skills/api-patterns/SKILL.md",
+			"target": ".cursor/skills/api-patterns/SKILL.md",
+			"placement": "project",
+			"componentType": "skill",
+			"agent": "cursor",
+			"description": "Teaches Cursor the project's Express API conventions"
+		}
+	]
+}

@@ -250,6 +250,59 @@ export async function getAllAgents() {
 	return db.select().from(agents).orderBy(agents.displayName);
 }
 
+export async function getAllAgentsWithSetupCount() {
+	return db
+		.select({
+			id: agents.id,
+			slug: agents.slug,
+			displayName: agents.displayName,
+			icon: agents.icon,
+			website: agents.website,
+			official: agents.official,
+			setupsCount: sql<number>`count(${setupAgents.setupId})::int`
+		})
+		.from(agents)
+		.leftJoin(setupAgents, eq(agents.id, setupAgents.agentId))
+		.groupBy(agents.id)
+		.orderBy(agents.displayName);
+}
+
+export async function getAgentBySlugWithSetups(slug: string) {
+	const agentRows = await db.select().from(agents).where(eq(agents.slug, slug)).limit(1);
+	if (!agentRows[0]) return null;
+	const agent = agentRows[0];
+
+	const setupRows = await db
+		.select({
+			id: setups.id,
+			name: setups.name,
+			slug: setups.slug,
+			description: setups.description,
+			starsCount: setups.starsCount,
+			clonesCount: setups.clonesCount,
+			updatedAt: setups.updatedAt,
+			ownerUsername: users.username,
+			ownerAvatarUrl: users.avatarUrl
+		})
+		.from(setupAgents)
+		.innerJoin(setups, eq(setupAgents.setupId, setups.id))
+		.innerJoin(users, eq(setups.userId, users.id))
+		.where(eq(setupAgents.agentId, agent.id))
+		.orderBy(desc(setups.createdAt));
+
+	const setupIds = setupRows.map((s) => s.id);
+	const agentsMap = await getAgentsForSetups(setupIds);
+
+	return {
+		...agent,
+		setupsCount: setupRows.length,
+		setups: setupRows.map((s) => ({
+			...s,
+			agents: (agentsMap[s.id] ?? []).map((a) => a.slug)
+		}))
+	};
+}
+
 export async function getAllTags() {
 	return db.select().from(tags).orderBy(tags.name);
 }
@@ -342,6 +395,9 @@ export async function searchSetups(filters: {
 
 	const total = Number(countResult[0].count);
 
+	const setupIds = items.map((row) => row.id);
+	const agentsMap = await getAgentsForSetups(setupIds);
+
 	return {
 		items: items.map((row) => ({
 			id: row.id,
@@ -352,7 +408,8 @@ export async function searchSetups(filters: {
 			clonesCount: row.clones_count,
 			updatedAt: new Date(row.updated_at),
 			ownerUsername: row.owner_username,
-			ownerAvatarUrl: row.owner_avatar_url
+			ownerAvatarUrl: row.owner_avatar_url,
+			agents: (agentsMap[row.id] ?? []).map((a) => a.slug)
 		})),
 		total,
 		page,

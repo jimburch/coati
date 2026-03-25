@@ -33,3 +33,6 @@ screenshots
 # Playground — gitignore CLI-generated artifacts
 playground/*/setup.json
 playground/*/.magpie/
+# Multi-agent and user playgrounds ship their setup.json as demonstration manifests
+!playground/multi/setup.json
+!playground/user/setup.json

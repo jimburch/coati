@@ -1,0 +1,42 @@
+---
+description: Vitest testing conventions and patterns
+globs: ["src/**/*.test.ts", "src/**/*.spec.ts"]
+---
+
+# Testing Conventions
+
+## File Organization
+- Colocate test files with their source: `users.service.ts` -> `users.service.test.ts`
+- Use `.test.ts` for unit tests and `.spec.ts` for integration tests
+- Place shared test utilities in `src/test/helpers.ts`
+- Place test fixtures in `src/test/fixtures/` as plain TypeScript objects
+
+## Test Structure
+- Use descriptive `describe` blocks named after the function or module under test
+- Use `it` (not `test`) with descriptions that read as sentences: `it('returns 404 when user not found')`
+- Follow Arrange-Act-Assert pattern with blank lines separating each phase
+- Keep each test focused on a single behavior — avoid testing multiple things at once
+
+## Assertions
+- Prefer `expect(x).toBe(y)` for primitives and `expect(x).toEqual(y)` for objects
+- Use `toMatchObject` for partial object matching in API response tests
+- Use `toThrow` or `rejects.toThrow` for error path testing
+- Avoid snapshot tests for API responses — use explicit assertions
+
+## Mocking
+- Use `vi.mock()` at the top of the file for module-level mocks
+- Prefer dependency injection over mocking when possible
+- Reset all mocks in `beforeEach` with `vi.clearAllMocks()`
+- Use `vi.spyOn` for observing calls without replacing implementation
+- Type mock return values explicitly — never let mocks return `undefined` silently
+
+## API Testing
+- Use `supertest` with the Express app instance for HTTP integration tests
+- Test all response status codes, not just the happy path
+- Verify response body structure matches the expected `{ data }` or `{ error, code }` format
+- Test authentication and authorization separately from business logic
+
+## Coverage
+- Aim for >80% line coverage on service and utility modules
+- Do not test trivial getters, type definitions, or re-exports
+- Focus coverage on branching logic, error paths, and edge cases
