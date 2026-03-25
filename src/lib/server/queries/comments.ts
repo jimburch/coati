@@ -1,6 +1,6 @@
 import { eq, and, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { comments, setups, users } from '$lib/server/db/schema';
+import { comments, setups, users, activities } from '$lib/server/db/schema';
 
 export type CommentWithAuthor = {
 	id: string;
@@ -136,6 +136,10 @@ export async function createComment(
 			.update(setups)
 			.set({ commentsCount: sql`${setups.commentsCount} + 1` })
 			.where(eq(setups.id, setupId));
+
+		await tx
+			.insert(activities)
+			.values({ userId, setupId, commentId: comment.id, actionType: 'commented' });
 
 		return comment;
 	});

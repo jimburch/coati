@@ -8,7 +8,8 @@ import {
 	tags,
 	agents,
 	stars,
-	users
+	users,
+	activities
 } from '$lib/server/db/schema';
 import type { z } from 'zod';
 import type { createSetupWithFilesSchema, updateSetupSchema, ExploreSort } from '$lib/types';
@@ -106,6 +107,8 @@ export async function createSetup(userId: string, data: CreateSetupInput) {
 			.update(users)
 			.set({ setupsCount: sql`${users.setupsCount} + 1` })
 			.where(eq(users.id, userId));
+
+		await tx.insert(activities).values({ userId, setupId: setup.id, actionType: 'created_setup' });
 
 		return setup;
 	});

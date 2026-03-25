@@ -256,6 +256,8 @@ export const activities = pgTable(
 			.references(() => users.id, { onDelete: 'cascade' })
 			.notNull(),
 		setupId: uuid('setup_id').references(() => setups.id, { onDelete: 'set null' }),
+		targetUserId: uuid('target_user_id').references(() => users.id, { onDelete: 'set null' }),
+		commentId: uuid('comment_id').references(() => comments.id, { onDelete: 'set null' }),
 		actionType: actionTypeEnum('action_type').notNull(),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 	},
@@ -346,7 +348,9 @@ export const commentsRelations = relations(comments, ({ one, many }) => ({
 
 export const activitiesRelations = relations(activities, ({ one }) => ({
 	user: one(users, { fields: [activities.userId], references: [users.id] }),
-	setup: one(setups, { fields: [activities.setupId], references: [setups.id] })
+	setup: one(setups, { fields: [activities.setupId], references: [setups.id] }),
+	targetUser: one(users, { fields: [activities.targetUserId], references: [users.id] }),
+	comment: one(comments, { fields: [activities.commentId], references: [comments.id] })
 }));
 
 // ─── Type Exports ───────────────────────────────────────────────────────────

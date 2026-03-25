@@ -44,7 +44,9 @@ export async function toggleFollow(followerId: string, followingId: string): Pro
 				.update(users)
 				.set({ followingCount: sql`${users.followingCount} + 1` })
 				.where(eq(users.id, followerId));
-			await tx.insert(activities).values({ userId: followerId, actionType: 'followed_user' });
+			await tx
+				.insert(activities)
+				.values({ userId: followerId, actionType: 'followed_user', targetUserId: followingId });
 			return true;
 		}
 	});

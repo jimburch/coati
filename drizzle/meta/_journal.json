@@ -29,6 +29,13 @@
 			"when": 1742860800000,
 			"tag": "0003_tools_to_agents",
 			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1742947200000,
+			"tag": "0004_activity_target_fields",
+			"breakpoints": true
 		}
 	]
 }
