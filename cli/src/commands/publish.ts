@@ -1,15 +1,91 @@
 import fs from 'fs';
 import path from 'path';
 import { Command } from 'commander';
+import { AGENTS_BY_SLUG } from '@magpie/agents-registry';
 import { get, post, patch, ApiError } from '../api.js';
-import { readManifest, MANIFEST_FILENAME } from '../manifest.js';
+import { readManifest, writeManifest, MANIFEST_FILENAME, type Manifest } from '../manifest.js';
 import { getConfig } from '../config.js';
 import { isLoggedIn } from '../auth.js';
-import { setOutputMode, isJsonMode, json, print, success, error, info } from '../output.js';
+import {
+	setOutputMode,
+	isJsonMode,
+	json,
+	print,
+	success,
+	error,
+	info,
+	warning
+} from '../output.js';
+import { confirm } from '../prompts.js';
 import { runInitFlow } from './init.js';
 
 interface PublishOptions {
 	json?: boolean;
+}
+
+/**
+ * Validate agent references in the manifest:
+ * 1. Every file's `agent` field must be a known slug in the registry.
+ * 2. Every agent referenced in file entries must appear in `manifest.agents`.
+ *
+ * Blocking errors (unknown slug) cause the function to return null.
+ * Fixable mismatches (agent missing from the agents array) prompt the user
+ * to auto-fix; the updated manifest is returned.
+ *
+ * @param manifest  The in-memory manifest (may be mutated for auto-fix).
+ * @param cwd       Project directory (used to persist auto-fixes to setup.json).
+ * @returns The (possibly updated) manifest, or null if a blocking error occurred.
+ */
+export async function validateAgentRefs(manifest: Manifest, cwd: string): Promise<Manifest | null> {
+	const agentsInFiles = new Set<string>();
+	const unknownSlugs: string[] = [];
+
+	for (const file of manifest.files) {
+		if (!file.agent) continue;
+		const slug = file.agent;
+		if (!AGENTS_BY_SLUG[slug]) {
+			unknownSlugs.push(slug);
+		} else {
+			agentsInFiles.add(slug);
+		}
+	}
+
+	// Block on unknown slugs
+	if (unknownSlugs.length > 0) {
+		for (const slug of unknownSlugs) {
+			error(`Unknown agent slug "${slug}". Run \`magpie agents\` to see valid slugs.`);
+		}
+		return null;
+	}
+
+	// Offer to auto-fix agents missing from the agents array
+	const manifestAgents = new Set(manifest.agents ?? []);
+	const missingSlugs = [...agentsInFiles].filter((slug) => !manifestAgents.has(slug));
+
+	if (missingSlugs.length > 0 && !isJsonMode()) {
+		let changed = false;
+		for (const slug of missingSlugs) {
+			const filesForSlug = manifest.files
+				.filter((f) => f.agent === slug)
+				.map((f) => f.source)
+				.join(', ');
+			warning(
+				`File(s) ${filesForSlug} reference agent "${slug}" but it's not in your agents list.`
+			);
+			const add = await confirm(`Add "${slug}" to agents list?`, true);
+			if (add) {
+				manifestAgents.add(slug);
+				changed = true;
+			}
+		}
+		if (changed) {
+			manifest = { ...manifest, agents: [...manifestAgents] };
+			writeManifest(cwd, manifest);
+			info('Updated agents list in setup.json.');
+		}
+	}
+
+	return manifest;
 }
 
 interface SetupResponse {
@@ -72,6 +148,14 @@ export function registerPublish(program: Command): void {
 				process.exit(1);
 				return;
 			}
+
+			// Validate agent references in manifest
+			const validatedManifest = await validateAgentRefs(manifest, cwd);
+			if (validatedManifest === null) {
+				process.exit(1);
+				return;
+			}
+			manifest = validatedManifest;
 
 			// Read file contents from disk
 			const filesPayload: Array<{
