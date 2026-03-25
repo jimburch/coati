@@ -3,9 +3,16 @@ import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { Command } from 'commander';
+import { AGENTS_BY_SLUG } from '@magpie/agents-registry';
 import { get, post, ApiError } from '../api.js';
 import { writeSetupFiles } from '../files.js';
-import { promptDestination, confirmPostInstall, pickFiles } from '../prompts.js';
+import {
+	promptDestination,
+	confirmPostInstall,
+	pickFiles,
+	promptAgentSelection
+} from '../prompts.js';
+import { detectInstalledAgents } from '../agent-detection.js';
 import {
 	setOutputMode,
 	isJsonMode,
@@ -29,6 +36,7 @@ interface SetupMeta {
 	clonesCount: number;
 	starsCount: number;
 	postInstall?: string | null;
+	agents?: string[];
 }
 
 interface SetupFileRecord {
@@ -39,6 +47,7 @@ interface SetupFileRecord {
 	content: string;
 	componentType?: string;
 	description?: string;
+	agent?: string;
 }
 
 interface CloneOptions {
@@ -50,6 +59,7 @@ interface CloneOptions {
 	postInstall?: boolean;
 	projectDir?: string;
 	dir?: string;
+	agent?: string;
 }
 
 export function registerClone(program: Command): void {
@@ -63,6 +73,7 @@ export function registerClone(program: Command): void {
 		.option('--no-post-install', 'Skip post-install commands')
 		.option('--dir <path>', 'Override destination directory for project-scoped files')
 		.option('--project-dir <path>', 'Project directory for project-scoped files (default: cwd)')
+		.option('--agent <slug>', 'Override agent detection and install files for this agent only')
 		.option('--json', 'Output results as JSON')
 		.action(async (ownerSlug: string, opts: CloneOptions) => {
 			if (opts.json) {
@@ -120,6 +131,48 @@ export function registerClone(program: Command): void {
 				process.exit(0);
 			}
 
+			// ── Agent selection ────────────────────────────────────────────────────
+			const setupAgents: string[] = setup.agents ?? [];
+
+			if (opts.agent) {
+				// --agent flag overrides auto-detection entirely
+				if (setupAgents.length > 0 && !setupAgents.includes(opts.agent)) {
+					warning(
+						`Agent "${opts.agent}" is not listed in this setup's supported agents (${setupAgents.join(', ')}).`
+					);
+				}
+				files = files.filter((f) => !f.agent || f.agent === opts.agent);
+			} else if (!isJsonMode() && setupAgents.length > 0) {
+				const detected = detectInstalledAgents(setupAgents);
+
+				let selectedAgent: string;
+				if (detected.length === 1) {
+					// Single match — auto-select without prompting
+					selectedAgent = detected[0]!;
+					const displayName = AGENTS_BY_SLUG[selectedAgent]?.displayName ?? selectedAgent;
+					info(`Auto-detected ${displayName}. Installing files for ${displayName}.`);
+				} else {
+					// Multiple matches or zero matches → prompt user to choose
+					const supportedNames = setupAgents
+						.map((s) => AGENTS_BY_SLUG[s]?.displayName ?? s)
+						.join(', ');
+					print(`\nThis setup supports: ${supportedNames}`);
+					if (detected.length === 0) {
+						info('No supported agents detected on your machine.');
+					}
+					const candidates = detected.length > 1 ? detected : setupAgents;
+					const agentChoices = candidates.map((s) => ({
+						slug: s,
+						displayName: AGENTS_BY_SLUG[s]?.displayName ?? s
+					}));
+					selectedAgent = await promptAgentSelection(agentChoices);
+				}
+
+				files = files.filter((f) => !f.agent || f.agent === selectedAgent);
+			}
+			// If setupAgents is empty (no agents declared) and no --agent flag,
+			// all files are installed (no agent filtering).
+
 			// --pick: interactive file selection (skip in JSON mode — use all files)
 			if (opts.pick && !isJsonMode()) {
 				const selectedIndices = await pickFiles(files);
@@ -139,10 +192,15 @@ export function registerClone(program: Command): void {
 				projectDir = path.resolve(opts.dir);
 				destination = 'dir';
 			} else {
-				// Prompt for install destination (interactive only)
+				// Prompt for install scope (interactive only)
+				// Default to 'global' when majority of filtered files are globally-scoped.
+				const globalCount = files.filter((f) => f.placement === 'global').length;
+				const defaultScope: 'current' | 'global' =
+					files.length > 0 && globalCount > files.length / 2 ? 'global' : 'current';
+
 				let dest: 'current' | 'global' = 'current';
 				if (!isJsonMode()) {
-					dest = await promptDestination();
+					dest = await promptDestination(defaultScope);
 				}
 				destination = dest;
 
