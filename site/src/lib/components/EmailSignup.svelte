@@ -35,7 +35,7 @@
 		<p class="font-medium text-primary">Thanks! We'll let you know when Coati launches.</p>
 	</div>
 {:else}
-	<form onsubmit={handleSubmit} class="flex w-full max-w-md gap-2">
+	<form onsubmit={handleSubmit} class="flex w-full max-w-md flex-col gap-2 sm:flex-row">
 		<input
 			type="email"
 			bind:value={email}

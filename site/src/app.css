@@ -20,18 +20,18 @@
 }
 
 :root {
-	/* Dark-dominant warm palette */
-	--background: oklch(0.13 0.01 60);
-	--foreground: oklch(0.93 0.01 75);
-	--primary: oklch(0.82 0.17 75);
-	--primary-foreground: oklch(0.13 0.01 60);
-	--muted: oklch(0.22 0.01 60);
-	--muted-foreground: oklch(0.62 0.03 60);
-	--accent: oklch(0.72 0.19 55);
-	--accent-foreground: oklch(0.13 0.01 60);
-	--border: oklch(0.25 0.015 60);
-	--card: oklch(0.16 0.01 60);
-	--card-foreground: oklch(0.93 0.01 75);
+	/* Cool dark palette — Kalshi-inspired green/mint */
+	--background: oklch(0.13 0.005 220);
+	--foreground: oklch(0.93 0.005 220);
+	--primary: oklch(0.72 0.19 160);
+	--primary-foreground: oklch(0.13 0.005 220);
+	--muted: oklch(0.22 0.005 220);
+	--muted-foreground: oklch(0.60 0.01 220);
+	--accent: oklch(0.68 0.12 200);
+	--accent-foreground: oklch(0.13 0.005 220);
+	--border: oklch(0.23 0.005 220);
+	--card: oklch(0.16 0.005 220);
+	--card-foreground: oklch(0.93 0.005 220);
 	--radius: 0.625rem;
 }
 

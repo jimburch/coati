@@ -5,7 +5,7 @@
 </script>
 
 <header class="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
-	<nav class="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
+	<nav class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
 		<a href="/" class="text-xl font-bold tracking-tight text-primary">Coati</a>
 		<button
 			onclick={scrollToSignup}
