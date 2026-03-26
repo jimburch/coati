@@ -10,12 +10,16 @@
 
 	const { item }: Props = $props();
 
-	let relativeTime = $state(timeAgo(item.createdAt));
+	let tick = $state(0);
+	const relativeTime = $derived.by(() => {
+		void tick;
+		return timeAgo(item.createdAt);
+	});
 
 	onMount(() => {
 		// Refresh relative timestamp every minute
 		const interval = setInterval(() => {
-			relativeTime = timeAgo(item.createdAt);
+			tick++;
 		}, 60_000);
 		return () => clearInterval(interval);
 	});

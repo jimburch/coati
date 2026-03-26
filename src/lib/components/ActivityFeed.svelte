@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import ActivityItem from '$lib/components/ActivityItem.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import type { FeedItem } from '$lib/server/queries/activities';
@@ -19,12 +20,16 @@
 		emptyActionLabel
 	}: Props = $props();
 
-	let allItems = $state<FeedItem[]>(initialItems);
+	// untrack() prevents Svelte from warning about capturing the initial prop value in $state —
+	// this is intentional: allItems, cursor, and hasMore diverge from the prop after pagination.
+	let allItems = $state<FeedItem[]>(untrack(() => initialItems));
 	let cursor = $state<string | null>(
-		initialItems.length > 0 ? initialItems[initialItems.length - 1].createdAt.toISOString() : null
+		untrack(() =>
+			initialItems.length > 0 ? initialItems[initialItems.length - 1].createdAt.toISOString() : null
+		)
 	);
 	// We don't know if there are more items until we try; treat as possibly more if we got a full page
-	let hasMore = $state(initialItems.length >= 20);
+	let hasMore = $state(untrack(() => initialItems.length >= 20));
 	let loading = $state(false);
 	let error = $state<string | null>(null);
 
