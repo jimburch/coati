@@ -10,12 +10,17 @@ import { registerPublish } from './commands/publish.js';
 import { registerSearch } from './commands/search.js';
 import { registerView } from './commands/view.js';
 import { setApiBaseOverride, isNonProductionApi, getEffectiveApiBase } from './api.js';
+import { createContext } from './context.js';
 
 const DEV_API_BASE = 'http://localhost:5173/api/v1';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const pkg = require(join(__dirname, '../package.json')) as { version: string };
+
+// Instantiate context once at startup. Commands will receive this in subsequent migrations.
+const _ctx = createContext();
+void _ctx; // Available for passing to commands once they are migrated.
 
 const program = new Command();
 
