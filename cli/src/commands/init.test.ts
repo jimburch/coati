@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createTestContext } from '../test-utils.js';
+import type { CommandContext } from '../context.js';
 
-// ── mocks ─────────────────────────────────────────────────────────────────────
+// ── mocks for pure utilities ──────────────────────────────────────────────────
 
 const mockDetectFiles = vi.fn();
 
@@ -15,55 +17,10 @@ vi.mock('../manifest.js', () => ({
 	MANIFEST_FILENAME: 'setup.json'
 }));
 
-const mockConfirm = vi.fn();
-const mockConfirmFileList = vi.fn();
-const mockPromptMetadata = vi.fn();
-
-vi.mock('../prompts.js', () => ({
-	confirm: (msg: string, def?: boolean) => mockConfirm(msg, def),
-	confirmFileList: (labels: string[]) => mockConfirmFileList(labels),
-	promptMetadata: (prefilledAgents?: string[]) => mockPromptMetadata(prefilledAgents),
-	promptDestination: vi.fn(),
-	confirmPostInstall: vi.fn(),
-	pickFiles: vi.fn(),
-	select: vi.fn(),
-	input: vi.fn(),
-	resolveConflict: vi.fn()
-}));
-
 const mockFormatFileList = vi.fn();
 
 vi.mock('../format.js', () => ({
 	formatFileList: (...args: unknown[]) => mockFormatFileList(...args)
-}));
-
-const mockExistsSync = vi.fn();
-
-vi.mock('fs', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('fs')>();
-	return {
-		...actual,
-		default: {
-			...actual,
-			existsSync: (...args: unknown[]) => mockExistsSync(...args)
-		}
-	};
-});
-
-const mockPrint = vi.fn();
-const mockSuccess = vi.fn();
-const mockError = vi.fn();
-const mockWarning = vi.fn();
-
-vi.mock('../output.js', () => ({
-	print: (msg: string) => mockPrint(msg),
-	success: (msg: string) => mockSuccess(msg),
-	error: (msg: string) => mockError(msg),
-	warning: (msg: string) => mockWarning(msg),
-	info: vi.fn(),
-	setOutputMode: vi.fn(),
-	isJsonMode: vi.fn(() => false),
-	json: vi.fn()
 }));
 
 // Import after mocks are registered
@@ -135,13 +92,17 @@ const DEFAULT_METADATA = {
 
 const CWD = '/fake/cwd';
 
+let ctx: CommandContext;
+
 beforeEach(() => {
+	ctx = createTestContext();
 	vi.clearAllMocks();
-	mockExistsSync.mockReturnValue(false);
+
+	vi.mocked(ctx.fs.existsSync).mockReturnValue(false);
 	mockDetectFiles.mockReturnValue(DETECTED_FILES);
-	mockConfirm.mockResolvedValue(true);
+	vi.mocked(ctx.io.confirm).mockResolvedValue(true);
 	mockFormatFileList.mockReturnValue('(formatted file list)');
-	mockPromptMetadata.mockResolvedValue(DEFAULT_METADATA);
+	vi.mocked(ctx.io.promptMetadata).mockResolvedValue(DEFAULT_METADATA);
 	mockWriteManifest.mockReturnValue(undefined);
 });
 
@@ -153,12 +114,12 @@ afterEach(() => {
 
 describe('runInitFlow — normal flow', () => {
 	it('detects files, confirms, prompts metadata, writes manifest, returns true', async () => {
-		const result = await runInitFlow(CWD);
+		const result = await runInitFlow(ctx, CWD);
 
 		expect(mockDetectFiles).toHaveBeenCalledWith(CWD);
 		expect(mockFormatFileList).toHaveBeenCalledWith(DETECTED_FILES);
-		expect(mockConfirm).toHaveBeenCalledWith('Proceed with these files?', undefined);
-		expect(mockPromptMetadata).toHaveBeenCalled();
+		expect(ctx.io.confirm).toHaveBeenCalledWith('Proceed with these files?');
+		expect(ctx.io.promptMetadata).toHaveBeenCalled();
 		expect(mockWriteManifest).toHaveBeenCalledWith(
 			CWD,
 			expect.objectContaining({
@@ -171,8 +132,8 @@ describe('runInitFlow — normal flow', () => {
 	});
 
 	it('calls success after writing manifest', async () => {
-		await runInitFlow(CWD);
-		expect(mockSuccess).toHaveBeenCalledWith(expect.stringContaining('setup.json'));
+		await runInitFlow(ctx, CWD);
+		expect(ctx.io.success).toHaveBeenCalledWith(expect.stringContaining('setup.json'));
 	});
 });
 
@@ -181,9 +142,9 @@ describe('runInitFlow — normal flow', () => {
 describe('runInitFlow — user cancels at file confirmation', () => {
 	it('returns false and does not write manifest', async () => {
 		// First confirm call is "Proceed with these files?" — reject it
-		mockConfirm.mockResolvedValueOnce(false);
+		vi.mocked(ctx.io.confirm).mockResolvedValueOnce(false);
 
-		const result = await runInitFlow(CWD);
+		const result = await runInitFlow(ctx, CWD);
 
 		expect(result).toBe(false);
 		expect(mockWriteManifest).not.toHaveBeenCalled();
@@ -194,20 +155,20 @@ describe('runInitFlow — user cancels at file confirmation', () => {
 
 describe('runInitFlow — existing setup.json', () => {
 	it('returns false when user declines overwrite', async () => {
-		mockExistsSync.mockReturnValue(true);
-		mockConfirm.mockResolvedValue(false);
+		vi.mocked(ctx.fs.existsSync).mockReturnValue(true);
+		vi.mocked(ctx.io.confirm).mockResolvedValue(false);
 
-		const result = await runInitFlow(CWD);
+		const result = await runInitFlow(ctx, CWD);
 
 		expect(result).toBe(false);
 		expect(mockWriteManifest).not.toHaveBeenCalled();
 	});
 
 	it('proceeds with flow when user confirms overwrite', async () => {
-		mockExistsSync.mockReturnValue(true);
-		mockConfirm.mockResolvedValue(true);
+		vi.mocked(ctx.fs.existsSync).mockReturnValue(true);
+		vi.mocked(ctx.io.confirm).mockResolvedValue(true);
 
-		const result = await runInitFlow(CWD);
+		const result = await runInitFlow(ctx, CWD);
 
 		expect(mockDetectFiles).toHaveBeenCalled();
 		expect(mockWriteManifest).toHaveBeenCalled();
@@ -223,29 +184,29 @@ describe('runInitFlow — zero files detected', () => {
 	});
 
 	it('returns false when user declines scaffold', async () => {
-		mockConfirm.mockResolvedValue(false);
+		vi.mocked(ctx.io.confirm).mockResolvedValue(false);
 
-		const result = await runInitFlow(CWD);
+		const result = await runInitFlow(ctx, CWD);
 
 		expect(result).toBe(false);
 		expect(mockWriteManifest).not.toHaveBeenCalled();
 	});
 
 	it('writes manifest with empty files array when user confirms scaffold', async () => {
-		mockConfirm.mockResolvedValue(true);
+		vi.mocked(ctx.io.confirm).mockResolvedValue(true);
 
-		const result = await runInitFlow(CWD);
+		const result = await runInitFlow(ctx, CWD);
 
 		expect(mockWriteManifest).toHaveBeenCalledWith(CWD, expect.objectContaining({ files: [] }));
 		expect(result).toBe(true);
 	});
 
 	it('shows warning about no files included', async () => {
-		mockConfirm.mockResolvedValue(true);
+		vi.mocked(ctx.io.confirm).mockResolvedValue(true);
 
-		await runInitFlow(CWD);
+		await runInitFlow(ctx, CWD);
 
-		expect(mockWarning).toHaveBeenCalledWith(expect.stringContaining('No files included'));
+		expect(ctx.io.warning).toHaveBeenCalledWith(expect.stringContaining('No files included'));
 	});
 });
 
@@ -253,9 +214,9 @@ describe('runInitFlow — zero files detected', () => {
 
 describe('runInitFlow — slug derivation', () => {
 	it('converts name with spaces to kebab-case slug', async () => {
-		mockPromptMetadata.mockResolvedValue({ ...DEFAULT_METADATA, name: 'My Setup' });
+		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({ ...DEFAULT_METADATA, name: 'My Setup' });
 
-		const result = await runInitFlow(CWD);
+		const result = await runInitFlow(ctx, CWD);
 
 		expect(result).toBe(true);
 		expect(mockWriteManifest).toHaveBeenCalledWith(
@@ -265,9 +226,12 @@ describe('runInitFlow — slug derivation', () => {
 	});
 
 	it('converts mixed case and special chars to valid slug', async () => {
-		mockPromptMetadata.mockResolvedValue({ ...DEFAULT_METADATA, name: 'My Awesome  Setup!' });
+		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({
+			...DEFAULT_METADATA,
+			name: 'My Awesome  Setup!'
+		});
 
-		await runInitFlow(CWD);
+		await runInitFlow(ctx, CWD);
 
 		expect(mockWriteManifest).toHaveBeenCalledWith(
 			CWD,
@@ -280,9 +244,9 @@ describe('runInitFlow — slug derivation', () => {
 
 describe('runInitFlow — invalid slug', () => {
 	it('throws when name produces an empty slug', async () => {
-		mockPromptMetadata.mockResolvedValue({ ...DEFAULT_METADATA, name: '!!!' });
+		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({ ...DEFAULT_METADATA, name: '!!!' });
 
-		await expect(runInitFlow(CWD)).rejects.toThrow('Setup name is required');
+		await expect(runInitFlow(ctx, CWD)).rejects.toThrow('Setup name is required');
 	});
 });
 
@@ -315,7 +279,7 @@ describe('computeDetectedAgents', () => {
 
 describe('runInitFlow — agents array auto-populated', () => {
 	it('populates agents from detected files', async () => {
-		await runInitFlow(CWD);
+		await runInitFlow(ctx, CWD);
 
 		expect(mockWriteManifest).toHaveBeenCalledWith(
 			CWD,
@@ -326,15 +290,19 @@ describe('runInitFlow — agents array auto-populated', () => {
 	});
 
 	it('passes auto-detected agents to promptMetadata as prefilledAgents', async () => {
-		await runInitFlow(CWD);
+		await runInitFlow(ctx, CWD);
 
-		expect(mockPromptMetadata).toHaveBeenCalledWith(['claude-code']);
+		expect(ctx.io.promptMetadata).toHaveBeenCalledWith(
+			['claude-code'],
+			expect.any(Array),
+			expect.any(Array)
+		);
 	});
 
 	it('merges user-provided agents from metadata with auto-detected agents', async () => {
-		mockPromptMetadata.mockResolvedValue({ ...DEFAULT_METADATA, agents: ['cursor'] });
+		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({ ...DEFAULT_METADATA, agents: ['cursor'] });
 
-		await runInitFlow(CWD);
+		await runInitFlow(ctx, CWD);
 
 		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
 		expect(writtenManifest.agents).toContain('claude-code');
@@ -342,9 +310,12 @@ describe('runInitFlow — agents array auto-populated', () => {
 	});
 
 	it('deduplicates agents when user confirms the pre-filled value', async () => {
-		mockPromptMetadata.mockResolvedValue({ ...DEFAULT_METADATA, agents: ['claude-code'] });
+		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({
+			...DEFAULT_METADATA,
+			agents: ['claude-code']
+		});
 
-		await runInitFlow(CWD);
+		await runInitFlow(ctx, CWD);
 
 		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
 		const claudeCount = (writtenManifest.agents as string[]).filter(
@@ -354,26 +325,26 @@ describe('runInitFlow — agents array auto-populated', () => {
 	});
 
 	it('passes detected files to formatFileList for display', async () => {
-		await runInitFlow(CWD);
+		await runInitFlow(ctx, CWD);
 
 		expect(mockFormatFileList).toHaveBeenCalledWith(DETECTED_FILES);
 	});
 
 	it('does not call formatFileList when no files detected', async () => {
 		mockDetectFiles.mockReturnValue([]);
-		mockConfirm.mockResolvedValue(true);
+		vi.mocked(ctx.io.confirm).mockResolvedValue(true);
 
-		await runInitFlow(CWD);
+		await runInitFlow(ctx, CWD);
 
 		expect(mockFormatFileList).not.toHaveBeenCalled();
 	});
 
 	it('omits agents key from manifest when none detected and user provides none', async () => {
 		mockDetectFiles.mockReturnValue([]);
-		mockConfirm.mockResolvedValue(true);
-		mockPromptMetadata.mockResolvedValue({ ...DEFAULT_METADATA, agents: [] });
+		vi.mocked(ctx.io.confirm).mockResolvedValue(true);
+		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({ ...DEFAULT_METADATA, agents: [] });
 
-		await runInitFlow(CWD);
+		await runInitFlow(ctx, CWD);
 
 		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
 		expect(writtenManifest.agents).toBeUndefined();
@@ -384,7 +355,7 @@ describe('runInitFlow — agents array auto-populated', () => {
 
 describe('runInitFlow — file tagging', () => {
 	it('sets agent field on each file entry matching an agent', async () => {
-		await runInitFlow(CWD);
+		await runInitFlow(ctx, CWD);
 
 		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
 		const claudeFile = (writtenManifest.files as Array<{ source: string; agent?: string }>).find(
@@ -395,7 +366,7 @@ describe('runInitFlow — file tagging', () => {
 	});
 
 	it('sets agent field on global placement files too', async () => {
-		await runInitFlow(CWD);
+		await runInitFlow(ctx, CWD);
 
 		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
 		const settingsFile = (writtenManifest.files as Array<{ source: string; agent?: string }>).find(
@@ -407,9 +378,9 @@ describe('runInitFlow — file tagging', () => {
 
 	it('does not set agent field on shared files with empty tool', async () => {
 		mockDetectFiles.mockReturnValue(MULTI_AGENT_FILES);
-		mockPromptMetadata.mockResolvedValue({ ...DEFAULT_METADATA, agents: [] });
+		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({ ...DEFAULT_METADATA, agents: [] });
 
-		await runInitFlow(CWD);
+		await runInitFlow(ctx, CWD);
 
 		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
 		const sharedFile = (writtenManifest.files as Array<{ source: string; agent?: string }>).find(
@@ -421,9 +392,9 @@ describe('runInitFlow — file tagging', () => {
 
 	it('tags each file correctly in a multi-agent project', async () => {
 		mockDetectFiles.mockReturnValue(MULTI_AGENT_FILES);
-		mockPromptMetadata.mockResolvedValue({ ...DEFAULT_METADATA, agents: [] });
+		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({ ...DEFAULT_METADATA, agents: [] });
 
-		await runInitFlow(CWD);
+		await runInitFlow(ctx, CWD);
 
 		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
 		const cursorFile = (writtenManifest.files as Array<{ source: string; agent?: string }>).find(
@@ -438,7 +409,7 @@ describe('runInitFlow — file tagging', () => {
 
 describe('runInitFlow — confirmation flow', () => {
 	it('passes detected files to formatFileList', async () => {
-		await runInitFlow(CWD);
+		await runInitFlow(ctx, CWD);
 
 		expect(mockFormatFileList).toHaveBeenCalledWith(DETECTED_FILES);
 	});
@@ -446,7 +417,7 @@ describe('runInitFlow — confirmation flow', () => {
 	it('passes multi-agent files to formatFileList', async () => {
 		mockDetectFiles.mockReturnValue(MULTI_AGENT_FILES);
 
-		await runInitFlow(CWD);
+		await runInitFlow(ctx, CWD);
 
 		expect(mockFormatFileList).toHaveBeenCalledWith(MULTI_AGENT_FILES);
 	});

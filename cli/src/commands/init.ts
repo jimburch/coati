@@ -1,4 +1,3 @@
-import fs from 'fs';
 import path from 'path';
 import { Command } from 'commander';
 import { AGENTS } from '@coati/agents-registry';
@@ -9,9 +8,8 @@ import {
 	type Manifest,
 	type ManifestCategory
 } from '../manifest.js';
-import { confirm, promptMetadata } from '../prompts.js';
-import { print, success, error, warning } from '../output.js';
 import { formatFileList } from '../format.js';
+import type { CommandContext } from '../context.js';
 
 const VALID_CATEGORIES: ManifestCategory[] = [
 	'web-dev',
@@ -50,21 +48,21 @@ export function computeDetectedAgents(
  * Returns true if setup.json was successfully written, false if the user cancelled.
  * Throws on unrecoverable errors (e.g. invalid slug).
  */
-export async function runInitFlow(cwd: string): Promise<boolean> {
+export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boolean> {
 	const manifestPath = path.join(cwd, MANIFEST_FILENAME);
 
 	// Edge case: setup.json already exists
-	if (fs.existsSync(manifestPath)) {
-		warning(`${MANIFEST_FILENAME} already exists in this directory.`);
-		const overwrite = await confirm('Overwrite existing setup.json?', false);
+	if (ctx.fs.existsSync(manifestPath)) {
+		ctx.io.warning(`${MANIFEST_FILENAME} already exists in this directory.`);
+		const overwrite = await ctx.io.confirm('Overwrite existing setup.json?', false);
 		if (!overwrite) {
-			print('Exiting without changes.');
+			ctx.io.print('Exiting without changes.');
 			return false;
 		}
 	}
 
 	// Scan for known AI config files
-	print('Scanning for AI config files...\n');
+	ctx.io.print('Scanning for AI config files...\n');
 	const detected = detectFiles(cwd);
 
 	// Compute agent summary from detected files
@@ -75,9 +73,11 @@ export async function runInitFlow(cwd: string): Promise<boolean> {
 
 	if (detected.length === 0) {
 		// Edge case: no files detected
-		warning('No AI config files detected in this directory.');
-		print('Add your config files (e.g. .claude/commands/, .cursorrules) then re-run `coati init`.');
-		const continueAnyway = await confirm(
+		ctx.io.warning('No AI config files detected in this directory.');
+		ctx.io.print(
+			'Add your config files (e.g. .claude/commands/, .cursorrules) then re-run `coati init`.'
+		);
+		const continueAnyway = await ctx.io.confirm(
 			'Continue and create a setup.json scaffold anyway?',
 			false
 		);
@@ -89,9 +89,9 @@ export async function runInitFlow(cwd: string): Promise<boolean> {
 		// Show detected files grouped by agent with colored type badges
 		const formatted = formatFileList(detected);
 		process.stdout.write('\n' + formatted + '\n');
-		const confirmed = await confirm('Proceed with these files?');
+		const confirmed = await ctx.io.confirm('Proceed with these files?');
 		if (!confirmed) {
-			print('Exiting without changes.');
+			ctx.io.print('Exiting without changes.');
 			return false;
 		}
 	}
@@ -108,8 +108,8 @@ export async function runInitFlow(cwd: string): Promise<boolean> {
 	];
 
 	// Prompt for setup metadata (agents pre-filled from detection)
-	print('\nSetup metadata:\n');
-	const metadata = await promptMetadata(autoDetectedAgents, agentChoices, categoryChoices);
+	ctx.io.print('\nSetup metadata:\n');
+	const metadata = await ctx.io.promptMetadata(autoDetectedAgents, agentChoices, categoryChoices);
 
 	// Derive and validate the slug from the name
 	const slug = toSlug(metadata.name);
@@ -117,7 +117,7 @@ export async function runInitFlow(cwd: string): Promise<boolean> {
 		throw new Error('Setup name is required.');
 	}
 	if (slug !== metadata.name) {
-		print(`Using slug: ${slug}`);
+		ctx.io.print(`Using slug: ${slug}`);
 	}
 
 	// Validate category
@@ -147,26 +147,26 @@ export async function runInitFlow(cwd: string): Promise<boolean> {
 	};
 
 	writeManifest(cwd, manifest);
-	success(`Created ${MANIFEST_FILENAME}`);
-	print(`  ${manifestPath}`);
+	ctx.io.success(`Created ${MANIFEST_FILENAME}`);
+	ctx.io.print(`  ${manifestPath}`);
 
 	if (filesToInclude.length === 0) {
-		warning(`No files included. Edit ${MANIFEST_FILENAME} to add files before publishing.`);
+		ctx.io.warning(`No files included. Edit ${MANIFEST_FILENAME} to add files before publishing.`);
 	}
 
 	return true;
 }
 
-export function registerInit(program: Command): void {
+export function registerInit(program: Command, ctx: CommandContext): void {
 	program
 		.command('init')
 		.description('Scaffold a setup.json manifest in the current directory')
 		.action(async () => {
 			try {
-				const ok = await runInitFlow(process.cwd());
+				const ok = await runInitFlow(ctx, process.cwd());
 				if (!ok) process.exit(0);
 			} catch (e) {
-				error(e instanceof Error ? e.message : 'Init failed.');
+				ctx.io.error(e instanceof Error ? e.message : 'Init failed.');
 				process.exit(1);
 			}
 		});

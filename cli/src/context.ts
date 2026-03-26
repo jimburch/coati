@@ -1,3 +1,4 @@
+import fs from 'fs';
 import * as api from './api.js';
 import * as output from './output.js';
 import * as prompts from './prompts.js';
@@ -84,6 +85,7 @@ export interface AuthClient {
 // ── Sub-interface: FsClient ───────────────────────────────────────────────────
 
 export interface FsClient {
+	existsSync(path: string): boolean;
 	readConfig(): import('./config.js').Config;
 	writeSetupFiles(
 		filesToWrite: files.FileToWrite[],
@@ -157,6 +159,7 @@ export function createContext(): CommandContext {
 		},
 
 		fs: {
+			existsSync: fs.existsSync,
 			readConfig: getConfig,
 			writeSetupFiles: files.writeSetupFiles,
 			resolveTargetPath: files.resolveTargetPath
