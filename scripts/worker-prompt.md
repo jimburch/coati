@@ -14,9 +14,17 @@ You are a worker agent. You have been assigned a specific task from a GitHub iss
 
 Explore the repo and fill your context window with relevant information that will allow you to complete the task. Understand the existing code patterns, file structure, and conventions before writing anything.
 
-### 2. Implement
+### 2. Implement (using TDD)
 
-Complete the task. Follow the coding conventions in CLAUDE.md strictly:
+Use the `/tdd` skill for ALL implementation work. This means:
+
+- **Write tests first**, then implementation. Follow the red-green-refactor loop.
+- **Vertical slices**: one test → one implementation → repeat. Do NOT write all tests first.
+- **Test behavior through public interfaces**, not implementation details.
+- Tests should survive internal refactors — if you rename a function and tests break, they were testing implementation.
+- Since this is a CI environment without a database or browser, write unit tests (not integration tests that need a DB). Mock external boundaries (database, network) but test real logic.
+
+Follow the coding conventions in CLAUDE.md strictly:
 
 - TypeScript strict mode
 - Drizzle ORM (no raw SQL unless necessary)

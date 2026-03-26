@@ -153,7 +153,7 @@
 
 ### Tasks
 
-- [ ] Activity feed (`(app)/feed/+page.svelte`):
+- [x] Activity feed (`(app)/feed/+page.svelte`):
   - Show recent activity from followed users (new setups, updates)
   - Simple chronological list for MVP
 - [ ] User profile enhancements:
