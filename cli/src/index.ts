@@ -50,6 +50,6 @@ registerClone(program);
 registerInit(program);
 registerPublish(program);
 registerSearch(program, ctx);
-registerView(program);
+registerView(program, ctx);
 
 program.parse(process.argv);

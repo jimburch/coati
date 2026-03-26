@@ -1,7 +1,6 @@
 import { Command } from 'commander';
 import { AGENTS_BY_SLUG } from '@coati/agents-registry';
-import { get, ApiError } from '../api.js';
-import { setOutputMode, isJsonMode, json, print, error, info } from '../output.js';
+import { type CommandContext, ApiError } from '../context.js';
 
 interface SetupFileRecord {
 	id: string;
@@ -32,7 +31,7 @@ interface ViewOptions {
 	json?: boolean;
 }
 
-export function registerView(program: Command): void {
+export function registerView(program: Command, ctx: CommandContext): void {
 	program
 		.command('view')
 		.description('View details of a setup')
@@ -40,12 +39,12 @@ export function registerView(program: Command): void {
 		.option('--json', 'Output results as JSON')
 		.action(async (ownerSlug: string, opts: ViewOptions) => {
 			if (opts.json) {
-				setOutputMode('json');
+				ctx.io.setOutputMode('json');
 			}
 
 			const slashIdx = ownerSlug.indexOf('/');
 			if (slashIdx <= 0 || slashIdx === ownerSlug.length - 1) {
-				error('Invalid format. Expected: <owner>/<slug> (e.g. alice/my-setup)');
+				ctx.io.error('Invalid format. Expected: <owner>/<slug> (e.g. alice/my-setup)');
 				process.exit(1);
 			}
 			const owner = ownerSlug.slice(0, slashIdx);
@@ -53,49 +52,49 @@ export function registerView(program: Command): void {
 
 			let setup: SetupDetail;
 			try {
-				setup = await get<SetupDetail>(`/setups/${owner}/${slug}`);
+				setup = await ctx.api.get<SetupDetail>(`/setups/${owner}/${slug}`);
 			} catch (err_) {
 				if (err_ instanceof ApiError && err_.status === 404) {
-					error(`Setup "${owner}/${slug}" not found.`);
+					ctx.io.error(`Setup "${owner}/${slug}" not found.`);
 				} else if (err_ instanceof Error) {
-					error(`Failed to fetch setup: ${err_.message}`);
+					ctx.io.error(`Failed to fetch setup: ${err_.message}`);
 				} else {
-					error('An unexpected error occurred.');
+					ctx.io.error('An unexpected error occurred.');
 				}
 				process.exit(1);
 			}
 
 			let files: SetupFileRecord[];
 			try {
-				files = await get<SetupFileRecord[]>(`/setups/${owner}/${slug}/files`);
+				files = await ctx.api.get<SetupFileRecord[]>(`/setups/${owner}/${slug}/files`);
 			} catch (err_) {
 				if (err_ instanceof Error) {
-					error(`Failed to fetch setup files: ${err_.message}`);
+					ctx.io.error(`Failed to fetch setup files: ${err_.message}`);
 				} else {
-					error('An unexpected error occurred.');
+					ctx.io.error('An unexpected error occurred.');
 				}
 				process.exit(1);
 			}
 
-			if (isJsonMode()) {
-				json({ setup, files });
+			if (ctx.io.isJson()) {
+				ctx.io.json({ setup, files });
 				return;
 			}
 
 			// Header
-			print(`${setup.ownerUsername}/${setup.slug}`);
-			print(`  ${setup.name}`);
+			ctx.io.print(`${setup.ownerUsername}/${setup.slug}`);
+			ctx.io.print(`  ${setup.name}`);
 			if (setup.description) {
-				print(`  ${setup.description}`);
+				ctx.io.print(`  ${setup.description}`);
 			}
-			print('');
+			ctx.io.print('');
 
 			// Stats
-			print(`  ★ ${setup.starsCount} stars  ↓ ${setup.clonesCount} clones`);
+			ctx.io.print(`  ★ ${setup.starsCount} stars  ↓ ${setup.clonesCount} clones`);
 
 			// Tags
 			if (setup.tags && setup.tags.length > 0) {
-				print(`  Tags: ${setup.tags.join(', ')}`);
+				ctx.io.print(`  Tags: ${setup.tags.join(', ')}`);
 			}
 
 			// Agents with per-agent file counts
@@ -123,26 +122,26 @@ export function registerView(program: Command): void {
 					parts.push(`Shared: ${sharedCount} ${sharedCount === 1 ? 'file' : 'files'}`);
 				}
 
-				print(`  Agents: ${parts.join(', ')}`);
+				ctx.io.print(`  Agents: ${parts.join(', ')}`);
 			}
 
 			// Post-install
 			if (setup.postInstall) {
-				print(`  Post-install: ${setup.postInstall}`);
+				ctx.io.print(`  Post-install: ${setup.postInstall}`);
 			}
 
-			print('');
+			ctx.io.print('');
 
 			// Files list
 			if (files.length === 0) {
-				info('No files in this setup.');
+				ctx.io.info('No files in this setup.');
 			} else {
-				print(`  Files (${files.length}):`);
+				ctx.io.print(`  Files (${files.length}):`);
 				for (const file of files) {
 					const agentLabel = file.agent
 						? ` [${AGENTS_BY_SLUG[file.agent]?.displayName ?? file.agent}]`
 						: '';
-					print(`    ${file.source}${agentLabel}`);
+					ctx.io.print(`    ${file.source}${agentLabel}`);
 				}
 			}
 		});

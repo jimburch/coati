@@ -1,57 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Command } from 'commander';
-
-// ── hoisted class definitions ─────────────────────────────────────────────────
-
-const { MockApiError } = vi.hoisted(() => {
-	class MockApiError extends Error {
-		code: string;
-		status: number;
-		constructor(message: string, code: string, status: number) {
-			super(message);
-			this.name = 'ApiError';
-			this.code = code;
-			this.status = status;
-		}
-	}
-	return { MockApiError };
-});
-
-// ── mocks ─────────────────────────────────────────────────────────────────────
-
-const mockGet = vi.fn();
-
-vi.mock('../api.js', () => ({
-	get: (...args: unknown[]) => mockGet(...args),
-	ApiError: MockApiError
-}));
-
-const mockSetOutputMode = vi.fn();
-const mockIsJsonMode = vi.fn(() => false);
-const mockJson = vi.fn();
-const mockPrint = vi.fn();
-const mockError = vi.fn();
-const mockInfo = vi.fn();
-
-vi.mock('../output.js', () => ({
-	setOutputMode: (mode: string) => mockSetOutputMode(mode),
-	isJsonMode: () => mockIsJsonMode(),
-	json: (data: unknown) => mockJson(data),
-	print: (msg: string) => mockPrint(msg),
-	error: (msg: string) => mockError(msg),
-	info: (msg: string) => mockInfo(msg)
-}));
-
-// Import after mocks are registered
-const { registerView } = await import('./view.js');
+import { createTestContext } from '../test-utils.js';
+import { ApiError } from '../context.js';
+import { registerView } from './view.js';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-function makeProgram(): Command {
+function makeProgram(overrides?: Parameters<typeof createTestContext>[0]) {
+	const ctx = createTestContext(overrides);
 	const program = new Command();
 	program.exitOverride();
-	registerView(program);
-	return program;
+	registerView(program, ctx);
+	return { program, ctx };
 }
 
 function exitSpy() {
@@ -112,7 +72,6 @@ function makeFile(
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	mockIsJsonMode.mockReturnValue(false);
 });
 
 afterEach(() => {
@@ -121,94 +80,121 @@ afterEach(() => {
 
 describe('coati view', () => {
 	it('fetches setup and files by owner/slug', async () => {
-		mockGet.mockResolvedValueOnce(makeSetup()).mockResolvedValueOnce([]);
-		await makeProgram().parseAsync(['view', 'alice/my-setup'], { from: 'user' });
-		expect(mockGet).toHaveBeenCalledWith('/setups/alice/my-setup');
-		expect(mockGet).toHaveBeenCalledWith('/setups/alice/my-setup/files');
+		const { program, ctx } = makeProgram();
+		vi.mocked(ctx.api.get).mockResolvedValueOnce(makeSetup()).mockResolvedValueOnce([]);
+		await program.parseAsync(['view', 'alice/my-setup'], { from: 'user' });
+		expect(ctx.api.get).toHaveBeenCalledWith('/setups/alice/my-setup');
+		expect(ctx.api.get).toHaveBeenCalledWith('/setups/alice/my-setup/files');
 	});
 
 	it('displays setup name and description', async () => {
-		mockGet
+		const { program, ctx } = makeProgram();
+		vi.mocked(ctx.api.get)
 			.mockResolvedValueOnce(makeSetup({ name: 'My Setup', description: 'Helpful setup' }))
 			.mockResolvedValueOnce([]);
-		await makeProgram().parseAsync(['view', 'alice/my-setup'], { from: 'user' });
-		const allPrints = mockPrint.mock.calls.map((c: unknown[]) => c[0]).join('\n');
+		await program.parseAsync(['view', 'alice/my-setup'], { from: 'user' });
+		const allPrints = vi
+			.mocked(ctx.io.print)
+			.mock.calls.map((c) => c[0])
+			.join('\n');
 		expect(allPrints).toMatch(/My Setup/);
 		expect(allPrints).toMatch(/Helpful setup/);
 	});
 
 	it('displays agents with per-agent file counts', async () => {
+		const { program, ctx } = makeProgram();
 		const setup = makeSetup({ agents: ['claude-code', 'cursor'] });
 		const files = [
 			makeFile({ source: 'CLAUDE.md', agent: 'claude-code' }),
 			makeFile({ id: 'f2', source: '.cursorrules', agent: 'cursor' }),
 			makeFile({ id: 'f3', source: '.cursorrules2', agent: 'cursor' })
 		];
-		mockGet.mockResolvedValueOnce(setup).mockResolvedValueOnce(files);
-		await makeProgram().parseAsync(['view', 'alice/my-setup'], { from: 'user' });
-		const allPrints = mockPrint.mock.calls.map((c: unknown[]) => c[0]).join('\n');
+		vi.mocked(ctx.api.get).mockResolvedValueOnce(setup).mockResolvedValueOnce(files);
+		await program.parseAsync(['view', 'alice/my-setup'], { from: 'user' });
+		const allPrints = vi
+			.mocked(ctx.io.print)
+			.mock.calls.map((c) => c[0])
+			.join('\n');
 		expect(allPrints).toMatch(/Claude Code: 1 file/);
 		expect(allPrints).toMatch(/Cursor: 2 files/);
 	});
 
 	it('includes shared file count when files have no agent', async () => {
+		const { program, ctx } = makeProgram();
 		const setup = makeSetup({ agents: ['claude-code'] });
 		const files = [
 			makeFile({ source: 'CLAUDE.md', agent: 'claude-code' }),
 			makeFile({ id: 'f2', source: 'README.md' }) // no agent = shared
 		];
-		mockGet.mockResolvedValueOnce(setup).mockResolvedValueOnce(files);
-		await makeProgram().parseAsync(['view', 'alice/my-setup'], { from: 'user' });
-		const allPrints = mockPrint.mock.calls.map((c: unknown[]) => c[0]).join('\n');
+		vi.mocked(ctx.api.get).mockResolvedValueOnce(setup).mockResolvedValueOnce(files);
+		await program.parseAsync(['view', 'alice/my-setup'], { from: 'user' });
+		const allPrints = vi
+			.mocked(ctx.io.print)
+			.mock.calls.map((c) => c[0])
+			.join('\n');
 		expect(allPrints).toMatch(/Shared: 1 file/);
 	});
 
 	it('omits agents section when setup has no agents', async () => {
-		mockGet.mockResolvedValueOnce(makeSetup({ agents: [] })).mockResolvedValueOnce([makeFile()]);
-		await makeProgram().parseAsync(['view', 'alice/my-setup'], { from: 'user' });
-		const allPrints = mockPrint.mock.calls.map((c: unknown[]) => c[0]).join('\n');
+		const { program, ctx } = makeProgram();
+		vi.mocked(ctx.api.get)
+			.mockResolvedValueOnce(makeSetup({ agents: [] }))
+			.mockResolvedValueOnce([makeFile()]);
+		await program.parseAsync(['view', 'alice/my-setup'], { from: 'user' });
+		const allPrints = vi
+			.mocked(ctx.io.print)
+			.mock.calls.map((c) => c[0])
+			.join('\n');
 		expect(allPrints).not.toMatch(/Agents:/);
 	});
 
 	it('shows file list with agent labels', async () => {
+		const { program, ctx } = makeProgram();
 		const setup = makeSetup({ agents: ['claude-code'] });
 		const files = [
 			makeFile({ source: 'CLAUDE.md', agent: 'claude-code' }),
 			makeFile({ id: 'f2', source: 'README.md' })
 		];
-		mockGet.mockResolvedValueOnce(setup).mockResolvedValueOnce(files);
-		await makeProgram().parseAsync(['view', 'alice/my-setup'], { from: 'user' });
-		const allPrints = mockPrint.mock.calls.map((c: unknown[]) => c[0]).join('\n');
+		vi.mocked(ctx.api.get).mockResolvedValueOnce(setup).mockResolvedValueOnce(files);
+		await program.parseAsync(['view', 'alice/my-setup'], { from: 'user' });
+		const allPrints = vi
+			.mocked(ctx.io.print)
+			.mock.calls.map((c) => c[0])
+			.join('\n');
 		expect(allPrints).toMatch(/CLAUDE\.md.*Claude Code/);
 		expect(allPrints).toMatch(/README\.md/);
 	});
 
 	it('outputs JSON when --json flag is set', async () => {
-		mockIsJsonMode.mockReturnValue(true);
+		const { program, ctx } = makeProgram({
+			io: { isJson: vi.fn(() => true) }
+		});
 		const setup = makeSetup();
 		const files = [makeFile()];
-		mockGet.mockResolvedValueOnce(setup).mockResolvedValueOnce(files);
-		await makeProgram().parseAsync(['view', '--json', 'alice/my-setup'], { from: 'user' });
-		expect(mockSetOutputMode).toHaveBeenCalledWith('json');
-		expect(mockJson).toHaveBeenCalledWith({ setup, files });
+		vi.mocked(ctx.api.get).mockResolvedValueOnce(setup).mockResolvedValueOnce(files);
+		await program.parseAsync(['view', '--json', 'alice/my-setup'], { from: 'user' });
+		expect(ctx.io.setOutputMode).toHaveBeenCalledWith('json');
+		expect(ctx.io.json).toHaveBeenCalledWith({ setup, files });
 	});
 
 	it('shows 404 error for unknown setup', async () => {
-		mockGet.mockRejectedValueOnce(new MockApiError('Not found', 'NOT_FOUND', 404));
+		const { program, ctx } = makeProgram();
+		vi.mocked(ctx.api.get).mockRejectedValueOnce(new ApiError('Not found', 'NOT_FOUND', 404));
 		const spy = exitSpy();
 		await expect(
-			makeProgram().parseAsync(['view', 'alice/nonexistent'], { from: 'user' })
+			program.parseAsync(['view', 'alice/nonexistent'], { from: 'user' })
 		).rejects.toThrow('process.exit');
-		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('not found'));
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('not found'));
 		expect(spy).toHaveBeenCalledWith(1);
 	});
 
 	it('shows error for invalid format (no slash)', async () => {
+		const { program, ctx } = makeProgram();
 		const spy = exitSpy();
-		await expect(
-			makeProgram().parseAsync(['view', 'invalidformat'], { from: 'user' })
-		).rejects.toThrow('process.exit');
-		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('Invalid format'));
+		await expect(program.parseAsync(['view', 'invalidformat'], { from: 'user' })).rejects.toThrow(
+			'process.exit'
+		);
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('Invalid format'));
 		expect(spy).toHaveBeenCalledWith(1);
 	});
 });
