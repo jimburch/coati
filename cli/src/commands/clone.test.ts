@@ -2,91 +2,20 @@ import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Command } from 'commander';
+import { createTestContext } from '../test-utils.js';
+import { ApiError } from '../context.js';
 
-// ── hoisted class definitions ─────────────────────────────────────────────────
-
-const { MockApiError } = vi.hoisted(() => {
-	class MockApiError extends Error {
-		code: string;
-		status: number;
-		constructor(message: string, code: string, status: number) {
-			super(message);
-			this.name = 'ApiError';
-			this.code = code;
-			this.status = status;
-		}
-	}
-	return { MockApiError };
-});
-
-// ── mocks ─────────────────────────────────────────────────────────────────────
-
-const mockGet = vi.fn();
-const mockPost = vi.fn();
-
-vi.mock('../api.js', () => ({
-	get: (...args: unknown[]) => mockGet(...args),
-	post: (...args: unknown[]) => mockPost(...args),
-	ApiError: MockApiError
-}));
-
-const mockSetOutputMode = vi.fn();
-const mockIsJsonMode = vi.fn(() => false);
-const mockJson = vi.fn();
-const mockPrint = vi.fn();
-const mockSuccess = vi.fn();
-const mockError = vi.fn();
-const mockWarning = vi.fn();
-const mockInfo = vi.fn();
-
-vi.mock('../output.js', () => ({
-	setOutputMode: (mode: string) => mockSetOutputMode(mode),
-	isJsonMode: () => mockIsJsonMode(),
-	json: (data: unknown) => mockJson(data),
-	print: (msg: string) => mockPrint(msg),
-	success: (msg: string) => mockSuccess(msg),
-	error: (msg: string) => mockError(msg),
-	warning: (msg: string) => mockWarning(msg),
-	info: (msg: string) => mockInfo(msg)
-}));
-
-const mockWriteSetupFiles = vi.fn();
-
-vi.mock('../files.js', () => ({
-	writeSetupFiles: (...args: unknown[]) => mockWriteSetupFiles(...args)
-}));
-
-const mockPromptDestination = vi.fn();
-const mockConfirmPostInstall = vi.fn();
-const mockPickFiles = vi.fn();
-
-vi.mock('../prompts.js', () => ({
-	promptDestination: () => mockPromptDestination(),
-	confirmPostInstall: (cmd: string) => mockConfirmPostInstall(cmd),
-	pickFiles: (files: unknown) => mockPickFiles(files),
-	confirm: vi.fn(),
-	select: vi.fn(),
-	input: vi.fn(),
-	resolveConflict: vi.fn(),
-	confirmFileList: vi.fn(),
-	promptMetadata: vi.fn()
-}));
-
-const mockExec = vi.fn();
-
-vi.mock('child_process', () => ({
-	exec: (...args: unknown[]) => mockExec(...args)
-}));
-
-// Import after mocks are registered
+// Import after test-utils are available
 const { registerClone } = await import('./clone.js');
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
+let ctx: ReturnType<typeof createTestContext>;
+
 function makeProgram(): Command {
 	const program = new Command();
 	program.exitOverride();
-	registerClone(program);
+	registerClone(program, ctx);
 	return program;
 }
 
@@ -130,16 +59,18 @@ const WRITE_RESULT = {
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	mockIsJsonMode.mockReturnValue(false);
-	mockGet.mockImplementation((url: string) => {
+	ctx = createTestContext({
+		io: { isJson: vi.fn(() => false) }
+	});
+	vi.mocked(ctx.api.get).mockImplementation((url: string) => {
 		if (url.endsWith('/files')) return Promise.resolve(SETUP_FILES);
 		return Promise.resolve(SETUP_META);
 	});
-	mockPost.mockResolvedValue({});
-	mockPromptDestination.mockResolvedValue('current');
-	mockWriteSetupFiles.mockResolvedValue(WRITE_RESULT);
-	mockPickFiles.mockResolvedValue([0, 1]);
-	mockConfirmPostInstall.mockResolvedValue(true);
+	vi.mocked(ctx.api.post).mockResolvedValue({});
+	vi.mocked(ctx.io.promptDestination).mockResolvedValue('current');
+	vi.mocked(ctx.fs.writeSetupFiles).mockResolvedValue(WRITE_RESULT);
+	vi.mocked(ctx.io.pickFiles).mockResolvedValue([0, 1]);
+	vi.mocked(ctx.io.confirmPostInstall).mockResolvedValue(true);
 });
 
 afterEach(() => {
@@ -155,7 +86,7 @@ describe('clone — argument parsing', () => {
 		await expect(program.parseAsync(['clone', 'alicemysetup'], { from: 'user' })).rejects.toThrow(
 			'process.exit'
 		);
-		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('Invalid format'));
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('Invalid format'));
 		expect(spy).toHaveBeenCalledWith(1);
 	});
 
@@ -165,7 +96,7 @@ describe('clone — argument parsing', () => {
 		await expect(program.parseAsync(['clone', '/my-setup'], { from: 'user' })).rejects.toThrow(
 			'process.exit'
 		);
-		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('Invalid format'));
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('Invalid format'));
 		expect(spy).toHaveBeenCalledWith(1);
 	});
 
@@ -175,7 +106,7 @@ describe('clone — argument parsing', () => {
 		await expect(program.parseAsync(['clone', 'alice/'], { from: 'user' })).rejects.toThrow(
 			'process.exit'
 		);
-		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('Invalid format'));
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('Invalid format'));
 		expect(spy).toHaveBeenCalledWith(1);
 	});
 });
@@ -187,9 +118,9 @@ describe('clone — basic flow', () => {
 		const program = makeProgram();
 		await program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' });
 
-		expect(mockGet).toHaveBeenCalledWith('/setups/alice/my-setup');
-		expect(mockGet).toHaveBeenCalledWith('/setups/alice/my-setup/files');
-		expect(mockWriteSetupFiles).toHaveBeenCalledWith(
+		expect(ctx.api.get).toHaveBeenCalledWith('/setups/alice/my-setup');
+		expect(ctx.api.get).toHaveBeenCalledWith('/setups/alice/my-setup/files');
+		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith(
 			SETUP_FILES,
 			expect.objectContaining({ projectDir: expect.any(String) })
 		);
@@ -198,11 +129,11 @@ describe('clone — basic flow', () => {
 	it('records clone event after writing', async () => {
 		const program = makeProgram();
 		await program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' });
-		expect(mockPost).toHaveBeenCalledWith('/setups/alice/my-setup/clone', {});
+		expect(ctx.api.post).toHaveBeenCalledWith('/setups/alice/my-setup/clone', {});
 	});
 
 	it('shows warning and exits when no files', async () => {
-		mockGet.mockImplementation((url: string) => {
+		vi.mocked(ctx.api.get).mockImplementation((url: string) => {
 			if (url.endsWith('/files')) return Promise.resolve([]);
 			return Promise.resolve(SETUP_META);
 		});
@@ -211,8 +142,19 @@ describe('clone — basic flow', () => {
 		await expect(program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' })).rejects.toThrow(
 			'process.exit'
 		);
-		expect(mockWarning).toHaveBeenCalledWith(expect.stringContaining('no files'));
+		expect(ctx.io.warning).toHaveBeenCalledWith(expect.stringContaining('no files'));
 		expect(spy).toHaveBeenCalledWith(0);
+	});
+
+	it('errors and exits on 404', async () => {
+		vi.mocked(ctx.api.get).mockRejectedValue(new ApiError('Not Found', 'NOT_FOUND', 404));
+		const spy = exitSpy();
+		const program = makeProgram();
+		await expect(program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' })).rejects.toThrow(
+			'process.exit'
+		);
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('not found'));
+		expect(spy).toHaveBeenCalledWith(1);
 	});
 });
 
@@ -222,7 +164,7 @@ describe('clone — --dry-run', () => {
 	it('passes dryRun=true to writeSetupFiles', async () => {
 		const program = makeProgram();
 		await program.parseAsync(['clone', 'alice/my-setup', '--dry-run'], { from: 'user' });
-		expect(mockWriteSetupFiles).toHaveBeenCalledWith(
+		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({ dryRun: true })
 		);
@@ -231,18 +173,18 @@ describe('clone — --dry-run', () => {
 	it('does not record clone event in dry-run mode', async () => {
 		const program = makeProgram();
 		await program.parseAsync(['clone', 'alice/my-setup', '--dry-run'], { from: 'user' });
-		expect(mockPost).not.toHaveBeenCalled();
+		expect(ctx.api.post).not.toHaveBeenCalled();
 	});
 
 	it('does not run post-install in dry-run mode', async () => {
-		mockGet.mockImplementation((url: string) => {
+		vi.mocked(ctx.api.get).mockImplementation((url: string) => {
 			if (url.endsWith('/files')) return Promise.resolve(SETUP_FILES);
 			return Promise.resolve({ ...SETUP_META, postInstall: 'chmod +x setup.sh' });
 		});
 		const program = makeProgram();
 		await program.parseAsync(['clone', 'alice/my-setup', '--dry-run'], { from: 'user' });
-		expect(mockConfirmPostInstall).not.toHaveBeenCalled();
-		expect(mockExec).not.toHaveBeenCalled();
+		expect(ctx.io.confirmPostInstall).not.toHaveBeenCalled();
+		expect(ctx.fs.runCommand).not.toHaveBeenCalled();
 	});
 });
 
@@ -252,7 +194,7 @@ describe('clone — --force', () => {
 	it('passes force=true to writeSetupFiles', async () => {
 		const program = makeProgram();
 		await program.parseAsync(['clone', 'alice/my-setup', '--force'], { from: 'user' });
-		expect(mockWriteSetupFiles).toHaveBeenCalledWith(
+		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({ force: true })
 		);
@@ -263,42 +205,42 @@ describe('clone — --force', () => {
 
 describe('clone — --pick', () => {
 	it('calls pickFiles and filters to selected files', async () => {
-		mockPickFiles.mockResolvedValue([0]); // select only first file
+		vi.mocked(ctx.io.pickFiles).mockResolvedValue([0]); // select only first file
 		const program = makeProgram();
 		await program.parseAsync(['clone', 'alice/my-setup', '--pick'], { from: 'user' });
 
-		expect(mockPickFiles).toHaveBeenCalledWith(SETUP_FILES);
+		expect(ctx.io.pickFiles).toHaveBeenCalledWith(SETUP_FILES);
 		// Only the first file should be passed to writeSetupFiles
-		expect(mockWriteSetupFiles).toHaveBeenCalledWith([SETUP_FILES[0]], expect.anything());
+		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith([SETUP_FILES[0]], expect.anything());
 	});
 
 	it('exits with warning when no files selected via --pick', async () => {
-		mockPickFiles.mockResolvedValue([]);
+		vi.mocked(ctx.io.pickFiles).mockResolvedValue([]);
 		const spy = exitSpy();
 		const program = makeProgram();
 		await expect(
 			program.parseAsync(['clone', 'alice/my-setup', '--pick'], { from: 'user' })
 		).rejects.toThrow('process.exit');
-		expect(mockWarning).toHaveBeenCalledWith(expect.stringContaining('No files selected'));
-		expect(mockWriteSetupFiles).not.toHaveBeenCalled();
+		expect(ctx.io.warning).toHaveBeenCalledWith(expect.stringContaining('No files selected'));
+		expect(ctx.fs.writeSetupFiles).not.toHaveBeenCalled();
 		expect(spy).toHaveBeenCalledWith(0);
 	});
 
 	it('skips pick prompt in JSON mode', async () => {
-		mockIsJsonMode.mockReturnValue(true);
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
 		const program = makeProgram();
 		await program.parseAsync(['clone', 'alice/my-setup', '--pick', '--json'], { from: 'user' });
 
-		expect(mockPickFiles).not.toHaveBeenCalled();
-		expect(mockWriteSetupFiles).toHaveBeenCalledWith(SETUP_FILES, expect.anything());
+		expect(ctx.io.pickFiles).not.toHaveBeenCalled();
+		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith(SETUP_FILES, expect.anything());
 	});
 
 	it('--pick + --force passes force=true to writeSetupFiles with filtered files', async () => {
-		mockPickFiles.mockResolvedValue([1]); // select only second file
+		vi.mocked(ctx.io.pickFiles).mockResolvedValue([1]); // select only second file
 		const program = makeProgram();
 		await program.parseAsync(['clone', 'alice/my-setup', '--pick', '--force'], { from: 'user' });
 
-		expect(mockWriteSetupFiles).toHaveBeenCalledWith(
+		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith(
 			[SETUP_FILES[1]],
 			expect.objectContaining({ force: true })
 		);
@@ -314,8 +256,8 @@ describe('clone — --dir', () => {
 			from: 'user'
 		});
 
-		expect(mockPromptDestination).not.toHaveBeenCalled();
-		expect(mockWriteSetupFiles).toHaveBeenCalledWith(
+		expect(ctx.io.promptDestination).not.toHaveBeenCalled();
+		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({ projectDir: path.resolve('/tmp/my-project') })
 		);
@@ -327,7 +269,7 @@ describe('clone — --dir', () => {
 			from: 'user'
 		});
 
-		expect(mockWriteSetupFiles).toHaveBeenCalledWith(
+		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({ projectDir: path.resolve('relative/path') })
 		);
@@ -338,40 +280,36 @@ describe('clone — --dir', () => {
 
 describe('clone — post-install', () => {
 	it('prompts and executes post-install command when confirmed', async () => {
-		mockGet.mockImplementation((url: string) => {
+		vi.mocked(ctx.api.get).mockImplementation((url: string) => {
 			if (url.endsWith('/files')) return Promise.resolve(SETUP_FILES);
 			return Promise.resolve({ ...SETUP_META, postInstall: 'echo hello' });
 		});
-		mockConfirmPostInstall.mockResolvedValue(true);
-		mockExec.mockImplementation(
-			(_cmd: string, _opts: unknown, cb: (err: null, stdout: string, stderr: string) => void) => {
-				cb(null, 'hello\n', '');
-			}
-		);
+		vi.mocked(ctx.io.confirmPostInstall).mockResolvedValue(true);
+		vi.mocked(ctx.fs.runCommand).mockResolvedValue({ stdout: 'hello\n', stderr: '' });
 
 		const program = makeProgram();
 		await program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' });
 
-		expect(mockConfirmPostInstall).toHaveBeenCalledWith('echo hello');
-		expect(mockExec).toHaveBeenCalled();
+		expect(ctx.io.confirmPostInstall).toHaveBeenCalledWith('echo hello');
+		expect(ctx.fs.runCommand).toHaveBeenCalled();
 	});
 
 	it('skips post-install when user declines confirmation', async () => {
-		mockGet.mockImplementation((url: string) => {
+		vi.mocked(ctx.api.get).mockImplementation((url: string) => {
 			if (url.endsWith('/files')) return Promise.resolve(SETUP_FILES);
 			return Promise.resolve({ ...SETUP_META, postInstall: 'echo hello' });
 		});
-		mockConfirmPostInstall.mockResolvedValue(false);
+		vi.mocked(ctx.io.confirmPostInstall).mockResolvedValue(false);
 
 		const program = makeProgram();
 		await program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' });
 
-		expect(mockConfirmPostInstall).toHaveBeenCalled();
-		expect(mockExec).not.toHaveBeenCalled();
+		expect(ctx.io.confirmPostInstall).toHaveBeenCalled();
+		expect(ctx.fs.runCommand).not.toHaveBeenCalled();
 	});
 
 	it('skips post-install when --no-post-install is passed', async () => {
-		mockGet.mockImplementation((url: string) => {
+		vi.mocked(ctx.api.get).mockImplementation((url: string) => {
 			if (url.endsWith('/files')) return Promise.resolve(SETUP_FILES);
 			return Promise.resolve({ ...SETUP_META, postInstall: 'echo hello' });
 		});
@@ -379,20 +317,20 @@ describe('clone — post-install', () => {
 		const program = makeProgram();
 		await program.parseAsync(['clone', 'alice/my-setup', '--no-post-install'], { from: 'user' });
 
-		expect(mockConfirmPostInstall).not.toHaveBeenCalled();
-		expect(mockExec).not.toHaveBeenCalled();
+		expect(ctx.io.confirmPostInstall).not.toHaveBeenCalled();
+		expect(ctx.fs.runCommand).not.toHaveBeenCalled();
 	});
 
 	it('does not prompt when setup has no postInstall', async () => {
 		const program = makeProgram();
 		await program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' });
 
-		expect(mockConfirmPostInstall).not.toHaveBeenCalled();
-		expect(mockExec).not.toHaveBeenCalled();
+		expect(ctx.io.confirmPostInstall).not.toHaveBeenCalled();
+		expect(ctx.fs.runCommand).not.toHaveBeenCalled();
 	});
 
 	it('does not prompt when postInstall is empty string', async () => {
-		mockGet.mockImplementation((url: string) => {
+		vi.mocked(ctx.api.get).mockImplementation((url: string) => {
 			if (url.endsWith('/files')) return Promise.resolve(SETUP_FILES);
 			return Promise.resolve({ ...SETUP_META, postInstall: '   ' });
 		});
@@ -400,12 +338,12 @@ describe('clone — post-install', () => {
 		const program = makeProgram();
 		await program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' });
 
-		expect(mockConfirmPostInstall).not.toHaveBeenCalled();
+		expect(ctx.io.confirmPostInstall).not.toHaveBeenCalled();
 	});
 
 	it('skips post-install in JSON mode', async () => {
-		mockIsJsonMode.mockReturnValue(true);
-		mockGet.mockImplementation((url: string) => {
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
+		vi.mocked(ctx.api.get).mockImplementation((url: string) => {
 			if (url.endsWith('/files')) return Promise.resolve(SETUP_FILES);
 			return Promise.resolve({ ...SETUP_META, postInstall: 'echo hello' });
 		});
@@ -413,12 +351,12 @@ describe('clone — post-install', () => {
 		const program = makeProgram();
 		await program.parseAsync(['clone', 'alice/my-setup', '--json'], { from: 'user' });
 
-		expect(mockConfirmPostInstall).not.toHaveBeenCalled();
-		expect(mockExec).not.toHaveBeenCalled();
+		expect(ctx.io.confirmPostInstall).not.toHaveBeenCalled();
+		expect(ctx.fs.runCommand).not.toHaveBeenCalled();
 	});
 
 	it('dry-run skips post-install even when setup has postInstall', async () => {
-		mockGet.mockImplementation((url: string) => {
+		vi.mocked(ctx.api.get).mockImplementation((url: string) => {
 			if (url.endsWith('/files')) return Promise.resolve(SETUP_FILES);
 			return Promise.resolve({ ...SETUP_META, postInstall: 'echo hello' });
 		});
@@ -426,7 +364,7 @@ describe('clone — post-install', () => {
 		const program = makeProgram();
 		await program.parseAsync(['clone', 'alice/my-setup', '--dry-run'], { from: 'user' });
 
-		expect(mockConfirmPostInstall).not.toHaveBeenCalled();
+		expect(ctx.io.confirmPostInstall).not.toHaveBeenCalled();
 	});
 });
 
@@ -434,11 +372,11 @@ describe('clone — post-install', () => {
 
 describe('clone — --json output', () => {
 	it('outputs JSON with all required fields', async () => {
-		mockIsJsonMode.mockReturnValue(true);
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
 		const program = makeProgram();
 		await program.parseAsync(['clone', 'alice/my-setup', '--json'], { from: 'user' });
 
-		expect(mockJson).toHaveBeenCalledWith(
+		expect(ctx.io.json).toHaveBeenCalledWith(
 			expect.objectContaining({
 				setup: expect.objectContaining({ owner: 'alice', slug: 'my-setup' }),
 				dryRun: false,
@@ -452,16 +390,16 @@ describe('clone — --json output', () => {
 	});
 
 	it('dry-run JSON includes dryRun=true', async () => {
-		mockIsJsonMode.mockReturnValue(true);
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
 		const program = makeProgram();
 		await program.parseAsync(['clone', 'alice/my-setup', '--dry-run', '--json'], { from: 'user' });
 
-		expect(mockJson).toHaveBeenCalledWith(expect.objectContaining({ dryRun: true }));
+		expect(ctx.io.json).toHaveBeenCalledWith(expect.objectContaining({ dryRun: true }));
 	});
 
 	it('JSON output with --no-post-install has ran=false', async () => {
-		mockIsJsonMode.mockReturnValue(true);
-		mockGet.mockImplementation((url: string) => {
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
+		vi.mocked(ctx.api.get).mockImplementation((url: string) => {
 			if (url.endsWith('/files')) return Promise.resolve(SETUP_FILES);
 			return Promise.resolve({ ...SETUP_META, postInstall: 'echo hello' });
 		});
@@ -471,7 +409,7 @@ describe('clone — --json output', () => {
 			from: 'user'
 		});
 
-		expect(mockJson).toHaveBeenCalledWith(
+		expect(ctx.io.json).toHaveBeenCalledWith(
 			expect.objectContaining({ postInstall: expect.objectContaining({ ran: false }) })
 		);
 	});

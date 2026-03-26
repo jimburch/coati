@@ -1,31 +1,11 @@
 import os from 'os';
 import path from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { Command } from 'commander';
 import { AGENTS_BY_SLUG } from '@coati/agents-registry';
-import { get, post, ApiError } from '../api.js';
-import { writeSetupFiles } from '../files.js';
-import {
-	promptDestination,
-	confirmPostInstall,
-	pickFiles,
-	promptAgentSelection
-} from '../prompts.js';
+import { ApiError } from '../context.js';
 import { detectInstalledAgents } from '../agent-detection.js';
-import {
-	setOutputMode,
-	isJsonMode,
-	json,
-	print,
-	success,
-	error,
-	warning,
-	info
-} from '../output.js';
 import type { ManifestPlacement } from '../manifest.js';
-
-const execAsync = promisify(exec);
+import type { CommandContext } from '../context.js';
 
 interface SetupMeta {
 	id: string;
@@ -62,7 +42,7 @@ interface CloneOptions {
 	agent?: string;
 }
 
-export function registerClone(program: Command): void {
+export function registerClone(program: Command, ctx: CommandContext): void {
 	program
 		.command('clone')
 		.description('Clone and install a setup to your local machine')
@@ -77,13 +57,13 @@ export function registerClone(program: Command): void {
 		.option('--json', 'Output results as JSON')
 		.action(async (ownerSlug: string, opts: CloneOptions) => {
 			if (opts.json) {
-				setOutputMode('json');
+				ctx.io.setOutputMode('json');
 			}
 
 			// Parse <owner>/<slug>
 			const slashIdx = ownerSlug.indexOf('/');
 			if (slashIdx <= 0 || slashIdx === ownerSlug.length - 1) {
-				error('Invalid format. Expected: <owner>/<slug> (e.g. alice/my-setup)');
+				ctx.io.error('Invalid format. Expected: <owner>/<slug> (e.g. alice/my-setup)');
 				process.exit(1);
 			}
 			const owner = ownerSlug.slice(0, slashIdx);
@@ -92,14 +72,14 @@ export function registerClone(program: Command): void {
 			// Fetch setup metadata
 			let setup: SetupMeta;
 			try {
-				setup = await get<SetupMeta>(`/setups/${owner}/${slug}`);
+				setup = await ctx.api.get<SetupMeta>(`/setups/${owner}/${slug}`);
 			} catch (err) {
 				if (err instanceof ApiError && err.status === 404) {
-					error(`Setup "${owner}/${slug}" not found.`);
+					ctx.io.error(`Setup "${owner}/${slug}" not found.`);
 				} else if (err instanceof Error) {
-					error(`Failed to fetch setup: ${err.message}`);
+					ctx.io.error(`Failed to fetch setup: ${err.message}`);
 				} else {
-					error('An unexpected error occurred.');
+					ctx.io.error('An unexpected error occurred.');
 				}
 				process.exit(1);
 			}
@@ -107,20 +87,20 @@ export function registerClone(program: Command): void {
 			// Fetch setup files
 			let files: SetupFileRecord[];
 			try {
-				files = await get<SetupFileRecord[]>(`/setups/${owner}/${slug}/files`);
+				files = await ctx.api.get<SetupFileRecord[]>(`/setups/${owner}/${slug}/files`);
 			} catch (err) {
 				if (err instanceof Error) {
-					error(`Failed to fetch setup files: ${err.message}`);
+					ctx.io.error(`Failed to fetch setup files: ${err.message}`);
 				} else {
-					error('An unexpected error occurred.');
+					ctx.io.error('An unexpected error occurred.');
 				}
 				process.exit(1);
 			}
 
 			if (files.length === 0) {
-				warning('This setup has no files to install.');
-				if (isJsonMode()) {
-					json({
+				ctx.io.warning('This setup has no files to install.');
+				if (ctx.io.isJson()) {
+					ctx.io.json({
 						setup: { owner, slug, name: setup.name },
 						files: [],
 						written: 0,
@@ -137,12 +117,12 @@ export function registerClone(program: Command): void {
 			if (opts.agent) {
 				// --agent flag overrides auto-detection entirely
 				if (setupAgents.length > 0 && !setupAgents.includes(opts.agent)) {
-					warning(
+					ctx.io.warning(
 						`Agent "${opts.agent}" is not listed in this setup's supported agents (${setupAgents.join(', ')}).`
 					);
 				}
 				files = files.filter((f) => !f.agent || f.agent === opts.agent);
-			} else if (!isJsonMode() && setupAgents.length > 0) {
+			} else if (!ctx.io.isJson() && setupAgents.length > 0) {
 				const detected = detectInstalledAgents(setupAgents);
 
 				let selectedAgent: string;
@@ -150,22 +130,22 @@ export function registerClone(program: Command): void {
 					// Single match — auto-select without prompting
 					selectedAgent = detected[0]!;
 					const displayName = AGENTS_BY_SLUG[selectedAgent]?.displayName ?? selectedAgent;
-					info(`Auto-detected ${displayName}. Installing files for ${displayName}.`);
+					ctx.io.info(`Auto-detected ${displayName}. Installing files for ${displayName}.`);
 				} else {
 					// Multiple matches or zero matches → prompt user to choose
 					const supportedNames = setupAgents
 						.map((s) => AGENTS_BY_SLUG[s]?.displayName ?? s)
 						.join(', ');
-					print(`\nThis setup supports: ${supportedNames}`);
+					ctx.io.print(`\nThis setup supports: ${supportedNames}`);
 					if (detected.length === 0) {
-						info('No supported agents detected on your machine.');
+						ctx.io.info('No supported agents detected on your machine.');
 					}
 					const candidates = detected.length > 1 ? detected : setupAgents;
 					const agentChoices = candidates.map((s) => ({
 						slug: s,
 						displayName: AGENTS_BY_SLUG[s]?.displayName ?? s
 					}));
-					selectedAgent = await promptAgentSelection(agentChoices);
+					selectedAgent = await ctx.io.promptAgentSelection(agentChoices);
 				}
 
 				files = files.filter((f) => !f.agent || f.agent === selectedAgent);
@@ -174,10 +154,10 @@ export function registerClone(program: Command): void {
 			// all files are installed (no agent filtering).
 
 			// --pick: interactive file selection (skip in JSON mode — use all files)
-			if (opts.pick && !isJsonMode()) {
-				const selectedIndices = await pickFiles(files);
+			if (opts.pick && !ctx.io.isJson()) {
+				const selectedIndices = await ctx.io.pickFiles(files);
 				if (selectedIndices.length === 0) {
-					warning('No files selected. Nothing to install.');
+					ctx.io.warning('No files selected. Nothing to install.');
 					process.exit(0);
 				}
 				files = selectedIndices.map((i) => files[i]!);
@@ -199,8 +179,8 @@ export function registerClone(program: Command): void {
 					files.length > 0 && globalCount > files.length / 2 ? 'global' : 'current';
 
 				let dest: 'current' | 'global' = 'current';
-				if (!isJsonMode()) {
-					dest = await promptDestination(defaultScope);
+				if (!ctx.io.isJson()) {
+					dest = await ctx.io.promptDestination(defaultScope);
 				}
 				destination = dest;
 
@@ -211,26 +191,26 @@ export function registerClone(program: Command): void {
 				}
 			}
 
-			if (!isJsonMode()) {
-				print(`\nCloning ${owner}/${slug} → ${projectDir}\n`);
+			if (!ctx.io.isJson()) {
+				ctx.io.print(`\nCloning ${owner}/${slug} → ${projectDir}\n`);
 				if (opts.dryRun) {
-					info('Dry run — no files will be written.\n');
+					ctx.io.info('Dry run — no files will be written.\n');
 				}
 			}
 
 			// Write files
 			let writeResult;
 			try {
-				writeResult = await writeSetupFiles(files, {
+				writeResult = await ctx.fs.writeSetupFiles(files, {
 					projectDir,
 					force: opts.force,
 					dryRun: opts.dryRun
 				});
 			} catch (err) {
 				if (err instanceof Error) {
-					error(`Failed to write files: ${err.message}`);
+					ctx.io.error(`Failed to write files: ${err.message}`);
 				} else {
-					error('An unexpected error occurred while writing files.');
+					ctx.io.error('An unexpected error occurred while writing files.');
 				}
 				process.exit(1);
 			}
@@ -238,7 +218,7 @@ export function registerClone(program: Command): void {
 			// Record clone event — best-effort, never fail the whole operation
 			if (!opts.dryRun) {
 				try {
-					await post(`/setups/${owner}/${slug}/clone`, {});
+					await ctx.api.post(`/setups/${owner}/${slug}/clone`, {});
 				} catch {
 					// Silently ignore — clone tracking is non-critical
 				}
@@ -249,7 +229,7 @@ export function registerClone(program: Command): void {
 			const shouldRunPostInstall =
 				!opts.dryRun &&
 				opts.postInstall !== false &&
-				!isJsonMode() &&
+				!ctx.io.isJson() &&
 				setup.postInstall != null &&
 				setup.postInstall.trim() !== '';
 
@@ -259,30 +239,30 @@ export function registerClone(program: Command): void {
 
 			if (shouldRunPostInstall) {
 				const cmd = setup.postInstall!;
-				print('');
-				info(`Post-install: ${cmd}`);
-				const confirmed = await confirmPostInstall(cmd);
+				ctx.io.print('');
+				ctx.io.info(`Post-install: ${cmd}`);
+				const confirmed = await ctx.io.confirmPostInstall(cmd);
 				if (confirmed) {
 					try {
-						const { stdout, stderr } = await execAsync(cmd, { cwd: projectDir });
-						if (stdout) print(stdout.trimEnd());
-						if (stderr) print(stderr.trimEnd());
-						success('Post-install command completed.');
+						const { stdout, stderr } = await ctx.fs.runCommand(cmd, { cwd: projectDir });
+						if (stdout) ctx.io.print(stdout.trimEnd());
+						if (stderr) ctx.io.print(stderr.trimEnd());
+						ctx.io.success('Post-install command completed.');
 						postInstallResult = { ran: true, command: cmd, output: stdout };
 					} catch (err) {
 						const msg = err instanceof Error ? err.message : String(err);
-						error(`Post-install failed: ${msg}`);
+						ctx.io.error(`Post-install failed: ${msg}`);
 						postInstallResult = { ran: false, command: cmd, error: msg };
 					}
 				} else {
-					info('Post-install skipped.');
+					ctx.io.info('Post-install skipped.');
 					postInstallResult = { ran: false, command: cmd };
 				}
 			}
 
 			// Output summary
-			if (isJsonMode()) {
-				json({
+			if (ctx.io.isJson()) {
+				ctx.io.json({
 					setup: { owner, slug, name: setup.name },
 					destination,
 					projectDir,
@@ -294,30 +274,30 @@ export function registerClone(program: Command): void {
 					postInstall: postInstallResult
 				});
 			} else {
-				print('');
+				ctx.io.print('');
 
 				if (opts.dryRun) {
-					success(`Dry run complete: ${writeResult.files.length} file(s) would be written.`);
+					ctx.io.success(`Dry run complete: ${writeResult.files.length} file(s) would be written.`);
 				} else {
 					if (writeResult.written > 0 || writeResult.backedUp > 0) {
-						success(`Cloned ${owner}/${slug} successfully.`);
+						ctx.io.success(`Cloned ${owner}/${slug} successfully.`);
 					} else if (writeResult.skipped === writeResult.files.length) {
-						warning('All files were skipped — nothing was written.');
+						ctx.io.warning('All files were skipped — nothing was written.');
 					}
 
 					const parts: string[] = [];
 					if (writeResult.written > 0) parts.push(`${writeResult.written} written`);
 					if (writeResult.backedUp > 0) parts.push(`${writeResult.backedUp} backed up`);
 					if (writeResult.skipped > 0) parts.push(`${writeResult.skipped} skipped`);
-					if (parts.length > 0) print(`  ${parts.join(', ')}`);
+					if (parts.length > 0) ctx.io.print(`  ${parts.join(', ')}`);
 				}
 
-				print('');
+				ctx.io.print('');
 				for (const f of writeResult.files) {
 					const icon = f.outcome === 'written' ? '✓' : f.outcome === 'backed-up' ? '↻' : '-';
-					print(`  ${icon} ${f.target}`);
+					ctx.io.print(`  ${icon} ${f.target}`);
 					if (f.backupPath) {
-						print(`    (backup: ${f.backupPath})`);
+						ctx.io.print(`    (backup: ${f.backupPath})`);
 					}
 				}
 			}

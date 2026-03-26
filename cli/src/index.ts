@@ -46,7 +46,7 @@ program.hook('preAction', () => {
 
 registerLogin(program, ctx);
 registerLogout(program, ctx);
-registerClone(program);
+registerClone(program, ctx);
 registerInit(program, ctx);
 registerPublish(program, ctx);
 registerSearch(program, ctx);

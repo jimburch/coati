@@ -1,10 +1,14 @@
 import fs from 'fs';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import * as api from './api.js';
 import * as output from './output.js';
 import * as prompts from './prompts.js';
 import * as auth from './auth.js';
 import { getConfig } from './config.js';
 import * as files from './files.js';
+
+const execAsync = promisify(exec);
 
 export type { ApiClientOptions } from './api.js';
 export type { OutputMode, TableColumn } from './output.js';
@@ -96,6 +100,10 @@ export interface FsClient {
 		placement: import('./manifest.js').ManifestPlacement,
 		options?: files.WriteOptions
 	): string;
+	runCommand(
+		command: string,
+		options: { cwd?: string }
+	): Promise<{ stdout: string; stderr: string }>;
 }
 
 // ── Top-level CommandContext ──────────────────────────────────────────────────
@@ -162,7 +170,8 @@ export function createContext(): CommandContext {
 			existsSync: fs.existsSync,
 			readConfig: getConfig,
 			writeSetupFiles: files.writeSetupFiles,
-			resolveTargetPath: files.resolveTargetPath
+			resolveTargetPath: files.resolveTargetPath,
+			runCommand: (command, options) => execAsync(command, options)
 		}
 	};
 }
