@@ -1,49 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Command } from 'commander';
 import type { Manifest } from '../manifest.js';
+import { createTestContext } from '../test-utils.js';
+import { ApiError } from '../context.js';
 
-// ── hoisted class definitions ─────────────────────────────────────────────────
-
-const { MockApiError } = vi.hoisted(() => {
-	class MockApiError extends Error {
-		code: string;
-		status: number;
-		constructor(message: string, code: string, status: number) {
-			super(message);
-			this.name = 'ApiError';
-			this.code = code;
-			this.status = status;
-		}
-	}
-	return { MockApiError };
-});
-
-// ── mock fs ───────────────────────────────────────────────────────────────────
-
-const mockExistsSync = vi.fn<[string], boolean>();
-const mockReadFileSync = vi.fn<[string, string], string>();
-
-vi.mock('fs', () => ({
-	default: {
-		existsSync: (p: string) => mockExistsSync(p),
-		readFileSync: (p: string, enc: string) => mockReadFileSync(p, enc)
-	}
-}));
-
-// ── mock api ──────────────────────────────────────────────────────────────────
-
-const mockGet = vi.fn();
-const mockPost = vi.fn();
-const mockPatch = vi.fn();
-
-vi.mock('../api.js', () => ({
-	get: (...args: unknown[]) => mockGet(...args),
-	post: (...args: unknown[]) => mockPost(...args),
-	patch: (...args: unknown[]) => mockPatch(...args),
-	ApiError: MockApiError
-}));
-
-// ── mock agents-registry ──────────────────────────────────────────────────────
+// ── mock agents-registry (pure utility) ───────────────────────────────────────
 
 vi.mock('@coati/agents-registry', () => ({
 	AGENTS_BY_SLUG: {
@@ -53,7 +14,7 @@ vi.mock('@coati/agents-registry', () => ({
 	}
 }));
 
-// ── mock manifest ─────────────────────────────────────────────────────────────
+// ── mock manifest (pure utility) ──────────────────────────────────────────────
 
 const mockReadManifest = vi.fn();
 const mockWriteManifest = vi.fn();
@@ -64,78 +25,29 @@ vi.mock('../manifest.js', () => ({
 	MANIFEST_FILENAME: 'setup.json'
 }));
 
-// ── mock config ───────────────────────────────────────────────────────────────
+// ── mock init (runInitFlow — has side effects, must be isolated) ───────────────
 
-const mockGetConfig = vi.fn();
-
-vi.mock('../config.js', () => ({
-	getConfig: () => mockGetConfig()
-}));
-
-// ── mock auth ─────────────────────────────────────────────────────────────────
-
-const mockIsLoggedIn = vi.fn<[], boolean>();
-
-vi.mock('../auth.js', () => ({
-	isLoggedIn: () => mockIsLoggedIn()
-}));
-
-// ── mock output ───────────────────────────────────────────────────────────────
-
-const mockSetOutputMode = vi.fn();
-const mockIsJsonMode = vi.fn(() => false);
-const mockJsonOutput = vi.fn();
-const mockPrint = vi.fn();
-const mockSuccess = vi.fn();
-const mockError = vi.fn();
-const mockInfo = vi.fn();
-const mockWarning = vi.fn();
-
-vi.mock('../output.js', () => ({
-	setOutputMode: (mode: string) => mockSetOutputMode(mode),
-	isJsonMode: () => mockIsJsonMode(),
-	json: (data: unknown) => mockJsonOutput(data),
-	print: (msg: string) => mockPrint(msg),
-	success: (msg: string) => mockSuccess(msg),
-	error: (msg: string) => mockError(msg),
-	info: (msg: string) => mockInfo(msg),
-	warning: (msg: string) => mockWarning(msg)
-}));
-
-// ── mock prompts ──────────────────────────────────────────────────────────────
-
-const mockConfirm = vi.fn<[string, boolean?], Promise<boolean>>();
-
-vi.mock('../prompts.js', () => ({
-	confirm: (question: string, defaultValue?: boolean) => mockConfirm(question, defaultValue),
-	resolveConflict: vi.fn(),
-	promptDestination: vi.fn(),
-	promptMetadata: vi.fn(),
-	confirmFileList: vi.fn(),
-	confirmPostInstall: vi.fn(),
-	pickFiles: vi.fn()
-}));
-
-// ── mock init ─────────────────────────────────────────────────────────────────
-
-const mockRunInitFlow = vi.fn<[string], Promise<boolean>>();
+const mockRunInitFlow = vi.fn();
 
 vi.mock('./init.js', () => ({
-	runInitFlow: (cwd: string) => mockRunInitFlow(cwd),
+	runInitFlow: (...args: unknown[]) => mockRunInitFlow(...args),
 	registerInit: vi.fn()
+}));
+
+// ── mock fs (readFileSync — raw disk read, not in FsClient) ──────────────────
+
+const mockReadFileSync = vi.fn<[string, string], string>();
+
+vi.mock('fs', () => ({
+	default: {
+		readFileSync: (p: string, enc: string) => mockReadFileSync(p, enc)
+	}
 }));
 
 // Import publish command after all mocks are set up
 const { registerPublish, validateAgentRefs } = await import('./publish.js');
 
 // ── helpers ───────────────────────────────────────────────────────────────────
-
-function makeProgram(): Command {
-	const program = new Command();
-	program.exitOverride();
-	registerPublish(program);
-	return program;
-}
 
 const MOCK_CONFIG = {
 	token: 'test-token',
@@ -164,22 +76,38 @@ const MOCK_SETUP_RESPONSE = {
 	ownerUsername: 'alice'
 };
 
+let ctx: ReturnType<typeof createTestContext>;
+
+function makeProgram() {
+	const program = new Command();
+	program.exitOverride();
+	registerPublish(program, ctx);
+	return program;
+}
+
 // ── setup / teardown ─────────────────────────────────────────────────────────
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	mockGetConfig.mockReturnValue(MOCK_CONFIG);
-	mockIsLoggedIn.mockReturnValue(true);
-	mockIsJsonMode.mockReturnValue(false);
-	mockExistsSync.mockReturnValue(true);
+	ctx = createTestContext({
+		auth: {
+			isLoggedIn: vi.fn(() => true),
+			getUsername: vi.fn(() => 'alice')
+		},
+		fs: {
+			existsSync: vi.fn(() => true),
+			readConfig: vi.fn(() => MOCK_CONFIG)
+		},
+		io: { isJson: vi.fn(() => false) }
+	});
 	mockReadManifest.mockReturnValue(MOCK_MANIFEST);
 	mockReadFileSync.mockReturnValue('file content here');
 	// Default: setup doesn't exist (404)
-	mockGet.mockRejectedValue(new MockApiError('Not Found', 'NOT_FOUND', 404));
-	mockPost.mockResolvedValue(MOCK_SETUP_RESPONSE);
-	mockPatch.mockResolvedValue(MOCK_SETUP_RESPONSE);
+	vi.mocked(ctx.api.get).mockRejectedValue(new ApiError('Not Found', 'NOT_FOUND', 404));
+	vi.mocked(ctx.api.post).mockResolvedValue(MOCK_SETUP_RESPONSE);
+	vi.mocked(ctx.api.patch).mockResolvedValue(MOCK_SETUP_RESPONSE);
 	mockRunInitFlow.mockResolvedValue(true);
-	mockConfirm.mockResolvedValue(true);
+	vi.mocked(ctx.io.confirm).mockResolvedValue(true);
 });
 
 afterEach(() => {
@@ -190,14 +118,14 @@ afterEach(() => {
 
 describe('authentication', () => {
 	it('errors and exits with code 1 when not logged in', async () => {
-		mockIsLoggedIn.mockReturnValue(false);
+		vi.mocked(ctx.auth.isLoggedIn).mockReturnValue(false);
 		const program = makeProgram();
 		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
 			throw new Error('process.exit');
 		});
 
 		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
-		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('coati login'));
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('coati login'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 });
@@ -206,11 +134,11 @@ describe('authentication', () => {
 
 describe('missing setup.json', () => {
 	beforeEach(() => {
-		mockExistsSync.mockReturnValue(false);
+		vi.mocked(ctx.fs.existsSync).mockReturnValue(false);
 	});
 
 	it('errors and exits in JSON mode', async () => {
-		mockIsJsonMode.mockReturnValue(true);
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
 		const program = makeProgram();
 		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
 			throw new Error('process.exit');
@@ -219,7 +147,7 @@ describe('missing setup.json', () => {
 		await expect(program.parseAsync(['node', 'coati', 'publish', '--json'])).rejects.toThrow(
 			'process.exit'
 		);
-		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('setup.json'));
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('setup.json'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 
@@ -229,7 +157,7 @@ describe('missing setup.json', () => {
 		await program.parseAsync(['node', 'coati', 'publish']);
 
 		expect(mockRunInitFlow).toHaveBeenCalled();
-		expect(mockPost).toHaveBeenCalled();
+		expect(ctx.api.post).toHaveBeenCalled();
 	});
 
 	it('exits cleanly (code 0) when init is cancelled', async () => {
@@ -251,7 +179,7 @@ describe('missing setup.json', () => {
 		});
 
 		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
-		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('Setup name is required'));
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('Setup name is required'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 });
@@ -263,7 +191,7 @@ describe('create new setup', () => {
 		const program = makeProgram();
 		await program.parseAsync(['node', 'coati', 'publish']);
 
-		expect(mockPost).toHaveBeenCalledWith(
+		expect(ctx.api.post).toHaveBeenCalledWith(
 			'/setups',
 			expect.objectContaining({
 				name: 'my-setup',
@@ -281,15 +209,15 @@ describe('create new setup', () => {
 				])
 			})
 		);
-		expect(mockPatch).not.toHaveBeenCalled();
+		expect(ctx.api.patch).not.toHaveBeenCalled();
 	});
 
 	it('displays success message with setup URL', async () => {
 		const program = makeProgram();
 		await program.parseAsync(['node', 'coati', 'publish']);
 
-		expect(mockSuccess).toHaveBeenCalledWith(expect.stringContaining('published'));
-		expect(mockPrint).toHaveBeenCalledWith(expect.stringContaining('alice/my-setup'));
+		expect(ctx.io.success).toHaveBeenCalledWith(expect.stringContaining('published'));
+		expect(ctx.io.print).toHaveBeenCalledWith(expect.stringContaining('alice/my-setup'));
 	});
 });
 
@@ -297,29 +225,29 @@ describe('create new setup', () => {
 
 describe('update existing setup', () => {
 	beforeEach(() => {
-		mockGet.mockResolvedValue(MOCK_SETUP_RESPONSE);
+		vi.mocked(ctx.api.get).mockResolvedValue(MOCK_SETUP_RESPONSE);
 	});
 
 	it('calls PATCH /setups/{owner}/{slug} when setup exists', async () => {
 		const program = makeProgram();
 		await program.parseAsync(['node', 'coati', 'publish']);
 
-		expect(mockPatch).toHaveBeenCalledWith(
+		expect(ctx.api.patch).toHaveBeenCalledWith(
 			'/setups/alice/my-setup',
 			expect.objectContaining({
 				name: 'my-setup',
 				files: expect.arrayContaining([expect.objectContaining({ content: 'file content here' })])
 			})
 		);
-		expect(mockPost).not.toHaveBeenCalled();
+		expect(ctx.api.post).not.toHaveBeenCalled();
 	});
 
 	it('displays updated message with setup URL', async () => {
 		const program = makeProgram();
 		await program.parseAsync(['node', 'coati', 'publish']);
 
-		expect(mockSuccess).toHaveBeenCalledWith(expect.stringContaining('updated'));
-		expect(mockPrint).toHaveBeenCalledWith(expect.stringContaining('alice/my-setup'));
+		expect(ctx.io.success).toHaveBeenCalledWith(expect.stringContaining('updated'));
+		expect(ctx.io.print).toHaveBeenCalledWith(expect.stringContaining('alice/my-setup'));
 	});
 });
 
@@ -330,15 +258,15 @@ describe('--json mode', () => {
 		const program = makeProgram();
 		await program.parseAsync(['node', 'coati', 'publish', '--json']);
 
-		expect(mockSetOutputMode).toHaveBeenCalledWith('json');
+		expect(ctx.io.setOutputMode).toHaveBeenCalledWith('json');
 	});
 
 	it('outputs structured JSON on successful create', async () => {
-		mockIsJsonMode.mockReturnValue(true);
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
 		const program = makeProgram();
 		await program.parseAsync(['node', 'coati', 'publish', '--json']);
 
-		expect(mockJsonOutput).toHaveBeenCalledWith({
+		expect(ctx.io.json).toHaveBeenCalledWith({
 			action: 'created',
 			owner: 'alice',
 			slug: 'my-setup',
@@ -347,12 +275,12 @@ describe('--json mode', () => {
 	});
 
 	it('outputs structured JSON on successful update', async () => {
-		mockIsJsonMode.mockReturnValue(true);
-		mockGet.mockResolvedValue(MOCK_SETUP_RESPONSE);
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
+		vi.mocked(ctx.api.get).mockResolvedValue(MOCK_SETUP_RESPONSE);
 		const program = makeProgram();
 		await program.parseAsync(['node', 'coati', 'publish', '--json']);
 
-		expect(mockJsonOutput).toHaveBeenCalledWith({
+		expect(ctx.io.json).toHaveBeenCalledWith({
 			action: 'updated',
 			owner: 'alice',
 			slug: 'my-setup',
@@ -380,9 +308,9 @@ describe('validateAgentRefs', () => {
 		const manifest = makeManifest({
 			files: [{ source: 'README.md', target: 'README.md', placement: 'project' }]
 		});
-		const result = await validateAgentRefs(manifest, CWD);
+		const result = await validateAgentRefs(ctx, manifest, CWD);
 		expect(result).toEqual(manifest);
-		expect(mockError).not.toHaveBeenCalled();
+		expect(ctx.io.error).not.toHaveBeenCalled();
 	});
 
 	it('returns manifest unchanged when all file agents are in agents array', async () => {
@@ -397,19 +325,19 @@ describe('validateAgentRefs', () => {
 				}
 			]
 		});
-		const result = await validateAgentRefs(manifest, CWD);
+		const result = await validateAgentRefs(ctx, manifest, CWD);
 		expect(result).toEqual(manifest);
-		expect(mockError).not.toHaveBeenCalled();
-		expect(mockConfirm).not.toHaveBeenCalled();
+		expect(ctx.io.error).not.toHaveBeenCalled();
+		expect(ctx.io.confirm).not.toHaveBeenCalled();
 	});
 
 	it('returns null and errors for unknown agent slug', async () => {
 		const manifest = makeManifest({
 			files: [{ source: '.foo', target: '.foo', placement: 'project', agent: 'totally-unknown' }]
 		});
-		const result = await validateAgentRefs(manifest, CWD);
+		const result = await validateAgentRefs(ctx, manifest, CWD);
 		expect(result).toBeNull();
-		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('totally-unknown'));
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('totally-unknown'));
 	});
 
 	it('returns null for multiple unknown agent slugs', async () => {
@@ -419,35 +347,35 @@ describe('validateAgentRefs', () => {
 				{ source: '.bar', target: '.bar', placement: 'project', agent: 'bad-agent-2' }
 			]
 		});
-		const result = await validateAgentRefs(manifest, CWD);
+		const result = await validateAgentRefs(ctx, manifest, CWD);
 		expect(result).toBeNull();
-		expect(mockError).toHaveBeenCalledTimes(2);
+		expect(ctx.io.error).toHaveBeenCalledTimes(2);
 	});
 
 	it('warns and offers to add missing agent when not in agents array', async () => {
-		mockConfirm.mockResolvedValue(false);
+		vi.mocked(ctx.io.confirm).mockResolvedValue(false);
 		const manifest = makeManifest({
 			agents: [],
 			files: [
 				{ source: '.cursorrules', target: '.cursorrules', placement: 'project', agent: 'cursor' }
 			]
 		});
-		const result = await validateAgentRefs(manifest, CWD);
+		const result = await validateAgentRefs(ctx, manifest, CWD);
 		expect(result).not.toBeNull();
-		expect(mockError).not.toHaveBeenCalled();
-		expect(mockWarning).toHaveBeenCalledWith(expect.stringContaining('cursor'));
-		expect(mockConfirm).toHaveBeenCalledWith(expect.stringContaining('cursor'), true);
+		expect(ctx.io.error).not.toHaveBeenCalled();
+		expect(ctx.io.warning).toHaveBeenCalledWith(expect.stringContaining('cursor'));
+		expect(ctx.io.confirm).toHaveBeenCalledWith(expect.stringContaining('cursor'), true);
 	});
 
 	it('adds agent to agents array when user confirms auto-fix', async () => {
-		mockConfirm.mockResolvedValue(true);
+		vi.mocked(ctx.io.confirm).mockResolvedValue(true);
 		const manifest = makeManifest({
 			agents: [],
 			files: [
 				{ source: '.cursorrules', target: '.cursorrules', placement: 'project', agent: 'cursor' }
 			]
 		});
-		const result = await validateAgentRefs(manifest, CWD);
+		const result = await validateAgentRefs(ctx, manifest, CWD);
 		expect(result).not.toBeNull();
 		expect(result!.agents).toContain('cursor');
 		expect(mockWriteManifest).toHaveBeenCalledWith(
@@ -457,21 +385,21 @@ describe('validateAgentRefs', () => {
 	});
 
 	it('does not update agents array when user declines auto-fix', async () => {
-		mockConfirm.mockResolvedValue(false);
+		vi.mocked(ctx.io.confirm).mockResolvedValue(false);
 		const manifest = makeManifest({
 			agents: [],
 			files: [
 				{ source: '.cursorrules', target: '.cursorrules', placement: 'project', agent: 'cursor' }
 			]
 		});
-		const result = await validateAgentRefs(manifest, CWD);
+		const result = await validateAgentRefs(ctx, manifest, CWD);
 		expect(result).not.toBeNull();
 		expect(result!.agents).not.toContain('cursor');
 		expect(mockWriteManifest).not.toHaveBeenCalled();
 	});
 
 	it('handles multiple missing agents with mixed confirm/decline', async () => {
-		mockConfirm
+		vi.mocked(ctx.io.confirm)
 			.mockResolvedValueOnce(true) // accept claude-code
 			.mockResolvedValueOnce(false); // decline cursor
 		const manifest = makeManifest({
@@ -481,23 +409,23 @@ describe('validateAgentRefs', () => {
 				{ source: '.cursorrules', target: '.cursorrules', placement: 'project', agent: 'cursor' }
 			]
 		});
-		const result = await validateAgentRefs(manifest, CWD);
+		const result = await validateAgentRefs(ctx, manifest, CWD);
 		expect(result).not.toBeNull();
 		expect(result!.agents).toContain('claude-code');
 		expect(result!.agents).not.toContain('cursor');
 	});
 
 	it('skips auto-fix prompts in JSON mode', async () => {
-		mockIsJsonMode.mockReturnValue(true);
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
 		const manifest = makeManifest({
 			agents: [],
 			files: [
 				{ source: '.cursorrules', target: '.cursorrules', placement: 'project', agent: 'cursor' }
 			]
 		});
-		const result = await validateAgentRefs(manifest, CWD);
+		const result = await validateAgentRefs(ctx, manifest, CWD);
 		expect(result).not.toBeNull();
-		expect(mockConfirm).not.toHaveBeenCalled();
+		expect(ctx.io.confirm).not.toHaveBeenCalled();
 	});
 });
 
@@ -523,13 +451,13 @@ describe('agent validation during publish', () => {
 		});
 
 		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
-		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('nonexistent-agent'));
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('nonexistent-agent'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
-		expect(mockPost).not.toHaveBeenCalled();
+		expect(ctx.api.post).not.toHaveBeenCalled();
 	});
 
 	it('offers auto-fix when file agent is missing from agents array, and publishes after accepting', async () => {
-		mockConfirm.mockResolvedValue(true);
+		vi.mocked(ctx.io.confirm).mockResolvedValue(true);
 		mockReadManifest.mockReturnValue({
 			...MOCK_MANIFEST,
 			agents: [],
@@ -545,12 +473,12 @@ describe('agent validation during publish', () => {
 		const program = makeProgram();
 		await program.parseAsync(['node', 'coati', 'publish']);
 
-		expect(mockConfirm).toHaveBeenCalledWith(expect.stringContaining('cursor'), true);
-		expect(mockPost).toHaveBeenCalled();
+		expect(ctx.io.confirm).toHaveBeenCalledWith(expect.stringContaining('cursor'), true);
+		expect(ctx.api.post).toHaveBeenCalled();
 	});
 
 	it('still publishes when user declines auto-fix for missing agent', async () => {
-		mockConfirm.mockResolvedValue(false);
+		vi.mocked(ctx.io.confirm).mockResolvedValue(false);
 		mockReadManifest.mockReturnValue({
 			...MOCK_MANIFEST,
 			agents: [],
@@ -566,7 +494,7 @@ describe('agent validation during publish', () => {
 		const program = makeProgram();
 		await program.parseAsync(['node', 'coati', 'publish']);
 
-		expect(mockPost).toHaveBeenCalled();
+		expect(ctx.api.post).toHaveBeenCalled();
 	});
 });
 
@@ -583,7 +511,7 @@ describe('error handling', () => {
 		});
 
 		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
-		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('.claude/commands/foo.md'));
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('.claude/commands/foo.md'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 
@@ -597,43 +525,45 @@ describe('error handling', () => {
 		});
 
 		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
-		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('Invalid setup.json'));
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('Invalid setup.json'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 
 	it('shows re-authentication hint on 401 error', async () => {
-		mockPost.mockRejectedValue(new MockApiError('Unauthorized', 'UNAUTHORIZED', 401));
+		vi.mocked(ctx.api.post).mockRejectedValue(new ApiError('Unauthorized', 'UNAUTHORIZED', 401));
 		const program = makeProgram();
 		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
 			throw new Error('process.exit');
 		});
 
 		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
-		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('coati login'));
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('coati login'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 
 	it('shows validation message on 422 error', async () => {
-		mockPost.mockRejectedValue(new MockApiError('Slug already taken', 'SLUG_TAKEN', 422));
+		vi.mocked(ctx.api.post).mockRejectedValue(
+			new ApiError('Slug already taken', 'SLUG_TAKEN', 422)
+		);
 		const program = makeProgram();
 		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
 			throw new Error('process.exit');
 		});
 
 		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
-		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('Validation error'));
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('Validation error'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 
 	it('shows error message on network failure', async () => {
-		mockPost.mockRejectedValue(new Error('Network error: unable to reach server'));
+		vi.mocked(ctx.api.post).mockRejectedValue(new Error('Network error: unable to reach server'));
 		const program = makeProgram();
 		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
 			throw new Error('process.exit');
 		});
 
 		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
-		expect(mockError).toHaveBeenCalledWith(expect.stringContaining('Network error'));
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('Network error'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 });

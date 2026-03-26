@@ -2,21 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import { Command } from 'commander';
 import { AGENTS_BY_SLUG } from '@coati/agents-registry';
-import { get, post, patch, ApiError } from '../api.js';
+import { ApiError } from '../context.js';
 import { readManifest, writeManifest, MANIFEST_FILENAME, type Manifest } from '../manifest.js';
-import { getConfig } from '../config.js';
-import { isLoggedIn } from '../auth.js';
-import {
-	setOutputMode,
-	isJsonMode,
-	json,
-	print,
-	success,
-	error,
-	info,
-	warning
-} from '../output.js';
-import { confirm } from '../prompts.js';
+import type { CommandContext } from '../context.js';
 import { runInitFlow } from './init.js';
 
 interface PublishOptions {
@@ -32,11 +20,16 @@ interface PublishOptions {
  * Fixable mismatches (agent missing from the agents array) prompt the user
  * to auto-fix; the updated manifest is returned.
  *
+ * @param ctx       Command context (for io methods).
  * @param manifest  The in-memory manifest (may be mutated for auto-fix).
  * @param cwd       Project directory (used to persist auto-fixes to setup.json).
  * @returns The (possibly updated) manifest, or null if a blocking error occurred.
  */
-export async function validateAgentRefs(manifest: Manifest, cwd: string): Promise<Manifest | null> {
+export async function validateAgentRefs(
+	ctx: CommandContext,
+	manifest: Manifest,
+	cwd: string
+): Promise<Manifest | null> {
 	const agentsInFiles = new Set<string>();
 	const unknownSlugs: string[] = [];
 
@@ -53,7 +46,7 @@ export async function validateAgentRefs(manifest: Manifest, cwd: string): Promis
 	// Block on unknown slugs
 	if (unknownSlugs.length > 0) {
 		for (const slug of unknownSlugs) {
-			error(`Unknown agent slug "${slug}". Run \`coati agents\` to see valid slugs.`);
+			ctx.io.error(`Unknown agent slug "${slug}". Run \`coati agents\` to see valid slugs.`);
 		}
 		return null;
 	}
@@ -62,17 +55,17 @@ export async function validateAgentRefs(manifest: Manifest, cwd: string): Promis
 	const manifestAgents = new Set(manifest.agents ?? []);
 	const missingSlugs = [...agentsInFiles].filter((slug) => !manifestAgents.has(slug));
 
-	if (missingSlugs.length > 0 && !isJsonMode()) {
+	if (missingSlugs.length > 0 && !ctx.io.isJson()) {
 		let changed = false;
 		for (const slug of missingSlugs) {
 			const filesForSlug = manifest.files
 				.filter((f) => f.agent === slug)
 				.map((f) => f.source)
 				.join(', ');
-			warning(
+			ctx.io.warning(
 				`File(s) ${filesForSlug} reference agent "${slug}" but it's not in your agents list.`
 			);
-			const add = await confirm(`Add "${slug}" to agents list?`, true);
+			const add = await ctx.io.confirm(`Add "${slug}" to agents list?`, true);
 			if (add) {
 				manifestAgents.add(slug);
 				changed = true;
@@ -81,7 +74,7 @@ export async function validateAgentRefs(manifest: Manifest, cwd: string): Promis
 		if (changed) {
 			manifest = { ...manifest, agents: [...manifestAgents] };
 			writeManifest(cwd, manifest);
-			info('Updated agents list in setup.json.');
+			ctx.io.info('Updated agents list in setup.json.');
 		}
 	}
 
@@ -95,20 +88,20 @@ interface SetupResponse {
 	ownerUsername: string;
 }
 
-export function registerPublish(program: Command): void {
+export function registerPublish(program: Command, ctx: CommandContext): void {
 	program
 		.command('publish')
 		.description('Publish or update a setup from the current directory')
 		.option('--json', 'Output results as JSON')
 		.action(async (opts: PublishOptions) => {
-			if (opts.json) setOutputMode('json');
+			if (opts.json) ctx.io.setOutputMode('json');
 
 			const cwd = process.cwd();
-			const config = getConfig();
+			const config = ctx.fs.readConfig();
 
 			// Require authentication
-			if (!isLoggedIn()) {
-				error('Not logged in. Run `coati login` to authenticate.');
+			if (!ctx.auth.isLoggedIn()) {
+				ctx.io.error('Not logged in. Run `coati login` to authenticate.');
 				process.exit(1);
 				return;
 			}
@@ -117,18 +110,18 @@ export function registerPublish(program: Command): void {
 
 			// Check for setup.json; auto-run init if absent
 			const manifestPath = path.join(cwd, MANIFEST_FILENAME);
-			if (!fs.existsSync(manifestPath)) {
-				if (isJsonMode()) {
-					error('No setup.json found. Run `coati init` first.');
+			if (!ctx.fs.existsSync(manifestPath)) {
+				if (ctx.io.isJson()) {
+					ctx.io.error('No setup.json found. Run `coati init` first.');
 					process.exit(1);
 					return;
 				}
-				info('No setup.json found. Running `coati init` to create one...\n');
+				ctx.io.info('No setup.json found. Running `coati init` to create one...\n');
 				let initialized: boolean;
 				try {
-					initialized = await runInitFlow(cwd);
+					initialized = await runInitFlow(ctx, cwd);
 				} catch (e) {
-					error(e instanceof Error ? e.message : 'Init failed.');
+					ctx.io.error(e instanceof Error ? e.message : 'Init failed.');
 					process.exit(1);
 					return;
 				}
@@ -136,7 +129,7 @@ export function registerPublish(program: Command): void {
 					process.exit(0);
 					return;
 				}
-				print('');
+				ctx.io.print('');
 			}
 
 			// Read and validate setup.json
@@ -144,13 +137,13 @@ export function registerPublish(program: Command): void {
 			try {
 				manifest = readManifest(cwd);
 			} catch (e) {
-				error(e instanceof Error ? e.message : 'Failed to read setup.json.');
+				ctx.io.error(e instanceof Error ? e.message : 'Failed to read setup.json.');
 				process.exit(1);
 				return;
 			}
 
 			// Validate agent references in manifest
-			const validatedManifest = await validateAgentRefs(manifest, cwd);
+			const validatedManifest = await validateAgentRefs(ctx, manifest, cwd);
 			if (validatedManifest === null) {
 				process.exit(1);
 				return;
@@ -173,7 +166,7 @@ export function registerPublish(program: Command): void {
 				try {
 					content = fs.readFileSync(filePath, 'utf-8');
 				} catch {
-					error(`Cannot read file: ${file.source}`);
+					ctx.io.error(`Cannot read file: ${file.source}`);
 					process.exit(1);
 					return;
 				}
@@ -192,13 +185,13 @@ export function registerPublish(program: Command): void {
 			// Determine create vs update: check if setup exists
 			let setupExists = false;
 			try {
-				await get(`/setups/${owner}/${slug}`);
+				await ctx.api.get(`/setups/${owner}/${slug}`);
 				setupExists = true;
 			} catch (e) {
 				if (e instanceof ApiError && e.status === 404) {
 					setupExists = false;
 				} else if (e instanceof Error) {
-					error(`Failed to check setup: ${e.message}`);
+					ctx.io.error(`Failed to check setup: ${e.message}`);
 					process.exit(1);
 					return;
 				}
@@ -216,30 +209,30 @@ export function registerPublish(program: Command): void {
 				files: filesPayload
 			};
 
-			if (!isJsonMode()) {
-				print(`${setupExists ? 'Updating' : 'Publishing'} ${owner}/${slug}...`);
+			if (!ctx.io.isJson()) {
+				ctx.io.print(`${setupExists ? 'Updating' : 'Publishing'} ${owner}/${slug}...`);
 			}
 
 			let result: SetupResponse;
 			try {
 				if (setupExists) {
-					result = await patch<SetupResponse>(`/setups/${owner}/${slug}`, payload);
+					result = await ctx.api.patch<SetupResponse>(`/setups/${owner}/${slug}`, payload);
 				} else {
-					result = await post<SetupResponse>(`/setups`, payload);
+					result = await ctx.api.post<SetupResponse>(`/setups`, payload);
 				}
 			} catch (e) {
 				if (e instanceof ApiError) {
 					if (e.status === 401 || e.status === 403) {
-						error(`${e.message}. Run \`coati login\` to re-authenticate.`);
+						ctx.io.error(`${e.message}. Run \`coati login\` to re-authenticate.`);
 					} else if (e.status === 422 || e.status === 400) {
-						error(`Validation error: ${e.message}`);
+						ctx.io.error(`Validation error: ${e.message}`);
 					} else {
-						error(`Failed to ${setupExists ? 'update' : 'publish'} setup: ${e.message}`);
+						ctx.io.error(`Failed to ${setupExists ? 'update' : 'publish'} setup: ${e.message}`);
 					}
 				} else if (e instanceof Error) {
-					error(`Failed to ${setupExists ? 'update' : 'publish'} setup: ${e.message}`);
+					ctx.io.error(`Failed to ${setupExists ? 'update' : 'publish'} setup: ${e.message}`);
 				} else {
-					error('An unexpected error occurred.');
+					ctx.io.error('An unexpected error occurred.');
 				}
 				process.exit(1);
 				return;
@@ -248,17 +241,17 @@ export function registerPublish(program: Command): void {
 			const platformBase = config.apiBase.replace('/api/v1', '');
 			const setupUrl = `${platformBase}/${owner}/${result.slug}`;
 
-			if (isJsonMode()) {
-				json({
+			if (ctx.io.isJson()) {
+				ctx.io.json({
 					action: setupExists ? 'updated' : 'created',
 					owner,
 					slug: result.slug,
 					url: setupUrl
 				});
 			} else {
-				print('');
-				success(`Setup ${setupExists ? 'updated' : 'published'} successfully.`);
-				print(`  ${setupUrl}`);
+				ctx.io.print('');
+				ctx.io.success(`Setup ${setupExists ? 'updated' : 'published'} successfully.`);
+				ctx.io.print(`  ${setupUrl}`);
 			}
 		});
 }

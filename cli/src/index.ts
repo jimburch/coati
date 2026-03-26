@@ -48,7 +48,7 @@ registerLogin(program, ctx);
 registerLogout(program, ctx);
 registerClone(program);
 registerInit(program, ctx);
-registerPublish(program);
+registerPublish(program, ctx);
 registerSearch(program, ctx);
 registerView(program, ctx);
 
