@@ -67,6 +67,7 @@ import {
 	placementSchema,
 	componentTypeSchema,
 	categorySchema,
+	postInstallSchema,
 	SLUG_NAME_REGEX,
 	SEMVER_REGEX
 } from '@coati/validation';
@@ -101,7 +102,7 @@ export const createSetupWithFilesSchema = createSetupSchema.extend({
 	category: categorySchema.optional(),
 	license: z.string().max(50).optional(),
 	minToolVersion: z.string().max(20).optional(),
-	postInstall: z.string().optional(),
+	postInstall: postInstallSchema.optional(),
 	prerequisites: z.array(z.string()).optional(),
 	files: z.array(createSetupFileSchema).optional(),
 	agentIds: z.array(z.string().uuid()).optional(),
@@ -117,7 +118,7 @@ export const updateSetupSchema = z.object({
 	category: categorySchema.nullable().optional(),
 	license: z.string().max(50).nullable().optional(),
 	minToolVersion: z.string().max(20).nullable().optional(),
-	postInstall: z.string().nullable().optional(),
+	postInstall: postInstallSchema.nullable().optional(),
 	prerequisites: z.array(z.string()).nullable().optional(),
 	files: z.array(createSetupFileSchema).optional()
 });

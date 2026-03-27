@@ -91,7 +91,7 @@ export const setups = pgTable(
 		category: categoryEnum('category'),
 		license: varchar('license', { length: 50 }),
 		minToolVersion: varchar('min_tool_version', { length: 20 }),
-		postInstall: text('post_install'),
+		postInstall: text('post_install').array(),
 		prerequisites: text('prerequisites').array(),
 		starsCount: integer('stars_count').default(0).notNull(),
 		clonesCount: integer('clones_count').default(0).notNull(),

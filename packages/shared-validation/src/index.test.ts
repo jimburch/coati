@@ -7,7 +7,8 @@ import {
 	SEMVER_REGEX,
 	placementSchema,
 	componentTypeSchema,
-	categorySchema
+	categorySchema,
+	postInstallSchema
 } from './index.js';
 
 describe('PLACEMENT_VALUES', () => {
@@ -116,5 +117,32 @@ describe('categorySchema', () => {
 
 	it('rejects invalid categories', () => {
 		expect(() => categorySchema.parse('frontend')).toThrow();
+	});
+});
+
+// Regression test: both web (createSetupWithFilesSchema) and CLI (manifestSchema)
+// must accept string[] for postInstall. Both use postInstallSchema from this package.
+describe('postInstallSchema', () => {
+	it('accepts an array of strings', () => {
+		expect(postInstallSchema.parse(['pnpm install', 'cp .env.example .env'])).toEqual([
+			'pnpm install',
+			'cp .env.example .env'
+		]);
+	});
+
+	it('accepts an empty array', () => {
+		expect(postInstallSchema.parse([])).toEqual([]);
+	});
+
+	it('accepts a single-element array', () => {
+		expect(postInstallSchema.parse(['pnpm install'])).toEqual(['pnpm install']);
+	});
+
+	it('rejects a plain string (not an array)', () => {
+		expect(() => postInstallSchema.parse('pnpm install')).toThrow();
+	});
+
+	it('rejects an array containing non-strings', () => {
+		expect(() => postInstallSchema.parse([1, 2, 3])).toThrow();
 	});
 });

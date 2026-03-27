@@ -45,3 +45,6 @@ export const SEMVER_REGEX = /^\d+\.\d+\.\d+$/;
 export const placementSchema = z.enum(PLACEMENT_VALUES);
 export const componentTypeSchema = z.enum(COMPONENT_TYPE_VALUES);
 export const categorySchema = z.enum(CATEGORY_VALUES);
+
+/** Array of shell commands to display after a successful clone */
+export const postInstallSchema = z.array(z.string());

@@ -31,7 +31,8 @@
 	let hooks = $state<{ event: HookEvent; description: string; config: string }[]>([]);
 
 	// Additional metadata
-	let postInstall = $state('');
+	let postInstall = $state<string[]>([]);
+	let postInstallInput = $state('');
 	let prerequisites = $state<string[]>([]);
 	let prereqInput = $state('');
 
@@ -65,6 +66,18 @@
 		} else {
 			selectedTagIds = [...selectedTagIds, id];
 		}
+	}
+
+	function addPostInstall() {
+		const value = postInstallInput.trim();
+		if (value) {
+			postInstall = [...postInstall, value];
+			postInstallInput = '';
+		}
+	}
+
+	function removePostInstall(index: number) {
+		postInstall = postInstall.filter((_, i) => i !== index);
 	}
 
 	function addPrerequisite() {
@@ -232,7 +245,7 @@
 				category: category || undefined,
 				license: license || undefined,
 				minToolVersion: minToolVersion || undefined,
-				postInstall: postInstall || undefined,
+				postInstall: postInstall.length > 0 ? postInstall : undefined,
 				prerequisites: prerequisites.length > 0 ? prerequisites : undefined,
 				files: bodyFiles.length > 0 ? bodyFiles : undefined,
 				agentIds: selectedAgentIds.length > 0 ? selectedAgentIds : undefined,
@@ -797,18 +810,41 @@
 			{/if}
 		</div>
 
-		<!-- Post-install message -->
+		<!-- Post-install commands -->
 		<div>
-			<h2 class="mb-3 text-lg font-semibold">Post-install message</h2>
+			<h2 class="mb-3 text-lg font-semibold">Post-install commands</h2>
 			<p class="text-muted-foreground mb-3 text-xs">
-				Displayed after a successful clone. Use it for next-step instructions.
+				Commands displayed after a successful clone. Add each step separately.
 			</p>
-			<textarea
-				bind:value={postInstall}
-				rows={3}
-				placeholder="Run 'pnpm install' and copy .env.example to .env before starting."
-				class={textareaClass}
-			></textarea>
+			<div class="flex gap-2">
+				<Input
+					bind:value={postInstallInput}
+					placeholder="Type a command and press Enter"
+					onkeydown={(e: KeyboardEvent) => {
+						if (e.key === 'Enter') {
+							e.preventDefault();
+							addPostInstall();
+						}
+					}}
+				/>
+				<Button type="button" variant="outline" size="sm" onclick={addPostInstall}>Add</Button>
+			</div>
+			{#if postInstall.length > 0}
+				<div class="mt-3 flex flex-wrap gap-2">
+					{#each postInstall as cmd, i (i)}
+						<span class="bg-muted inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm">
+							{cmd}
+							<button
+								type="button"
+								class="text-muted-foreground hover:text-foreground ml-1"
+								onclick={() => removePostInstall(i)}
+							>
+								&times;
+							</button>
+						</span>
+					{/each}
+				</div>
+			{/if}
 		</div>
 
 		<!-- README -->
