@@ -1,6 +1,7 @@
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { comments, setups, users, activities } from '$lib/server/db/schema';
+import { comments, users, activities } from '$lib/server/db/schema';
+import { counters } from '$lib/server/counters';
 
 export type CommentWithAuthor = {
 	id: string;
@@ -94,10 +95,7 @@ export async function deleteComment(commentId: string, userId: string): Promise<
 		await tx.delete(comments).where(eq(comments.id, commentId));
 
 		// Decrement commentsCount by total deleted rows
-		await tx
-			.update(setups)
-			.set({ commentsCount: sql`${setups.commentsCount} - ${totalDeleted}` })
-			.where(eq(setups.id, comment.setupId));
+		await counters.commentsDeleted(tx, comment.setupId, totalDeleted);
 	});
 }
 
@@ -132,10 +130,7 @@ export async function createComment(
 			.values({ setupId, userId, body, parentId: parentId ?? null })
 			.returning({ id: comments.id });
 
-		await tx
-			.update(setups)
-			.set({ commentsCount: sql`${setups.commentsCount} + 1` })
-			.where(eq(setups.id, setupId));
+		await counters.commentCreated(tx, setupId);
 
 		await tx
 			.insert(activities)
