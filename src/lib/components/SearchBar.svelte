@@ -15,7 +15,7 @@
 	}
 </script>
 
-<form onsubmit={handleSubmit} class="relative hidden sm:block">
+<form onsubmit={handleSubmit} class="relative">
 	<svg
 		xmlns="http://www.w3.org/2000/svg"
 		class="text-muted-foreground absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2"
