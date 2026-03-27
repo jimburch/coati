@@ -5,12 +5,12 @@
 	const is404 = $derived($page.status === 404);
 </script>
 
-<div class="flex flex-col items-center justify-center px-4 py-24 text-center">
-	<p class="select-none text-[8rem] font-bold leading-none text-foreground/10 sm:text-[12rem]">
+<div class="flex flex-col items-center justify-center px-4 py-16 text-center lg:py-24">
+	<p class="select-none text-[8rem] font-bold leading-none text-foreground/10 lg:text-[12rem]">
 		{$page.status}
 	</p>
 
-	<h1 class="-mt-4 text-2xl font-semibold text-foreground sm:text-3xl">
+	<h1 class="-mt-4 text-2xl font-semibold text-foreground lg:text-3xl">
 		{#if is404}
 			Page not found
 		{:else}
@@ -27,7 +27,7 @@
 		{/if}
 	</p>
 
-	<div class="mt-8 flex items-center gap-4">
+	<div class="mt-6 flex items-center gap-4 lg:mt-8">
 		<a href="/" class={buttonVariants({ variant: 'default' })}>Go home</a>
 		<button
 			class="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"

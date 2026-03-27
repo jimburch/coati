@@ -13,8 +13,8 @@
 	);
 </script>
 
-<main class="mx-auto max-w-2xl px-4 py-8">
-	<h1 class="mb-6 text-xl font-semibold text-foreground">Your Feed</h1>
+<main class="mx-auto max-w-2xl px-4 py-6 lg:py-8">
+	<h1 class="mb-4 text-xl font-semibold text-foreground lg:mb-6 lg:text-2xl">Your Feed</h1>
 
 	<ActivityFeed
 		items={feedItems}

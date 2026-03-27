@@ -25,13 +25,13 @@
 	});
 </script>
 
-<div class="mx-auto max-w-2xl px-4 py-10">
-	<h1 class="text-foreground mb-8 text-2xl font-bold">Settings</h1>
+<div class="mx-auto max-w-2xl px-4 py-6 lg:py-10">
+	<h1 class="text-foreground mb-6 text-xl font-bold lg:mb-8 lg:text-2xl">Settings</h1>
 
 	<!-- Profile Section -->
-	<section class="mb-10" data-testid="profile-section">
-		<h2 class="text-foreground mb-1 text-lg font-semibold">Profile</h2>
-		<p class="text-muted-foreground mb-6 text-sm">
+	<section class="mb-6 lg:mb-10" data-testid="profile-section">
+		<h2 class="text-foreground mb-1 text-base font-semibold lg:text-lg">Profile</h2>
+		<p class="text-muted-foreground mb-4 text-sm lg:mb-6">
 			Update your public profile information. All fields are optional.
 		</p>
 
@@ -45,7 +45,7 @@
 					await update();
 				};
 			}}
-			class="space-y-5"
+			class="space-y-4 lg:space-y-5"
 			data-testid="profile-form"
 		>
 			<div class="space-y-1.5">
@@ -120,18 +120,24 @@
 		</form>
 	</section>
 
-	<hr class="border-border mb-10" />
+	<hr class="border-border mb-6 lg:mb-10" />
 
 	<!-- Account Section -->
 	<section data-testid="account-section">
-		<h2 class="text-foreground mb-1 text-lg font-semibold">Account</h2>
-		<p class="text-muted-foreground mb-6 text-sm">Your account details, managed via GitHub.</p>
+		<h2 class="text-foreground mb-1 text-base font-semibold lg:text-lg">Account</h2>
+		<p class="text-muted-foreground mb-4 text-sm lg:mb-6">
+			Your account details, managed via GitHub.
+		</p>
 
-		<div class="space-y-6">
+		<div class="space-y-4 lg:space-y-6">
 			<!-- Avatar -->
-			<div class="flex items-center gap-4" data-testid="account-avatar">
+			<div class="flex items-center gap-3 lg:gap-4" data-testid="account-avatar">
 				{#if user?.avatarUrl}
-					<img src={user.avatarUrl} alt="{user.username}'s avatar" class="h-16 w-16 rounded-full" />
+					<img
+						src={user.avatarUrl}
+						alt="{user.username}'s avatar"
+						class="h-12 w-12 rounded-full lg:h-16 lg:w-16"
+					/>
 				{/if}
 				<div>
 					<p class="text-foreground text-sm font-medium">Avatar</p>
