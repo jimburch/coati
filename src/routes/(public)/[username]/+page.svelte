@@ -65,10 +65,10 @@
 	twitterCard="summary_large_image"
 />
 
-<div class="mx-auto max-w-4xl px-4 py-8">
+<div class="mx-auto max-w-4xl px-4 py-6 lg:py-8">
 	<!-- Header -->
-	<div class="flex gap-6">
-		<Avatar class="size-24 text-2xl">
+	<div class="flex gap-4 lg:gap-6">
+		<Avatar class="size-16 text-xl lg:size-24 lg:text-2xl">
 			<AvatarImage src={data.profile.avatarUrl} alt={data.profile.username} />
 			<AvatarFallback>{data.profile.username[0].toUpperCase()}</AvatarFallback>
 		</Avatar>
@@ -77,12 +77,14 @@
 			<div class="flex flex-wrap items-start gap-3">
 				<div class="min-w-0 flex-1">
 					{#if data.profile.name}
-						<h1 class="text-2xl font-bold" data-testid="profile-name">{data.profile.name}</h1>
+						<h1 class="text-xl font-bold lg:text-2xl" data-testid="profile-name">
+							{data.profile.name}
+						</h1>
 						<p class="text-sm text-muted-foreground" data-testid="profile-username">
 							@{data.profile.username}
 						</p>
 					{:else}
-						<h1 class="text-2xl font-bold" data-testid="profile-username">
+						<h1 class="text-xl font-bold lg:text-2xl" data-testid="profile-username">
 							@{data.profile.username}
 						</h1>
 					{/if}
@@ -111,7 +113,7 @@
 			</div>
 
 			{#if data.profile.bio}
-				<p class="mt-1 text-muted-foreground">{data.profile.bio}</p>
+				<p class="mt-1 text-sm text-muted-foreground lg:text-base">{data.profile.bio}</p>
 			{/if}
 
 			{#if data.profile.location}
@@ -169,7 +171,7 @@
 	</div>
 
 	<!-- Stats -->
-	<div class="mt-4 text-sm text-muted-foreground">
+	<div class="mt-3 text-sm text-muted-foreground lg:mt-4">
 		<span>{data.profile.setupsCount} setups</span>
 		<span class="mx-1">&middot;</span>
 		<span>{followersCount} followers</span>
@@ -179,15 +181,16 @@
 
 	<p class="mt-1 text-xs text-muted-foreground">Joined {joinedDate}</p>
 
-	<Separator class="my-6" />
+	<Separator class="my-4 lg:my-6" />
 
 	<!-- Tabs -->
-	<div class="mb-6" data-testid="profile-tabs">
+	<div class="mb-4 lg:mb-6" data-testid="profile-tabs">
 		<nav class="-mb-px flex gap-0 border-b border-border" aria-label="Profile tabs">
 			<a
 				href={tabHref('setups')}
 				data-testid="tab-setups"
-				class="border-b-2 px-4 py-2 text-sm font-medium transition-colors {data.tab === 'setups'
+				class="border-b-2 px-3 py-2 text-sm font-medium transition-colors lg:px-4 {data.tab ===
+				'setups'
 					? 'border-foreground text-foreground'
 					: 'border-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
 				aria-current={data.tab === 'setups' ? 'page' : undefined}
@@ -197,7 +200,8 @@
 			<a
 				href={tabHref('starred')}
 				data-testid="tab-starred"
-				class="border-b-2 px-4 py-2 text-sm font-medium transition-colors {data.tab === 'starred'
+				class="border-b-2 px-3 py-2 text-sm font-medium transition-colors lg:px-4 {data.tab ===
+				'starred'
 					? 'border-foreground text-foreground'
 					: 'border-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
 				aria-current={data.tab === 'starred' ? 'page' : undefined}
@@ -207,7 +211,8 @@
 			<a
 				href={tabHref('activity')}
 				data-testid="tab-activity"
-				class="border-b-2 px-4 py-2 text-sm font-medium transition-colors {data.tab === 'activity'
+				class="border-b-2 px-3 py-2 text-sm font-medium transition-colors lg:px-4 {data.tab ===
+				'activity'
 					? 'border-foreground text-foreground'
 					: 'border-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground'}"
 				aria-current={data.tab === 'activity' ? 'page' : undefined}

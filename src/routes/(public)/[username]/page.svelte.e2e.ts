@@ -192,3 +192,34 @@ test('mobile: profile heading visible at 430x932', async ({ page, isMobile }) =>
 	await page.goto(PROFILE_URL);
 	await expect(page.locator('h1').first()).toBeVisible();
 });
+
+test('mobile: tab nav has no horizontal overflow at 430px', async ({ page, isMobile }) => {
+	test.skip(!isMobile, 'mobile-only');
+	await page.goto(PROFILE_URL);
+	const nav = page.locator('[aria-label="Profile tabs"]');
+	await expect(nav).toBeVisible();
+	const overflow = await nav.evaluate((el) => el.scrollWidth <= el.clientWidth);
+	expect(overflow).toBe(true);
+});
+
+test('mobile: avatar is smaller than desktop avatar', async ({ page, isMobile }) => {
+	test.skip(!isMobile, 'mobile-only');
+	await page.goto(PROFILE_URL);
+	// Avatar container should be 64px (size-16) on mobile
+	const box = await page.locator('span[class*="size-16"]').first().boundingBox();
+	expect(box).not.toBeNull();
+	if (box) {
+		expect(box.width).toBeLessThanOrEqual(64);
+	}
+});
+
+test('desktop: avatar is full size at 1280x720', async ({ page, isMobile }) => {
+	test.skip(isMobile, 'desktop-only');
+	await page.setViewportSize({ width: 1280, height: 720 });
+	await page.goto(PROFILE_URL);
+	const box = await page.locator('span[class*="size-24"]').first().boundingBox();
+	expect(box).not.toBeNull();
+	if (box) {
+		expect(box.width).toBeGreaterThanOrEqual(96);
+	}
+});
