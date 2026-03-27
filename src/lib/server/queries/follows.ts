@@ -1,6 +1,7 @@
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { follows, users, activities } from '$lib/server/db/schema';
+import { follows, activities } from '$lib/server/db/schema';
+import { counters } from '$lib/server/counters';
 
 export async function isFollowing(followerId: string, followingId: string): Promise<boolean> {
 	const result = await db
@@ -25,25 +26,11 @@ export async function toggleFollow(followerId: string, followingId: string): Pro
 
 		if (existing.length > 0) {
 			await tx.delete(follows).where(eq(follows.id, existing[0].id));
-			await tx
-				.update(users)
-				.set({ followersCount: sql`${users.followersCount} - 1` })
-				.where(eq(users.id, followingId));
-			await tx
-				.update(users)
-				.set({ followingCount: sql`${users.followingCount} - 1` })
-				.where(eq(users.id, followerId));
+			await counters.follow(tx, followerId, followingId, false);
 			return false;
 		} else {
 			await tx.insert(follows).values({ followerId, followingId });
-			await tx
-				.update(users)
-				.set({ followersCount: sql`${users.followersCount} + 1` })
-				.where(eq(users.id, followingId));
-			await tx
-				.update(users)
-				.set({ followingCount: sql`${users.followingCount} + 1` })
-				.where(eq(users.id, followerId));
+			await counters.follow(tx, followerId, followingId, true);
 			await tx
 				.insert(activities)
 				.values({ userId: followerId, actionType: 'followed_user', targetUserId: followingId });
