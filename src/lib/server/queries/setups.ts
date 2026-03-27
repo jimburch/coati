@@ -439,6 +439,26 @@ export async function recordClone(setupId: string): Promise<void> {
 	});
 }
 
+export async function getStarredSetupsByUserId(userId: string) {
+	return db
+		.select({
+			id: setups.id,
+			name: setups.name,
+			slug: setups.slug,
+			description: setups.description,
+			starsCount: setups.starsCount,
+			clonesCount: setups.clonesCount,
+			updatedAt: setups.updatedAt,
+			ownerUsername: users.username,
+			ownerAvatarUrl: users.avatarUrl
+		})
+		.from(stars)
+		.innerJoin(setups, eq(stars.setupId, setups.id))
+		.innerJoin(users, eq(setups.userId, users.id))
+		.where(eq(stars.userId, userId))
+		.orderBy(desc(stars.createdAt));
+}
+
 export async function getAgentsForSetups(setupIds: string[]) {
 	if (setupIds.length === 0) return {};
 

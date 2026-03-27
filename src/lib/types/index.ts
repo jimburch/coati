@@ -53,8 +53,10 @@ export type ProfileUser = {
 	id: string;
 	username: string;
 	avatarUrl: string;
+	name: string | null;
 	bio: string | null;
 	websiteUrl: string | null;
+	location: string | null;
 	githubUsername: string;
 	setupsCount: number;
 	followersCount: number;
@@ -121,6 +123,18 @@ export const updateSetupSchema = z.object({
 	postInstall: postInstallSchema.nullable().optional(),
 	prerequisites: z.array(z.string()).nullable().optional(),
 	files: z.array(createSetupFileSchema).optional()
+});
+
+export const updateProfileSchema = z.object({
+	name: z.string().max(100).optional(),
+	bio: z.string().max(500).optional(),
+	websiteUrl: z
+		.string()
+		.refine((v) => v === '' || z.string().url().safeParse(v).success, {
+			message: 'Must be a valid URL or empty string'
+		})
+		.optional(),
+	location: z.string().max(100).optional()
 });
 
 export const createCommentSchema = z.object({
