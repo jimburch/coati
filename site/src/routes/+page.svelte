@@ -104,18 +104,61 @@
 
 <!-- Problem -->
 <section class="border-t border-border/50 bg-card/50">
-	<div class="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 md:py-24">
-		<h2 class="text-3xl font-bold tracking-tight">Sharing AI workflows is still a&nbsp;mess</h2>
-		<div class="mx-auto mt-6 max-w-2xl space-y-4 text-lg leading-relaxed text-muted-foreground">
-			<p>
-				Someone posts their Claude Code setup on Twitter. It looks amazing. But recreating it means
-				hunting through screenshots, copying config snippets, manually installing MCP servers, and
-				hoping you didn't miss anything.
-			</p>
-			<p>
-				Dotfiles repos help, but they weren't built for AI tooling. They don't capture MCP configs,
-				custom skills, project-specific prompts, or the context that makes a workflow actually work.
-			</p>
+	<div class="mx-auto max-w-4xl px-4 py-16 sm:px-6 md:py-24">
+		<h2 class="text-center text-3xl font-bold tracking-tight">
+			Sharing AI workflows is still a&nbsp;mess
+		</h2>
+		<div class="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
+			<!-- Pain point 1: scattered pieces -->
+			<div class="rounded-xl border border-border/60 bg-background/50 p-6">
+				<div class="mb-5 flex flex-wrap gap-2">
+					{#each [
+						{ name: 'screenshot.png', angle: '-2deg' },
+						{ name: 'config.json', angle: '1deg' },
+						{ name: '.cursorrules', angle: '-1deg' },
+						{ name: 'mcp-setup.md', angle: '2deg' }
+					] as item (item.name)}
+						<span
+							class="inline-flex items-center gap-1.5 rounded-md border border-red-500/20 bg-red-500/5 px-2.5 py-1 font-mono text-xs text-red-400"
+							style="transform: rotate({item.angle})"
+						>
+							{item.name}
+						</span>
+					{/each}
+				</div>
+				<h3 class="text-base font-semibold">The copy-paste gauntlet</h3>
+				<p class="mt-2 text-sm leading-relaxed text-muted-foreground">
+					Someone posts their Claude Code setup on Twitter. It looks amazing. But recreating it
+					means hunting through screenshots, copying config snippets, manually installing MCP
+					servers, and hoping you didn't miss anything.
+				</p>
+			</div>
+
+			<!-- Pain point 2: dotfiles don't cover AI tooling -->
+			<div class="rounded-xl border border-border/60 bg-background/50 p-6">
+				<div class="mb-5 flex flex-wrap gap-2">
+					{#each [
+						{ name: 'MCP configs', missing: true },
+						{ name: 'Custom skills', missing: true },
+						{ name: 'Prompts', missing: true },
+						{ name: '.bashrc', missing: false }
+					] as item (item.name)}
+						<span
+							class="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 font-mono text-xs {item.missing
+								? 'border-amber-500/20 bg-amber-500/5 text-amber-400 line-through decoration-amber-500/40'
+								: 'border-border bg-muted/50 text-muted-foreground'}"
+						>
+							{item.name}
+						</span>
+					{/each}
+				</div>
+				<h3 class="text-base font-semibold">Dotfiles weren't built for this</h3>
+				<p class="mt-2 text-sm leading-relaxed text-muted-foreground">
+					Dotfiles repos help, but they weren't built for AI tooling. They don't capture MCP
+					configs, custom skills, project-specific prompts, or the context that makes a workflow
+					actually work.
+				</p>
+			</div>
 		</div>
 	</div>
 </section>
