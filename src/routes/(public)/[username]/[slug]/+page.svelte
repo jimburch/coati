@@ -10,6 +10,7 @@
 	const { data } = $props();
 
 	let copied = $state(false);
+	let showComments = $state(false);
 	const cloneCommand = $derived(`coati clone ${data.setup.ownerUsername}/${data.setup.slug}`);
 
 	// Optimistic override for stars count — set on button click, cleared when server data refreshes.
@@ -56,13 +57,13 @@
 	twitterCard="summary_large_image"
 />
 
-<div class="mx-auto max-w-5xl px-4 py-8">
+<div class="mx-auto max-w-5xl px-4 py-6 lg:py-8">
 	<!-- Header -->
-	<div class="mb-6">
+	<div class="mb-4 lg:mb-6">
 		<div class="flex items-start justify-between gap-4">
 			<div class="min-w-0">
-				<h1 class="text-2xl font-bold md:text-3xl">{data.setup.name}</h1>
-				<p class="mt-1 text-muted-foreground">{data.setup.description}</p>
+				<h1 class="text-xl font-bold lg:text-2xl">{data.setup.name}</h1>
+				<p class="mt-1 text-sm text-muted-foreground lg:text-base">{data.setup.description}</p>
 			</div>
 			<span
 				class="shrink-0 rounded-md bg-secondary px-2.5 py-0.5 text-sm font-medium text-secondary-foreground"
@@ -72,10 +73,10 @@
 		</div>
 	</div>
 
-	<Separator class="mb-8" />
+	<Separator class="mb-6 lg:mb-8" />
 
 	<!-- Two-column layout -->
-	<div class="flex flex-col gap-8 lg:flex-row">
+	<div class="flex flex-col gap-6 lg:flex-row lg:gap-8">
 		<!-- Main content -->
 		<div class="min-w-0 flex-1">
 			{#if data.readmeHtml}
@@ -83,8 +84,8 @@
 					{@html data.readmeHtml}
 				</div>
 			{:else}
-				<div class="rounded-lg border border-border bg-card p-8 text-center">
-					<p class="text-muted-foreground">No README found for this setup.</p>
+				<div class="rounded-lg border border-border bg-card p-6 text-center lg:p-8">
+					<p class="text-sm text-muted-foreground">No README found for this setup.</p>
 				</div>
 			{/if}
 		</div>
@@ -242,12 +243,25 @@
 		</div>
 	</div>
 
-	<Separator class="my-8" />
+	<Separator class="my-6 lg:my-8" />
 
-	<!-- Comments -->
-	<CommentThread
-		comments={data.comments}
-		isLoggedIn={!!data.user}
-		currentUsername={data.user?.username ?? null}
-	/>
+	<!-- Mobile comments toggle -->
+	<button
+		data-testid="show-comments-btn"
+		class="w-full py-2 text-left text-sm font-medium lg:hidden"
+		onclick={() => (showComments = !showComments)}
+	>
+		{showComments
+			? 'Hide comments'
+			: `Show ${data.comments.length} comment${data.comments.length === 1 ? '' : 's'}`}
+	</button>
+
+	<!-- Comments: collapsed on mobile by default, always visible on desktop -->
+	<div data-testid="comment-thread" class={showComments ? '' : 'hidden lg:block'}>
+		<CommentThread
+			comments={data.comments}
+			isLoggedIn={!!data.user}
+			currentUsername={data.user?.username ?? null}
+		/>
+	</div>
 </div>

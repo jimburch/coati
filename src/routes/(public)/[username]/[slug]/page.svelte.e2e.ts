@@ -89,3 +89,35 @@ test('single-agent setup shows one agent group', async ({ page }) => {
 	// At least one group must be visible
 	expect(agentCount + (hasShared ? 1 : 0)).toBeGreaterThan(0);
 });
+
+test('mobile: show comments button is visible by default', async ({ page, isMobile }) => {
+	test.skip(!isMobile, 'mobile-only test');
+	await page.goto(SETUP_URL);
+	const showBtn = page.getByTestId('show-comments-btn');
+	await expect(showBtn).toBeVisible();
+});
+
+test('mobile: comment thread is hidden by default', async ({ page, isMobile }) => {
+	test.skip(!isMobile, 'mobile-only test');
+	await page.goto(SETUP_URL);
+	const commentThread = page.getByTestId('comment-thread');
+	await expect(commentThread).toBeHidden();
+});
+
+test('mobile: tapping show comments button expands comment thread', async ({ page, isMobile }) => {
+	test.skip(!isMobile, 'mobile-only test');
+	await page.goto(SETUP_URL);
+	const showBtn = page.getByTestId('show-comments-btn');
+	await showBtn.tap();
+	const commentThread = page.getByTestId('comment-thread');
+	await expect(commentThread).toBeVisible();
+});
+
+test('desktop: comments always visible without toggle button', async ({ page, isMobile }) => {
+	test.skip(isMobile, 'desktop-only test');
+	await page.goto(SETUP_URL);
+	const commentThread = page.getByTestId('comment-thread');
+	await expect(commentThread).toBeVisible();
+	const showBtn = page.getByTestId('show-comments-btn');
+	await expect(showBtn).toBeHidden();
+});
