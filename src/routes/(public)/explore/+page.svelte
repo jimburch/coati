@@ -89,9 +89,9 @@
 	twitterCard="summary"
 />
 
-<div class="mx-auto max-w-7xl px-4 py-8">
-	<div class="mb-6 flex items-baseline justify-between">
-		<h1 class="text-2xl font-bold">Explore Setups</h1>
+<div class="mx-auto max-w-7xl px-4 py-6 lg:py-8">
+	<div class="mb-4 flex items-baseline justify-between lg:mb-6">
+		<h1 class="text-xl font-bold lg:text-2xl">Explore Setups</h1>
 		<span class="text-sm text-muted-foreground">
 			{data.total}
 			{data.total === 1 ? 'setup' : 'setups'}
@@ -124,7 +124,7 @@
 
 	<!-- Agent filter chips -->
 	{#if data.allAgents.length > 0}
-		<div class="mb-4 flex flex-wrap items-center gap-2">
+		<div class="mb-3 flex flex-wrap items-center gap-1.5 lg:mb-4 lg:gap-2">
 			{#each data.allAgents as agent (agent.id)}
 				{@const isActive = data.agents?.includes(agent.slug)}
 				<button
@@ -154,7 +154,7 @@
 	{/if}
 
 	<!-- Filter/sort bar -->
-	<div class="mb-6 flex flex-wrap items-center gap-3">
+	<div class="mb-4 flex flex-wrap items-center gap-2 lg:mb-6 lg:gap-3">
 		<select
 			class="h-9 rounded-md border border-input bg-background px-3 text-sm"
 			value={data.tag ?? ''}
@@ -215,17 +215,17 @@
 
 	<!-- Results grid -->
 	{#if data.items.length > 0}
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+		<div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 lg:gap-4">
 			{#each data.items as setup (setup.id)}
 				<SetupCard {setup} username={setup.ownerUsername} showAuthor />
 			{/each}
 		</div>
 
-		<div class="mt-8">
+		<div class="mt-6 lg:mt-8">
 			<Pagination page={data.page} totalPages={data.totalPages} buildUrl={buildPageUrl} />
 		</div>
 	{:else}
-		<div class="py-12 text-center">
+		<div class="py-8 text-center lg:py-12">
 			<p class="text-muted-foreground">No setups match your filters.</p>
 			{#if hasFilters}
 				<a href="/explore" class="mt-2 inline-block text-sm text-primary hover:underline">

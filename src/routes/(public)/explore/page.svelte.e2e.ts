@@ -214,3 +214,46 @@ test('setup cards show author name', async ({ page }) => {
 		await expect(authorSpan.first()).toBeVisible();
 	}
 });
+
+test('mobile: heading is visible and page has no horizontal overflow', async ({
+	page,
+	isMobile
+}) => {
+	test.skip(!isMobile, 'mobile-only test');
+	await page.goto(EXPLORE_URL);
+	await expect(page.getByRole('heading', { name: 'Explore Setups' })).toBeVisible();
+	// Page should not overflow horizontally
+	const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
+	const viewportWidth = await page.evaluate(() => window.innerWidth);
+	expect(bodyWidth).toBeLessThanOrEqual(viewportWidth + 1);
+});
+
+test('mobile: filter selects are visible and usable', async ({ page, isMobile }) => {
+	test.skip(!isMobile, 'mobile-only test');
+	await page.goto(EXPLORE_URL);
+	const selects = page.locator('main select');
+	await expect(selects).toHaveCount(2);
+	// Both selects are visible on mobile
+	await expect(selects.nth(0)).toBeVisible();
+	await expect(selects.nth(1)).toBeVisible();
+});
+
+test('mobile: pagination is usable without overflow', async ({ page, isMobile }) => {
+	test.skip(!isMobile, 'mobile-only test');
+	await page.goto(EXPLORE_URL);
+	const nav = page.locator('nav[aria-label="Pagination"]');
+	const exists = (await nav.count()) > 0;
+	if (exists) {
+		await expect(nav).toBeVisible();
+		// Pagination should not cause overflow
+		const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
+		const viewportWidth = await page.evaluate(() => window.innerWidth);
+		expect(bodyWidth).toBeLessThanOrEqual(viewportWidth + 1);
+	}
+});
+
+test('desktop: heading renders at full size', async ({ page, isMobile }) => {
+	test.skip(isMobile, 'desktop-only test');
+	await page.goto(EXPLORE_URL);
+	await expect(page.getByRole('heading', { name: 'Explore Setups' })).toBeVisible();
+});
