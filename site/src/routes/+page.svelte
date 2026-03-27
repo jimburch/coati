@@ -146,57 +146,12 @@
 				<div class="p-4 sm:p-6">
 					<div class="mb-4 flex items-center justify-between">
 						<h3 class="text-sm font-semibold text-foreground">Trending setups</h3>
-						<div
-							class="rounded-md bg-muted px-3 py-1.5 text-xs text-muted-foreground"
-						>
+						<div class="rounded-md bg-muted px-3 py-1.5 text-xs text-muted-foreground">
 							<Search class="mr-1 inline size-3" />Search setups...
 						</div>
 					</div>
 					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-						{#each [
-							{
-								name: 'typescript-fullstack',
-								author: 'jsmith',
-								stars: 342,
-								tools: ['claude-code', 'eslint'],
-								desc: 'Full-stack TypeScript workflow with Claude Code'
-							},
-							{
-								name: 'python-ml-pipeline',
-								author: 'datadev',
-								stars: 218,
-								tools: ['cursor', 'pytest'],
-								desc: 'ML development setup with Cursor AI'
-							},
-							{
-								name: 'react-nextjs-pro',
-								author: 'webcraft',
-								stars: 189,
-								tools: ['copilot', 'prettier'],
-								desc: 'Next.js production-ready workflow'
-							},
-							{
-								name: 'rust-systems',
-								author: 'ferris42',
-								stars: 156,
-								tools: ['claude-code', 'clippy'],
-								desc: 'Systems programming with Claude Code'
-							},
-							{
-								name: 'go-microservices',
-								author: 'gopher',
-								stars: 134,
-								tools: ['cursor', 'golangci'],
-								desc: 'Go microservices development workflow'
-							},
-							{
-								name: 'devops-infra',
-								author: 'cloudops',
-								stars: 97,
-								tools: ['claude-code', 'terraform'],
-								desc: 'Infrastructure as code with AI assistance'
-							}
-						] as card (card.name)}
+						{#each [{ name: 'typescript-fullstack', author: 'jsmith', stars: 342, tools: ['claude-code', 'eslint'], desc: 'Full-stack TypeScript workflow with Claude Code' }, { name: 'python-ml-pipeline', author: 'datadev', stars: 218, tools: ['cursor', 'pytest'], desc: 'ML development setup with Cursor AI' }, { name: 'react-nextjs-pro', author: 'webcraft', stars: 189, tools: ['copilot', 'prettier'], desc: 'Next.js production-ready workflow' }, { name: 'rust-systems', author: 'ferris42', stars: 156, tools: ['claude-code', 'clippy'], desc: 'Systems programming with Claude Code' }, { name: 'go-microservices', author: 'gopher', stars: 134, tools: ['cursor', 'golangci'], desc: 'Go microservices development workflow' }, { name: 'devops-infra', author: 'cloudops', stars: 97, tools: ['claude-code', 'terraform'], desc: 'Infrastructure as code with AI assistance' }] as card (card.name)}
 							<div class="rounded-lg border border-border bg-background p-3">
 								<div class="flex items-start justify-between">
 									<div>
