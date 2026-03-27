@@ -209,17 +209,11 @@ export async function toggleStar(userId: string, setupId: string) {
 
 		if (existing.length > 0) {
 			await tx.delete(stars).where(eq(stars.id, existing[0].id));
-			await tx
-				.update(setups)
-				.set({ starsCount: sql`${setups.starsCount} - 1` })
-				.where(eq(setups.id, setupId));
+			await counters.star(tx, setupId, false);
 			return false;
 		} else {
 			await tx.insert(stars).values({ userId, setupId });
-			await tx
-				.update(setups)
-				.set({ starsCount: sql`${setups.starsCount} + 1` })
-				.where(eq(setups.id, setupId));
+			await counters.star(tx, setupId, true);
 			return true;
 		}
 	});
@@ -245,13 +239,12 @@ export async function toggleStarWithCount(
 			starred = true;
 		}
 
+		await counters.star(tx, setupId, starred);
+
 		const [updated] = await tx
-			.update(setups)
-			.set({
-				starsCount: starred ? sql`${setups.starsCount} + 1` : sql`${setups.starsCount} - 1`
-			})
-			.where(eq(setups.id, setupId))
-			.returning({ starsCount: setups.starsCount });
+			.select({ starsCount: setups.starsCount })
+			.from(setups)
+			.where(eq(setups.id, setupId));
 
 		return { starred, starsCount: updated.starsCount };
 	});
