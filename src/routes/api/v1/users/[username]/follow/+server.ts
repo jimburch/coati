@@ -2,7 +2,7 @@ import type { RequestHandler } from './$types';
 import { requireApiAuth } from '$lib/server/guards';
 import { success, error } from '$lib/server/responses';
 import { getUserByUsername } from '$lib/server/queries/users';
-import { isFollowing, toggleFollow } from '$lib/server/queries/follows';
+import { setFollow } from '$lib/server/queries/follows';
 
 export const POST: RequestHandler = async (event) => {
 	const authResult = requireApiAuth(event);
@@ -18,14 +18,8 @@ export const POST: RequestHandler = async (event) => {
 		return error('Cannot follow yourself', 'SELF_FOLLOW', 400);
 	}
 
-	const alreadyFollowing = await isFollowing(user.id, target.id);
-
-	if (!alreadyFollowing) {
-		await toggleFollow(user.id, target.id);
-	}
-
-	const updated = await getUserByUsername(event.params.username);
-	return success({ following: true, followersCount: updated!.followersCount });
+	const result = await setFollow(user.id, target.id, true);
+	return success({ following: result.following, followersCount: result.followersCount });
 };
 
 export const DELETE: RequestHandler = async (event) => {
@@ -42,12 +36,6 @@ export const DELETE: RequestHandler = async (event) => {
 		return error('Cannot follow yourself', 'SELF_FOLLOW', 400);
 	}
 
-	const alreadyFollowing = await isFollowing(user.id, target.id);
-
-	if (alreadyFollowing) {
-		await toggleFollow(user.id, target.id);
-	}
-
-	const updated = await getUserByUsername(event.params.username);
-	return success({ following: false, followersCount: updated!.followersCount });
+	const result = await setFollow(user.id, target.id, false);
+	return success({ following: result.following, followersCount: result.followersCount });
 };

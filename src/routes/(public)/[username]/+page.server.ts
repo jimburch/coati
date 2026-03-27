@@ -2,7 +2,7 @@ import { error, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { getUserByUsername } from '$lib/server/queries/users';
 import { getSetupsByUserId, getAgentsForSetups } from '$lib/server/queries/setups';
-import { isFollowing, toggleFollow } from '$lib/server/queries/follows';
+import { isFollowing, setFollow } from '$lib/server/queries/follows';
 import { getProfileFeed } from '$lib/server/queries/activities';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -42,7 +42,8 @@ export const actions: Actions = {
 
 		if (locals.user.id === targetUser.id) throw error(400, 'Cannot follow yourself');
 
-		const nowFollowing = await toggleFollow(locals.user.id, targetUser.id);
-		return { isFollowing: nowFollowing };
+		const currentlyFollowing = await isFollowing(locals.user.id, targetUser.id);
+		const result = await setFollow(locals.user.id, targetUser.id, !currentlyFollowing);
+		return { isFollowing: result.following, followersCount: result.followersCount };
 	}
 };

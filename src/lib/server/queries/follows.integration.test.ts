@@ -23,7 +23,7 @@ vi.mock('$env/static/private', () => ({
 import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { users, activities } from '$lib/server/db/schema';
-import { isFollowing, toggleFollow, setFollow } from './follows';
+import { isFollowing, setFollow } from './follows';
 import { createTestUser, deleteTestUsers } from './__tests__/db-test-helpers';
 
 const hasDatabase = !!(process.env.DATABASE_URL_TEST ?? process.env.DATABASE_URL);
@@ -49,32 +49,32 @@ describe.skipIf(!hasDatabase)('follow queries — integration', () => {
 		const target = await createTestUser();
 		createdUserIds.push(follower.id, target.id);
 
-		await toggleFollow(follower.id, target.id);
+		await setFollow(follower.id, target.id, true);
 
 		const result = await isFollowing(follower.id, target.id);
 		expect(result).toBe(true);
 	});
 
-	it('toggleFollow creates follow relationship and returns true', async () => {
+	it('setFollow(true) creates follow relationship', async () => {
 		const follower = await createTestUser();
 		const target = await createTestUser();
 		createdUserIds.push(follower.id, target.id);
 
-		const nowFollowing = await toggleFollow(follower.id, target.id);
-		expect(nowFollowing).toBe(true);
+		const result = await setFollow(follower.id, target.id, true);
+		expect(result.following).toBe(true);
 
 		expect(await isFollowing(follower.id, target.id)).toBe(true);
 	});
 
-	it('toggleFollow on existing follow removes it and returns false', async () => {
+	it('setFollow(false) removes existing follow relationship', async () => {
 		const follower = await createTestUser();
 		const target = await createTestUser();
 		createdUserIds.push(follower.id, target.id);
 
-		await toggleFollow(follower.id, target.id);
-		const nowFollowing = await toggleFollow(follower.id, target.id);
+		await setFollow(follower.id, target.id, true);
+		const result = await setFollow(follower.id, target.id, false);
 
-		expect(nowFollowing).toBe(false);
+		expect(result.following).toBe(false);
 		expect(await isFollowing(follower.id, target.id)).toBe(false);
 	});
 
@@ -83,7 +83,7 @@ describe.skipIf(!hasDatabase)('follow queries — integration', () => {
 		const target = await createTestUser();
 		createdUserIds.push(follower.id, target.id);
 
-		await toggleFollow(follower.id, target.id);
+		await setFollow(follower.id, target.id, true);
 
 		const [after] = await db
 			.select({ followersCount: users.followersCount })
@@ -91,7 +91,7 @@ describe.skipIf(!hasDatabase)('follow queries — integration', () => {
 			.where(eq(users.id, target.id));
 		expect(after.followersCount).toBe(1);
 
-		await toggleFollow(follower.id, target.id);
+		await setFollow(follower.id, target.id, false);
 
 		const [afterUnfollow] = await db
 			.select({ followersCount: users.followersCount })
@@ -105,7 +105,7 @@ describe.skipIf(!hasDatabase)('follow queries — integration', () => {
 		const target = await createTestUser();
 		createdUserIds.push(follower.id, target.id);
 
-		await toggleFollow(follower.id, target.id);
+		await setFollow(follower.id, target.id, true);
 
 		const [after] = await db
 			.select({ followingCount: users.followingCount })
@@ -113,7 +113,7 @@ describe.skipIf(!hasDatabase)('follow queries — integration', () => {
 			.where(eq(users.id, follower.id));
 		expect(after.followingCount).toBe(1);
 
-		await toggleFollow(follower.id, target.id);
+		await setFollow(follower.id, target.id, false);
 
 		const [afterUnfollow] = await db
 			.select({ followingCount: users.followingCount })
@@ -127,7 +127,7 @@ describe.skipIf(!hasDatabase)('follow queries — integration', () => {
 		const target = await createTestUser();
 		createdUserIds.push(follower.id, target.id);
 
-		await toggleFollow(follower.id, target.id);
+		await setFollow(follower.id, target.id, true);
 
 		const records = await db.select().from(activities).where(eq(activities.userId, follower.id));
 
@@ -140,8 +140,8 @@ describe.skipIf(!hasDatabase)('follow queries — integration', () => {
 		const target = await createTestUser();
 		createdUserIds.push(follower.id, target.id);
 
-		await toggleFollow(follower.id, target.id);
-		await toggleFollow(follower.id, target.id);
+		await setFollow(follower.id, target.id, true);
+		await setFollow(follower.id, target.id, false);
 
 		const records = await db.select().from(activities).where(eq(activities.userId, follower.id));
 
@@ -153,7 +153,7 @@ describe.skipIf(!hasDatabase)('follow queries — integration', () => {
 		const user = await createTestUser();
 		createdUserIds.push(user.id);
 
-		await expect(toggleFollow(user.id, user.id)).rejects.toThrow('Cannot follow yourself');
+		await expect(setFollow(user.id, user.id, true)).rejects.toThrow('Cannot follow yourself');
 	});
 
 	// ── setFollow tests ───────────────────────────────────────────────────────
@@ -277,14 +277,14 @@ describe.skipIf(!hasDatabase)('follow queries — integration', () => {
 		expect(result.followersCount).toBe(row.followersCount);
 	});
 
-	// ── toggleFollow tests (must still pass) ─────────────────────────────────
+	// ── atomicity test ────────────────────────────────────────────────────────
 
-	it('toggleFollow is atomic — all side effects happen together', async () => {
+	it('setFollow is atomic — all side effects happen together', async () => {
 		const follower = await createTestUser();
 		const target = await createTestUser();
 		createdUserIds.push(follower.id, target.id);
 
-		await toggleFollow(follower.id, target.id);
+		await setFollow(follower.id, target.id, true);
 
 		const [followerRow] = await db
 			.select({ followingCount: users.followingCount })
