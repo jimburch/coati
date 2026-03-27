@@ -1,7 +1,7 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { setupRepo } from '$lib/server/queries/setupRepository';
-import { toggleStar, getSetupByOwnerSlug } from '$lib/server/queries/setups';
+import { setStar, getSetupByOwnerSlug, isSetupStarredByUser } from '$lib/server/queries/setups';
 import {
 	getSetupComments,
 	createComment,
@@ -49,9 +49,9 @@ export const actions: Actions = {
 		const setup = await getSetupByOwnerSlug(params.username, params.slug);
 		if (!setup) throw error(404, 'Setup not found');
 
-		const newIsStarred = await toggleStar(locals.user.id, setup.id);
-		const newStarsCount = newIsStarred ? setup.starsCount + 1 : setup.starsCount - 1;
-		return { isStarred: newIsStarred, starsCount: newStarsCount };
+		const currentIsStarred = await isSetupStarredByUser(setup.id, locals.user.id);
+		const result = await setStar(locals.user.id, setup.id, !currentIsStarred);
+		return { isStarred: result.starred, starsCount: result.starsCount };
 	},
 
 	comment: async ({ locals, params, request }) => {

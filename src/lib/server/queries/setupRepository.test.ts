@@ -11,7 +11,7 @@ const mockGetAllTags = vi.fn();
 const mockCreateSetup = vi.fn();
 const mockUpdateSetup = vi.fn();
 const mockDeleteSetup = vi.fn();
-const mockToggleStarWithCount = vi.fn();
+const mockSetStar = vi.fn();
 const mockRecordClone = vi.fn();
 const mockSearchSetups = vi.fn();
 const mockGetAllAgentsWithSetupCount = vi.fn();
@@ -29,7 +29,7 @@ vi.mock('$lib/server/queries/setups', () => ({
 	createSetup: (...args: unknown[]) => mockCreateSetup(...args),
 	updateSetup: (...args: unknown[]) => mockUpdateSetup(...args),
 	deleteSetup: (...args: unknown[]) => mockDeleteSetup(...args),
-	toggleStarWithCount: (...args: unknown[]) => mockToggleStarWithCount(...args),
+	setStar: (...args: unknown[]) => mockSetStar(...args),
 	recordClone: (...args: unknown[]) => mockRecordClone(...args),
 	searchSetups: (...args: unknown[]) => mockSearchSetups(...args),
 	getAllAgentsWithSetupCount: (...args: unknown[]) => mockGetAllAgentsWithSetupCount(...args),
@@ -316,22 +316,29 @@ describe('setupRepo.remove', () => {
 	});
 });
 
-describe('setupRepo.toggleStar', () => {
+describe('setupRepo.setStar', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
 
-	it('returns { starred: true, starsCount } when starring', async () => {
-		mockToggleStarWithCount.mockResolvedValue({ starred: true, starsCount: 6 });
-		const result = await setupRepo.toggleStar('user-1', 'setup-1');
+	it('calls setStar with desired=true when starring', async () => {
+		mockSetStar.mockResolvedValue({ starred: true, starsCount: 6 });
+		const result = await setupRepo.setStar('user-1', 'setup-1', true);
 		expect(result).toEqual({ starred: true, starsCount: 6 });
-		expect(mockToggleStarWithCount).toHaveBeenCalledWith('user-1', 'setup-1');
+		expect(mockSetStar).toHaveBeenCalledWith('user-1', 'setup-1', true);
 	});
 
-	it('returns { starred: false, starsCount } when unstarring', async () => {
-		mockToggleStarWithCount.mockResolvedValue({ starred: false, starsCount: 4 });
-		const result = await setupRepo.toggleStar('user-1', 'setup-1');
+	it('calls setStar with desired=false when unstarring', async () => {
+		mockSetStar.mockResolvedValue({ starred: false, starsCount: 4 });
+		const result = await setupRepo.setStar('user-1', 'setup-1', false);
 		expect(result).toEqual({ starred: false, starsCount: 4 });
+		expect(mockSetStar).toHaveBeenCalledWith('user-1', 'setup-1', false);
+	});
+
+	it('is idempotent: double-star returns current state without error', async () => {
+		mockSetStar.mockResolvedValue({ starred: true, starsCount: 5 });
+		const result = await setupRepo.setStar('user-1', 'setup-1', true);
+		expect(result).toEqual({ starred: true, starsCount: 5 });
 	});
 });
 

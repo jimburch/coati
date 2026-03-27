@@ -199,29 +199,10 @@ export async function isSetupStarredByUser(setupId: string, userId: string) {
 	return result.length > 0;
 }
 
-export async function toggleStar(userId: string, setupId: string) {
-	return db.transaction(async (tx) => {
-		const existing = await tx
-			.select({ id: stars.id })
-			.from(stars)
-			.where(and(eq(stars.userId, userId), eq(stars.setupId, setupId)))
-			.limit(1);
-
-		if (existing.length > 0) {
-			await tx.delete(stars).where(eq(stars.id, existing[0].id));
-			await counters.star(tx, setupId, false);
-			return false;
-		} else {
-			await tx.insert(stars).values({ userId, setupId });
-			await counters.star(tx, setupId, true);
-			return true;
-		}
-	});
-}
-
-export async function toggleStarWithCount(
+export async function setStar(
 	userId: string,
-	setupId: string
+	setupId: string,
+	desired: boolean
 ): Promise<{ starred: boolean; starsCount: number }> {
 	return db.transaction(async (tx) => {
 		const existing = await tx
@@ -230,23 +211,31 @@ export async function toggleStarWithCount(
 			.where(and(eq(stars.userId, userId), eq(stars.setupId, setupId)))
 			.limit(1);
 
-		let starred: boolean;
-		if (existing.length > 0) {
-			await tx.delete(stars).where(eq(stars.id, existing[0].id));
-			starred = false;
-		} else {
-			await tx.insert(stars).values({ userId, setupId });
-			starred = true;
+		const alreadyStarred = existing.length > 0;
+
+		if (desired === alreadyStarred) {
+			const [setupRow] = await tx
+				.select({ starsCount: setups.starsCount })
+				.from(setups)
+				.where(eq(setups.id, setupId));
+			return { starred: alreadyStarred, starsCount: setupRow.starsCount };
 		}
 
-		await counters.star(tx, setupId, starred);
+		if (desired) {
+			await tx.insert(stars).values({ userId, setupId });
+			await counters.star(tx, setupId, true);
+			await tx.insert(activities).values({ userId, setupId, actionType: 'starred_setup' });
+		} else {
+			await tx.delete(stars).where(eq(stars.id, existing[0].id));
+			await counters.star(tx, setupId, false);
+		}
 
 		const [updated] = await tx
 			.select({ starsCount: setups.starsCount })
 			.from(setups)
 			.where(eq(setups.id, setupId));
 
-		return { starred, starsCount: updated.starsCount };
+		return { starred: desired, starsCount: updated.starsCount };
 	});
 }
 

@@ -26,7 +26,7 @@ vi.mock('$env/static/private', () => ({
 import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { setups } from '$lib/server/db/schema';
-import { isSetupStarredByUser } from './setups';
+import { isSetupStarredByUser, setStar } from './setups';
 import { setupRepo } from './setupRepository';
 import { createTestUser, createTestSetup, deleteTestUsers } from './__tests__/db-test-helpers';
 
@@ -45,7 +45,7 @@ describe.skipIf(!hasDatabase)('star queries — integration', () => {
 		const setup = await createTestSetup(user.id);
 		createdUserIds.push(user.id);
 
-		const result = await setupRepo.toggleStar(user.id, setup.id);
+		const result = await setupRepo.setStar(user.id, setup.id, true);
 
 		expect(result.starred).toBe(true);
 		expect(result.starsCount).toBe(1);
@@ -60,10 +60,10 @@ describe.skipIf(!hasDatabase)('star queries — integration', () => {
 		createdUserIds.push(user.id);
 
 		// Star first
-		await setupRepo.toggleStar(user.id, setup.id);
+		await setupRepo.setStar(user.id, setup.id, true);
 
 		// Then unstar
-		const result = await setupRepo.toggleStar(user.id, setup.id);
+		const result = await setupRepo.setStar(user.id, setup.id, false);
 
 		expect(result.starred).toBe(false);
 		expect(result.starsCount).toBe(0);
@@ -86,26 +86,50 @@ describe.skipIf(!hasDatabase)('star queries — integration', () => {
 		const setup = await createTestSetup(user.id);
 		createdUserIds.push(user.id);
 
-		await setupRepo.toggleStar(user.id, setup.id);
+		await setupRepo.setStar(user.id, setup.id, true);
 
 		const isStarred = await isSetupStarredByUser(setup.id, user.id);
 		expect(isStarred).toBe(true);
 	});
 
-	it('double-star is idempotent (second call removes the star)', async () => {
+	it('setStar is idempotent: double-star returns starred=true without error', async () => {
 		const user = await createTestUser();
 		const setup = await createTestSetup(user.id);
 		createdUserIds.push(user.id);
 
 		// First call: stars
-		const first = await setupRepo.toggleStar(user.id, setup.id);
+		const first = await setStar(user.id, setup.id, true);
 		expect(first.starred).toBe(true);
 
-		// Second call: unstars — behaves as toggle, no error thrown
-		const second = await setupRepo.toggleStar(user.id, setup.id);
+		// Second call with same desired=true: no-op, stays starred
+		const second = await setStar(user.id, setup.id, true);
+		expect(second.starred).toBe(true);
+
+		// Star count stays at 1 (not incremented twice)
+		const [{ starsCount }] = await db
+			.select({ starsCount: setups.starsCount })
+			.from(setups)
+			.where(eq(setups.id, setup.id));
+		expect(starsCount).toBe(1);
+	});
+
+	it('setStar is idempotent: double-unstar returns starred=false without error', async () => {
+		const user = await createTestUser();
+		const setup = await createTestSetup(user.id);
+		createdUserIds.push(user.id);
+
+		// Star it first
+		await setStar(user.id, setup.id, true);
+
+		// Unstar
+		const first = await setStar(user.id, setup.id, false);
+		expect(first.starred).toBe(false);
+
+		// Unstar again: no-op
+		const second = await setStar(user.id, setup.id, false);
 		expect(second.starred).toBe(false);
 
-		// Star count returns to 0
+		// Star count stays at 0 (not decremented below 0)
 		const [{ starsCount }] = await db
 			.select({ starsCount: setups.starsCount })
 			.from(setups)
@@ -120,8 +144,8 @@ describe.skipIf(!hasDatabase)('star queries — integration', () => {
 		const setup = await createTestSetup(owner.id);
 		createdUserIds.push(owner.id, starrer1.id, starrer2.id);
 
-		await setupRepo.toggleStar(starrer1.id, setup.id);
-		await setupRepo.toggleStar(starrer2.id, setup.id);
+		await setupRepo.setStar(starrer1.id, setup.id, true);
+		await setupRepo.setStar(starrer2.id, setup.id, true);
 
 		const [{ starsCount }] = await db
 			.select({ starsCount: setups.starsCount })

@@ -10,7 +10,7 @@ import {
 	createSetup,
 	updateSetup,
 	deleteSetup,
-	toggleStarWithCount,
+	setStar,
 	recordClone,
 	searchSetups,
 	getAllAgentsWithSetupCount,
@@ -73,11 +73,12 @@ export const setupRepo = {
 		return deleteSetup(id, userId);
 	},
 
-	async toggleStar(
+	async setStar(
 		userId: string,
-		setupId: string
+		setupId: string,
+		desired: boolean
 	): Promise<{ starred: boolean; starsCount: number }> {
-		return toggleStarWithCount(userId, setupId);
+		return setStar(userId, setupId, desired);
 	},
 
 	async recordClone(setupId: string): Promise<void> {
