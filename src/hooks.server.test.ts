@@ -13,6 +13,13 @@ vi.mock('$lib/server/auth', () => ({
 	setSessionCookie: (...args: unknown[]) => mockSetSessionCookie(...args)
 }));
 
+// Mock rate-limit module
+const mockCheckRateLimit = vi.fn();
+
+vi.mock('$lib/server/rate-limit', () => ({
+	checkRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args)
+}));
+
 import { handle } from './hooks.server';
 
 function makeEvent(opts: { cookie?: string; bearerToken?: string } = {}) {
@@ -42,6 +49,8 @@ function makeResolve() {
 describe('hooks.server handle', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		// Default: not rate limited
+		mockCheckRateLimit.mockResolvedValue({ limited: false, retryAfter: 0 });
 	});
 
 	it('sets user and session to null when no token present', async () => {
@@ -157,5 +166,61 @@ describe('hooks.server handle', () => {
 		await handle({ event, resolve } as never);
 
 		expect(mockSetSessionCookie).not.toHaveBeenCalled();
+	});
+
+	describe('rate limiting', () => {
+		it('returns 429 when checkRateLimit reports limited: true', async () => {
+			const { event } = makeEvent();
+			const resolve = makeResolve();
+			mockGetSessionToken.mockReturnValue(undefined);
+			mockCheckRateLimit.mockResolvedValue({ limited: true, retryAfter: 30 });
+
+			const response = await handle({ event, resolve } as never);
+
+			expect(response.status).toBe(429);
+			expect(resolve).not.toHaveBeenCalled();
+			const body = await response.json();
+			expect(body).toEqual({ error: 'Too many requests', code: 'RATE_LIMITED' });
+		});
+
+		it('calls resolve normally when checkRateLimit reports limited: false', async () => {
+			const { event } = makeEvent();
+			const resolve = makeResolve();
+			mockGetSessionToken.mockReturnValue(undefined);
+			mockCheckRateLimit.mockResolvedValue({ limited: false, retryAfter: 0 });
+
+			const response = await handle({ event, resolve } as never);
+
+			expect(resolve).toHaveBeenCalledWith(event);
+			expect(response.status).toBe(200);
+		});
+
+		it('sets Retry-After header to retryAfter value from checkRateLimit', async () => {
+			const { event } = makeEvent();
+			const resolve = makeResolve();
+			mockGetSessionToken.mockReturnValue(undefined);
+			mockCheckRateLimit.mockResolvedValue({ limited: true, retryAfter: 42 });
+
+			const response = await handle({ event, resolve } as never);
+
+			expect(response.headers.get('Retry-After')).toBe('42');
+		});
+
+		it('calls checkRateLimit after auth resolution', async () => {
+			const { event } = makeEvent();
+			const resolve = makeResolve();
+			const user = { id: 'u1', username: 'test' };
+			const session = { id: 'sess-1', expiresAt: new Date() };
+
+			mockGetSessionToken.mockReturnValue('cookie-token');
+			mockValidateSessionToken.mockResolvedValue({ user, session });
+			mockCheckRateLimit.mockResolvedValue({ limited: false, retryAfter: 0 });
+
+			await handle({ event, resolve } as never);
+
+			// checkRateLimit is called with event that already has locals.user set
+			expect(mockCheckRateLimit).toHaveBeenCalledWith(event);
+			expect(event.locals.user).toBe(user);
+		});
 	});
 });
