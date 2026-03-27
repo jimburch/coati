@@ -1,37 +1,25 @@
 /**
  * CLI manifest validation schemas using Zod.
  *
- * These schemas mirror the server's `createSetupSchema` and `createSetupFileSchema`
- * defined in src/lib/types/index.ts. Keep in sync when server schemas change.
+ * Enum values and regex patterns are imported from the shared @coati/validation
+ * package to stay in sync with the server schema automatically.
  * Cross-reference: src/lib/types/index.ts → createSetupWithFilesSchema, createSetupFileSchema
  */
 
 import { z } from 'zod';
+import {
+	PLACEMENT_VALUES,
+	COMPONENT_TYPE_VALUES,
+	CATEGORY_VALUES,
+	SLUG_NAME_REGEX,
+	SEMVER_REGEX
+} from '@coati/validation';
 
-export const manifestFilePlacementSchema = z.enum(['global', 'project', 'relative']);
+export const manifestFilePlacementSchema = z.enum(PLACEMENT_VALUES);
 
-// Cross-reference: src/lib/types/index.ts → componentTypeEnum (schema.ts)
-export const manifestFileComponentTypeSchema = z.enum([
-	'instruction',
-	'command',
-	'skill',
-	'mcp_server',
-	'hook',
-	'config',
-	'policy',
-	'agent_def',
-	'ignore',
-	'setup_script'
-]);
+export const manifestFileComponentTypeSchema = z.enum(COMPONENT_TYPE_VALUES);
 
-export const manifestCategorySchema = z.enum([
-	'web-dev',
-	'mobile',
-	'data-science',
-	'devops',
-	'systems',
-	'general'
-]);
+export const manifestCategorySchema = z.enum(CATEGORY_VALUES);
 
 export const manifestFileEntrySchema = z.object({
 	source: z.string().min(1, 'Required, must be a non-empty string'),
@@ -48,14 +36,11 @@ export const manifestSchema = z.object({
 		.string()
 		.min(1, 'Required, must be a non-empty string')
 		.max(100, 'Must be 100 characters or fewer')
-		.regex(
-			/^[a-z0-9]+(-[a-z0-9]+)*$/,
-			'Must be lowercase letters, digits, and hyphens only (e.g. my-setup)'
-		),
+		.regex(SLUG_NAME_REGEX, 'Must be lowercase letters, digits, and hyphens only (e.g. my-setup)'),
 	version: z
 		.string()
 		.min(1, 'Required, must be a non-empty string')
-		.regex(/^\d+\.\d+\.\d+$/, 'Must be semver format (e.g. 1.0.0)'),
+		.regex(SEMVER_REGEX, 'Must be semver format (e.g. 1.0.0)'),
 	description: z.string().max(300, 'Must be 300 characters or fewer'),
 	files: z.array(manifestFileEntrySchema).min(1, 'Must contain at least one file'),
 	category: manifestCategorySchema.optional(),
