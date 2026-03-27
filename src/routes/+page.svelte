@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { buttonVariants } from '$lib/components/ui/button/button.svelte';
 	import SetupCard from '$lib/components/SetupCard.svelte';
+	import OgMeta from '$lib/components/OgMeta.svelte';
 	import { Upload, Search, Download } from '@lucide/svelte';
 
 	const { data } = $props();
@@ -16,6 +17,14 @@
 		content="Discover, share, and clone AI coding workflows and setups for Claude Code, Cursor, Copilot, and more."
 	/>
 </svelte:head>
+
+<OgMeta
+	title="Coati - Share AI Coding Workflows"
+	description="Discover, share, and clone AI coding workflows and setups for Claude Code, Cursor, Copilot, and more."
+	url="/"
+	type="website"
+	twitterCard="summary"
+/>
 
 <!-- Hero -->
 <section class="overflow-hidden border-b border-border">

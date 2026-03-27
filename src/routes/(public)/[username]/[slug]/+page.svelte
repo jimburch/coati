@@ -4,6 +4,7 @@
 	import StarButton from '$lib/components/StarButton.svelte';
 	import CommentThread from '$lib/components/CommentThread.svelte';
 	import AgentIcon from '$lib/components/AgentIcon.svelte';
+	import OgMeta from '$lib/components/OgMeta.svelte';
 	import { timeAgo } from '$lib/utils';
 
 	const { data } = $props();
@@ -46,6 +47,14 @@
 	<title>{data.setup.name} by {data.setup.ownerUsername} - Coati</title>
 	<meta name="description" content={data.setup.description} />
 </svelte:head>
+
+<OgMeta
+	title="{data.setup.name} by {data.setup.ownerUsername} - Coati"
+	description={data.setup.description}
+	url="/{data.setup.ownerUsername}/{data.setup.slug}"
+	type="article"
+	twitterCard="summary_large_image"
+/>
 
 <div class="mx-auto max-w-5xl px-4 py-8">
 	<!-- Header -->

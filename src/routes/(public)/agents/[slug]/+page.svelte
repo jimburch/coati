@@ -1,6 +1,7 @@
 <script lang="ts">
 	import SetupCard from '$lib/components/SetupCard.svelte';
 	import AgentIcon from '$lib/components/AgentIcon.svelte';
+	import OgMeta from '$lib/components/OgMeta.svelte';
 
 	const { data } = $props();
 	const agent = $derived(data.agent);
@@ -14,6 +15,14 @@
 		content="Browse {agent.displayName} AI coding workflows and setups on Coati."
 	/>
 </svelte:head>
+
+<OgMeta
+	title="{agent.displayName} Setups - Coati"
+	description="Browse {agent.displayName} AI coding workflows and setups on Coati."
+	url="/agents/{agent.slug}"
+	type="article"
+	twitterCard="summary"
+/>
 
 <div class="mx-auto max-w-7xl px-4 py-8">
 	<!-- Agent header -->

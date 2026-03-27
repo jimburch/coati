@@ -4,6 +4,7 @@
 	import SetupCard from '$lib/components/SetupCard.svelte';
 	import Pagination from '$lib/components/Pagination.svelte';
 	import AgentIcon from '$lib/components/AgentIcon.svelte';
+	import OgMeta from '$lib/components/OgMeta.svelte';
 	import { Input } from '$lib/components/ui/input';
 	import type { ExploreSort } from '$lib/types';
 
@@ -79,6 +80,14 @@
 	<title>Explore Setups - Coati</title>
 	<meta name="description" content="Browse AI coding workflows and setups on Coati." />
 </svelte:head>
+
+<OgMeta
+	title="Explore Setups - Coati"
+	description="Browse AI coding workflows and setups on Coati."
+	url="/explore"
+	type="website"
+	twitterCard="summary"
+/>
 
 <div class="mx-auto max-w-7xl px-4 py-8">
 	<div class="mb-6 flex items-baseline justify-between">

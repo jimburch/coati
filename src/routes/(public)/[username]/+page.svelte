@@ -11,6 +11,7 @@
 	import SetupCard from '$lib/components/SetupCard.svelte';
 	import FollowButton from '$lib/components/FollowButton.svelte';
 	import ActivityFeed from '$lib/components/ActivityFeed.svelte';
+	import OgMeta from '$lib/components/OgMeta.svelte';
 	import type { FeedItem } from '$lib/server/queries/activities';
 
 	const { data } = $props();
@@ -54,6 +55,15 @@
 		content={data.profile.bio ?? `${data.profile.username}'s AI coding setups on Coati`}
 	/>
 </svelte:head>
+
+<OgMeta
+	title="{data.profile.name ?? data.profile.username} - Coati"
+	description={data.profile.bio ?? `${data.profile.username}'s AI coding setups on Coati`}
+	url="/{data.profile.username}"
+	image={data.profile.avatarUrl}
+	type="profile"
+	twitterCard="summary_large_image"
+/>
 
 <div class="mx-auto max-w-4xl px-4 py-8">
 	<!-- Header -->
