@@ -3,6 +3,7 @@
 	import ActivityItem from '$lib/components/ActivityItem.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import type { FeedItem } from '$lib/server/queries/activities';
+	import { deserializeFeedItems } from '$lib/utils/feed';
 
 	type Props = {
 		items: FeedItem[];
@@ -22,7 +23,7 @@
 
 	// untrack() prevents Svelte from warning about capturing the initial prop value in $state —
 	// this is intentional: allItems, cursor, and hasMore diverge from the prop after pagination.
-	let allItems = $state<FeedItem[]>(untrack(() => initialItems));
+	let allItems = $state<FeedItem[]>(untrack(() => deserializeFeedItems(initialItems)));
 	let cursor = $state<string | null>(
 		untrack(() =>
 			initialItems.length > 0 ? initialItems[initialItems.length - 1].createdAt.toISOString() : null
@@ -54,10 +55,7 @@
 			};
 
 			// Deserialize dates (they arrive as strings from JSON)
-			const hydrated = newItems.map((item) => ({
-				...item,
-				createdAt: new Date(item.createdAt)
-			}));
+			const hydrated = deserializeFeedItems(newItems);
 
 			allItems = [...allItems, ...hydrated];
 			cursor = nextCursor;
