@@ -160,19 +160,28 @@
   - Edit bio, website
   - "Starred setups" tab
   - Setup count, follower/following counts
-- [ ] Setup detail enhancements:
-  - Open Graph meta tags for social sharing (title, description, image)
-  - "Copy CLI command" button
-  - Related setups (same tools/tags) — simple query
-- [ ] Settings page (`(app)/settings/+page.svelte`):
-  - Edit profile info
-  - View/revoke CLI sessions
-- [ ] Error handling pass:
-  - 404 pages for missing users/setups
-  - Rate limiting on API (simple in-memory)
-  - Input validation everywhere (Zod)
-  - Loading states and error states in UI
-- [ ] Mobile responsiveness pass
+- [x] Settings page (`(app)/settings/+page.svelte`):
+  - Edit profile info (name, bio, website, location)
+- [x] "Copy CLI command" button on setup detail page
+- [x] Input validation everywhere (Zod) — comprehensive schemas in place
+- [ ] Open Graph meta tags for social sharing:
+  - `og:title`, `og:description`, `og:url`, `og:image` on public routes (setup detail, user profile, explore, landing)
+  - Static placeholder image for `og:image` (swap for real logo later)
+- [ ] Global error page (`+error.svelte`):
+  - Styled 404/500 page with navbar, friendly message, and link home
+- [ ] Simple global rate limiting:
+  - Lightweight per-IP middleware (general-purpose, not per-endpoint)
+  - Protect against basic abuse without overengineering
+- [ ] Loading/error states audit:
+  - Verify all pages handle loading and error states gracefully
+  - Fill remaining gaps (file viewer, profile pages, etc.)
+- [ ] Mobile responsiveness pass:
+  - Full pass across all routes — nothing should be broken on mobile
+  - Priority on public-facing pages (landing, explore, setup detail, profiles)
+  - Navbar, file tree/viewer, and settings need attention
+  - Desktop is primary; mobile should be functional, not necessarily pixel-perfect
+- ~CLI session management (descoped — `coati logout` suffices for MVP)~
+- ~Related setups on detail page (descoped — explore page covers discovery for MVP)~
 
 ### Milestone: Platform feels complete and polished for launch
 
