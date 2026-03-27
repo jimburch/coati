@@ -24,14 +24,14 @@
 	twitterCard="summary"
 />
 
-<div class="mx-auto max-w-7xl px-4 py-8">
+<div class="mx-auto max-w-7xl px-4 py-6 lg:py-8">
 	<!-- Agent header -->
-	<div class="mb-8 flex items-start gap-4">
+	<div class="mb-6 flex items-start gap-3 lg:mb-8 lg:gap-4">
 		<AgentIcon slug={agent.slug} size={48} class="mt-1 shrink-0" />
 
 		<div>
 			<div class="flex flex-wrap items-center gap-3">
-				<h1 class="text-2xl font-bold">{agent.displayName}</h1>
+				<h1 class="text-xl font-bold lg:text-2xl">{agent.displayName}</h1>
 				{#if agent.official}
 					<span class="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
 						Official
@@ -58,8 +58,8 @@
 	</div>
 
 	<!-- Setup count + grid -->
-	<div class="mb-6 flex items-baseline justify-between">
-		<h2 class="text-lg font-semibold">Setups</h2>
+	<div class="mb-4 flex items-baseline justify-between lg:mb-6">
+		<h2 class="text-base font-semibold lg:text-lg">Setups</h2>
 		<span class="text-sm text-muted-foreground">
 			{setups.length}
 			{setups.length === 1 ? 'setup' : 'setups'}
@@ -67,13 +67,13 @@
 	</div>
 
 	{#if setups.length > 0}
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+		<div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 lg:gap-4">
 			{#each setups as setup (setup.id)}
 				<SetupCard {setup} username={setup.ownerUsername} showAuthor />
 			{/each}
 		</div>
 	{:else}
-		<div class="py-12 text-center">
+		<div class="py-8 text-center lg:py-12">
 			<p class="text-muted-foreground">No setups yet for {agent.displayName}.</p>
 			<a href="/explore" class="mt-2 inline-block text-sm text-primary hover:underline">
 				Browse all setups

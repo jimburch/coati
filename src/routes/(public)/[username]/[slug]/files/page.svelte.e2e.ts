@@ -80,6 +80,22 @@ test('mobile toggle reveals and hides file tree', async ({ page, isMobile }) => 
 	await expect(page.getByRole('button', { name: /show files/i })).toBeVisible();
 });
 
+test('mobile breadcrumb visible and not clipped', async ({ page, isMobile }) => {
+	test.skip(!isMobile, 'mobile-only test');
+	await page.goto(FILES_URL);
+	const breadcrumb = page.locator('nav').first();
+	await expect(breadcrumb).toBeVisible();
+	// Breadcrumb should not overflow (scrollWidth <= clientWidth)
+	const overflows = await breadcrumb.evaluate((el) => el.scrollWidth > el.clientWidth + 2);
+	expect(overflows).toBe(false);
+});
+
+test('desktop breadcrumb visible', async ({ page, isMobile }) => {
+	test.skip(!!isMobile, 'desktop-only test');
+	await page.goto(FILES_URL);
+	await expect(page.locator('nav').first()).toBeVisible();
+});
+
 test('directory expand/collapse works', async ({ page }) => {
 	await page.goto(FILES_URL);
 	// The hooks directory should be visible and expanded by default

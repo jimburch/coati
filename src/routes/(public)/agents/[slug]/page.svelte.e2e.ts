@@ -87,3 +87,29 @@ test('page has correct meta title', async ({ page }) => {
 	const title = await page.title();
 	expect(title).toMatch(/Setups.*Coati/);
 });
+
+test('mobile agent heading not clipped', async ({ page, isMobile }) => {
+	test.skip(!isMobile, 'mobile-only test');
+	await page.goto(AGENT_URL);
+	const h1 = page.getByRole('heading', { level: 1 });
+	await expect(h1).toBeVisible();
+	const overflows = await h1.evaluate((el) => el.scrollWidth > el.clientWidth + 2);
+	expect(overflows).toBe(false);
+});
+
+test('mobile setup grid visible', async ({ page, isMobile }) => {
+	test.skip(!isMobile, 'mobile-only test');
+	await page.goto(AGENT_URL);
+	// Either a grid or empty state should be visible
+	const grid = page.locator('.grid');
+	const empty = page.locator('text=/No setups yet/');
+	const hasGrid = (await grid.count()) > 0;
+	const hasEmpty = (await empty.count()) > 0;
+	expect(hasGrid || hasEmpty).toBe(true);
+});
+
+test('desktop agent header shows icon and name', async ({ page, isMobile }) => {
+	test.skip(!!isMobile, 'desktop-only test');
+	await page.goto(AGENT_URL);
+	await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+});
