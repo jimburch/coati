@@ -112,12 +112,7 @@
 			<!-- Pain point 1: scattered pieces -->
 			<div class="rounded-xl border border-border/60 bg-background/50 p-6">
 				<div class="mb-5 flex flex-wrap gap-2">
-					{#each [
-						{ name: 'screenshot.png', angle: '-2deg' },
-						{ name: 'config.json', angle: '1deg' },
-						{ name: '.cursorrules', angle: '-1deg' },
-						{ name: 'mcp-setup.md', angle: '2deg' }
-					] as item (item.name)}
+					{#each [{ name: 'screenshot.png', angle: '-2deg' }, { name: 'config.json', angle: '1deg' }, { name: '.cursorrules', angle: '-1deg' }, { name: 'mcp-setup.md', angle: '2deg' }] as item (item.name)}
 						<span
 							class="inline-flex items-center gap-1.5 rounded-md border border-red-500/20 bg-red-500/5 px-2.5 py-1 font-mono text-xs text-red-400"
 							style="transform: rotate({item.angle})"
@@ -137,12 +132,7 @@
 			<!-- Pain point 2: dotfiles don't cover AI tooling -->
 			<div class="rounded-xl border border-border/60 bg-background/50 p-6">
 				<div class="mb-5 flex flex-wrap gap-2">
-					{#each [
-						{ name: 'MCP configs', missing: true },
-						{ name: 'Custom skills', missing: true },
-						{ name: 'Prompts', missing: true },
-						{ name: '.bashrc', missing: false }
-					] as item (item.name)}
+					{#each [{ name: 'MCP configs', missing: true }, { name: 'Custom skills', missing: true }, { name: 'Prompts', missing: true }, { name: '.bashrc', missing: false }] as item (item.name)}
 						<span
 							class="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 font-mono text-xs {item.missing
 								? 'border-amber-500/20 bg-amber-500/5 text-amber-400 line-through decoration-amber-500/40'
@@ -154,9 +144,9 @@
 				</div>
 				<h3 class="text-base font-semibold">Dotfiles weren't built for this</h3>
 				<p class="mt-2 text-sm leading-relaxed text-muted-foreground">
-					Dotfiles repos help, but they weren't built for AI tooling. They don't capture MCP
-					configs, custom skills, project-specific prompts, or the context that makes a workflow
-					actually work.
+					Dotfiles help, but they weren't built for AI tooling. They don't capture MCP configs,
+					custom skills, project-specific prompts, or the context that makes a workflow actually
+					work.
 				</p>
 			</div>
 		</div>
