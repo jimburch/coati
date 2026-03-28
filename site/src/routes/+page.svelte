@@ -80,12 +80,10 @@
 		<!-- Left: copy -->
 		<div>
 			<div class="flex items-center gap-4 md:gap-5">
-				<img
-					src="/coati.png"
-					alt="Coati logo"
-					class="hidden h-[4.5rem] w-auto shrink-0 md:block"
-				/>
-				<h1 class="text-3xl font-bold leading-tight tracking-tight sm:text-4xl md:text-[2.6rem] md:leading-tight">
+				<img src="/coati.png" alt="Coati logo" class="hidden h-[4.5rem] w-auto shrink-0 md:block" />
+				<h1
+					class="text-3xl font-bold leading-tight tracking-tight sm:text-4xl md:text-[2.6rem] md:leading-tight"
+				>
 					Elite AI Coding Setups.
 					<span class="text-primary">Yours to Use &&nbsp;Share.</span>
 				</h1>

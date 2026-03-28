@@ -25,7 +25,9 @@ export type {
 	SetupTag,
 	NewSetupTag,
 	SetupAgent,
-	NewSetupAgent
+	NewSetupAgent,
+	FeedbackSubmission,
+	NewFeedbackSubmission
 } from '$lib/server/db/schema';
 
 export type LayoutUser = {
@@ -33,6 +35,7 @@ export type LayoutUser = {
 	username: string;
 	avatarUrl: string;
 	bio: string | null;
+	isBetaApproved: boolean;
 };
 
 export type ExploreSort = 'trending' | 'stars' | 'clones' | 'newest';

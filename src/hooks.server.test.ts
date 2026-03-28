@@ -1,5 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// Mock $env/static/public (must be before other mocks and imports)
+let mockPublicBetaMode = '';
+vi.mock('$env/static/public', () => ({
+	get PUBLIC_BETA_MODE() {
+		return mockPublicBetaMode;
+	},
+	PUBLIC_SITE_URL: 'http://localhost:5173'
+}));
+
 // Mock auth module
 const mockValidateSessionToken = vi.fn();
 const mockGetSessionToken = vi.fn();
@@ -20,7 +29,7 @@ vi.mock('$lib/server/rate-limit', () => ({
 	checkRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args)
 }));
 
-import { handle } from './hooks.server';
+import { handle, betaGate } from './hooks.server';
 
 function makeEvent(opts: { cookie?: string; bearerToken?: string } = {}) {
 	const locals: Record<string, unknown> = {};
@@ -46,9 +55,20 @@ function makeResolve() {
 	return vi.fn().mockImplementation(() => new Response('ok'));
 }
 
+function makeGateEvent(
+	pathname: string,
+	user: { isBetaApproved: boolean; isAdmin: boolean } | null
+) {
+	return {
+		locals: { user },
+		url: { pathname }
+	};
+}
+
 describe('hooks.server handle', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mockPublicBetaMode = '';
 		// Default: not rate limited
 		mockCheckRateLimit.mockResolvedValue({ limited: false, retryAfter: 0 });
 	});
@@ -222,5 +242,80 @@ describe('hooks.server handle', () => {
 			expect(mockCheckRateLimit).toHaveBeenCalledWith(event);
 			expect(event.locals.user).toBe(user);
 		});
+	});
+
+	describe('handle uses betaGate', () => {
+		it('returns 302 for unauthenticated user on protected route when beta mode enabled', async () => {
+			mockPublicBetaMode = 'true';
+			const { event } = makeEvent();
+			const resolve = makeResolve();
+			mockGetSessionToken.mockReturnValue(undefined);
+			// Provide a URL with a protected pathname
+			(event as Record<string, unknown>).url = { pathname: '/explore' };
+
+			const response = await handle({ event, resolve } as never);
+
+			expect(response.status).toBe(302);
+			expect(response.headers.get('Location')).toBe('/auth/login/github');
+			expect(resolve).not.toHaveBeenCalled();
+		});
+	});
+});
+
+describe('betaGate', () => {
+	it('betaGate returns null when betaModeEnabled is false', () => {
+		const event = makeGateEvent('/explore', null);
+		expect(betaGate(event, false)).toBeNull();
+	});
+
+	it('betaGate returns null for API routes even when beta mode enabled', () => {
+		const event = makeGateEvent('/api/v1/setups', null);
+		expect(betaGate(event, true)).toBeNull();
+	});
+
+	it('betaGate redirects unauthenticated user on protected route to login', () => {
+		const event = makeGateEvent('/explore', null);
+		const response = betaGate(event, true);
+		expect(response).not.toBeNull();
+		expect(response?.status).toBe(302);
+		expect(response?.headers.get('Location')).toBe('/auth/login/github');
+	});
+
+	it('betaGate allows unauthenticated user on landing page', () => {
+		const event = makeGateEvent('/', null);
+		expect(betaGate(event, true)).toBeNull();
+	});
+
+	it('betaGate allows unauthenticated user on auth routes', () => {
+		const event = makeGateEvent('/auth/login/github', null);
+		expect(betaGate(event, true)).toBeNull();
+	});
+
+	it('betaGate allows unauthenticated user on waitlist page', () => {
+		const event = makeGateEvent('/waitlist', null);
+		expect(betaGate(event, true)).toBeNull();
+	});
+
+	it('betaGate redirects non-approved authenticated user to waitlist', () => {
+		const event = makeGateEvent('/explore', { isBetaApproved: false, isAdmin: false });
+		const response = betaGate(event, true);
+		expect(response).not.toBeNull();
+		expect(response?.status).toBe(302);
+		expect(response?.headers.get('Location')).toBe('/waitlist');
+	});
+
+	it('betaGate allows approved authenticated user through', () => {
+		const event = makeGateEvent('/explore', { isBetaApproved: true, isAdmin: false });
+		expect(betaGate(event, true)).toBeNull();
+	});
+
+	it('betaGate allows admin user through regardless of isBetaApproved', () => {
+		const event = makeGateEvent('/explore', { isBetaApproved: false, isAdmin: true });
+		expect(betaGate(event, true)).toBeNull();
+	});
+
+	it('betaGate does not redirect non-approved user already on waitlist page', () => {
+		const event = makeGateEvent('/waitlist', { isBetaApproved: false, isAdmin: false });
+		expect(betaGate(event, true)).toBeNull();
 	});
 });

@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { upsertGithubUser, generateSessionToken, createSession } from '$lib/server/auth';
 import { success, error } from '$lib/server/responses';
 import { GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET } from '$env/static/private';
+import { updateLastLoginAt } from '$lib/server/queries/users';
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json()) as { deviceCode?: string };
@@ -68,6 +69,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	const userId = await upsertGithubUser(ghData.access_token);
 	const token = generateSessionToken();
 	await createSession(token, userId);
+	await updateLastLoginAt(userId);
 
 	// Clean up device flow state
 	await db.delete(deviceFlowStates).where(eq(deviceFlowStates.id, state.id));
