@@ -36,6 +36,7 @@ export type LayoutUser = {
 	avatarUrl: string;
 	bio: string | null;
 	isBetaApproved: boolean;
+	isAdmin: boolean;
 };
 
 export type ExploreSort = 'trending' | 'stars' | 'clones' | 'newest';

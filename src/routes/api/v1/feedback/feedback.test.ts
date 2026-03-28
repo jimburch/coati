@@ -15,6 +15,10 @@ vi.mock('$lib/server/db/schema', () => ({
 	feedbackSubmissions: {}
 }));
 
+vi.mock('$app/environment', () => ({
+	dev: true
+}));
+
 vi.mock('$env/dynamic/private', () => ({
 	env: { GITHUB_FEEDBACK_TOKEN: 'test-gh-token' }
 }));
@@ -151,7 +155,8 @@ describe('POST /api/v1/feedback', () => {
 				title: 'Something broke',
 				description: 'It stopped working after update',
 				pageUrl: 'https://coati.dev/explore',
-				username: 'alice'
+				username: 'alice',
+				environment: 'development'
 			})
 		);
 	});

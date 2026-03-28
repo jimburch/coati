@@ -80,7 +80,39 @@
 	* {
 		@apply border-border;
 	}
+	html {
+		overflow-y: scroll;
+		scrollbar-gutter: stable;
+	}
 	body {
 		@apply bg-background text-foreground;
+	}
+
+	/* Scrollbar styling */
+	* {
+		scrollbar-width: thin;
+		scrollbar-color: oklch(0.35 0.012 220) transparent;
+	}
+	*:hover {
+		scrollbar-color: oklch(0.45 0.012 220) transparent;
+	}
+
+	/* Webkit scrollbar styling */
+	::-webkit-scrollbar {
+		width: 8px;
+		height: 8px;
+	}
+	::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	::-webkit-scrollbar-thumb {
+		background: oklch(0.35 0.012 220);
+		border-radius: 4px;
+	}
+	::-webkit-scrollbar-thumb:hover {
+		background: oklch(0.45 0.012 220);
+	}
+	::-webkit-scrollbar-corner {
+		background: transparent;
 	}
 }

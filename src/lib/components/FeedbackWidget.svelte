@@ -28,7 +28,7 @@
 	let errorMsg = $state('');
 
 	const visible = $derived(
-		user !== null && user.isBetaApproved && page.url.pathname !== '/waitlist'
+		user !== null && (user.isBetaApproved || user.isAdmin) && page.url.pathname !== '/waitlist'
 	);
 
 	const CATEGORIES: { value: Category; label: string; icon: typeof Bug; description: string }[] = [

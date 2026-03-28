@@ -1,11 +1,16 @@
 import type { RequestHandler } from './$types';
+import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import { z } from 'zod';
 import { db } from '$lib/server/db';
 import { feedbackSubmissions } from '$lib/server/db/schema';
 import { requireApiAuth } from '$lib/server/guards';
 import { success, error, parseRequestBody } from '$lib/server/responses';
-import { createFeedbackIssue, type FeedbackCategory } from '$lib/server/github-issues';
+import {
+	createFeedbackIssue,
+	type FeedbackCategory,
+	type FeedbackEnvironment
+} from '$lib/server/github-issues';
 
 const GITHUB_REPO_OWNER = 'jimburch';
 const GITHUB_REPO_NAME = 'coati';
@@ -34,6 +39,8 @@ export const POST: RequestHandler = async (event) => {
 		return error('Feedback service not configured', 'SERVICE_UNAVAILABLE', 503);
 	}
 
+	const environment: FeedbackEnvironment = dev ? 'development' : 'production';
+
 	let issueUrl: string;
 	try {
 		const issue = await createFeedbackIssue({
@@ -44,7 +51,8 @@ export const POST: RequestHandler = async (event) => {
 			title: parsed.title,
 			description: parsed.description,
 			pageUrl: parsed.pageUrl,
-			username: user.username
+			username: user.username,
+			environment
 		});
 		issueUrl = issue.html_url;
 	} catch {

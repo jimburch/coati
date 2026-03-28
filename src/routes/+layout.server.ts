@@ -8,7 +8,8 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 					username: locals.user.username,
 					avatarUrl: locals.user.avatarUrl,
 					bio: locals.user.bio,
-					isBetaApproved: locals.user.isBetaApproved
+					isBetaApproved: locals.user.isBetaApproved,
+					isAdmin: locals.user.isAdmin
 				}
 			: null
 	};

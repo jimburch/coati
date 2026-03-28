@@ -77,6 +77,8 @@ const CATEGORY_LABEL: Record<FeedbackCategory, string> = {
 	'feature-request': 'feature-request'
 };
 
+export type FeedbackEnvironment = 'development' | 'production' | 'testing';
+
 export interface CreateFeedbackIssueParams {
 	token: string;
 	owner: string;
@@ -86,15 +88,17 @@ export interface CreateFeedbackIssueParams {
 	description: string;
 	pageUrl: string;
 	username: string;
+	environment: FeedbackEnvironment;
 }
 
 /**
  * Creates a structured feedback issue with standard labels and body format.
  */
 export async function createFeedbackIssue(params: CreateFeedbackIssueParams): Promise<GitHubIssue> {
-	const { token, owner, repo, category, title, description, pageUrl, username } = params;
+	const { token, owner, repo, category, title, description, pageUrl, username, environment } =
+		params;
 
-	const labels = ['beta-feedback', CATEGORY_LABEL[category]];
+	const labels = ['beta-feedback', CATEGORY_LABEL[category], `env:${environment}`];
 	const body = [
 		`## ${title}`,
 		'',
@@ -104,7 +108,8 @@ export async function createFeedbackIssue(params: CreateFeedbackIssueParams): Pr
 		'',
 		`**Page:** ${pageUrl}`,
 		`**Reported by:** @${username}`,
-		`**Category:** ${category}`
+		`**Category:** ${category}`,
+		`**Environment:** ${environment}`
 	].join('\n');
 
 	return createIssue({ token, owner, repo, title, body, labels });

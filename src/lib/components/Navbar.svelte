@@ -161,6 +161,9 @@
 				>
 				<a href="/new" class="block rounded-md px-3 py-2 text-sm hover:bg-muted">New Setup</a>
 				<a href="/settings" class="block rounded-md px-3 py-2 text-sm hover:bg-muted">Settings</a>
+				{#if user.isAdmin}
+					<a href="/admin/beta" class="block rounded-md px-3 py-2 text-sm hover:bg-muted">Admin</a>
+				{/if}
 				<div class="border-t pt-1">
 					<button
 						onclick={signOut}

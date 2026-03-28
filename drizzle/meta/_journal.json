@@ -57,6 +57,13 @@
 			"when": 1743206400000,
 			"tag": "0007_add_beta_and_login_tracking",
 			"breakpoints": true
+		},
+		{
+			"idx": 8,
+			"version": "7",
+			"when": 1743292800000,
+			"tag": "0008_add_feedback_submissions",
+			"breakpoints": true
 		}
 	]
 }
