@@ -6,6 +6,42 @@ import {
 	setSessionCookie
 } from '$lib/server/auth';
 import { checkRateLimit } from '$lib/server/rate-limit';
+import { PUBLIC_BETA_MODE } from '$env/static/public';
+
+type GateEvent = {
+	locals: { user: { isBetaApproved: boolean; isAdmin: boolean } | null };
+	url: { pathname: string };
+};
+
+export function betaGate(event: GateEvent, betaModeEnabled: boolean): Response | null {
+	if (!betaModeEnabled) return null;
+
+	const { pathname } = event.url;
+
+	if (pathname.startsWith('/api/')) return null;
+
+	const isAllowedWithoutAuth =
+		pathname === '/' || pathname.startsWith('/auth/') || pathname === '/waitlist';
+
+	if (!event.locals.user) {
+		if (!isAllowedWithoutAuth) {
+			return new Response(null, {
+				status: 302,
+				headers: { Location: '/auth/login/github' }
+			});
+		}
+		return null;
+	}
+
+	if (!event.locals.user.isBetaApproved && !event.locals.user.isAdmin && pathname !== '/waitlist') {
+		return new Response(null, {
+			status: 302,
+			headers: { Location: '/waitlist' }
+		});
+	}
+
+	return null;
+}
 
 export const handle: Handle = async ({ event, resolve }) => {
 	// Auth resolution — must happen before rate limit so event.locals.user is populated
@@ -36,6 +72,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 			}
 		}
 	}
+
+	// Beta gate check (runs after auth so event.locals.user is populated, before rate limit)
+	const gateResponse = betaGate(event, PUBLIC_BETA_MODE === 'true');
+	if (gateResponse) return gateResponse;
 
 	// Rate limit check (runs after auth so event.locals.user is already populated)
 	const { limited, retryAfter } = await checkRateLimit(event);
