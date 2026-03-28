@@ -7,6 +7,7 @@ import {
 	setSessionCookie
 } from '$lib/server/auth';
 import { error } from '$lib/server/responses';
+import { updateLastLoginAt } from '$lib/server/queries/users';
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
 	const code = url.searchParams.get('code');
@@ -37,6 +38,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 	const token = generateSessionToken();
 	await createSession(token, userId);
 	setSessionCookie(cookies, token);
+	await updateLastLoginAt(userId);
 
 	return redirect(302, '/');
 };

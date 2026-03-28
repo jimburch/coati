@@ -54,6 +54,7 @@ export const users = pgTable('users', {
 	followingCount: integer('following_count').default(0).notNull(),
 	isAdmin: boolean('is_admin').default(false).notNull(),
 	isBetaApproved: boolean('is_beta_approved').default(false).notNull(),
+	lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 	updatedAt: timestamp('updated_at', { withTimezone: true })
 		.defaultNow()

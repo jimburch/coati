@@ -47,7 +47,7 @@ vi.mock('$lib/server/db', () => {
 	return { db: chain };
 });
 
-import { getUserByUsername, getUserById, updateUserProfile } from './users';
+import { getUserByUsername, getUserById, updateUserProfile, updateLastLoginAt } from './users';
 
 describe('getUserByUsername', () => {
 	beforeEach(() => {
@@ -183,5 +183,29 @@ describe('updateUserProfile', () => {
 		state.rows = [{ id: 'user-1', location: 'NYC' }];
 		await updateUserProfile('user-1', { location: 'NYC' });
 		expect(mockSet).toHaveBeenCalledWith(expect.objectContaining({ location: 'NYC' }));
+	});
+});
+
+describe('updateLastLoginAt', () => {
+	beforeEach(() => {
+		state.rows = [];
+		vi.clearAllMocks();
+		mockSet.mockClear();
+	});
+
+	it('calls db.update and sets lastLoginAt to a Date', async () => {
+		const before = Date.now();
+		await updateLastLoginAt('user-1');
+		expect(mockSet).toHaveBeenCalledWith(
+			expect.objectContaining({ lastLoginAt: expect.any(Date) })
+		);
+		const setArg = mockSet.mock.calls[0][0] as { lastLoginAt: Date };
+		expect(setArg.lastLoginAt.getTime()).toBeGreaterThanOrEqual(before);
+		expect(setArg.lastLoginAt.getTime()).toBeLessThanOrEqual(Date.now());
+	});
+
+	it('filters the update by the provided userId', async () => {
+		await updateLastLoginAt('user-abc');
+		expect(mockWhere).toHaveBeenCalled();
 	});
 });

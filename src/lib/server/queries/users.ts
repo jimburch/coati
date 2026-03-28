@@ -63,6 +63,10 @@ function emptyToNull(value: string | undefined): string | null | undefined {
 	return value === '' ? null : value;
 }
 
+export async function updateLastLoginAt(userId: string) {
+	await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, userId));
+}
+
 export async function updateUserProfile(userId: string, data: UpdateProfileData) {
 	const result = await db
 		.update(users)

@@ -32,6 +32,12 @@ vi.mock('$lib/server/auth', () => ({
 	createSession: (token: unknown, userId: unknown) => mockCreateSession(token, userId)
 }));
 
+// Mock users queries
+const mockUpdateLastLoginAt = vi.fn();
+vi.mock('$lib/server/queries/users', () => ({
+	updateLastLoginAt: (userId: unknown) => mockUpdateLastLoginAt(userId)
+}));
+
 // Use real responses module
 vi.mock('$lib/server/responses', async (importOriginal) => {
 	return await importOriginal();
@@ -63,6 +69,7 @@ describe('POST /api/v1/auth/device/poll', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockDeleteWhere.mockResolvedValue(undefined);
+		mockUpdateLastLoginAt.mockResolvedValue(undefined);
 	});
 
 	it('returns 400 when deviceCode is missing', async () => {
@@ -191,5 +198,31 @@ describe('POST /api/v1/auth/device/poll', () => {
 		const { POST } = await import('./+server');
 		await POST(makeRequest({ deviceCode: 'device-code-123' }));
 		expect(mockDeleteWhere).toHaveBeenCalled();
+	});
+
+	it('updates lastLoginAt on successful login', async () => {
+		mockFindFirstState.mockResolvedValue(MOCK_STATE);
+		mockFetch.mockResolvedValue({
+			json: () => Promise.resolve({ access_token: 'gh-access-token' })
+		});
+		mockUpsertGithubUser.mockResolvedValue('user-uuid-123');
+		mockGenerateSessionToken.mockReturnValue('session-token');
+		mockCreateSession.mockResolvedValue(undefined);
+		mockFindFirstUser.mockResolvedValue({ id: 'user-uuid-123', username: 'octocat' });
+
+		const { POST } = await import('./+server');
+		await POST(makeRequest({ deviceCode: 'device-code-123' }));
+		expect(mockUpdateLastLoginAt).toHaveBeenCalledWith('user-uuid-123');
+	});
+
+	it('does not update lastLoginAt when authorization is pending', async () => {
+		mockFindFirstState.mockResolvedValue(MOCK_STATE);
+		mockFetch.mockResolvedValue({
+			json: () => Promise.resolve({ error: 'authorization_pending' })
+		});
+
+		const { POST } = await import('./+server');
+		await POST(makeRequest({ deviceCode: 'device-code-123' }));
+		expect(mockUpdateLastLoginAt).not.toHaveBeenCalled();
 	});
 });
