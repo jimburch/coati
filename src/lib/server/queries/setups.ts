@@ -334,7 +334,10 @@ export async function searchSetups(filters: {
 	const conditions: ReturnType<typeof sql>[] = [];
 
 	if (q) {
-		conditions.push(sql`${setups}.search_vector @@ websearch_to_tsquery('english', ${q})`);
+		const pattern = `%${q}%`;
+		conditions.push(
+			sql`(${setups.name} ILIKE ${pattern} OR ${setups.description} ILIKE ${pattern})`
+		);
 	}
 
 	if (agentSlugs && agentSlugs.length > 0) {
@@ -365,7 +368,7 @@ export async function searchSetups(filters: {
 
 	let orderClause: ReturnType<typeof sql>;
 	if (q && sort === 'newest') {
-		orderClause = sql`ORDER BY ts_rank(${setups}.search_vector, websearch_to_tsquery('english', ${q})) DESC, ${setups.createdAt} DESC`;
+		orderClause = sql`ORDER BY ${setups.starsCount} DESC, ${setups.createdAt} DESC`;
 	} else if (sort === 'stars') {
 		orderClause = sql`ORDER BY ${setups.starsCount} DESC, ${setups.createdAt} DESC`;
 	} else if (sort === 'clones') {
