@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
+	import { toast } from 'svelte-sonner';
 	import { Avatar, AvatarImage, AvatarFallback } from '$lib/components/ui/avatar';
 	import { Separator } from '$lib/components/ui/separator';
 	import { Button } from '$lib/components/ui/button';
@@ -236,6 +237,13 @@
 							savingProfile = false;
 							if (result.type === 'success') {
 								editProfileOpen = false;
+							} else {
+								const message =
+									result.type === 'failure'
+										? (((result.data as Record<string, unknown>)?.error as string | undefined) ??
+											'Failed to save profile')
+										: 'Failed to save profile';
+								toast.error(message);
 							}
 							await update();
 						};

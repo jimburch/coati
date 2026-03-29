@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { Avatar, AvatarImage, AvatarFallback } from '$lib/components/ui/avatar';
 	import { timeAgo } from '$lib/utils';
+	import { toast } from 'svelte-sonner';
 
 	interface CommentWithAuthor {
 		id: string;
@@ -34,6 +35,7 @@
 	);
 
 	let activeReplyId = $state<string | null>(null);
+	let commentBody = $state('');
 
 	function toggleReply(commentId: string) {
 		activeReplyId = activeReplyId === commentId ? null : commentId;
@@ -58,7 +60,10 @@
 			action="?/comment"
 			use:enhance={() => {
 				return async ({ result, update }) => {
-					if (result.type !== 'failure' && result.type !== 'error') {
+					if (result.type === 'failure' || result.type === 'error') {
+						toast.error('Failed to post comment');
+					} else {
+						commentBody = '';
 						await update({ reset: true });
 					}
 				};
@@ -70,6 +75,7 @@
 					rows="3"
 					placeholder="Leave a comment…"
 					required
+					bind:value={commentBody}
 					class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
 				></textarea>
 				<div class="flex justify-end">
@@ -125,7 +131,9 @@
 										action="?/deleteComment"
 										use:enhance={() => {
 											return async ({ result, update }) => {
-												if (result.type !== 'failure' && result.type !== 'error') {
+												if (result.type === 'failure' || result.type === 'error') {
+													toast.error('Failed to delete comment');
+												} else {
 													await update({ reset: true });
 												}
 											};
@@ -153,7 +161,9 @@
 								action="?/comment"
 								use:enhance={() => {
 									return async ({ result, update }) => {
-										if (result.type !== 'failure' && result.type !== 'error') {
+										if (result.type === 'failure' || result.type === 'error') {
+											toast.error('Failed to post comment');
+										} else {
 											activeReplyId = null;
 											await update({ reset: true });
 										}
@@ -212,7 +222,9 @@
 												action="?/deleteComment"
 												use:enhance={() => {
 													return async ({ result, update }) => {
-														if (result.type !== 'failure' && result.type !== 'error') {
+														if (result.type === 'failure' || result.type === 'error') {
+															toast.error('Failed to delete comment');
+														} else {
 															await update({ reset: true });
 														}
 													};

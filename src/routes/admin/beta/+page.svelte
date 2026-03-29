@@ -3,8 +3,11 @@
 	import type { PageData } from './$types';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
+	import { toast } from 'svelte-sonner';
 
 	const { data }: { data: PageData } = $props();
+
+	let pendingUserId = $state<string | null>(null);
 
 	function formatDate(date: Date | null | undefined): string {
 		if (!date) return '—';
@@ -97,7 +100,29 @@
 								{user.feedbackCount}
 							</td>
 							<td class="px-4 py-3 text-center">
-								<form method="POST" action="?/toggleBeta" use:enhance data-testid="toggle-form">
+								<form
+									method="POST"
+									action="?/toggleBeta"
+									use:enhance={() => {
+										pendingUserId = user.id;
+										const username = user.username;
+										const granting = !user.isBetaApproved;
+										return async ({ result, update }) => {
+											pendingUserId = null;
+											if (result.type === 'failure' || result.type === 'error') {
+												toast.error('Failed to update beta access');
+											} else {
+												toast.success(
+													granting
+														? `Beta access granted for ${username}`
+														: `Beta access revoked for ${username}`
+												);
+												await update();
+											}
+										};
+									}}
+									data-testid="toggle-form"
+								>
 									<input type="hidden" name="userId" value={user.id} />
 									<input
 										type="hidden"
@@ -106,7 +131,8 @@
 									/>
 									<button
 										type="submit"
-										class="inline-flex h-6 w-11 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 {user.isBetaApproved
+										disabled={pendingUserId === user.id}
+										class="inline-flex h-6 w-11 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {user.isBetaApproved
 											? 'bg-primary'
 											: 'bg-muted'}"
 										aria-label="{user.isBetaApproved
@@ -170,12 +196,35 @@
 						</div>
 					</div>
 
-					<form method="POST" action="?/toggleBeta" use:enhance data-testid="toggle-form">
+					<form
+						method="POST"
+						action="?/toggleBeta"
+						use:enhance={() => {
+							pendingUserId = user.id;
+							const username = user.username;
+							const granting = !user.isBetaApproved;
+							return async ({ result, update }) => {
+								pendingUserId = null;
+								if (result.type === 'failure' || result.type === 'error') {
+									toast.error('Failed to update beta access');
+								} else {
+									toast.success(
+										granting
+											? `Beta access granted for ${username}`
+											: `Beta access revoked for ${username}`
+									);
+									await update();
+								}
+							};
+						}}
+						data-testid="toggle-form"
+					>
 						<input type="hidden" name="userId" value={user.id} />
 						<input type="hidden" name="approved" value={user.isBetaApproved ? 'false' : 'true'} />
 						<button
 							type="submit"
-							class="inline-flex h-6 w-11 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 {user.isBetaApproved
+							disabled={pendingUserId === user.id}
+							class="inline-flex h-6 w-11 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {user.isBetaApproved
 								? 'bg-primary'
 								: 'bg-muted'}"
 							aria-label="{user.isBetaApproved
