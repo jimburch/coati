@@ -16,7 +16,9 @@
 	let items = $state<SearchItem[]>([]);
 	let isLoading = $state(false);
 	let isOpen = $state(false);
+	let highlightedIndex = $state(-1);
 	let containerEl: HTMLDivElement | undefined = $state();
+	let inputEl: HTMLInputElement | undefined = $state();
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 	function handleInput() {
@@ -26,6 +28,7 @@
 		if (trimmed.length < 2) {
 			isOpen = false;
 			items = [];
+			highlightedIndex = -1;
 			return;
 		}
 
@@ -38,6 +41,7 @@
 
 		isLoading = true;
 		isOpen = true;
+		highlightedIndex = -1;
 
 		try {
 			const res = await fetch(`/api/v1/setups?q=${encodeURIComponent(trimmed)}&page=1`);
@@ -54,6 +58,7 @@
 	function handleClickOutside(e: MouseEvent) {
 		if (containerEl && !containerEl.contains(e.target as Node)) {
 			isOpen = false;
+			highlightedIndex = -1;
 		}
 	}
 
@@ -71,17 +76,58 @@
 
 	function navigateToResult(username: string, slug: string) {
 		isOpen = false;
+		highlightedIndex = -1;
 		query = '';
 		goto(`/${username}/${slug}`);
 	}
 
 	function navigateToAll() {
 		isOpen = false;
+		highlightedIndex = -1;
 		const trimmed = query.trim();
 		if (trimmed) {
 			goto(`/explore?q=${encodeURIComponent(trimmed)}`);
 		} else {
 			goto('/explore');
+		}
+	}
+
+	function handleKeydown(e: KeyboardEvent) {
+		if (e.key === 'Escape') {
+			isOpen = false;
+			highlightedIndex = -1;
+			inputEl?.blur();
+			return;
+		}
+
+		if (!isOpen) return;
+
+		if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			if (items.length === 0) return;
+			highlightedIndex =
+				highlightedIndex >= items.length - 1 ? items.length - 1 : highlightedIndex + 1;
+			return;
+		}
+
+		if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			if (highlightedIndex <= 0) {
+				highlightedIndex = -1;
+			} else {
+				highlightedIndex = highlightedIndex - 1;
+			}
+			return;
+		}
+
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			if (highlightedIndex >= 0 && highlightedIndex < items.length) {
+				const item = items[highlightedIndex];
+				navigateToResult(item.ownerUsername, item.slug);
+			} else {
+				navigateToAll();
+			}
 		}
 	}
 </script>
@@ -100,11 +146,13 @@
 			<path d="m21 21-4.3-4.3" />
 		</svg>
 		<Input
+			bind:ref={inputEl}
 			type="search"
 			placeholder="Search setups..."
 			class="h-9 w-64 pl-9 pr-8"
 			bind:value={query}
 			oninput={handleInput}
+			onkeydown={handleKeydown}
 		/>
 		{#if isLoading}
 			<span
@@ -138,11 +186,14 @@
 			{:else if items.length === 0}
 				<div class="text-muted-foreground p-4 text-center text-sm">No results found</div>
 			{:else}
-				<ul>
-					{#each items as item (item.id)}
-						<li>
+				<ul role="listbox">
+					{#each items as item, index (item.id)}
+						<li role="option" aria-selected={index === highlightedIndex}>
 							<button
-								class="hover:bg-accent flex w-full items-center gap-3 px-3 py-2.5 text-left"
+								class="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors {index ===
+								highlightedIndex
+									? 'bg-accent'
+									: 'hover:bg-accent'}"
 								onclick={() => navigateToResult(item.ownerUsername, item.slug)}
 							>
 								{#if item.agents.length > 0}

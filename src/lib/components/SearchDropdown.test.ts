@@ -22,6 +22,30 @@ function sliceResults<T>(items: T[], max: number): T[] {
 	return items.slice(0, max);
 }
 
+// -1 means no item highlighted; valid range is [0, total-1]
+function getNextIndex(current: number, total: number): number {
+	if (total === 0) return -1;
+	if (current >= total - 1) return total - 1;
+	return current + 1;
+}
+
+function getPrevIndex(current: number): number {
+	if (current <= 0) return -1;
+	return current - 1;
+}
+
+function resolveEnterAction(
+	highlightedIndex: number,
+	items: { ownerUsername: string; slug: string }[],
+	query: string
+): { type: 'result'; url: string } | { type: 'explore'; url: string } {
+	if (highlightedIndex >= 0 && highlightedIndex < items.length) {
+		const item = items[highlightedIndex];
+		return { type: 'result', url: buildResultUrl(item.ownerUsername, item.slug) };
+	}
+	return { type: 'explore', url: buildExploreUrl(query) };
+}
+
 describe('shouldFetch', () => {
 	it('returns false for empty string', () => {
 		expect(shouldFetch('')).toBe(false);
@@ -105,5 +129,72 @@ describe('sliceResults', () => {
 
 	it('returns empty array when max is 0', () => {
 		expect(sliceResults([1, 2, 3], 0)).toEqual([]);
+	});
+});
+
+describe('getNextIndex', () => {
+	it('returns -1 when total is 0', () => {
+		expect(getNextIndex(-1, 0)).toBe(-1);
+	});
+
+	it('moves from -1 (no highlight) to 0 on first arrow down', () => {
+		expect(getNextIndex(-1, 3)).toBe(0);
+	});
+
+	it('increments index', () => {
+		expect(getNextIndex(0, 3)).toBe(1);
+		expect(getNextIndex(1, 3)).toBe(2);
+	});
+
+	it('stops at last item (does not wrap)', () => {
+		expect(getNextIndex(2, 3)).toBe(2);
+		expect(getNextIndex(4, 5)).toBe(4);
+	});
+});
+
+describe('getPrevIndex', () => {
+	it('returns -1 when current is -1 (no highlight)', () => {
+		expect(getPrevIndex(-1)).toBe(-1);
+	});
+
+	it('returns -1 when current is 0 (moves to no highlight)', () => {
+		expect(getPrevIndex(0)).toBe(-1);
+	});
+
+	it('decrements index', () => {
+		expect(getPrevIndex(2)).toBe(1);
+		expect(getPrevIndex(1)).toBe(0);
+	});
+});
+
+describe('resolveEnterAction', () => {
+	const items = [
+		{ ownerUsername: 'alice', slug: 'my-setup' },
+		{ ownerUsername: 'bob', slug: 'other-setup' }
+	];
+
+	it('navigates to explore when no highlight (-1)', () => {
+		const result = resolveEnterAction(-1, items, 'claude');
+		expect(result).toEqual({ type: 'explore', url: '/explore?q=claude' });
+	});
+
+	it('navigates to explore when items is empty', () => {
+		const result = resolveEnterAction(-1, [], 'claude');
+		expect(result).toEqual({ type: 'explore', url: '/explore?q=claude' });
+	});
+
+	it('navigates to result when first item is highlighted', () => {
+		const result = resolveEnterAction(0, items, 'alice');
+		expect(result).toEqual({ type: 'result', url: '/alice/my-setup' });
+	});
+
+	it('navigates to correct result for second item', () => {
+		const result = resolveEnterAction(1, items, 'alice');
+		expect(result).toEqual({ type: 'result', url: '/bob/other-setup' });
+	});
+
+	it('falls back to explore when highlightedIndex is out of bounds', () => {
+		const result = resolveEnterAction(5, items, 'query');
+		expect(result).toEqual({ type: 'explore', url: '/explore?q=query' });
 	});
 });
