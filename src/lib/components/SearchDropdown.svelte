@@ -94,6 +94,10 @@
 		}
 	}
 
+	export function focus() {
+		inputEl?.focus();
+	}
+
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Escape') {
 			isOpen = false;

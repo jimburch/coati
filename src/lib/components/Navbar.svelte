@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { afterNavigate, goto, invalidateAll } from '$app/navigation';
+	import { tick } from 'svelte';
 	import { fade, slide } from 'svelte/transition';
 	import { buttonVariants } from '$lib/components/ui/button/button.svelte';
 	import SearchDropdown from './SearchDropdown.svelte';
@@ -12,6 +13,8 @@
 	let menuOpen = $state(false);
 	let mobileSearchOpen = $state(false);
 	let mobileSearchEl: HTMLDivElement | undefined = $state();
+	let desktopDropdown: { focus: () => void } | undefined = $state();
+	let mobileDropdown: { focus: () => void } | undefined = $state();
 
 	function toggleMenu() {
 		menuOpen = !menuOpen;
@@ -48,6 +51,46 @@
 		};
 	});
 
+	function shouldHandleSlashKey(
+		event: { key: string },
+		activeElement: { tagName?: string; getAttribute?: (attr: string) => string | null } | null
+	): boolean {
+		if (event.key !== '/') return false;
+		if (!activeElement) return true;
+		const tag = activeElement.tagName?.toUpperCase();
+		if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return false;
+		const contentEditable = activeElement.getAttribute?.('contenteditable');
+		if (contentEditable !== null && contentEditable !== undefined && contentEditable !== 'false')
+			return false;
+		return true;
+	}
+
+	async function focusSearch() {
+		const isMobile = browser && window.innerWidth < 1024;
+		if (isMobile) {
+			if (!mobileSearchOpen) {
+				openMobileSearch();
+				await tick();
+			}
+			mobileDropdown?.focus();
+		} else {
+			desktopDropdown?.focus();
+		}
+	}
+
+	$effect(() => {
+		if (!browser) return;
+
+		function handleGlobalKeydown(e: KeyboardEvent) {
+			if (!shouldHandleSlashKey(e, document.activeElement)) return;
+			e.preventDefault();
+			focusSearch();
+		}
+
+		document.addEventListener('keydown', handleGlobalKeydown);
+		return () => document.removeEventListener('keydown', handleGlobalKeydown);
+	});
+
 	async function signOut() {
 		await fetch('/auth/logout', { method: 'POST' });
 		await invalidateAll();
@@ -66,7 +109,7 @@
 			<!-- Mobile search bar (full-width) -->
 			<div bind:this={mobileSearchEl} class="flex w-full items-center gap-2 lg:hidden">
 				<div class="flex-1">
-					<SearchDropdown inputClass="h-9 w-full" />
+					<SearchDropdown bind:this={mobileDropdown} inputClass="h-9 w-full" />
 				</div>
 				<button
 					class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md hover:bg-muted"
@@ -90,7 +133,7 @@
 				<div class="flex items-center gap-6">
 					<a href="/" class="text-lg font-bold">Coati</a>
 				</div>
-				<SearchDropdown />
+				<SearchDropdown bind:this={desktopDropdown} />
 				<div class="flex">
 					{#if user}
 						{#if browser}
@@ -123,7 +166,7 @@
 			</div>
 
 			<div class="hidden lg:block">
-				<SearchDropdown />
+				<SearchDropdown bind:this={desktopDropdown} />
 			</div>
 
 			<div class="hidden lg:flex">
