@@ -52,4 +52,10 @@ registerPublish(program, ctx);
 registerSearch(program, ctx);
 registerView(program, ctx);
 
+// Show help and exit cleanly when invoked with no arguments.
+if (process.argv.length <= 2) {
+	program.outputHelp();
+	process.exit(0);
+}
+
 program.parse(process.argv);

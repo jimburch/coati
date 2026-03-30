@@ -14,6 +14,8 @@ export interface FileToWrite {
 export interface WriteOptions {
 	/** Project directory for project/relative-scoped files. Defaults to process.cwd(). */
 	projectDir?: string;
+	/** User's chosen install destination. When set, overrides per-file placement. */
+	destination?: 'current' | 'global' | 'dir';
 	/** Overwrite all conflicts without prompting. */
 	force?: boolean;
 	/** Preview what would be written without actually writing anything. */
@@ -38,10 +40,24 @@ export interface WriteResult {
 }
 
 /**
- * Resolve a target path to an absolute path based on placement type.
+ * Strip global prefixes from a target path so it can be resolved relative
+ * to a chosen base directory (e.g. `~/` prefix, absolute paths).
+ */
+function stripGlobalPrefix(target: string): string {
+	if (target.startsWith('~/')) return target.slice(2);
+	if (path.isAbsolute(target)) return path.relative(os.homedir(), target);
+	return target;
+}
+
+/**
+ * Resolve a target path to an absolute path.
  *
- * - global: expand leading `~/` to home directory; already-absolute paths pass through
- * - project / relative: resolve relative to projectDir (defaults to cwd)
+ * When `options.destination` is set, it takes precedence over per-file placement:
+ * - 'current' / 'dir': all files resolve relative to projectDir
+ * - 'global': all files resolve relative to home directory
+ *
+ * When no destination is set, falls back to per-file placement for backwards
+ * compatibility (e.g. publish preview, dry-run without prompt).
  */
 export function resolveTargetPath(
 	target: string,
@@ -49,7 +65,19 @@ export function resolveTargetPath(
 	options: WriteOptions = {}
 ): string {
 	const projectDir = options.projectDir ?? process.cwd();
+	const dest = options.destination;
 
+	// User explicitly chose a destination — honour it for all files.
+	if (dest === 'current' || dest === 'dir') {
+		const relative = stripGlobalPrefix(target);
+		return path.resolve(projectDir, relative);
+	}
+	if (dest === 'global') {
+		const relative = stripGlobalPrefix(target);
+		return path.join(os.homedir(), relative);
+	}
+
+	// No destination override — use per-file placement (legacy / non-clone paths).
 	switch (placement) {
 		case 'global': {
 			if (target.startsWith('~/')) {
@@ -58,7 +86,6 @@ export function resolveTargetPath(
 			if (path.isAbsolute(target)) {
 				return target;
 			}
-			// Bare name with no path separator — treat as relative to home
 			return path.join(os.homedir(), target);
 		}
 		case 'project':

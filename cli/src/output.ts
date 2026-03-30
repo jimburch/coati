@@ -31,6 +31,16 @@ export interface OutputClient {
 	table(rows: Record<string, unknown>[], columns: TableColumn[]): void;
 }
 
+// ── Shared singleton state for non-context-aware consumers (e.g. prompts) ────
+
+let _globalMode: OutputMode = 'text';
+
+/** Returns true if the global output mode is JSON. Used by prompts.ts to guard
+ *  against interactive prompts when running in --json mode. */
+export function isJsonMode(): boolean {
+	return _globalMode === 'json';
+}
+
 /** Create an output client with its own private mode/verbose state. */
 export function createOutputClient(): OutputClient {
 	let mode: OutputMode = 'text';
@@ -44,6 +54,7 @@ export function createOutputClient(): OutputClient {
 	return {
 		setOutputMode(m: OutputMode): void {
 			mode = m;
+			_globalMode = m;
 		},
 
 		setVerbose(enabled: boolean): void {

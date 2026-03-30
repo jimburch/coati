@@ -203,6 +203,7 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 			try {
 				writeResult = await ctx.fs.writeSetupFiles(files, {
 					projectDir,
+					destination,
 					force: opts.force,
 					dryRun: opts.dryRun
 				});

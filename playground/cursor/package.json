@@ -7,7 +7,7 @@
 		"dev": "tsx watch src/index.ts",
 		"test": "vitest run",
 		"lint": "eslint src/",
-		"coati": "COATI_API_BASE=http://localhost:5173/api/v1 npx tsx ../../cli/src/index.ts"
+		"coati": "COATI_API_BASE=http://localhost:5173/api/v1 ../../cli/node_modules/.bin/tsx ../../cli/src/index.ts"
 	},
 	"dependencies": {
 		"express": "^4.18.0"

@@ -94,12 +94,6 @@ export async function promptDestination(
 	const globalLabel =
 		'Install globally (home directory)' + (defaultScope === 'global' ? ' [recommended]' : '');
 
-	if (defaultScope === 'global') {
-		return select<InstallDestination>('Install scope?', [
-			{ label: globalLabel, value: 'global' },
-			{ label: projectLabel, value: 'current' }
-		]);
-	}
 	return select<InstallDestination>('Install scope?', [
 		{ label: projectLabel, value: 'current' },
 		{ label: globalLabel, value: 'global' }
