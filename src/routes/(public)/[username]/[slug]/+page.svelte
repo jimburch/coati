@@ -62,16 +62,9 @@
 <div class="mx-auto max-w-5xl px-4 py-6 lg:py-8">
 	<!-- Header -->
 	<div class="mb-4 lg:mb-6">
-		<div class="flex items-start justify-between gap-4">
-			<div class="min-w-0">
-				<h1 class="text-xl font-bold lg:text-2xl">{data.setup.name}</h1>
-				<p class="mt-1 text-sm text-muted-foreground lg:text-base">{data.setup.description}</p>
-			</div>
-			<span
-				class="shrink-0 rounded-md bg-secondary px-2.5 py-0.5 text-sm font-medium text-secondary-foreground"
-			>
-				v{data.setup.version}
-			</span>
+		<div class="min-w-0">
+			<h1 class="text-xl font-bold lg:text-2xl">{data.setup.name}</h1>
+			<p class="mt-1 text-sm text-muted-foreground lg:text-base">{data.setup.description}</p>
 		</div>
 	</div>
 

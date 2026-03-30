@@ -116,9 +116,8 @@ export const setups = pgTable(
 			.notNull(),
 		name: varchar('name', { length: 100 }).notNull(),
 		slug: varchar('slug', { length: 100 }).notNull(),
-		version: varchar('version', { length: 20 }).default('0.1.0').notNull(),
 		description: varchar('description', { length: 300 }).notNull(),
-		readmePath: text('readme_path'),
+		readme: text('readme'),
 		category: categoryEnum('category'),
 		license: varchar('license', { length: 50 }),
 		minToolVersion: varchar('min_tool_version', { length: 20 }),
@@ -128,10 +127,7 @@ export const setups = pgTable(
 		clonesCount: integer('clones_count').default(0).notNull(),
 		commentsCount: integer('comments_count').default(0).notNull(),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-		updatedAt: timestamp('updated_at', { withTimezone: true })
-			.defaultNow()
-			.$onUpdate(() => new Date())
-			.notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 		searchVector: tsvector('search_vector').generatedAlwaysAs(
 			sql`setweight(to_tsvector('english', coalesce(name, '')), 'A') || setweight(to_tsvector('english', coalesce(description, '')), 'B')`
 		)

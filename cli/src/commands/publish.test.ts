@@ -197,7 +197,6 @@ describe('create new setup', () => {
 				name: 'my-setup',
 				slug: 'my-setup',
 				description: 'A test setup',
-				version: '1.0.0',
 				files: expect.arrayContaining([
 					expect.objectContaining({
 						source: '.claude/commands/foo.md',
@@ -209,6 +208,8 @@ describe('create new setup', () => {
 				])
 			})
 		);
+		const postCall = vi.mocked(ctx.api.post).mock.calls[0][1] as Record<string, unknown>;
+		expect(postCall).not.toHaveProperty('version');
 		expect(ctx.api.patch).not.toHaveBeenCalled();
 	});
 
@@ -495,6 +496,20 @@ describe('agent validation during publish', () => {
 		await program.parseAsync(['node', 'coati', 'publish']);
 
 		expect(ctx.api.post).toHaveBeenCalled();
+	});
+});
+
+// ── version field handling ────────────────────────────────────────────────────
+
+describe('publish — version field in coati.json', () => {
+	it('does not include version in publish payload even when present in coati.json', async () => {
+		mockReadManifest.mockReturnValue({ ...MOCK_MANIFEST, version: '1.0.0' });
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		const postCall = vi.mocked(ctx.api.post).mock.calls[0][1] as Record<string, unknown>;
+		expect(postCall).not.toHaveProperty('version');
+		expect(ctx.io.error).not.toHaveBeenCalled();
 	});
 });
 

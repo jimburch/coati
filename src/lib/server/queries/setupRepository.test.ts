@@ -43,9 +43,8 @@ const MOCK_SETUP = {
 	userId: 'user-1',
 	name: 'My Setup',
 	slug: 'my-setup',
-	version: '1.0.0',
 	description: 'A great setup',
-	readmePath: 'README.md',
+	readme: null,
 	category: null,
 	license: null,
 	minToolVersion: null,
@@ -279,7 +278,6 @@ describe('setupRepo.create', () => {
 		const data: Parameters<typeof setupRepo.create>[1] = {
 			name: 'My Setup',
 			slug: 'my-setup',
-			version: '1.0.0',
 			description: 'A setup',
 			files: []
 		};

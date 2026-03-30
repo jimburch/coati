@@ -19,15 +19,16 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	const { files } = detail;
 
-	// Find README file
-	const readmePath = detail.readmePath?.toLowerCase();
-	const readmeFile = files.find((f) => {
-		const source = f.source.toLowerCase();
-		if (readmePath && source === readmePath) return true;
-		return source === 'readme.md' || source === 'readme';
-	});
+	// Use readme column if set, otherwise look for README.md file
+	const readmeContent =
+		detail.readme ??
+		files.find((f) => {
+			const source = f.source.toLowerCase();
+			return source === 'readme.md' || source === 'readme';
+		})?.content ??
+		null;
 
-	const readmeHtml = readmeFile ? await renderMarkdown(readmeFile.content) : null;
+	const readmeHtml = readmeContent ? await renderMarkdown(readmeContent) : null;
 
 	return {
 		setup: detail,

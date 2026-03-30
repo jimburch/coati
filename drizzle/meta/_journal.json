@@ -78,6 +78,13 @@
 			"when": 1743465600000,
 			"tag": "0011_trending_materialized_view",
 			"breakpoints": true
+		},
+		{
+			"idx": 11,
+			"version": "7",
+			"when": 1743552000000,
+			"tag": "0012_drop_version_add_readme",
+			"breakpoints": true
 		}
 	]
 }
