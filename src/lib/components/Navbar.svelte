@@ -3,15 +3,13 @@
 	import { afterNavigate, goto, invalidateAll } from '$app/navigation';
 	import { fade, slide } from 'svelte/transition';
 	import { buttonVariants } from '$lib/components/ui/button/button.svelte';
-	import { Input } from '$lib/components/ui/input';
-	import SearchBar from './SearchBar.svelte';
+	import SearchDropdown from './SearchDropdown.svelte';
 	import UserMenu from './UserMenu.svelte';
 	import type { LayoutUser } from '$lib/types';
 
 	let { user }: { user: LayoutUser | null } = $props();
 
 	let menuOpen = $state(false);
-	let mobileQuery = $state('');
 
 	function toggleMenu() {
 		menuOpen = !menuOpen;
@@ -19,16 +17,6 @@
 
 	function closeMenu() {
 		menuOpen = false;
-	}
-
-	function handleMobileSearch(e: SubmitEvent) {
-		e.preventDefault();
-		const trimmed = mobileQuery.trim();
-		if (trimmed) {
-			goto(`/explore?q=${encodeURIComponent(trimmed)}`);
-		} else {
-			goto('/explore');
-		}
 	}
 
 	async function signOut() {
@@ -49,7 +37,7 @@
 		</div>
 
 		<div class="hidden lg:block">
-			<SearchBar />
+			<SearchDropdown />
 		</div>
 
 		<div class="hidden lg:flex">
@@ -126,27 +114,9 @@
 		transition:slide={{ duration: 200 }}
 	>
 		<nav aria-label="Mobile navigation" class="mx-auto max-w-7xl space-y-1 px-4 py-3">
-			<form onsubmit={handleMobileSearch}>
-				<div class="relative px-3 py-1">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="text-muted-foreground absolute left-5.5 top-1/2 h-4 w-4 -translate-y-1/2"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-						stroke-width="2"
-					>
-						<circle cx="11" cy="11" r="8" />
-						<path d="m21 21-4.3-4.3" />
-					</svg>
-					<Input
-						type="search"
-						placeholder="Search setups..."
-						class="h-9 w-full pl-9"
-						bind:value={mobileQuery}
-					/>
-				</div>
-			</form>
+			<div class="px-3 py-1">
+				<SearchDropdown />
+			</div>
 
 			{#if user}
 				<a href="/{user.username}" class="block rounded-md px-3 py-2 text-sm hover:bg-muted"
