@@ -1,0 +1,98 @@
+{
+	"name": "cursor-playground-2",
+	"version": "1.0.0",
+	"description": "re-running init a second time",
+	"category": "general",
+	"agents": [
+		"cursor"
+	],
+	"tags": [
+		"cursor"
+	],
+	"files": [
+		{
+			"source": ".cursor/commands/refactor.md",
+			"target": ".cursor/commands/refactor.md",
+			"placement": "project",
+			"componentType": "command",
+			"agent": "cursor"
+		},
+		{
+			"source": ".cursor/commands/review.md",
+			"target": ".cursor/commands/review.md",
+			"placement": "project",
+			"componentType": "command",
+			"agent": "cursor"
+		},
+		{
+			"source": ".cursor/commands/test-coverage.md",
+			"target": ".cursor/commands/test-coverage.md",
+			"placement": "project",
+			"componentType": "command",
+			"agent": "cursor"
+		},
+		{
+			"source": ".cursor/hooks.json",
+			"target": ".cursor/hooks.json",
+			"placement": "project",
+			"componentType": "hook",
+			"agent": "cursor"
+		},
+		{
+			"source": ".cursor/mcp.json",
+			"target": ".cursor/mcp.json",
+			"placement": "project",
+			"componentType": "mcp_server",
+			"agent": "cursor"
+		},
+		{
+			"source": ".cursor/rules/api-patterns.mdc",
+			"target": "~/.cursor/rules/api-patterns.mdc",
+			"placement": "global",
+			"componentType": "instruction",
+			"agent": "cursor"
+		},
+		{
+			"source": ".cursor/rules/testing.mdc",
+			"target": "~/.cursor/rules/testing.mdc",
+			"placement": "global",
+			"componentType": "instruction",
+			"agent": "cursor"
+		},
+		{
+			"source": ".cursor/rules/typescript.mdc",
+			"target": "~/.cursor/rules/typescript.mdc",
+			"placement": "global",
+			"componentType": "instruction",
+			"agent": "cursor"
+		},
+		{
+			"source": ".cursor/skills/api-patterns/SKILL.md",
+			"target": ".cursor/skills/api-patterns/SKILL.md",
+			"placement": "project",
+			"componentType": "skill",
+			"agent": "cursor"
+		},
+		{
+			"source": ".cursorignore",
+			"target": ".cursorignore",
+			"placement": "project",
+			"componentType": "instruction",
+			"agent": "cursor"
+		},
+		{
+			"source": ".cursorindexingignore",
+			"target": ".cursorindexingignore",
+			"placement": "project",
+			"componentType": "instruction",
+			"agent": "cursor"
+		},
+		{
+			"source": ".cursorrules",
+			"target": ".cursorrules",
+			"placement": "project",
+			"componentType": "instruction",
+			"agent": "cursor"
+		}
+	]
+}

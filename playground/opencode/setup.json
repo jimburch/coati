@@ -1,0 +1,46 @@
+{
+	"name": "da-opencode-playground",
+	"version": "1.0.0",
+	"description": "jims dev opencode",
+	"category": "web-dev",
+	"agents": [
+		"opencode"
+	],
+	"files": [
+		{
+			"source": ".opencode/commands/deploy-check.md",
+			"target": ".opencode/commands/deploy-check.md",
+			"placement": "project",
+			"componentType": "command",
+			"agent": "opencode"
+		},
+		{
+			"source": ".opencode/commands/review.md",
+			"target": ".opencode/commands/review.md",
+			"placement": "project",
+			"componentType": "command",
+			"agent": "opencode"
+		},
+		{
+			"source": ".opencode/commands/test-coverage.md",
+			"target": ".opencode/commands/test-coverage.md",
+			"placement": "project",
+			"componentType": "command",
+			"agent": "opencode"
+		},
+		{
+			"source": ".opencode.json",
+			"target": ".opencode.json",
+			"placement": "project",
+			"componentType": "instruction",
+			"agent": "opencode"
+		},
+		{
+			"source": "opencode.md",
+			"target": "opencode.md",
+			"placement": "project",
+			"componentType": "instruction",
+			"agent": "opencode"
+		}
+	]
+}
