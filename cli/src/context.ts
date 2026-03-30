@@ -105,6 +105,7 @@ export interface FsClient {
 		command: string,
 		options: { cwd?: string }
 	): Promise<{ stdout: string; stderr: string }>;
+	writeJson(filePath: string, data: unknown): void;
 }
 
 // ── Top-level CommandContext ──────────────────────────────────────────────────
@@ -175,7 +176,9 @@ export function createContext(): CommandContext {
 			writeSetupFiles: (filesToWrite, options) =>
 				files.writeSetupFiles(filesToWrite, { ...options, isJson: outputClient.isJsonMode() }),
 			resolveTargetPath: files.resolveTargetPath,
-			runCommand: (command, options) => execAsync(command, options)
+			runCommand: (command, options) => execAsync(command, options),
+			writeJson: (filePath, data) =>
+				fs.writeFileSync(filePath, JSON.stringify(data, null, '\t') + '\n', 'utf-8')
 		}
 	};
 }

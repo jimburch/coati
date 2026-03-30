@@ -4,6 +4,7 @@ import { Command } from 'commander';
 import { AGENTS_BY_SLUG } from '@coati/agents-registry';
 import { ApiError } from '../context.js';
 import { detectInstalledAgents } from '../agent-detection.js';
+import { MANIFEST_FILENAME } from '../manifest.js';
 import type { ManifestPlacement } from '../manifest.js';
 import type { CommandContext } from '../context.js';
 
@@ -11,6 +12,7 @@ interface SetupMeta {
 	id: string;
 	name: string;
 	slug: string;
+	version?: string;
 	description: string;
 	ownerUsername: string;
 	clonesCount: number;
@@ -223,6 +225,13 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 				} catch {
 					// Silently ignore — clone tracking is non-critical
 				}
+
+				// Write clone-tracking coati.json to the destination directory
+				ctx.fs.writeJson(path.join(projectDir, MANIFEST_FILENAME), {
+					source: `${owner}/${slug}`,
+					clonedAt: new Date().toISOString(),
+					revision: setup.version ?? setup.id
+				});
 			}
 
 			// Post-install execution

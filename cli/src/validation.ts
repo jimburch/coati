@@ -50,7 +50,11 @@ export const manifestSchema = z.object({
 	prerequisites: z.array(z.string()).optional(),
 	readme: z.string().optional(),
 	agents: z.array(z.string()).optional(),
-	tags: z.array(z.string()).optional()
+	tags: z.array(z.string()).optional(),
+	/** Clone-tracking fields — written by `coati clone`, ignored during publish. */
+	source: z.string().optional(),
+	clonedAt: z.string().optional(),
+	revision: z.string().optional()
 });
 
 /**

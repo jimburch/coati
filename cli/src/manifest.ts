@@ -45,6 +45,10 @@ export interface Manifest {
 	prerequisites?: string[];
 	readme?: string;
 	files: ManifestFileEntry[];
+	/** Clone-tracking fields — written by `coati clone`, ignored during publish. */
+	source?: string;
+	clonedAt?: string;
+	revision?: string;
 }
 
 export interface ValidationError {

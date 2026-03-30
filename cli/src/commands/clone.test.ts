@@ -368,6 +368,31 @@ describe('clone — post-install', () => {
 	});
 });
 
+// ── clone tracking ────────────────────────────────────────────────────────────
+
+describe('clone — tracking file', () => {
+	it('writes coati.json with tracking fields after a successful clone', async () => {
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' });
+
+		expect(ctx.fs.writeJson).toHaveBeenCalledWith(
+			expect.stringContaining('coati.json'),
+			expect.objectContaining({
+				source: 'alice/my-setup',
+				clonedAt: expect.any(String),
+				revision: expect.any(String)
+			})
+		);
+	});
+
+	it('does not write coati.json in dry-run mode', async () => {
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup', '--dry-run'], { from: 'user' });
+
+		expect(ctx.fs.writeJson).not.toHaveBeenCalled();
+	});
+});
+
 // ── --json output ─────────────────────────────────────────────────────────────
 
 describe('clone — --json output', () => {

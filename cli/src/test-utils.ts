@@ -61,7 +61,8 @@ export function createTestContext(overrides?: Partial<CommandContext>): CommandC
 			readConfig: vi.fn(() => ({ apiBase: 'https://coati.sh/api/v1' })),
 			writeSetupFiles: vi.fn(),
 			resolveTargetPath: vi.fn(),
-			runCommand: vi.fn()
+			runCommand: vi.fn(),
+			writeJson: vi.fn()
 		}
 	};
 

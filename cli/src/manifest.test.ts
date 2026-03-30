@@ -213,6 +213,47 @@ describe('writeManifest + readManifest roundtrip', () => {
 	});
 });
 
+describe('validateManifest — clone-tracking fields', () => {
+	it('accepts optional source field', () => {
+		const result = validateManifest({ ...VALID_MANIFEST, source: 'alice/my-setup' });
+		expect(result.valid).toBe(true);
+	});
+
+	it('accepts optional clonedAt field', () => {
+		const result = validateManifest({ ...VALID_MANIFEST, clonedAt: '2026-03-30T12:00:00.000Z' });
+		expect(result.valid).toBe(true);
+	});
+
+	it('accepts optional revision field', () => {
+		const result = validateManifest({ ...VALID_MANIFEST, revision: '1.0.0' });
+		expect(result.valid).toBe(true);
+	});
+
+	it('accepts all three tracking fields together', () => {
+		const result = validateManifest({
+			...VALID_MANIFEST,
+			source: 'alice/my-setup',
+			clonedAt: '2026-03-30T12:00:00.000Z',
+			revision: '1.0.0'
+		});
+		expect(result.valid).toBe(true);
+	});
+
+	it('preserves tracking fields through writeManifest/readManifest roundtrip', () => {
+		const withTracking: Manifest = {
+			...VALID_MANIFEST,
+			source: 'alice/my-setup',
+			clonedAt: '2026-03-30T12:00:00.000Z',
+			revision: '1.0.0'
+		};
+		writeManifest(tmpDir, withTracking);
+		const read = readManifest(tmpDir);
+		expect(read.source).toBe('alice/my-setup');
+		expect(read.clonedAt).toBe('2026-03-30T12:00:00.000Z');
+		expect(read.revision).toBe('1.0.0');
+	});
+});
+
 describe('readManifest error handling', () => {
 	it('throws when coati.json does not exist', () => {
 		expect(() => readManifest(tmpDir)).toThrow(/No coati\.json found/);

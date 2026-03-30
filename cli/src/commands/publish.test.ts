@@ -498,6 +498,24 @@ describe('agent validation during publish', () => {
 	});
 });
 
+// ── clone-tracking fields ─────────────────────────────────────────────────────
+
+describe('publish — clone-tracking fields', () => {
+	it('accepts manifest with tracking fields and publishes without errors', async () => {
+		mockReadManifest.mockReturnValue({
+			...MOCK_MANIFEST,
+			source: 'bob/original-setup',
+			clonedAt: '2026-03-30T12:00:00.000Z',
+			revision: '1.0.0'
+		});
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		expect(ctx.api.post).toHaveBeenCalled();
+		expect(ctx.io.error).not.toHaveBeenCalled();
+	});
+});
+
 // ── error handling ────────────────────────────────────────────────────────────
 
 describe('error handling', () => {
