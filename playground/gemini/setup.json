@@ -3,9 +3,7 @@
 	"version": "1.0.0",
 	"description": "this is jimbos gemini",
 	"category": "web-dev",
-	"agents": [
-		"gemini"
-	],
+	"agents": ["gemini"],
 	"files": [
 		{
 			"source": ".gemini/commands/deploy-check.toml",

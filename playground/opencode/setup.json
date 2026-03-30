@@ -3,9 +3,7 @@
 	"version": "1.0.0",
 	"description": "jims dev opencode",
 	"category": "web-dev",
-	"agents": [
-		"opencode"
-	],
+	"agents": ["opencode"],
 	"files": [
 		{
 			"source": ".opencode/commands/deploy-check.md",

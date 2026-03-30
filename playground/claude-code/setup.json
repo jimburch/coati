@@ -3,9 +3,7 @@
 	"version": "1.0.0",
 	"description": "local dev playground",
 	"category": "web-dev",
-	"agents": [
-		"claude-code"
-	],
+	"agents": ["claude-code"],
 	"files": [
 		{
 			"source": ".claude/commands/review.md",

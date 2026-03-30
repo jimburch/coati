@@ -3,12 +3,8 @@
 	"version": "1.0.0",
 	"description": "re-running init a second time",
 	"category": "general",
-	"agents": [
-		"cursor"
-	],
-	"tags": [
-		"cursor"
-	],
+	"agents": ["cursor"],
+	"tags": ["cursor"],
 	"files": [
 		{
 			"source": ".cursor/commands/refactor.md",
