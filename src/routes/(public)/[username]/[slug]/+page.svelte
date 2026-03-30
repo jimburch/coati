@@ -2,7 +2,6 @@
 	import { Avatar, AvatarImage, AvatarFallback } from '$lib/components/ui/avatar';
 	import { Separator } from '$lib/components/ui/separator';
 	import StarButton from '$lib/components/StarButton.svelte';
-	import CommentThread from '$lib/components/CommentThread.svelte';
 	import AgentIcon from '$lib/components/AgentIcon.svelte';
 	import OgMeta from '$lib/components/OgMeta.svelte';
 	import { timeAgo } from '$lib/utils';
@@ -10,7 +9,6 @@
 	const { data } = $props();
 
 	let copied = $state(false);
-	let showComments = $state(false);
 	const cloneCommand = $derived(`coati clone ${data.setup.ownerUsername}/${data.setup.slug}`);
 
 	// Optimistic override for stars count — set on button click, cleared when server data refreshes.
@@ -243,10 +241,11 @@
 		</div>
 	</div>
 
-	<Separator class="my-6 lg:my-8" />
+	<!-- BETA: comments hidden, re-enable post-launch -->
+	<!-- <Separator class="my-6 lg:my-8" /> -->
 
-	<!-- Mobile comments toggle -->
-	<button
+	<!-- BETA: mobile comments toggle hidden, re-enable post-launch -->
+	<!-- <button
 		data-testid="show-comments-btn"
 		class="w-full py-2 text-left text-sm font-medium lg:hidden"
 		onclick={() => (showComments = !showComments)}
@@ -254,14 +253,14 @@
 		{showComments
 			? 'Hide comments'
 			: `Show ${data.comments.length} comment${data.comments.length === 1 ? '' : 's'}`}
-	</button>
+	</button> -->
 
-	<!-- Comments: collapsed on mobile by default, always visible on desktop -->
-	<div data-testid="comment-thread" class={showComments ? '' : 'hidden lg:block'}>
+	<!-- BETA: CommentThread hidden, re-enable post-launch -->
+	<!-- <div data-testid="comment-thread" class={showComments ? '' : 'hidden lg:block'}>
 		<CommentThread
 			comments={data.comments}
 			isLoggedIn={!!data.user}
 			currentUsername={data.user?.username ?? null}
 		/>
-	</div>
+	</div> -->
 </div>

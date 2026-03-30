@@ -3,7 +3,6 @@ import type { PageServerLoad, Actions } from './$types';
 import { setupRepo } from '$lib/server/queries/setupRepository';
 import { setStar, getSetupByOwnerSlug, isSetupStarredByUser } from '$lib/server/queries/setups';
 import {
-	getSetupComments,
 	createComment,
 	deleteComment,
 	InvalidParentError,
@@ -26,10 +25,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		return source === 'readme.md' || source === 'readme';
 	});
 
-	const [readmeHtml, comments] = await Promise.all([
-		readmeFile ? renderMarkdown(readmeFile.content) : Promise.resolve(null),
-		getSetupComments(detail.id)
-	]);
+	const readmeHtml = readmeFile ? await renderMarkdown(readmeFile.content) : null;
 
 	return {
 		setup: detail,
@@ -37,8 +33,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		tags: detail.tags,
 		agents: detail.agents,
 		readmeHtml,
-		isStarred: detail.isStarred,
-		comments
+		isStarred: detail.isStarred
 	};
 };
 
