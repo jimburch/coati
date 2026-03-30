@@ -128,7 +128,8 @@ export const setups = pgTable(
 	},
 	(table) => [
 		uniqueIndex('setups_user_id_slug_idx').on(table.userId, table.slug),
-		index('setups_user_id_idx').on(table.userId)
+		index('setups_user_id_idx').on(table.userId),
+		index('setups_created_at_idx').on(table.createdAt)
 	]
 );
 
@@ -196,7 +197,8 @@ export const setupTags = pgTable(
 	},
 	(table) => [
 		primaryKey({ columns: [table.setupId, table.tagId] }),
-		index('setup_tags_tag_id_idx').on(table.tagId)
+		index('setup_tags_tag_id_idx').on(table.tagId),
+		index('setup_tags_setup_id_tag_id_idx').on(table.setupId, table.tagId)
 	]
 );
 
@@ -212,7 +214,8 @@ export const setupAgents = pgTable(
 	},
 	(table) => [
 		primaryKey({ columns: [table.setupId, table.agentId] }),
-		index('setup_agents_agent_id_idx').on(table.agentId)
+		index('setup_agents_agent_id_idx').on(table.agentId),
+		index('setup_agents_setup_id_agent_id_idx').on(table.setupId, table.agentId)
 	]
 );
 
@@ -230,7 +233,8 @@ export const stars = pgTable(
 	},
 	(table) => [
 		uniqueIndex('stars_user_id_setup_id_idx').on(table.userId, table.setupId),
-		index('stars_setup_id_idx').on(table.setupId)
+		index('stars_setup_id_idx').on(table.setupId),
+		index('stars_created_at_idx').on(table.createdAt)
 	]
 );
 
@@ -252,7 +256,10 @@ export const comments = pgTable(
 			.$onUpdate(() => new Date())
 			.notNull()
 	},
-	(table) => [index('comments_setup_id_idx').on(table.setupId)]
+	(table) => [
+		index('comments_setup_id_idx').on(table.setupId),
+		index('comments_user_id_idx').on(table.userId)
+	]
 );
 
 export const activities = pgTable(

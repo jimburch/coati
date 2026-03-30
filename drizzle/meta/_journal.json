@@ -64,6 +64,13 @@
 			"when": 1743292800000,
 			"tag": "0008_add_feedback_submissions",
 			"breakpoints": true
+		},
+		{
+			"idx": 9,
+			"version": "7",
+			"when": 1743379200000,
+			"tag": "0010_missing_indexes",
+			"breakpoints": true
 		}
 	]
 }
