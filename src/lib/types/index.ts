@@ -99,35 +99,51 @@ export const createSetupFileSchema = z.object({
 	placement: placementSchema,
 	componentType: componentTypeSchema.default('instruction'),
 	description: z.string().optional(),
-	content: z.string().min(1)
+	content: z.string().min(1).max(102400, 'File exceeds 100KB limit')
 });
 
 // Cross-reference: cli/src/validation.ts must stay in sync with this schema
-export const createSetupWithFilesSchema = createSetupSchema.extend({
-	readmePath: z.string().optional(),
-	category: categorySchema.optional(),
-	license: z.string().max(50).optional(),
-	minToolVersion: z.string().max(20).optional(),
-	postInstall: postInstallSchema.optional(),
-	prerequisites: z.array(z.string()).optional(),
-	files: z.array(createSetupFileSchema).optional(),
-	agentIds: z.array(z.string().uuid()).optional(),
-	tagIds: z.array(z.string().uuid()).optional()
-});
+export const createSetupWithFilesSchema = createSetupSchema
+	.extend({
+		readmePath: z.string().optional(),
+		category: categorySchema.optional(),
+		license: z.string().max(50).optional(),
+		minToolVersion: z.string().max(20).optional(),
+		postInstall: postInstallSchema.optional(),
+		prerequisites: z.array(z.string()).optional(),
+		files: z.array(createSetupFileSchema).optional(),
+		agentIds: z.array(z.string().uuid()).optional(),
+		tagIds: z.array(z.string().uuid()).optional()
+	})
+	.refine((data) => !data.files || data.files.length <= 50, {
+		message: 'Maximum 50 files per setup'
+	})
+	.refine(
+		(data) => !data.files || data.files.reduce((sum, f) => sum + f.content.length, 0) <= 1048576,
+		{ message: 'Setup exceeds 1MB total limit' }
+	);
 
-export const updateSetupSchema = z.object({
-	name: z.string().min(1).max(100).optional(),
-	slug: z.string().min(1).max(100).regex(SLUG_NAME_REGEX).optional(),
-	description: z.string().max(300).optional(),
-	version: z.string().regex(SEMVER_REGEX).optional(),
-	readmePath: z.string().nullable().optional(),
-	category: categorySchema.nullable().optional(),
-	license: z.string().max(50).nullable().optional(),
-	minToolVersion: z.string().max(20).nullable().optional(),
-	postInstall: postInstallSchema.nullable().optional(),
-	prerequisites: z.array(z.string()).nullable().optional(),
-	files: z.array(createSetupFileSchema).optional()
-});
+export const updateSetupSchema = z
+	.object({
+		name: z.string().min(1).max(100).optional(),
+		slug: z.string().min(1).max(100).regex(SLUG_NAME_REGEX).optional(),
+		description: z.string().max(300).optional(),
+		version: z.string().regex(SEMVER_REGEX).optional(),
+		readmePath: z.string().nullable().optional(),
+		category: categorySchema.nullable().optional(),
+		license: z.string().max(50).nullable().optional(),
+		minToolVersion: z.string().max(20).nullable().optional(),
+		postInstall: postInstallSchema.nullable().optional(),
+		prerequisites: z.array(z.string()).nullable().optional(),
+		files: z.array(createSetupFileSchema).optional()
+	})
+	.refine((data) => !data.files || data.files.length <= 50, {
+		message: 'Maximum 50 files per setup'
+	})
+	.refine(
+		(data) => !data.files || data.files.reduce((sum, f) => sum + f.content.length, 0) <= 1048576,
+		{ message: 'Setup exceeds 1MB total limit' }
+	);
 
 export const updateProfileSchema = z.object({
 	name: z.string().max(100).optional(),
