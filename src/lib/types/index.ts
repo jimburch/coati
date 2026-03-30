@@ -76,8 +76,7 @@ import {
 	componentTypeSchema,
 	categorySchema,
 	postInstallSchema,
-	SLUG_NAME_REGEX,
-	SEMVER_REGEX
+	SLUG_NAME_REGEX
 } from '@coati/validation';
 
 export const apiSuccessSchema = <T extends z.ZodType>(dataSchema: T) =>
@@ -91,8 +90,7 @@ export const apiErrorSchema = z.object({
 export const createSetupSchema = z.object({
 	name: z.string().min(1).max(100),
 	slug: z.string().min(1).max(100).regex(SLUG_NAME_REGEX),
-	description: z.string().max(300),
-	version: z.string().regex(SEMVER_REGEX)
+	description: z.string().max(300)
 });
 
 export const createSetupFileSchema = z.object({
@@ -107,7 +105,6 @@ export const createSetupFileSchema = z.object({
 // Cross-reference: cli/src/validation.ts must stay in sync with this schema
 export const createSetupWithFilesSchema = createSetupSchema
 	.extend({
-		readmePath: z.string().optional(),
 		category: categorySchema.optional(),
 		license: z.string().max(50).optional(),
 		minToolVersion: z.string().max(20).optional(),
@@ -130,8 +127,7 @@ export const updateSetupSchema = z
 		name: z.string().min(1).max(100).optional(),
 		slug: z.string().min(1).max(100).regex(SLUG_NAME_REGEX).optional(),
 		description: z.string().max(300).optional(),
-		version: z.string().regex(SEMVER_REGEX).optional(),
-		readmePath: z.string().nullable().optional(),
+		readme: z.string().optional(),
 		category: categorySchema.nullable().optional(),
 		license: z.string().max(50).nullable().optional(),
 		minToolVersion: z.string().max(20).nullable().optional(),

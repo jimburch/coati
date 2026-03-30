@@ -1,6 +1,7 @@
 import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { counters } from '$lib/server/counters';
+import { generateReadme } from '$lib/utils/readme';
 import {
 	setups,
 	setupFiles,
@@ -42,9 +43,8 @@ export async function getSetupByOwnerSlug(ownerUsername: string, slug: string) {
 			userId: setups.userId,
 			name: setups.name,
 			slug: setups.slug,
-			version: setups.version,
 			description: setups.description,
-			readmePath: setups.readmePath,
+			readme: setups.readme,
 			category: setups.category,
 			license: setups.license,
 			minToolVersion: setups.minToolVersion,
@@ -73,20 +73,23 @@ export async function getSetupById(id: string) {
 
 export async function createSetup(userId: string, data: CreateSetupInput) {
 	return db.transaction(async (tx) => {
+		const filePaths = (data.files ?? []).map((f) => f.source);
+		const readme = generateReadme(data.name, data.description ?? '', filePaths);
+
 		const [setup] = await tx
 			.insert(setups)
 			.values({
 				userId,
 				name: data.name,
 				slug: data.slug,
-				version: data.version,
 				description: data.description,
-				readmePath: data.readmePath,
+				readme,
 				category: data.category,
 				license: data.license,
 				minToolVersion: data.minToolVersion,
 				postInstall: data.postInstall,
-				prerequisites: data.prerequisites
+				prerequisites: data.prerequisites,
+				updatedAt: new Date()
 			})
 			.returning();
 
@@ -118,29 +121,31 @@ export async function updateSetup(id: string, data: UpdateSetupInput) {
 			...(data.name !== undefined && { name: data.name }),
 			...(data.slug !== undefined && { slug: data.slug }),
 			...(data.description !== undefined && { description: data.description }),
-			...(data.version !== undefined && { version: data.version }),
-			...(data.readmePath !== undefined && { readmePath: data.readmePath }),
+			...(data.readme !== undefined && { readme: data.readme }),
 			...(data.category !== undefined && { category: data.category }),
 			...(data.license !== undefined && { license: data.license }),
 			...(data.minToolVersion !== undefined && { minToolVersion: data.minToolVersion }),
 			...(data.postInstall !== undefined && { postInstall: data.postInstall }),
-			...(data.prerequisites !== undefined && { prerequisites: data.prerequisites })
+			...(data.prerequisites !== undefined && { prerequisites: data.prerequisites }),
+			updatedAt: new Date()
 		};
 
-		let setup;
-		if (Object.keys(updateFields).length > 0) {
-			const [updated] = await tx
-				.update(setups)
-				.set(updateFields)
-				.where(eq(setups.id, id))
-				.returning();
-			setup = updated;
-		} else {
-			const [existing] = await tx.select().from(setups).where(eq(setups.id, id));
-			setup = existing;
-		}
+		const [setup] = await tx.update(setups).set(updateFields).where(eq(setups.id, id)).returning();
 
 		if (data.files !== undefined) {
+			// Regenerate readme when files change: fetch current name/description for fields not in this update
+			const [current] = await tx
+				.select({ name: setups.name, description: setups.description })
+				.from(setups)
+				.where(eq(setups.id, id));
+			const name = data.name ?? current?.name ?? '';
+			const description = data.description ?? current?.description ?? '';
+			const filePaths = data.files.map((f) => f.source);
+			await tx
+				.update(setups)
+				.set({ readme: generateReadme(name, description, filePaths) })
+				.where(eq(setups.id, id));
+
 			await tx.delete(setupFiles).where(eq(setupFiles.setupId, id));
 			if (data.files.length > 0) {
 				await tx.insert(setupFiles).values(toSetupFileRows(id, data.files));

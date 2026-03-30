@@ -17,8 +17,7 @@ function makeFile(content: string = 'x') {
 const validSetupBase = {
 	name: 'My Setup',
 	slug: 'my-setup',
-	description: 'A setup',
-	version: '1.0.0'
+	description: 'A setup'
 };
 import { z } from 'zod';
 
@@ -62,8 +61,7 @@ describe('Input validation schemas', () => {
 		const validInput = {
 			name: 'My Claude Setup',
 			slug: 'my-claude-setup',
-			description: 'A great setup for Claude Code',
-			version: '1.0.0'
+			description: 'A great setup for Claude Code'
 		};
 
 		it('accepts valid input', () => {
@@ -103,18 +101,6 @@ describe('Input validation schemas', () => {
 				description: 'a'.repeat(301)
 			});
 			expect(result.success).toBe(false);
-		});
-
-		it('rejects invalid version format', () => {
-			const result = createSetupSchema.safeParse({ ...validInput, version: 'not-a-version' });
-			expect(result.success).toBe(false);
-		});
-
-		it('accepts valid semver versions', () => {
-			for (const version of ['0.1.0', '1.0.0', '12.34.56']) {
-				const result = createSetupSchema.safeParse({ ...validInput, version });
-				expect(result.success).toBe(true);
-			}
 		});
 	});
 
