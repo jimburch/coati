@@ -1,4 +1,4 @@
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import {
 	pgTable,
 	pgEnum,
@@ -10,8 +10,15 @@ import {
 	timestamp,
 	primaryKey,
 	uniqueIndex,
-	index
+	index,
+	customType
 } from 'drizzle-orm/pg-core';
+
+const tsvector = customType<{ data: string }>({
+	dataType() {
+		return 'tsvector';
+	}
+});
 import { PLACEMENT_VALUES, COMPONENT_TYPE_VALUES, CATEGORY_VALUES } from '@coati/validation';
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
@@ -124,12 +131,16 @@ export const setups = pgTable(
 		updatedAt: timestamp('updated_at', { withTimezone: true })
 			.defaultNow()
 			.$onUpdate(() => new Date())
-			.notNull()
+			.notNull(),
+		searchVector: tsvector('search_vector').generatedAlwaysAs(
+			sql`setweight(to_tsvector('english', coalesce(name, '')), 'A') || setweight(to_tsvector('english', coalesce(description, '')), 'B')`
+		)
 	},
 	(table) => [
 		uniqueIndex('setups_user_id_slug_idx').on(table.userId, table.slug),
 		index('setups_user_id_idx').on(table.userId),
-		index('setups_created_at_idx').on(table.createdAt)
+		index('setups_created_at_idx').on(table.createdAt),
+		index('setups_search_vector_idx').using('gin', table.searchVector)
 	]
 );
 

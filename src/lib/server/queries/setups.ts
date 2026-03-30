@@ -334,10 +334,7 @@ export async function searchSetups(filters: {
 	const conditions: ReturnType<typeof sql>[] = [];
 
 	if (q) {
-		const pattern = `%${q}%`;
-		conditions.push(
-			sql`(${setups.name} ILIKE ${pattern} OR ${setups.description} ILIKE ${pattern})`
-		);
+		conditions.push(sql`${setups.searchVector} @@ plainto_tsquery('english', ${q})`);
 	}
 
 	if (agentSlugs && agentSlugs.length > 0) {
@@ -367,8 +364,8 @@ export async function searchSetups(filters: {
 		conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
 
 	let orderClause: ReturnType<typeof sql>;
-	if (q && sort === 'newest') {
-		orderClause = sql`ORDER BY ${setups.starsCount} DESC, ${setups.createdAt} DESC`;
+	if (q) {
+		orderClause = sql`ORDER BY ts_rank(${setups.searchVector}, plainto_tsquery('english', ${q})) DESC, ${setups.starsCount} DESC, ${setups.createdAt} DESC`;
 	} else if (sort === 'stars') {
 		orderClause = sql`ORDER BY ${setups.starsCount} DESC, ${setups.createdAt} DESC`;
 	} else if (sort === 'clones') {
