@@ -86,14 +86,26 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 		}
 		filesToInclude = [];
 	} else {
-		// Show detected files grouped by agent with colored type badges
-		const formatted = formatFileList(detected);
-		process.stdout.write('\n' + formatted + '\n');
-		const confirmed = await ctx.io.confirm('Proceed with these files?');
-		if (!confirmed) {
-			ctx.io.print('Exiting without changes.');
-			return false;
+		if (!ctx.io.isJson()) {
+			// Show detected files grouped by agent with colored type badges
+			const formatted = formatFileList(detected);
+			process.stdout.write('\n' + formatted + '\n');
+
+			const fileChoices = detected.map((f) => ({ label: f.source, value: f.source }));
+			const allSources = detected.map((f) => f.source);
+			const selected = await ctx.io.checklist(
+				'Select files to include',
+				fileChoices,
+				allSources,
+				1
+			);
+			if (selected.length === 0) {
+				ctx.io.error('At least 1 file must be selected.');
+				return false;
+			}
+			filesToInclude = detected.filter((f) => selected.includes(f.source));
 		}
+		// In JSON mode: filesToInclude remains as detected (all files)
 	}
 
 	// Build choice lists for interactive prompts
@@ -149,6 +161,10 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 	writeManifest(cwd, manifest);
 	ctx.io.success(`Created ${MANIFEST_FILENAME}`);
 	ctx.io.print(`  ${manifestPath}`);
+
+	if (!ctx.io.isJson()) {
+		ctx.io.info('Edit coati.json to adjust files, metadata, or post-install commands.');
+	}
 
 	if (filesToInclude.length === 0) {
 		ctx.io.warning(`No files included. Edit ${MANIFEST_FILENAME} to add files before publishing.`);

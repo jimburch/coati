@@ -101,6 +101,8 @@ beforeEach(() => {
 	vi.mocked(ctx.fs.existsSync).mockReturnValue(false);
 	mockDetectFiles.mockReturnValue(DETECTED_FILES);
 	vi.mocked(ctx.io.confirm).mockResolvedValue(true);
+	// Default: checklist returns all detected file sources (all pre-selected, none deselected)
+	vi.mocked(ctx.io.checklist).mockResolvedValue(DETECTED_FILES.map((f) => f.source));
 	mockFormatFileList.mockReturnValue('(formatted file list)');
 	vi.mocked(ctx.io.promptMetadata).mockResolvedValue(DEFAULT_METADATA);
 	mockWriteManifest.mockReturnValue(undefined);
@@ -113,12 +115,12 @@ afterEach(() => {
 // ── normal flow ───────────────────────────────────────────────────────────────
 
 describe('runInitFlow — normal flow', () => {
-	it('detects files, confirms, prompts metadata, writes manifest, returns true', async () => {
+	it('detects files, shows checklist, prompts metadata, writes manifest, returns true', async () => {
 		const result = await runInitFlow(ctx, CWD);
 
 		expect(mockDetectFiles).toHaveBeenCalledWith(CWD);
 		expect(mockFormatFileList).toHaveBeenCalledWith(DETECTED_FILES);
-		expect(ctx.io.confirm).toHaveBeenCalledWith('Proceed with these files?');
+		expect(ctx.io.checklist).toHaveBeenCalled();
 		expect(ctx.io.promptMetadata).toHaveBeenCalled();
 		expect(mockWriteManifest).toHaveBeenCalledWith(
 			CWD,
@@ -137,17 +139,75 @@ describe('runInitFlow — normal flow', () => {
 	});
 });
 
+// ── file picker checklist ─────────────────────────────────────────────────────
+
+describe('runInitFlow — file picker checklist', () => {
+	it('calls checklist with all detected files pre-selected', async () => {
+		await runInitFlow(ctx, CWD);
+
+		expect(ctx.io.checklist).toHaveBeenCalledWith(
+			expect.any(String),
+			DETECTED_FILES.map((f) => ({ label: f.source, value: f.source })),
+			DETECTED_FILES.map((f) => f.source),
+			1
+		);
+	});
+
+	it('excludes deselected files from the generated manifest', async () => {
+		// User deselects the second file (.claude/settings.json)
+		vi.mocked(ctx.io.checklist).mockResolvedValueOnce(['CLAUDE.md']);
+
+		await runInitFlow(ctx, CWD);
+
+		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
+		expect(writtenManifest.files).toHaveLength(1);
+		expect(writtenManifest.files[0].source).toBe('CLAUDE.md');
+	});
+
+	it('returns false and shows error when no files selected', async () => {
+		vi.mocked(ctx.io.checklist).mockResolvedValueOnce([]);
+
+		const result = await runInitFlow(ctx, CWD);
+
+		expect(result).toBe(false);
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('At least 1 file'));
+		expect(mockWriteManifest).not.toHaveBeenCalled();
+	});
+
+	it('prints edit hint after writing manifest', async () => {
+		await runInitFlow(ctx, CWD);
+
+		expect(ctx.io.info).toHaveBeenCalledWith(
+			expect.stringContaining('Edit coati.json to adjust files')
+		);
+	});
+});
+
 // ── user cancels at file confirmation ─────────────────────────────────────────
 
 describe('runInitFlow — user cancels at file confirmation', () => {
 	it('returns false and does not write manifest', async () => {
-		// First confirm call is "Proceed with these files?" — reject it
-		vi.mocked(ctx.io.confirm).mockResolvedValueOnce(false);
+		// User deselects all files in checklist — returns false with validation error
+		vi.mocked(ctx.io.checklist).mockResolvedValueOnce([]);
 
 		const result = await runInitFlow(ctx, CWD);
 
 		expect(result).toBe(false);
 		expect(mockWriteManifest).not.toHaveBeenCalled();
+	});
+});
+
+// ── JSON mode ─────────────────────────────────────────────────────────────────
+
+describe('runInitFlow — JSON mode', () => {
+	it('skips checklist and includes all detected files', async () => {
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
+
+		await runInitFlow(ctx, CWD);
+
+		expect(ctx.io.checklist).not.toHaveBeenCalled();
+		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
+		expect(writtenManifest.files).toHaveLength(DETECTED_FILES.length);
 	});
 });
 
@@ -378,6 +438,7 @@ describe('runInitFlow — file tagging', () => {
 
 	it('does not set agent field on shared files with empty tool', async () => {
 		mockDetectFiles.mockReturnValue(MULTI_AGENT_FILES);
+		vi.mocked(ctx.io.checklist).mockResolvedValueOnce(MULTI_AGENT_FILES.map((f) => f.source));
 		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({ ...DEFAULT_METADATA, agents: [] });
 
 		await runInitFlow(ctx, CWD);
@@ -392,6 +453,7 @@ describe('runInitFlow — file tagging', () => {
 
 	it('tags each file correctly in a multi-agent project', async () => {
 		mockDetectFiles.mockReturnValue(MULTI_AGENT_FILES);
+		vi.mocked(ctx.io.checklist).mockResolvedValueOnce(MULTI_AGENT_FILES.map((f) => f.source));
 		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({ ...DEFAULT_METADATA, agents: [] });
 
 		await runInitFlow(ctx, CWD);
@@ -416,6 +478,7 @@ describe('runInitFlow — confirmation flow', () => {
 
 	it('passes multi-agent files to formatFileList', async () => {
 		mockDetectFiles.mockReturnValue(MULTI_AGENT_FILES);
+		vi.mocked(ctx.io.checklist).mockResolvedValueOnce(MULTI_AGENT_FILES.map((f) => f.source));
 
 		await runInitFlow(ctx, CWD);
 
