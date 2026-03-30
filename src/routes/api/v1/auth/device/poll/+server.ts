@@ -1,21 +1,21 @@
 import type { RequestHandler } from '@sveltejs/kit';
+import { z } from 'zod';
 import { db } from '$lib/server/db';
 import { deviceFlowStates, users } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { upsertGithubUser, generateSessionToken, createSession } from '$lib/server/auth';
-import { success, error } from '$lib/server/responses';
+import { success, error, parseRequestBody } from '$lib/server/responses';
 import { GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET } from '$env/static/private';
 import { updateLastLoginAt } from '$lib/server/queries/users';
 
-export const POST: RequestHandler = async ({ request }) => {
-	const body = (await request.json()) as { deviceCode?: string };
+const deviceCodeSchema = z.object({ deviceCode: z.string().min(1) });
 
-	if (!body.deviceCode) {
-		return error('deviceCode is required', 'VALIDATION_ERROR', 400);
-	}
+export const POST: RequestHandler = async ({ request }) => {
+	const parsed = await parseRequestBody(request, deviceCodeSchema);
+	if (parsed instanceof Response) return parsed;
 
 	const state = await db.query.deviceFlowStates.findFirst({
-		where: eq(deviceFlowStates.deviceCode, body.deviceCode)
+		where: eq(deviceFlowStates.deviceCode, parsed.deviceCode)
 	});
 
 	if (!state) {

@@ -80,6 +80,14 @@ describe('POST /api/v1/auth/device/poll', () => {
 		expect(body.code).toBe('VALIDATION_ERROR');
 	});
 
+	it('returns 400 when deviceCode is an empty string', async () => {
+		const { POST } = await import('./+server');
+		const res = await POST(makeRequest({ deviceCode: '' }));
+		expect(res.status).toBe(400);
+		const body = await res.json();
+		expect(body.code).toBe('VALIDATION_ERROR');
+	});
+
 	it('returns 404 when device code is unknown', async () => {
 		mockFindFirstState.mockResolvedValue(null);
 		const { POST } = await import('./+server');
