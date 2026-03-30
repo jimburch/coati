@@ -244,6 +244,64 @@ export async function setStar(
 	});
 }
 
+export async function getTrendingSetups(limit: number) {
+	type SetupRow = {
+		id: string;
+		name: string;
+		slug: string;
+		description: string;
+		stars_count: number;
+		clones_count: number;
+		updated_at: Date;
+		owner_username: string;
+		owner_avatar_url: string;
+	};
+
+	const trendingRows = await db.execute<SetupRow>(
+		sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
+			${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
+			${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
+			FROM ${setups}
+			INNER JOIN ${users} ON ${setups.userId} = ${users.id}
+			INNER JOIN trending_setups_mv ON trending_setups_mv.setup_id = ${setups.id}
+			ORDER BY trending_setups_mv.recent_stars_count DESC
+			LIMIT ${limit}`
+	);
+
+	let allRows: SetupRow[] = [...trendingRows];
+
+	if (allRows.length < limit) {
+		const backfillLimit = limit - allRows.length;
+		const backfillRows = await db.execute<SetupRow>(
+			sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
+				${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
+				${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
+				FROM ${setups}
+				INNER JOIN ${users} ON ${setups.userId} = ${users.id}
+				WHERE ${setups.id} NOT IN (SELECT setup_id FROM trending_setups_mv)
+				ORDER BY ${setups.starsCount} DESC
+				LIMIT ${backfillLimit}`
+		);
+		allRows = [...allRows, ...backfillRows];
+	}
+
+	const setupIds = allRows.map((r) => r.id);
+	const agentsMap = await getAgentsForSetups(setupIds);
+
+	return allRows.map((row) => ({
+		id: row.id,
+		name: row.name,
+		slug: row.slug,
+		description: row.description,
+		starsCount: row.stars_count,
+		clonesCount: row.clones_count,
+		updatedAt: new Date(row.updated_at),
+		ownerUsername: row.owner_username,
+		ownerAvatarUrl: row.owner_avatar_url,
+		agents: (agentsMap[row.id] ?? []).map((a) => a.slug)
+	}));
+}
+
 export async function getRecentSetups(limit = 12) {
 	return db
 		.select({
