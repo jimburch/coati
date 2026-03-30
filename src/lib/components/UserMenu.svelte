@@ -30,9 +30,6 @@
 		<a href="/{user.username}">
 			<DropdownMenuItem>My Profile</DropdownMenuItem>
 		</a>
-		<a href="/new">
-			<DropdownMenuItem>New Setup</DropdownMenuItem>
-		</a>
 		<a href="/settings">
 			<DropdownMenuItem>Settings</DropdownMenuItem>
 		</a>

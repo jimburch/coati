@@ -46,11 +46,6 @@
 	<div class="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
 		<div class="flex items-center gap-6">
 			<a href="/" class="text-lg font-bold">Coati</a>
-			<a
-				href="/explore"
-				class="hidden text-sm text-muted-foreground transition-colors hover:text-foreground lg:block"
-				>Explore</a
-			>
 		</div>
 
 		<div class="hidden lg:block">
@@ -131,8 +126,6 @@
 		transition:slide={{ duration: 200 }}
 	>
 		<nav aria-label="Mobile navigation" class="mx-auto max-w-7xl space-y-1 px-4 py-3">
-			<a href="/explore" class="block rounded-md px-3 py-2 text-sm hover:bg-muted">Explore</a>
-
 			<form onsubmit={handleMobileSearch}>
 				<div class="relative px-3 py-1">
 					<svg
@@ -159,7 +152,6 @@
 				<a href="/{user.username}" class="block rounded-md px-3 py-2 text-sm hover:bg-muted"
 					>My Profile</a
 				>
-				<a href="/new" class="block rounded-md px-3 py-2 text-sm hover:bg-muted">New Setup</a>
 				<a href="/settings" class="block rounded-md px-3 py-2 text-sm hover:bg-muted">Settings</a>
 				{#if user.isAdmin}
 					<a href="/admin/beta" class="block rounded-md px-3 py-2 text-sm hover:bg-muted">Admin</a>
