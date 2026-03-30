@@ -1,10 +1,69 @@
-import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { searchSetups, getAgentsForSetups } from '$lib/server/queries/setups';
+import {
+	getFeaturedSetups,
+	getTrendingSetups,
+	getRecentSetups,
+	getAgentsForSetups,
+	searchSetups
+} from '$lib/server/queries/setups';
+
+type DashboardSetup = {
+	id: string;
+	name: string;
+	slug: string;
+	description: string;
+	starsCount: number;
+	clonesCount: number;
+	updatedAt: Date;
+	ownerUsername: string;
+	ownerAvatarUrl: string | undefined;
+	agents: { id: string; displayName: string; slug: string }[];
+};
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (locals.user) {
-		throw redirect(302, '/explore');
+		const [featured, trending, recent] = await Promise.all([
+			getFeaturedSetups(5),
+			getTrendingSetups(6),
+			getRecentSetups(6)
+		]);
+
+		const allIds = [
+			...featured.map((s) => s.id),
+			...trending.map((s) => s.id),
+			...recent.map((s) => s.id)
+		];
+		const agentsMap = await getAgentsForSetups(allIds);
+
+		const toCard = (s: {
+			id: string;
+			name: string;
+			slug: string;
+			description: string;
+			starsCount: number;
+			clonesCount: number;
+			updatedAt: Date;
+			ownerUsername: string;
+			ownerAvatarUrl: string | null;
+		}): DashboardSetup => ({
+			id: s.id,
+			name: s.name,
+			slug: s.slug,
+			description: s.description,
+			starsCount: s.starsCount,
+			clonesCount: s.clonesCount,
+			updatedAt: s.updatedAt,
+			ownerUsername: s.ownerUsername,
+			ownerAvatarUrl: s.ownerAvatarUrl ?? undefined,
+			agents: agentsMap[s.id] ?? []
+		});
+
+		return {
+			user: locals.user,
+			featuredSetups: featured.map(toCard),
+			trendingSetups: trending.map(toCard),
+			recentSetups: recent.map(toCard)
+		};
 	}
 
 	const results = await searchSetups({ sort: 'trending', page: 1 });
@@ -12,9 +71,22 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const agentsMap = await getAgentsForSetups(setupIds);
 
 	return {
-		trendingSetups: results.items.slice(0, 6).map((s) => ({
-			...s,
-			agents: agentsMap[s.id] ?? []
-		}))
+		user: null,
+		featuredSetups: [] as DashboardSetup[],
+		trendingSetups: results.items.slice(0, 6).map(
+			(s): DashboardSetup => ({
+				id: s.id,
+				name: s.name,
+				slug: s.slug,
+				description: s.description,
+				starsCount: s.starsCount,
+				clonesCount: s.clonesCount,
+				updatedAt: s.updatedAt,
+				ownerUsername: s.ownerUsername,
+				ownerAvatarUrl: s.ownerAvatarUrl ?? undefined,
+				agents: agentsMap[s.id] ?? []
+			})
+		),
+		recentSetups: [] as DashboardSetup[]
 	};
 };
