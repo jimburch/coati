@@ -1,7 +1,12 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { setupRepo } from '$lib/server/queries/setupRepository';
-import { setStar, getSetupByOwnerSlug, isSetupStarredByUser } from '$lib/server/queries/setups';
+import {
+	setStar,
+	getSetupByOwnerSlug,
+	isSetupStarredByUser,
+	setFeatured
+} from '$lib/server/queries/setups';
 import {
 	createComment,
 	deleteComment,
@@ -118,6 +123,20 @@ export const actions: Actions = {
 		}
 
 		return { success: true };
+	},
+
+	feature: async ({ locals, params }) => {
+		if (!locals.user) throw redirect(302, '/auth/login/github');
+		if (!locals.user.isAdmin) {
+			return fail(403, { error: 'Admin access required', code: 'FORBIDDEN' });
+		}
+
+		const setup = await getSetupByOwnerSlug(params.username, params.slug);
+		if (!setup) throw error(404, 'Setup not found');
+
+		const nowFeatured = !setup.featuredAt;
+		await setFeatured(setup.id, nowFeatured);
+		return { featured: nowFeatured };
 	},
 
 	report: async ({ locals, params, request }) => {

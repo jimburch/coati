@@ -55,6 +55,7 @@ export async function getSetupByOwnerSlug(ownerUsername: string, slug: string) {
 			commentsCount: setups.commentsCount,
 			createdAt: setups.createdAt,
 			updatedAt: setups.updatedAt,
+			featuredAt: setups.featuredAt,
 			ownerUsername: users.username,
 			ownerAvatarUrl: users.avatarUrl
 		})

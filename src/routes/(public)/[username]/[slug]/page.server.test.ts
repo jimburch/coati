@@ -11,10 +11,14 @@ vi.mock('$lib/server/queries/setupRepository', () => ({
 	}
 }));
 
+const mockSetFeatured = vi.fn();
+const mockGetSetupByOwnerSlug = vi.fn();
+
 vi.mock('$lib/server/queries/setups', () => ({
 	setStar: vi.fn(),
-	getSetupByOwnerSlug: vi.fn(),
-	isSetupStarredByUser: vi.fn()
+	getSetupByOwnerSlug: (...args: unknown[]) => mockGetSetupByOwnerSlug(...args),
+	isSetupStarredByUser: vi.fn(),
+	setFeatured: (...args: unknown[]) => mockSetFeatured(...args)
 }));
 
 vi.mock('$lib/server/queries/comments', () => ({
@@ -53,7 +57,7 @@ const MOCK_SETUP = {
 function makeActionEvent(
 	formData: Record<string, string>,
 	params: { username: string; slug: string },
-	user: { id: string; username: string } | null
+	user: { id: string; username: string; isAdmin?: boolean } | null
 ) {
 	const fd = new FormData();
 	for (const [key, value] of Object.entries(formData)) {
@@ -146,6 +150,72 @@ describe('saveReadme action', () => {
 		const result = await actions.saveReadme(event);
 		expect(mockUpdate).toHaveBeenCalledWith('setup-id', { readme: '' });
 		expect(result).toMatchObject({ readmeHtml: null });
+	});
+});
+
+describe('feature action', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.resetModules();
+	});
+
+	it('redirects to login when not authenticated', async () => {
+		const { actions } = await import('./+page.server');
+		const event = makeActionEvent({}, { username: 'alice', slug: 'test-setup' }, null);
+		await expect(actions.feature(event)).rejects.toMatchObject({ status: 302 });
+	});
+
+	it('returns 403 when user is not admin', async () => {
+		const { actions } = await import('./+page.server');
+		const event = makeActionEvent(
+			{},
+			{ username: 'alice', slug: 'test-setup' },
+			{ id: 'user-id', username: 'bob', isAdmin: false }
+		);
+		const result = await actions.feature(event);
+		expect(result).toMatchObject({ status: 403 });
+	});
+
+	it('returns 404 when setup not found', async () => {
+		mockGetSetupByOwnerSlug.mockResolvedValue(null);
+		const { actions } = await import('./+page.server');
+		const event = makeActionEvent(
+			{},
+			{ username: 'alice', slug: 'test-setup' },
+			{ id: 'admin-id', username: 'admin', isAdmin: true }
+		);
+		await expect(actions.feature(event)).rejects.toMatchObject({ status: 404 });
+	});
+
+	it('features a setup when featuredAt is null', async () => {
+		mockGetSetupByOwnerSlug.mockResolvedValue({ ...MOCK_SETUP, featuredAt: null });
+		mockSetFeatured.mockResolvedValue(undefined);
+		const { actions } = await import('./+page.server');
+		const event = makeActionEvent(
+			{},
+			{ username: 'alice', slug: 'test-setup' },
+			{ id: 'admin-id', username: 'admin', isAdmin: true }
+		);
+		const result = await actions.feature(event);
+		expect(mockSetFeatured).toHaveBeenCalledWith('setup-id', true);
+		expect(result).toMatchObject({ featured: true });
+	});
+
+	it('unfeatures a setup when featuredAt is set', async () => {
+		mockGetSetupByOwnerSlug.mockResolvedValue({
+			...MOCK_SETUP,
+			featuredAt: new Date('2026-01-01')
+		});
+		mockSetFeatured.mockResolvedValue(undefined);
+		const { actions } = await import('./+page.server');
+		const event = makeActionEvent(
+			{},
+			{ username: 'alice', slug: 'test-setup' },
+			{ id: 'admin-id', username: 'admin', isAdmin: true }
+		);
+		const result = await actions.feature(event);
+		expect(mockSetFeatured).toHaveBeenCalledWith('setup-id', false);
+		expect(result).toMatchObject({ featured: false });
 	});
 });
 

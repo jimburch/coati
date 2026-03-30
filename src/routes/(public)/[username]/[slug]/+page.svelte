@@ -43,6 +43,10 @@
 		editMode = false;
 	}
 
+	// Optimistic featured state for admin toggle
+	let localFeatured = $state<boolean | null>(null);
+	const isFeatured = $derived(localFeatured !== null ? localFeatured : !!data.setup.featuredAt);
+
 	// Optimistic override for stars count — set on button click, cleared when server data refreshes.
 	let starsCountOverride = $state<number | null>(null);
 	const localStarsCount = $derived(starsCountOverride ?? data.setup.starsCount);
@@ -248,6 +252,60 @@
 						}}
 					/>
 				</div>
+
+				<!-- Admin: featured toggle -->
+				{#if data.user?.isAdmin}
+					<div>
+						<form
+							method="POST"
+							action="?/feature"
+							use:enhance={() => {
+								return async ({ result, update }) => {
+									if (result.type === 'success' && result.data) {
+										localFeatured = result.data.featured as boolean;
+									}
+									await update({ reset: false });
+								};
+							}}
+						>
+							<Button
+								type="submit"
+								variant={isFeatured ? 'default' : 'outline'}
+								size="sm"
+								class="w-full"
+								data-testid="feature-toggle-btn"
+							>
+								{#if isFeatured}
+									<svg
+										class="mr-1.5 size-3.5"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										aria-hidden="true"
+									>
+										<path
+											d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"
+										/>
+									</svg>
+									Unfeature
+								{:else}
+									<svg
+										class="mr-1.5 size-3.5"
+										viewBox="0 0 16 16"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="1.5"
+										aria-hidden="true"
+									>
+										<path
+											d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"
+										/>
+									</svg>
+									Feature
+								{/if}
+							</Button>
+						</form>
+					</div>
+				{/if}
 
 				<!-- Stats -->
 				<div>
