@@ -123,10 +123,6 @@
 							<span>{localStarsCount}</span>
 						</div>
 						<div class="flex items-center justify-between">
-							<span class="text-muted-foreground">Clones</span>
-							<span>{data.setup.clonesCount}</span>
-						</div>
-						<div class="flex items-center justify-between">
 							<span class="text-muted-foreground">Updated</span>
 							<span>{timeAgo(data.setup.updatedAt)}</span>
 						</div>
