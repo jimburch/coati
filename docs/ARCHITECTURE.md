@@ -179,7 +179,10 @@ Stars are weighted less than clones because a clone represents someone actually 
 ## Security Considerations
 
 - All auth tokens stored as HTTP-only cookies (web) or local file with restricted permissions (CLI)
-- API rate limiting via simple in-memory counter per IP (upgrade to Redis later if needed)
+- API rate limiting via `RateLimiterMemory` from `rate-limiter-flexible` (one counter per IP).
+  **Note:** In-memory state resets on restart and is not shared across PM2 cluster workers —
+  effective limits are multiplied by worker count. For horizontal scaling, switch to the
+  drop-in `RateLimiterPostgres` or `RateLimiterRedis` variants from the same package.
 - Input validation with Zod on all API endpoints
 - Setup file contents are stored as text — no executable uploads
 - `postInstall` commands in setup.json are displayed to the user for approval before execution (CLI-side)
