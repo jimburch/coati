@@ -4,7 +4,7 @@
 		<span class="size-3 rounded-full bg-red-500/60"></span>
 		<span class="size-3 rounded-full bg-yellow-500/60"></span>
 		<span class="size-3 rounded-full bg-green-500/60"></span>
-		<span class="ml-2 text-xs text-muted-foreground">setup.json</span>
+		<span class="ml-2 text-xs text-muted-foreground">coati.json</span>
 	</div>
 	<!-- Content -->
 	<div class="overflow-x-auto p-5 font-mono text-[13px] leading-loose">

@@ -100,7 +100,7 @@
 			</p>
 		</div>
 
-		<!-- Right: setup.json mock (desktop) -->
+		<!-- Right: coati.json mock (desktop) -->
 		<div class="hidden md:block">
 			<SetupJsonMock />
 		</div>
@@ -271,7 +271,7 @@
 							<span class="text-foreground"> coati clone jsmith/typescript-fullstack</span>
 						</p>
 						<p class="mt-2 text-muted-foreground">Fetching setup from coati.sh...</p>
-						<p class="mt-2 text-primary">&#10003; Cloned setup.json</p>
+						<p class="mt-2 text-primary">&#10003; Cloned coati.json</p>
 						<p class="text-primary">&#10003; Installed 3 MCP servers</p>
 						<p class="text-primary">&#10003; Applied .claude/settings.json</p>
 						<p class="text-primary">&#10003; Copied CLAUDE.md</p>
@@ -305,7 +305,7 @@
 			<FeatureCard
 				icon={Upload}
 				title="Share"
-				description="Package your own workflow into a setup.json and publish it. Let other developers benefit from what you've built."
+				description="Package your own workflow into a coati.json and publish it. Let other developers benefit from what you've built."
 			/>
 			<FeatureCard
 				icon={Terminal}

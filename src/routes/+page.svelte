@@ -63,7 +63,7 @@
 					<span class="size-3 rounded-full bg-destructive/60"></span>
 					<span class="size-3 rounded-full bg-yellow-400/60"></span>
 					<span class="size-3 rounded-full bg-green-500/60"></span>
-					<span class="ml-2 text-xs text-muted-foreground">setup.json</span>
+					<span class="ml-2 text-xs text-muted-foreground">coati.json</span>
 				</div>
 				<pre class="leading-relaxed text-foreground/90"><span class="text-muted-foreground"
 						>{LBRACE}</span
