@@ -109,6 +109,52 @@ describe('clone — argument parsing', () => {
 		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('Invalid format'));
 		expect(spy).toHaveBeenCalledWith(1);
 	});
+
+	it('accepts a valid HTTPS URL and extracts owner/slug', async () => {
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'https://coati.sh/alice/my-setup'], { from: 'user' });
+
+		expect(ctx.api.get).toHaveBeenCalledWith('/setups/alice/my-setup');
+		expect(ctx.api.get).toHaveBeenCalledWith('/setups/alice/my-setup/files');
+	});
+
+	it('accepts a valid HTTP URL and extracts owner/slug', async () => {
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'http://coati.sh/alice/my-setup'], { from: 'user' });
+
+		expect(ctx.api.get).toHaveBeenCalledWith('/setups/alice/my-setup');
+		expect(ctx.api.get).toHaveBeenCalledWith('/setups/alice/my-setup/files');
+	});
+
+	it('accepts a URL with a trailing slash', async () => {
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'https://coati.sh/alice/my-setup/'], { from: 'user' });
+
+		expect(ctx.api.get).toHaveBeenCalledWith('/setups/alice/my-setup');
+		expect(ctx.api.get).toHaveBeenCalledWith('/setups/alice/my-setup/files');
+	});
+
+	it('rejects URL with extra path segments', async () => {
+		const spy = exitSpy();
+		const program = makeProgram();
+		await expect(
+			program.parseAsync(['clone', 'https://coati.sh/alice/my-setup/extra'], { from: 'user' })
+		).rejects.toThrow('process.exit');
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('extra path segments'));
+		expect(spy).toHaveBeenCalledWith(1);
+	});
+
+	it('rejects a malformed URL with a helpful error message', async () => {
+		const spy = exitSpy();
+		const program = makeProgram();
+		await expect(program.parseAsync(['clone', 'https://'], { from: 'user' })).rejects.toThrow(
+			'process.exit'
+		);
+		expect(ctx.io.error).toHaveBeenCalledWith(
+			expect.stringContaining('https://coati.sh/owner/slug')
+		);
+		expect(spy).toHaveBeenCalledWith(1);
+	});
 });
 
 // ── basic clone flow ───────────────────────────────────────────────────────────

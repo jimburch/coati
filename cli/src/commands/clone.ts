@@ -62,14 +62,40 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 				ctx.io.setOutputMode('json');
 			}
 
-			// Parse <owner>/<slug>
-			const slashIdx = ownerSlug.indexOf('/');
-			if (slashIdx <= 0 || slashIdx === ownerSlug.length - 1) {
-				ctx.io.error('Invalid format. Expected: <owner>/<slug> (e.g. alice/my-setup)');
-				process.exit(1);
+			// Parse <owner>/<slug> or full URL
+			let owner: string;
+			let slug: string;
+
+			if (ownerSlug.startsWith('http://') || ownerSlug.startsWith('https://')) {
+				let url: URL;
+				try {
+					url = new URL(ownerSlug);
+				} catch {
+					ctx.io.error('Invalid URL. Expected format: https://coati.sh/owner/slug or owner/slug');
+					process.exit(1);
+				}
+				const segments = url.pathname.split('/').filter(Boolean);
+				if (segments.length !== 2) {
+					if (segments.length > 2) {
+						ctx.io.error(
+							'Invalid URL: extra path segments detected. Expected format: https://coati.sh/owner/slug'
+						);
+					} else {
+						ctx.io.error('Invalid URL. Expected format: https://coati.sh/owner/slug or owner/slug');
+					}
+					process.exit(1);
+				}
+				owner = segments[0]!;
+				slug = segments[1]!;
+			} else {
+				const slashIdx = ownerSlug.indexOf('/');
+				if (slashIdx <= 0 || slashIdx === ownerSlug.length - 1) {
+					ctx.io.error('Invalid format. Expected: <owner>/<slug> (e.g. alice/my-setup)');
+					process.exit(1);
+				}
+				owner = ownerSlug.slice(0, slashIdx);
+				slug = ownerSlug.slice(slashIdx + 1);
 			}
-			const owner = ownerSlug.slice(0, slashIdx);
-			const slug = ownerSlug.slice(slashIdx + 1);
 
 			// Fetch setup metadata
 			let setup: SetupMeta;
