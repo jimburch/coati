@@ -363,6 +363,7 @@ export async function searchSetups(filters: {
 	const whereClause =
 		conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
 
+	let joinClause: ReturnType<typeof sql> = sql``;
 	let orderClause: ReturnType<typeof sql>;
 	if (q) {
 		orderClause = sql`ORDER BY ts_rank(${setups.searchVector}, plainto_tsquery('english', ${q})) DESC, ${setups.starsCount} DESC, ${setups.createdAt} DESC`;
@@ -371,11 +372,8 @@ export async function searchSetups(filters: {
 	} else if (sort === 'clones') {
 		orderClause = sql`ORDER BY ${setups.clonesCount} DESC, ${setups.createdAt} DESC`;
 	} else if (sort === 'trending') {
-		orderClause = sql`ORDER BY (
-			SELECT COUNT(*) FROM ${stars}
-			WHERE ${stars.setupId} = ${setups.id}
-			AND ${stars.createdAt} > NOW() - INTERVAL '7 days'
-		) DESC, ${setups.createdAt} DESC`;
+		joinClause = sql`LEFT JOIN trending_setups_mv ON trending_setups_mv.setup_id = ${setups.id}`;
+		orderClause = sql`ORDER BY COALESCE(trending_setups_mv.recent_stars_count, 0) DESC, ${setups.createdAt} DESC`;
 	} else {
 		orderClause = sql`ORDER BY ${setups.createdAt} DESC`;
 	}
@@ -397,6 +395,7 @@ export async function searchSetups(filters: {
 				${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
 				FROM ${setups}
 				INNER JOIN ${users} ON ${setups.userId} = ${users.id}
+				${joinClause}
 				${whereClause}
 				${orderClause}
 				LIMIT ${PAGE_SIZE} OFFSET ${offset}`

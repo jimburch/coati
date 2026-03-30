@@ -7,6 +7,9 @@ import {
 } from '$lib/server/auth';
 import { checkRateLimit } from '$lib/server/rate-limit';
 import { PUBLIC_BETA_MODE } from '$env/static/public';
+import { startScheduler } from '$lib/server/scheduler';
+
+startScheduler();
 
 type GateEvent = {
 	locals: { user: { isBetaApproved: boolean; isAdmin: boolean } | null };

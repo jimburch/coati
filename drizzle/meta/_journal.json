@@ -71,6 +71,13 @@
 			"when": 1743379200000,
 			"tag": "0010_missing_indexes",
 			"breakpoints": true
+		},
+		{
+			"idx": 10,
+			"version": "7",
+			"when": 1743465600000,
+			"tag": "0011_trending_materialized_view",
+			"breakpoints": true
 		}
 	]
 }

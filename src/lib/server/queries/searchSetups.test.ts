@@ -201,4 +201,42 @@ describe('searchSetups', () => {
 		expect(result.items[0].starsCount).toBe(10);
 		expect(result.items[1].starsCount).toBe(3);
 	});
+
+	it('trending sort uses LEFT JOIN against trending_setups_mv', async () => {
+		mockExecute
+			.mockResolvedValueOnce([makeItemRow()]) // items
+			.mockResolvedValueOnce([{ count: '1' }]); // count
+
+		await searchSetups({ sort: 'trending', page: 1 });
+
+		const hasMvJoin = capturedSql.queries.some((q) => q.includes('trending_setups_mv'));
+		expect(hasMvJoin).toBe(true);
+	});
+
+	it('trending sort orders by COALESCE of recent_stars_count', async () => {
+		mockExecute
+			.mockResolvedValueOnce([makeItemRow()]) // items
+			.mockResolvedValueOnce([{ count: '1' }]); // count
+
+		await searchSetups({ sort: 'trending', page: 1 });
+
+		const hasCoalesce = capturedSql.queries.some(
+			(q) => q.includes('COALESCE') && q.includes('recent_stars_count')
+		);
+		expect(hasCoalesce).toBe(true);
+	});
+
+	it('trending sort does not use correlated subquery', async () => {
+		mockExecute
+			.mockResolvedValueOnce([makeItemRow()]) // items
+			.mockResolvedValueOnce([{ count: '1' }]); // count
+
+		await searchSetups({ sort: 'trending', page: 1 });
+
+		// Old correlated subquery pattern: SELECT COUNT(*) FROM stars WHERE stars.setup_id = ...
+		const hasCorrelatedSubquery = capturedSql.queries.some(
+			(q) => q.includes('SELECT COUNT(') && q.includes('INTERVAL')
+		);
+		expect(hasCorrelatedSubquery).toBe(false);
+	});
 });
