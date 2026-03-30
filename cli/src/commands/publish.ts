@@ -223,14 +223,27 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 			} catch (e) {
 				if (e instanceof ApiError) {
 					if (e.status === 401 || e.status === 403) {
-						ctx.io.error(`${e.message}. Run \`coati login\` to re-authenticate.`);
+						ctx.io.error('Authentication failed. Run `coati login` to re-authenticate.');
+					} else if (e.status === 409 && e.code === 'SLUG_TAKEN') {
+						ctx.io.error('A setup with this slug already exists. Choose a different name or slug.');
 					} else if (e.status === 422 || e.status === 400) {
 						ctx.io.error(`Validation error: ${e.message}`);
+					} else if (e.status === 500) {
+						ctx.io.error('Server error. Please try again later.');
 					} else {
 						ctx.io.error(`Failed to ${setupExists ? 'update' : 'publish'} setup: ${e.message}`);
 					}
 				} else if (e instanceof Error) {
-					ctx.io.error(`Failed to ${setupExists ? 'update' : 'publish'} setup: ${e.message}`);
+					if (
+						e.message.includes('ECONNREFUSED') ||
+						e.message.includes('ETIMEDOUT') ||
+						e.message.includes('ENOTFOUND') ||
+						e.message.includes('fetch failed')
+					) {
+						ctx.io.error('Could not reach the Coati API. Check your internet connection.');
+					} else {
+						ctx.io.error(`Failed to ${setupExists ? 'update' : 'publish'} setup: ${e.message}`);
+					}
 				} else {
 					ctx.io.error('An unexpected error occurred.');
 				}

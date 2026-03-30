@@ -566,4 +566,78 @@ describe('error handling', () => {
 		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('Network error'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
+
+	it('shows authentication failed message on expired/invalid token (401)', async () => {
+		vi.mocked(ctx.api.post).mockRejectedValue(new ApiError('Unauthorized', 'UNAUTHORIZED', 401));
+		const program = makeProgram();
+		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+			throw new Error('process.exit');
+		});
+
+		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
+		expect(ctx.io.error).toHaveBeenCalledWith(
+			'Authentication failed. Run `coati login` to re-authenticate.'
+		);
+		expect(exitSpy).toHaveBeenCalledWith(1);
+	});
+
+	it('shows field-level validation errors on 400 response', async () => {
+		vi.mocked(ctx.api.post).mockRejectedValue(
+			new ApiError('name: Required, slug: Invalid format', 'VALIDATION_ERROR', 400)
+		);
+		const program = makeProgram();
+		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+			throw new Error('process.exit');
+		});
+
+		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
+		expect(ctx.io.error).toHaveBeenCalledWith(
+			expect.stringContaining('name: Required, slug: Invalid format')
+		);
+		expect(exitSpy).toHaveBeenCalledWith(1);
+	});
+
+	it('shows duplicate slug message on 409 SLUG_TAKEN response', async () => {
+		vi.mocked(ctx.api.post).mockRejectedValue(
+			new ApiError('Slug already taken', 'SLUG_TAKEN', 409)
+		);
+		const program = makeProgram();
+		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+			throw new Error('process.exit');
+		});
+
+		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
+		expect(ctx.io.error).toHaveBeenCalledWith(
+			'A setup with this slug already exists. Choose a different name or slug.'
+		);
+		expect(exitSpy).toHaveBeenCalledWith(1);
+	});
+
+	it('shows network error message when connection is refused (ECONNREFUSED)', async () => {
+		vi.mocked(ctx.api.post).mockRejectedValue(new Error('connect ECONNREFUSED 127.0.0.1:3000'));
+		const program = makeProgram();
+		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+			throw new Error('process.exit');
+		});
+
+		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
+		expect(ctx.io.error).toHaveBeenCalledWith(
+			'Could not reach the Coati API. Check your internet connection.'
+		);
+		expect(exitSpy).toHaveBeenCalledWith(1);
+	});
+
+	it('shows server error message on 500 response', async () => {
+		vi.mocked(ctx.api.post).mockRejectedValue(
+			new ApiError('Internal Server Error', 'INTERNAL_ERROR', 500)
+		);
+		const program = makeProgram();
+		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+			throw new Error('process.exit');
+		});
+
+		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
+		expect(ctx.io.error).toHaveBeenCalledWith('Server error. Please try again later.');
+		expect(exitSpy).toHaveBeenCalledWith(1);
+	});
 });
