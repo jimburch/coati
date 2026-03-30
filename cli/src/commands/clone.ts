@@ -234,6 +234,11 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 			}
 
 			if (!ctx.io.isJson()) {
+				ctx.io.info(`Review setup contents before installing: https://coati.sh/${owner}/${slug}`);
+				ctx.io.info('Coati setups are community-contributed and not verified.');
+			}
+
+			if (!ctx.io.isJson()) {
 				ctx.io.print(`\nCloning ${owner}/${slug} → ${projectDir}\n`);
 				if (opts.dryRun) {
 					ctx.io.info('Dry run — no files will be written.\n');

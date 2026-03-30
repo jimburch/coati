@@ -178,6 +178,40 @@ describe('clone — basic flow', () => {
 		expect(ctx.api.post).toHaveBeenCalledWith('/setups/alice/my-setup/clone', {});
 	});
 
+	it('displays safety warning before file writing in interactive mode', async () => {
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' });
+
+		const infoCalls = vi.mocked(ctx.io.info).mock.calls.map((c) => c[0]);
+		const reviewIdx = infoCalls.findIndex((msg) =>
+			msg.includes('Review setup contents before installing: https://coati.sh/alice/my-setup')
+		);
+		const communityIdx = infoCalls.findIndex((msg) =>
+			msg.includes('Coati setups are community-contributed and not verified.')
+		);
+
+		expect(reviewIdx).toBeGreaterThanOrEqual(0);
+		expect(communityIdx).toBeGreaterThanOrEqual(0);
+
+		// Both warning lines must appear before writeSetupFiles is called
+		const writeOrder = vi.mocked(ctx.fs.writeSetupFiles).mock.invocationCallOrder[0]!;
+		const infoOrders = vi.mocked(ctx.io.info).mock.invocationCallOrder;
+		expect(infoOrders[reviewIdx]!).toBeLessThan(writeOrder);
+		expect(infoOrders[communityIdx]!).toBeLessThan(writeOrder);
+	});
+
+	it('does not display safety warning when --json flag is used', async () => {
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup', '--json'], { from: 'user' });
+
+		const infoCalls = vi.mocked(ctx.io.info).mock.calls.map((c) => c[0]);
+		expect(infoCalls.some((msg) => msg.includes('Review setup contents before installing'))).toBe(
+			false
+		);
+		expect(infoCalls.some((msg) => msg.includes('community-contributed'))).toBe(false);
+	});
+
 	it('shows warning and exits when no files', async () => {
 		vi.mocked(ctx.api.get).mockImplementation((url: string) => {
 			if (url.endsWith('/files')) return Promise.resolve([]);
