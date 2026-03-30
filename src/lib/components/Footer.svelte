@@ -4,10 +4,8 @@
 	>
 		<p class="text-muted-foreground text-xs lg:text-sm">&copy; 2026 Coati</p>
 		<nav class="text-muted-foreground flex gap-3 text-xs lg:gap-4 lg:text-sm">
-			<a href="/explore" class="hover:text-foreground transition-colors">Explore</a>
-			<a href="/about" class="hover:text-foreground transition-colors">About</a>
 			<a
-				href="https://github.com"
+				href="https://github.com/jimburch/coati"
 				target="_blank"
 				rel="noopener noreferrer"
 				class="hover:text-foreground transition-colors">GitHub</a
