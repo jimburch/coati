@@ -1,7 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	MANIFEST_FILENAME,
 	readManifest,
@@ -214,8 +214,8 @@ describe('writeManifest + readManifest roundtrip', () => {
 });
 
 describe('readManifest error handling', () => {
-	it('throws when setup.json does not exist', () => {
-		expect(() => readManifest(tmpDir)).toThrow(/No setup\.json found/);
+	it('throws when coati.json does not exist', () => {
+		expect(() => readManifest(tmpDir)).toThrow(/No coati\.json found/);
 	});
 
 	it('throws on malformed JSON', () => {
@@ -225,6 +225,23 @@ describe('readManifest error handling', () => {
 
 	it('throws on invalid manifest contents', () => {
 		fs.writeFileSync(path.join(tmpDir, MANIFEST_FILENAME), JSON.stringify({ name: 123 }), 'utf-8');
-		expect(() => readManifest(tmpDir)).toThrow(/Invalid setup\.json/);
+		expect(() => readManifest(tmpDir)).toThrow(/Invalid coati\.json/);
+	});
+
+	it('prints migration message and exits when setup.json exists but coati.json does not', () => {
+		fs.writeFileSync(path.join(tmpDir, 'setup.json'), JSON.stringify(VALID_MANIFEST), 'utf-8');
+		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+			throw new Error('process.exit');
+		});
+		const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+		expect(() => readManifest(tmpDir)).toThrow('process.exit');
+		expect(logSpy).toHaveBeenCalledWith(
+			'ℹ Found setup.json — Coati now uses coati.json. Rename it to continue.'
+		);
+		expect(exitSpy).toHaveBeenCalledWith(1);
+
+		exitSpy.mockRestore();
+		logSpy.mockRestore();
 	});
 });

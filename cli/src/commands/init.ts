@@ -45,16 +45,16 @@ export function computeDetectedAgents(
 
 /**
  * Run the init flow in the given directory.
- * Returns true if setup.json was successfully written, false if the user cancelled.
+ * Returns true if coati.json was successfully written, false if the user cancelled.
  * Throws on unrecoverable errors (e.g. invalid slug).
  */
 export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boolean> {
 	const manifestPath = path.join(cwd, MANIFEST_FILENAME);
 
-	// Edge case: setup.json already exists
+	// Edge case: coati.json already exists
 	if (ctx.fs.existsSync(manifestPath)) {
 		ctx.io.warning(`${MANIFEST_FILENAME} already exists in this directory.`);
-		const overwrite = await ctx.io.confirm('Overwrite existing setup.json?', false);
+		const overwrite = await ctx.io.confirm('Overwrite existing coati.json?', false);
 		if (!overwrite) {
 			ctx.io.print('Exiting without changes.');
 			return false;
@@ -78,7 +78,7 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 			'Add your config files (e.g. .claude/commands/, .cursorrules) then re-run `coati init`.'
 		);
 		const continueAnyway = await ctx.io.confirm(
-			'Continue and create a setup.json scaffold anyway?',
+			'Continue and create a coati.json scaffold anyway?',
 			false
 		);
 		if (!continueAnyway) {
@@ -160,7 +160,7 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 export function registerInit(program: Command, ctx: CommandContext): void {
 	program
 		.command('init')
-		.description('Scaffold a setup.json manifest in the current directory')
+		.description('Scaffold a coati.json manifest in the current directory')
 		.action(async () => {
 			try {
 				const ok = await runInitFlow(ctx, process.cwd());

@@ -57,10 +57,10 @@ export interface ValidationResult {
 	errors: ValidationError[];
 }
 
-export const MANIFEST_FILENAME = 'setup.json';
+export const MANIFEST_FILENAME = 'coati.json';
 
 /**
- * Validate a manifest object against the setup.json schema rules.
+ * Validate a manifest object against the coati.json schema rules.
  * Internally uses Zod (.safeParse) via manifestSchema; consistent with
  * the server's createSetupWithFilesSchema in src/lib/types/index.ts.
  */
@@ -83,8 +83,9 @@ export function validateManifest(data: unknown): ValidationResult {
 }
 
 /**
- * Read and parse setup.json from the given directory.
+ * Read and parse coati.json from the given directory.
  * Throws if the file is missing, malformed, or invalid.
+ * If coati.json is not found but setup.json exists, prints a migration message and exits.
  */
 export function readManifest(dir: string): Manifest {
 	const filePath = path.join(dir, MANIFEST_FILENAME);
@@ -94,6 +95,11 @@ export function readManifest(dir: string): Manifest {
 	} catch (err: unknown) {
 		const nodeErr = err as NodeJS.ErrnoException;
 		if (nodeErr.code === 'ENOENT') {
+			const legacyPath = path.join(dir, 'setup.json');
+			if (fs.existsSync(legacyPath)) {
+				console.log('ℹ Found setup.json — Coati now uses coati.json. Rename it to continue.');
+				process.exit(1);
+			}
 			throw new Error(`No ${MANIFEST_FILENAME} found in ${dir}`);
 		}
 		throw new Error(`Failed to read ${MANIFEST_FILENAME}: ${nodeErr.message}`);
@@ -118,7 +124,7 @@ export function readManifest(dir: string): Manifest {
 }
 
 /**
- * Write a manifest object to setup.json in the given directory.
+ * Write a manifest object to coati.json in the given directory.
  * Creates the directory if it doesn't exist.
  */
 export function writeManifest(dir: string, data: Manifest): void {

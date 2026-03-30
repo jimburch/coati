@@ -14,7 +14,7 @@ const mockWriteManifest = vi.fn();
 
 vi.mock('../manifest.js', () => ({
 	writeManifest: (...args: unknown[]) => mockWriteManifest(...args),
-	MANIFEST_FILENAME: 'setup.json'
+	MANIFEST_FILENAME: 'coati.json'
 }));
 
 const mockFormatFileList = vi.fn();
@@ -133,7 +133,7 @@ describe('runInitFlow — normal flow', () => {
 
 	it('calls success after writing manifest', async () => {
 		await runInitFlow(ctx, CWD);
-		expect(ctx.io.success).toHaveBeenCalledWith(expect.stringContaining('setup.json'));
+		expect(ctx.io.success).toHaveBeenCalledWith(expect.stringContaining('coati.json'));
 	});
 });
 

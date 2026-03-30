@@ -74,7 +74,7 @@ export async function validateAgentRefs(
 		if (changed) {
 			manifest = { ...manifest, agents: [...manifestAgents] };
 			writeManifest(cwd, manifest);
-			ctx.io.info('Updated agents list in setup.json.');
+			ctx.io.info('Updated agents list in coati.json.');
 		}
 	}
 
@@ -112,11 +112,11 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 			const manifestPath = path.join(cwd, MANIFEST_FILENAME);
 			if (!ctx.fs.existsSync(manifestPath)) {
 				if (ctx.io.isJson()) {
-					ctx.io.error('No setup.json found. Run `coati init` first.');
+					ctx.io.error('No coati.json found. Run `coati init` first.');
 					process.exit(1);
 					return;
 				}
-				ctx.io.info('No setup.json found. Running `coati init` to create one...\n');
+				ctx.io.info('No coati.json found. Running `coati init` to create one...\n');
 				let initialized: boolean;
 				try {
 					initialized = await runInitFlow(ctx, cwd);

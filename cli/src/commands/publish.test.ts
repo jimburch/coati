@@ -22,7 +22,7 @@ const mockWriteManifest = vi.fn();
 vi.mock('../manifest.js', () => ({
 	readManifest: (dir: string) => mockReadManifest(dir),
 	writeManifest: (dir: string, data: unknown) => mockWriteManifest(dir, data),
-	MANIFEST_FILENAME: 'setup.json'
+	MANIFEST_FILENAME: 'coati.json'
 }));
 
 // ── mock init (runInitFlow — has side effects, must be isolated) ───────────────
@@ -147,7 +147,7 @@ describe('missing setup.json', () => {
 		await expect(program.parseAsync(['node', 'coati', 'publish', '--json'])).rejects.toThrow(
 			'process.exit'
 		);
-		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('setup.json'));
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('coati.json'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 
@@ -517,7 +517,7 @@ describe('error handling', () => {
 
 	it('errors and exits when manifest is invalid', async () => {
 		mockReadManifest.mockImplementation(() => {
-			throw new Error('Invalid setup.json:\n  name: Required');
+			throw new Error('Invalid coati.json:\n  name: Required');
 		});
 		const program = makeProgram();
 		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
@@ -525,7 +525,7 @@ describe('error handling', () => {
 		});
 
 		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
-		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('Invalid setup.json'));
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('Invalid coati.json'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 
