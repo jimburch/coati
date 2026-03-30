@@ -19,16 +19,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	const { files } = detail;
 
-	// Use readme column if set, otherwise look for README.md file
-	const readmeContent =
-		detail.readme ??
-		files.find((f) => {
-			const source = f.source.toLowerCase();
-			return source === 'readme.md' || source === 'readme';
-		})?.content ??
-		null;
-
-	const readmeHtml = readmeContent ? await renderMarkdown(readmeContent) : null;
+	const readmeHtml = detail.readme ? await renderMarkdown(detail.readme) : null;
 
 	return {
 		setup: detail,
