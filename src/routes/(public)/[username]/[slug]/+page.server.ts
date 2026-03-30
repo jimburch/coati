@@ -33,6 +33,32 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 };
 
 export const actions: Actions = {
+	saveReadme: async ({ locals, params, request }) => {
+		if (!locals.user) throw redirect(302, '/auth/login/github');
+
+		const detail = await setupRepo.getDetail(params.username, params.slug, locals.user.id);
+		if (!detail) throw error(404, 'Setup not found');
+		if (detail.userId !== locals.user.id) {
+			return fail(403, { error: 'You do not own this setup', code: 'FORBIDDEN' });
+		}
+
+		const formData = await request.formData();
+		const readme = String(formData.get('readme') ?? '');
+
+		const updated = await setupRepo.update(detail.id, { readme });
+		const readmeHtml = updated.readme ? await renderMarkdown(updated.readme) : null;
+
+		return { readmeHtml, updatedAt: updated.updatedAt };
+	},
+
+	previewReadme: async ({ request }) => {
+		const formData = await request.formData();
+		const readme = String(formData.get('readme') ?? '');
+
+		const previewHtml = readme ? await renderMarkdown(readme) : null;
+		return { previewHtml };
+	},
+
 	star: async ({ locals, params }) => {
 		if (!locals.user) throw redirect(302, '/auth/login/github');
 
