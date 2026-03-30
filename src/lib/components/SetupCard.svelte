@@ -8,9 +8,12 @@
 		setup: SetupCardProps;
 		username: string;
 		showAuthor?: boolean;
+		variant?: 'default' | 'featured';
 	};
 
-	const { setup, username, showAuthor = false }: Props = $props();
+	const { setup, username, showAuthor = false, variant = 'default' }: Props = $props();
+
+	const featured = $derived(variant === 'featured');
 
 	const MAX_AGENTS = 3;
 	const visibleAgents = $derived(setup.agents?.slice(0, MAX_AGENTS) ?? []);
@@ -19,12 +22,26 @@
 
 <a
 	href="/{username}/{setup.slug}"
-	class="block rounded-lg border border-border bg-card p-3 transition-colors hover:border-foreground/20 hover:bg-accent/50 lg:p-4"
+	class={featured
+		? 'block w-full rounded-lg border border-primary/50 bg-card p-5 transition-colors hover:border-foreground/20 hover:bg-accent/50 lg:p-6'
+		: 'block rounded-lg border border-border bg-card p-3 transition-colors hover:border-foreground/20 hover:bg-accent/50 lg:p-4'}
 >
-	<h3 class="truncate text-sm font-semibold text-foreground lg:text-base">{setup.name}</h3>
+	<h3
+		class={featured
+			? 'truncate text-base font-semibold text-foreground lg:text-lg'
+			: 'truncate text-sm font-semibold text-foreground lg:text-base'}
+	>
+		{setup.name}
+	</h3>
 
 	{#if setup.description}
-		<p class="mt-1 line-clamp-2 text-sm text-muted-foreground">{setup.description}</p>
+		<p
+			class={featured
+				? 'mt-1 text-sm text-muted-foreground'
+				: 'mt-1 line-clamp-2 text-sm text-muted-foreground'}
+		>
+			{setup.description}
+		</p>
 	{/if}
 
 	{#if visibleAgents.length > 0}
@@ -52,6 +69,17 @@
 			</svg>
 			{setup.starsCount}
 		</span>
+
+		{#if featured}
+			<span class="inline-flex items-center gap-1">
+				<svg class="size-3.5" viewBox="0 0 16 16" fill="currentColor">
+					<path
+						d="M5 3.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zm0 2.122a2.25 2.25 0 1 0-1.5 0v.878A2.25 2.25 0 0 0 5.75 8.5h4.5a.75.75 0 0 1 0 1.5h-4.5A2.25 2.25 0 0 0 3.5 12.25v.878a2.25 2.25 0 1 0 1.5 0v-.878a.75.75 0 0 1 .75-.75h4.5a2.25 2.25 0 0 0 2.25-2.25V5.372a2.25 2.25 0 1 0-1.5 0V8.5a.75.75 0 0 1-.75.75h-4.5A2.25 2.25 0 0 0 5 6.128V5.372zm6.75-1.122a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zm0 9.5a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0z"
+					/>
+				</svg>
+				{setup.clonesCount}
+			</span>
+		{/if}
 
 		{#if showAuthor}
 			<span class="ml-auto inline-flex items-center gap-1.5">
