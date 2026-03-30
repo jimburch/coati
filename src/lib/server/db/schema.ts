@@ -36,6 +36,20 @@ export const feedbackCategoryEnum = pgEnum('feedback_category', [
 	'feature-request'
 ]);
 
+export const setupReportReasonEnum = pgEnum('setup_report_reason', [
+	'malicious',
+	'spam',
+	'inappropriate',
+	'other'
+]);
+
+export const setupReportStatusEnum = pgEnum('setup_report_status', [
+	'pending',
+	'reviewed',
+	'dismissed',
+	'actioned'
+]);
+
 // ─── Tier 1: No FK dependencies ─────────────────────────────────────────────
 
 export const users = pgTable('users', {
@@ -276,6 +290,30 @@ export const feedbackSubmissions = pgTable(
 	(table) => [index('feedback_submissions_user_id_idx').on(table.userId)]
 );
 
+export const setupReports = pgTable(
+	'setup_reports',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		setupId: uuid('setup_id')
+			.references(() => setups.id, { onDelete: 'cascade' })
+			.notNull(),
+		reporterId: uuid('reporter_id')
+			.references(() => users.id, { onDelete: 'cascade' })
+			.notNull(),
+		reason: setupReportReasonEnum('reason').notNull(),
+		description: text('description'),
+		status: setupReportStatusEnum('status').default('pending').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+		reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+		reviewedBy: uuid('reviewed_by').references(() => users.id, { onDelete: 'set null' })
+	},
+	(table) => [
+		uniqueIndex('setup_reports_setup_id_reporter_id_idx').on(table.setupId, table.reporterId),
+		index('setup_reports_setup_id_idx').on(table.setupId),
+		index('setup_reports_status_idx').on(table.status)
+	]
+);
+
 // ─── Relations ──────────────────────────────────────────────────────────────
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -285,7 +323,8 @@ export const usersRelations = relations(users, ({ many }) => ({
 	comments: many(comments),
 	activities: many(activities),
 	followers: many(follows, { relationName: 'following' }),
-	following: many(follows, { relationName: 'follower' })
+	following: many(follows, { relationName: 'follower' }),
+	reports: many(setupReports, { relationName: 'reporter' })
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -299,7 +338,8 @@ export const setupsRelations = relations(setups, ({ one, many }) => ({
 	setupAgents: many(setupAgents),
 	stars: many(stars),
 	comments: many(comments),
-	activities: many(activities)
+	activities: many(activities),
+	reports: many(setupReports)
 }));
 
 export const followsRelations = relations(follows, ({ one }) => ({
@@ -365,6 +405,16 @@ export const activitiesRelations = relations(activities, ({ one }) => ({
 	comment: one(comments, { fields: [activities.commentId], references: [comments.id] })
 }));
 
+export const setupReportsRelations = relations(setupReports, ({ one }) => ({
+	setup: one(setups, { fields: [setupReports.setupId], references: [setups.id] }),
+	reporter: one(users, {
+		fields: [setupReports.reporterId],
+		references: [users.id],
+		relationName: 'reporter'
+	}),
+	reviewer: one(users, { fields: [setupReports.reviewedBy], references: [users.id] })
+}));
+
 // ─── Type Exports ───────────────────────────────────────────────────────────
 
 export type User = typeof users.$inferSelect;
@@ -408,3 +458,6 @@ export type NewActivity = typeof activities.$inferInsert;
 
 export type FeedbackSubmission = typeof feedbackSubmissions.$inferSelect;
 export type NewFeedbackSubmission = typeof feedbackSubmissions.$inferInsert;
+
+export type SetupReport = typeof setupReports.$inferSelect;
+export type NewSetupReport = typeof setupReports.$inferInsert;

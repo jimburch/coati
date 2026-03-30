@@ -27,7 +27,9 @@ export type {
 	SetupAgent,
 	NewSetupAgent,
 	FeedbackSubmission,
-	NewFeedbackSubmission
+	NewFeedbackSubmission,
+	SetupReport,
+	NewSetupReport
 } from '$lib/server/db/schema';
 
 export type LayoutUser = {
@@ -160,6 +162,11 @@ export const updateProfileSchema = z.object({
 export const createCommentSchema = z.object({
 	body: z.string().min(1).max(5000),
 	parentId: z.string().uuid().optional()
+});
+
+export const createReportSchema = z.object({
+	reason: z.enum(['malicious', 'spam', 'inappropriate', 'other']),
+	description: z.string().max(1000).optional()
 });
 
 export const usernameSchema = z

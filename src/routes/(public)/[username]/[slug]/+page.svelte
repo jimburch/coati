@@ -1,14 +1,18 @@
 <script lang="ts">
 	import { Avatar, AvatarImage, AvatarFallback } from '$lib/components/ui/avatar';
 	import { Separator } from '$lib/components/ui/separator';
+	import { Button } from '$lib/components/ui/button';
 	import StarButton from '$lib/components/StarButton.svelte';
 	import AgentIcon from '$lib/components/AgentIcon.svelte';
 	import OgMeta from '$lib/components/OgMeta.svelte';
+	import { enhance } from '$app/forms';
 	import { timeAgo } from '$lib/utils';
 
 	const { data } = $props();
 
 	let copied = $state(false);
+	let showReportForm = $state(false);
+	let reportSubmitting = $state(false);
 	const cloneCommand = $derived(`coati clone ${data.setup.ownerUsername}/${data.setup.slug}`);
 
 	// Optimistic override for stars count — set on button click, cleared when server data refreshes.
@@ -233,6 +237,87 @@
 						{data.files.length === 1 ? 'file' : 'files'} →
 					</a>
 				</div>
+				<!-- Report -->
+				{#if data.user && data.user.username !== data.setup.ownerUsername}
+					<div>
+						{#if !showReportForm}
+							<button
+								onclick={() => (showReportForm = true)}
+								class="text-xs text-muted-foreground hover:text-destructive hover:underline"
+								data-testid="report-toggle-btn"
+							>
+								Report this setup
+							</button>
+						{:else}
+							<div class="rounded-lg border border-border bg-card p-3">
+								<h3 class="mb-2 text-sm font-semibold">Report Setup</h3>
+								<form
+									method="POST"
+									action="?/report"
+									use:enhance={() => {
+										reportSubmitting = true;
+										return async ({ result, update }) => {
+											reportSubmitting = false;
+											if (result.type === 'success') {
+												showReportForm = false;
+											}
+											await update();
+										};
+									}}
+								>
+									<div class="mb-2">
+										<label for="report-reason" class="mb-1 block text-xs font-medium">
+											Reason
+										</label>
+										<select
+											id="report-reason"
+											name="reason"
+											required
+											class="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+										>
+											<option value="">Select a reason...</option>
+											<option value="malicious">Malicious</option>
+											<option value="spam">Spam</option>
+											<option value="inappropriate">Inappropriate</option>
+											<option value="other">Other</option>
+										</select>
+									</div>
+									<div class="mb-3">
+										<label for="report-description" class="mb-1 block text-xs font-medium">
+											Description (optional)
+										</label>
+										<textarea
+											id="report-description"
+											name="description"
+											rows="3"
+											maxlength="1000"
+											placeholder="Provide additional context..."
+											class="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm resize-none"
+										></textarea>
+									</div>
+									<div class="flex gap-2">
+										<Button
+											type="submit"
+											variant="destructive"
+											size="sm"
+											disabled={reportSubmitting}
+										>
+											Submit Report
+										</Button>
+										<Button
+											type="button"
+											variant="outline"
+											size="sm"
+											onclick={() => (showReportForm = false)}
+										>
+											Cancel
+										</Button>
+									</div>
+								</form>
+							</div>
+						{/if}
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>

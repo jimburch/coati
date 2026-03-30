@@ -8,8 +8,10 @@ import {
 	InvalidParentError,
 	ForbiddenError
 } from '$lib/server/queries/comments';
+import { createReport } from '$lib/server/queries/reports';
 import { renderMarkdown } from '$lib/server/markdown';
-import { createCommentSchema } from '$lib/types';
+import { createCommentSchema, createReportSchema } from '$lib/types';
+import { isUniqueViolation } from '$lib/server/responses';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const detail = await setupRepo.getDetail(params.username, params.slug, locals.user?.id);
@@ -33,7 +35,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		tags: detail.tags,
 		agents: detail.agents,
 		readmeHtml,
-		isStarred: detail.isStarred
+		isStarred: detail.isStarred,
+		user: locals.user ?? null
 	};
 };
 
@@ -97,5 +100,37 @@ export const actions: Actions = {
 		}
 
 		return { success: true };
+	},
+
+	report: async ({ locals, params, request }) => {
+		if (!locals.user) throw redirect(302, '/auth/login/github');
+
+		const setup = await getSetupByOwnerSlug(params.username, params.slug);
+		if (!setup) throw error(404, 'Setup not found');
+
+		const formData = await request.formData();
+		const raw = {
+			reason: formData.get('reason'),
+			description: formData.get('description') || undefined
+		};
+
+		const parsed = createReportSchema.safeParse(raw);
+		if (!parsed.success) {
+			return fail(400, { error: 'Invalid report' });
+		}
+
+		try {
+			await createReport(setup.id, locals.user.id, parsed.data.reason, parsed.data.description);
+		} catch (e) {
+			if (isUniqueViolation(e)) {
+				return fail(409, {
+					error: 'You have already reported this setup',
+					code: 'DUPLICATE_REPORT'
+				});
+			}
+			throw e;
+		}
+
+		return { reportSuccess: true };
 	}
 };
