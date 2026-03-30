@@ -44,6 +44,16 @@ interface CloneOptions {
 	agent?: string;
 }
 
+function isNetworkError(err: Error): boolean {
+	const code = (err as NodeJS.ErrnoException).code;
+	return (
+		code === 'ECONNREFUSED' ||
+		code === 'ENOTFOUND' ||
+		err.message.toLowerCase().includes('etimedout') ||
+		err.message.toLowerCase().includes('timeout')
+	);
+}
+
 export function registerClone(program: Command, ctx: CommandContext): void {
 	program
 		.command('clone')
@@ -103,7 +113,11 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 				setup = await ctx.api.get<SetupMeta>(`/setups/${owner}/${slug}`);
 			} catch (err) {
 				if (err instanceof ApiError && err.status === 404) {
-					ctx.io.error(`Setup "${owner}/${slug}" not found.`);
+					ctx.io.error(
+						`Setup "${owner}/${slug}" not found.\nCheck the owner/slug spelling, or browse setups at https://coati.sh/explore`
+					);
+				} else if (err instanceof Error && isNetworkError(err)) {
+					ctx.io.error('Could not reach the Coati API. Check your internet connection.');
 				} else if (err instanceof Error) {
 					ctx.io.error(`Failed to fetch setup: ${err.message}`);
 				} else {

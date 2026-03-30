@@ -439,6 +439,61 @@ describe('clone — tracking file', () => {
 	});
 });
 
+// ── error messages ────────────────────────────────────────────────────────────
+
+describe('clone — error messages', () => {
+	it('404 error includes suggestion to check spelling and explore URL', async () => {
+		vi.mocked(ctx.api.get).mockRejectedValue(new ApiError('Not Found', 'NOT_FOUND', 404));
+		const spy = exitSpy();
+		const program = makeProgram();
+		await expect(program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' })).rejects.toThrow(
+			'process.exit'
+		);
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('https://coati.sh/explore'));
+		expect(spy).toHaveBeenCalledWith(1);
+	});
+
+	it('ECONNREFUSED shows distinct network error message', async () => {
+		const netErr = Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' });
+		vi.mocked(ctx.api.get).mockRejectedValue(netErr);
+		const spy = exitSpy();
+		const program = makeProgram();
+		await expect(program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' })).rejects.toThrow(
+			'process.exit'
+		);
+		expect(ctx.io.error).toHaveBeenCalledWith(
+			expect.stringContaining('Could not reach the Coati API')
+		);
+		expect(spy).toHaveBeenCalledWith(1);
+	});
+
+	it('ENOTFOUND shows distinct network error message', async () => {
+		const netErr = Object.assign(new Error('getaddrinfo ENOTFOUND'), { code: 'ENOTFOUND' });
+		vi.mocked(ctx.api.get).mockRejectedValue(netErr);
+		const spy = exitSpy();
+		const program = makeProgram();
+		await expect(program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' })).rejects.toThrow(
+			'process.exit'
+		);
+		expect(ctx.io.error).toHaveBeenCalledWith(
+			expect.stringContaining('Could not reach the Coati API')
+		);
+		expect(spy).toHaveBeenCalledWith(1);
+	});
+
+	it('network error is distinct from 404 not-found message', async () => {
+		const netErr = Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' });
+		vi.mocked(ctx.api.get).mockRejectedValue(netErr);
+		const spy = exitSpy();
+		const program = makeProgram();
+		await expect(program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' })).rejects.toThrow(
+			'process.exit'
+		);
+		expect(ctx.io.error).not.toHaveBeenCalledWith(expect.stringContaining('not found'));
+		expect(spy).toHaveBeenCalledWith(1);
+	});
+});
+
 // ── --json output ─────────────────────────────────────────────────────────────
 
 describe('clone — --json output', () => {
