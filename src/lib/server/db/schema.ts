@@ -126,6 +126,7 @@ export const setups = pgTable(
 		starsCount: integer('stars_count').default(0).notNull(),
 		clonesCount: integer('clones_count').default(0).notNull(),
 		commentsCount: integer('comments_count').default(0).notNull(),
+		featuredAt: timestamp('featured_at', { withTimezone: true }),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 		searchVector: tsvector('search_vector').generatedAlwaysAs(

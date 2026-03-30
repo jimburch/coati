@@ -1,4 +1,4 @@
-import { eq, and, desc, sql, inArray } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray, isNotNull } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { counters } from '$lib/server/counters';
 import { generateReadme } from '$lib/utils/readme';
@@ -461,6 +461,45 @@ export async function getStarredSetupsByUserId(userId: string) {
 		.innerJoin(users, eq(setups.userId, users.id))
 		.where(eq(stars.userId, userId))
 		.orderBy(desc(stars.createdAt));
+}
+
+export async function getFeaturedSetups(limit: number) {
+	const rows = await db
+		.select({
+			id: setups.id,
+			userId: setups.userId,
+			name: setups.name,
+			slug: setups.slug,
+			description: setups.description,
+			starsCount: setups.starsCount,
+			clonesCount: setups.clonesCount,
+			commentsCount: setups.commentsCount,
+			featuredAt: setups.featuredAt,
+			createdAt: setups.createdAt,
+			updatedAt: setups.updatedAt,
+			ownerUsername: users.username,
+			ownerAvatarUrl: users.avatarUrl
+		})
+		.from(setups)
+		.innerJoin(users, eq(setups.userId, users.id))
+		.where(isNotNull(setups.featuredAt))
+		.orderBy(desc(setups.featuredAt))
+		.limit(limit);
+
+	const setupIds = rows.map((r) => r.id);
+	const agentsMap = await getAgentsForSetups(setupIds);
+
+	return rows.map((r) => ({
+		...r,
+		agents: (agentsMap[r.id] ?? []).map((a) => a.slug)
+	}));
+}
+
+export async function setFeatured(setupId: string, featured: boolean): Promise<void> {
+	await db
+		.update(setups)
+		.set({ featuredAt: featured ? new Date() : null })
+		.where(eq(setups.id, setupId));
 }
 
 export async function getAgentsForSetups(setupIds: string[]) {
