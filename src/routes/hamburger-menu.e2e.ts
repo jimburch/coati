@@ -69,6 +69,13 @@ test.describe('Hamburger menu (mobile)', () => {
 		await expect(nav.getByRole('link', { name: 'My Profile' })).not.toBeVisible();
 		await expect(nav.getByRole('link', { name: 'Settings' })).not.toBeVisible();
 	});
+
+	test('mobile menu does not contain a Feed link', async ({ page }) => {
+		await page.goto('/');
+		await page.getByRole('button', { name: 'Open menu' }).click();
+		const nav = page.getByRole('navigation', { name: 'Mobile navigation' });
+		await expect(nav.getByRole('link', { name: /^Feed$/i })).not.toBeAttached();
+	});
 });
 
 test.describe('Desktop navbar (mobile menu hidden)', () => {
@@ -87,5 +94,10 @@ test.describe('Desktop navbar (mobile menu hidden)', () => {
 	test('desktop sign in button is visible for unauthenticated users', async ({ page }) => {
 		await page.goto('/');
 		await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible();
+	});
+
+	test('desktop navbar does not contain a Feed link', async ({ page }) => {
+		await page.goto('/');
+		await expect(page.getByRole('link', { name: /^Feed$/i })).not.toBeAttached();
 	});
 });
