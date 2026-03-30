@@ -172,7 +172,7 @@
 - [x] Simple global rate limiting:
   - Lightweight per-IP middleware (general-purpose, not per-endpoint)
   - Protect against basic abuse without overengineering
-- [ ] Loading/error states audit:
+- [x] Loading/error states audit:
   - Verify all pages handle loading and error states gracefully
   - Fill remaining gaps (file viewer, profile pages, etc.)
 - [x] Mobile responsiveness pass:

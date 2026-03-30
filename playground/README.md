@@ -71,6 +71,31 @@ Expected behavior:
 3. Installs only selected agent's files plus shared files
 4. `--agent cursor` flag overrides auto-detection
 
+## Clean Directory (No Agent Config)
+
+`clean/` — A realistic TypeScript project with **zero AI agent config files**. No `CLAUDE.md`, no `.cursorrules`, no `setup.json` — just a plain Express app. Designed for testing fresh `coati clone` workflows.
+
+### Testing fresh clone
+
+```bash
+cd playground/clean
+pnpm coati clone <owner>/<slug>
+```
+
+Expected behavior:
+
+1. No agents detected locally (no config files present)
+2. Full clone flow runs from scratch
+3. Agent config files land in the project directory
+
+### Resetting after a clone
+
+```bash
+pnpm reset
+```
+
+This restores the directory to its committed state — removes all files added by the clone and reverts any modifications. Run this between clone tests for a clean slate.
+
 ## User/Global Directory
 
 `user/` — A global setup that installs to home directories (`~/`), targeting **Claude Code + Gemini + Codex**. This directory **includes a `setup.json`** with `placement: "global"` on every file.
