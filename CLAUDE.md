@@ -186,7 +186,7 @@ coati/
 - File contents stored in PostgreSQL text columns for MVP (config files are tiny, <10KB)
 - No file versioning in MVP — setups have a single "current" state
 - Everything is public for MVP — no private setups
-- The `setup.json` manifest is the platform's core standard — similar to package.json
+- The `coati.json` manifest is the platform's core standard — similar to package.json
 - Stars and clone counts are denormalized on the setups table for query performance
 - Username slugs and setup slugs are unique and URL-safe (lowercase, hyphens only)
 - Comments support single-level threading (parent_id) — not deeply nested

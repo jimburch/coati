@@ -146,9 +146,9 @@ Supported hook events: `PreToolUse`, `PostToolUse`, `Notification`, `Stop`.
 }
 ```
 
-## 3. The Manifest (`setup.json`)
+## 3. The Manifest (`coati.json`)
 
-Every setup has a `setup.json` manifest at its root. This file describes the setup's metadata and declares its components.
+Every setup has a `coati.json` manifest at its root. This file describes the setup's metadata and declares its components.
 
 ### 3.1 Schema
 
@@ -377,13 +377,13 @@ Array of paths to image files within the setup. Displayed on the setup detail pa
    - Tags (comma-separated)
    - License (default: MIT)
 
-3. **Generates `setup.json`** — Writes the manifest with detected components and user-provided metadata. Each detected file becomes a component entry with sensible defaults for `target` and `placement`.
+3. **Generates `coati.json`** — Writes the manifest with detected components and user-provided metadata. Each detected file becomes a component entry with sensible defaults for `target` and `placement`.
 
 4. **Review** — Prints a summary of what was detected and lets the user confirm or edit before writing.
 
 ### CLI: `coati publish`
 
-1. Reads `setup.json` from the current directory
+1. Reads `coati.json` from the current directory
 2. Validates the manifest (required fields, valid JSON, files exist)
 3. Authenticates via stored token (or prompts `coati login`)
 4. Uploads manifest + all referenced files to the Coati API
@@ -509,7 +509,7 @@ Revert restores all backed-up files to their original locations, effectively und
 
 ## 8. Database Mapping
 
-The `setup.json` manifest maps to the existing database schema as follows:
+The `coati.json` manifest maps to the existing database schema as follows:
 
 | Manifest Field  | Database Location                                       |
 | --------------- | ------------------------------------------------------- |
@@ -570,6 +570,6 @@ Each tool registers its own:
 - **Detection rules** — how `coati init` finds existing config for that tool
 - **Clone behavior** — per-component-type merge/write strategy
 
-The `tool` field in `setup.json` determines which set of rules apply. A single setup targets one tool. Users who want to share configs for multiple tools publish separate setups.
+The `tool` field in `coati.json` determines which set of rules apply. A single setup targets one tool. Users who want to share configs for multiple tools publish separate setups.
 
 The `tools` table in the database already supports this — each tool is a row with a `name` and `slug`. The `setup_tools` join table links setups to their target tools. For MVP, only a `claude-code` row exists.

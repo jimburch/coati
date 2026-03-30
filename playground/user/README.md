@@ -7,7 +7,7 @@ It covers three agents with meaningful global config stories: **Claude Code**, *
 
 ## What's Here
 
-All files use `placement: "global"` in `setup.json`, meaning they install to `~/` paths.
+All files use `placement: "global"` in `coati.json`, meaning they install to `~/` paths.
 
 ### Claude Code (`~/.claude/`)
 
@@ -31,7 +31,7 @@ All files use `placement: "global"` in `setup.json`, meaning they install to `~/
 
 ## How Global Placement Works
 
-In `setup.json`, every file entry has `"placement": "global"` and a target starting with `~/`:
+In `coati.json`, every file entry has `"placement": "global"` and a target starting with `~/`:
 
 ```json
 {

@@ -79,7 +79,7 @@ When multiple overrides are set, the CLI resolves the API base in this order (fi
 | `login`   | Authenticate via GitHub Device Flow             |
 | `logout`  | Remove stored credentials                       |
 | `clone`   | Clone and install a setup to your local machine |
-| `init`    | Scaffold a `setup.json` manifest                |
+| `init`    | Scaffold a `coati.json` manifest                |
 | `publish` | Publish or update a setup from the current dir  |
 
 Run `coati <command> --help` for command-specific options.

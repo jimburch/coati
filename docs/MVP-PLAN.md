@@ -133,15 +133,15 @@
 - [x] `coati init`:
   - Auto-detect existing AI config files in cwd (`.claude/`, `.cursor/`, etc.)
   - Confirm detected files with user, prompt for name/description/tools/tags
-  - Generate `setup.json` manifest from detected files
+  - Generate `coati.json` manifest from detected files
 - [x] `coati publish`:
-  - Auto-run `init` flow if no `setup.json` exists
-  - Read and validate `setup.json` (Zod schema)
+  - Auto-run `init` flow if no `coati.json` exists
+  - Read and validate `coati.json` (Zod schema)
   - Collect referenced files
   - Create or update setup on platform (determined by owner/slug match)
   - `POST /api/v1/setups` for new, `PATCH` for existing
 - ~`coati star/unstar` and `coati follow/unfollow` (descoped — social features are web-only)~
-- [x] Validate `setup.json` schema with Zod (shared between CLI and server)
+- [x] Validate `coati.json` schema with Zod (shared between CLI and server)
 
 ### Milestone: Full publish → discover → clone loop works end-to-end
 

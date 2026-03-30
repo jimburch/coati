@@ -15,7 +15,7 @@ Coati is a platform where developers publish and install complete AI coding setu
 
 ## How it works
 
-A **setup** is Coati's core entity: a manifest (`setup.json`) plus the config files, scripts, and documentation that define an AI coding workflow. Setups can include:
+A **setup** is Coati's core entity: a manifest (`coati.json`) plus the config files, scripts, and documentation that define an AI coding workflow. Setups can include:
 
 - **Instructions** — CLAUDE.md files, .cursorrules, system prompts
 - **Commands** — slash commands and custom scripts

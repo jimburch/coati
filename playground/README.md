@@ -12,7 +12,7 @@ node ../../cli/bin/coati.js <command>
 
 ## Single-Agent Directories
 
-Each directory contains a realistic project-level setup for one agent. **None of these have a `setup.json`** — they're designed for testing `node ../../cli/bin/coati.js init` auto-detection.
+Each directory contains a realistic project-level setup for one agent. **None of these have a `coati.json`** — they're designed for testing `node ../../cli/bin/coati.js init` auto-detection.
 
 | Directory      | Agent          | Key Config Files                                      |
 | -------------- | -------------- | ----------------------------------------------------- |
@@ -35,19 +35,19 @@ Expected behavior:
 1. Scanner detects all config files for that agent
 2. Reports detected agent and file count (e.g., "Found config files for: Claude Code (9 files)")
 3. Tags each file with the correct agent slug
-4. Writes a valid `setup.json` with the `agents` array pre-populated
+4. Writes a valid `coati.json` with the `agents` array pre-populated
 
-Verify: the generated `setup.json` should list only the one agent and tag every file with it.
+Verify: the generated `coati.json` should list only the one agent and tag every file with it.
 
 ## Multi-Agent Directory
 
-`multi/` — A project-level setup targeting **Claude Code + Cursor** simultaneously. This directory **includes a `setup.json`** as a reference manifest.
+`multi/` — A project-level setup targeting **Claude Code + Cursor** simultaneously. This directory **includes a `coati.json`** as a reference manifest.
 
 ### Testing multi-agent init
 
 ```bash
 cd playground/multi
-rm setup.json              # remove the reference manifest
+rm coati.json              # remove the reference manifest
 node ../../cli/bin/coati.js init
 ```
 
@@ -73,7 +73,7 @@ Expected behavior:
 
 ## Clean Directory (No Agent Config)
 
-`clean/` — A realistic TypeScript project with **zero AI agent config files**. No `CLAUDE.md`, no `.cursorrules`, no `setup.json` — just a plain Express app. Designed for testing fresh `coati clone` workflows.
+`clean/` — A realistic TypeScript project with **zero AI agent config files**. No `CLAUDE.md`, no `.cursorrules`, no `coati.json` — just a plain Express app. Designed for testing fresh `coati clone` workflows.
 
 ### Testing fresh clone
 
@@ -98,7 +98,7 @@ This restores the directory to its committed state — removes all files added b
 
 ## User/Global Directory
 
-`user/` — A global setup that installs to home directories (`~/`), targeting **Claude Code + Gemini + Codex**. This directory **includes a `setup.json`** with `placement: "global"` on every file.
+`user/` — A global setup that installs to home directories (`~/`), targeting **Claude Code + Gemini + Codex**. This directory **includes a `coati.json`** with `placement: "global"` on every file.
 
 ### Testing global clone behavior
 
@@ -115,7 +115,7 @@ Expected behavior:
 
 ## Testing `node ../../cli/bin/coati.js publish` validation
 
-From any directory with a `setup.json`:
+From any directory with a `coati.json`:
 
 ```bash
 cd playground/multi
@@ -128,4 +128,4 @@ The publish command validates agent references before uploading:
 - The `agents` array must include every agent referenced in file entries
 - On mismatch, warns and offers to auto-fix
 
-To test validation errors, edit `setup.json` to introduce a mismatch (e.g., remove an agent from the `agents` array while keeping file references to it).
+To test validation errors, edit `coati.json` to introduce a mismatch (e.g., remove an agent from the `agents` array while keeping file references to it).

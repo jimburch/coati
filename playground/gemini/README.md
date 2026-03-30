@@ -36,6 +36,6 @@ configuration.
 This playground lets us test that:
 
 1. All Gemini-specific files are detected and categorized correctly
-2. The `init` command maps Gemini config files to the right setup.json fields
+2. The `init` command maps Gemini config files to the right coati.json fields
 3. The `clone` command writes files to the correct paths with proper content
 4. Conflict resolution works when cloning into an existing project

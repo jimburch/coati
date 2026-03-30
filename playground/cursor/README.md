@@ -65,5 +65,5 @@ This playground exists to test how the Coati CLI handles:
 - Parsing MDC frontmatter (YAML + Markdown body)
 - Handling the legacy `.cursorrules` format alongside modern `.cursor/rules/` MDC files
 - Packaging MCP server configs, hooks, commands, and skills
-- Generating `setup.json` manifests from existing project files
+- Generating `coati.json` manifests from existing project files
 - Resolving file conflicts during `coati clone`

@@ -25,12 +25,12 @@ From this directory, you can test Coati commands like:
 # Initialize a Coati setup from this project's config
 coati init
 
-# Verify the generated setup.json includes all detected files
-cat setup.json
+# Verify the generated coati.json includes all detected files
+cat coati.json
 ```
 
 ## Not Included
 
-- `setup.json` — intentionally omitted so you can test `coati init` generating it
+- `coati.json` — intentionally omitted so you can test `coati init` generating it
 - `node_modules/` — this is a simulated project, no need to install dependencies
 - `src/` — source code is not needed; the playground focuses on config files only

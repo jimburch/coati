@@ -2,7 +2,7 @@
 
 This directory demonstrates a **multi-agent setup** — the same Express + TypeScript + SQLite project configured for both **Claude Code** and **Cursor** side by side.
 
-It is a test environment for the Coati CLI and platform, showing how a single `setup.json` can bundle config files for multiple AI coding agents, with per-file `agent` fields identifying which tool each file belongs to.
+It is a test environment for the Coati CLI and platform, showing how a single `coati.json` can bundle config files for multiple AI coding agents, with per-file `agent` fields identifying which tool each file belongs to.
 
 ## Config Files
 
@@ -44,7 +44,7 @@ It is a test environment for the Coati CLI and platform, showing how a single `s
 
 ## How the `agent` Field Works
 
-In `setup.json`, each file entry has an optional `agent` field:
+In `coati.json`, each file entry has an optional `agent` field:
 
 ```json
 {
@@ -74,6 +74,6 @@ coati publish
 
 ## Not Included
 
-- `setup.json` is present here (unlike the single-agent playgrounds) to demonstrate the manifest format
+- `coati.json` is present here (unlike the single-agent playgrounds) to demonstrate the manifest format
 - `node_modules/` — simulated project, no dependencies installed
 - `src/` — source code omitted; the playground focuses on config files only

@@ -164,7 +164,7 @@ $ coati clone alice/mcp-power-setup
 
 ### `coati init`
 
-Scaffold a `setup.json` manifest in the current directory.
+Scaffold a `coati.json` manifest in the current directory.
 
 ```
 $ coati init
@@ -187,10 +187,10 @@ $ coati init
 
   ... (repeat for each found file)
 
-  ✓ Created setup.json
+  ✓ Created coati.json
 
   Next steps:
-    1. Edit setup.json to refine file mappings
+    1. Edit coati.json to refine file mappings
     2. Add a README.md describing your workflow
     3. Run `coati publish` to share it
 ```
@@ -209,7 +209,7 @@ Publish or update a setup from the current directory.
 ```
 $ coati publish
 
-  Reading setup.json...
+  Reading coati.json...
   Validating manifest... ✓
   Collecting 6 files (12.4 KB total)...
 
@@ -253,9 +253,9 @@ $ coati follow alice
 
 Unfollow a user.
 
-## The `setup.json` Manifest Specification
+## The `coati.json` Manifest Specification
 
-Every setup has a `setup.json` at its root. This is the platform's core standard.
+Every setup has a `coati.json` at its root. This is the platform's core standard.
 
 ```json
 {

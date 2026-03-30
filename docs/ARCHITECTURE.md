@@ -89,9 +89,9 @@ Coati is a monolithic SvelteKit application backed by PostgreSQL, with a separat
 
 ### CLI: Publishing a Setup
 
-1. User creates a `setup.json` manifest in their project directory
+1. User creates a `coati.json` manifest in their project directory
 2. User runs `coati publish`
-3. CLI reads and validates `setup.json`
+3. CLI reads and validates `coati.json`
 4. CLI collects all files referenced in the manifest
 5. CLI sends `POST /api/v1/setups` with metadata + files as JSON payload
 6. Server validates, stores setup + files in PostgreSQL
@@ -185,6 +185,6 @@ Stars are weighted less than clones because a clone represents someone actually 
   drop-in `RateLimiterPostgres` or `RateLimiterRedis` variants from the same package.
 - Input validation with Zod on all API endpoints
 - Setup file contents are stored as text — no executable uploads
-- `postInstall` commands in setup.json are displayed to the user for approval before execution (CLI-side)
+- `postInstall` commands in coati.json are displayed to the user for approval before execution (CLI-side)
 - SQL injection prevented by Drizzle's parameterized queries
 - XSS prevented by SvelteKit's default HTML escaping + markdown sanitization

@@ -19,11 +19,11 @@ to detect, parse, and clone.
 ## How Coati uses this
 
 When running `coati init` in this directory, the CLI should detect the OpenCode
-configuration files and offer to create a `setup.json` manifest from them. This
+configuration files and offer to create a `coati.json` manifest from them. This
 playground lets you test that detection and initialization flow against realistic
 file contents rather than minimal stubs.
 
-The directory intentionally does **not** include a `setup.json` so you can test
+The directory intentionally does **not** include a `coati.json` so you can test
 the full init flow from scratch.
 
 ## OpenCode config structure

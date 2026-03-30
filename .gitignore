@@ -36,8 +36,8 @@ screenshots
 .serena/project.local.yml
 
 # Playground — gitignore CLI-generated artifacts
-playground/*/setup.json
+playground/*/coati.json
 playground/*/.coati/
-# Multi-agent and user playgrounds ship their setup.json as demonstration manifests
-!playground/multi/setup.json
-!playground/user/setup.json
+# Multi-agent and user playgrounds ship their coati.json as demonstration manifests
+!playground/multi/coati.json
+!playground/user/coati.json
