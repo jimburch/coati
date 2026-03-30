@@ -12,6 +12,8 @@
 		agents: string[];
 	};
 
+	let { inputClass = 'h-9 w-64' }: { inputClass?: string } = $props();
+
 	let query = $state('');
 	let items = $state<SearchItem[]>([]);
 	let isLoading = $state(false);
@@ -149,7 +151,7 @@
 			bind:ref={inputEl}
 			type="search"
 			placeholder="Search setups..."
-			class="h-9 w-64 pl-9 pr-8"
+			class="{inputClass} pl-9 pr-8"
 			bind:value={query}
 			oninput={handleInput}
 			onkeydown={handleKeydown}
