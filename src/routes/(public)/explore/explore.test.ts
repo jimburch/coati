@@ -1,14 +1,13 @@
 import { describe, it, expect } from 'vitest';
 
 // Pure logic extracted from explore/+page.svelte buildUrl function
-// Tests URL construction for explore page filters, sort, and pagination
+// Tests URL construction for explore page filters and sort
 
-type ExploreSort = 'trending' | 'stars' | 'clones' | 'newest';
+type ExploreSort = 'trending' | 'stars' | 'newest';
 
 interface ExploreState {
 	q?: string;
 	agents?: string[];
-	tag?: string;
 	sort: ExploreSort;
 	page: number;
 }
@@ -18,7 +17,6 @@ function buildUrl(
 	overrides: {
 		q?: string | undefined;
 		agents?: string[] | undefined;
-		tag?: string | undefined;
 		sort?: string | undefined;
 		page?: number | undefined;
 	} = {}
@@ -26,7 +24,6 @@ function buildUrl(
 	const merged = {
 		q: 'q' in overrides ? overrides.q : current.q,
 		agents: 'agents' in overrides ? overrides.agents : current.agents,
-		tag: 'tag' in overrides ? overrides.tag : current.tag,
 		sort: 'sort' in overrides ? overrides.sort : current.sort,
 		page: 'page' in overrides ? overrides.page : current.page
 	};
@@ -36,8 +33,7 @@ function buildUrl(
 	for (const slug of merged.agents ?? []) {
 		parts.push(`agent=${encodeURIComponent(slug)}`);
 	}
-	if (merged.tag) parts.push(`tag=${encodeURIComponent(String(merged.tag))}`);
-	if (merged.sort && merged.sort !== 'newest') parts.push(`sort=${merged.sort}`);
+	if (merged.sort && merged.sort !== 'trending') parts.push(`sort=${merged.sort}`);
 	if (merged.page && Number(merged.page) > 1) parts.push(`page=${String(merged.page)}`);
 
 	return `/explore${parts.length > 0 ? `?${parts.join('&')}` : ''}`;
@@ -48,19 +44,18 @@ function buildUrl(
 function parseExploreParams(searchParams: URLSearchParams): Omit<ExploreState, 'sort'> & {
 	sort: ExploreSort;
 } {
-	const VALID_SORTS: ExploreSort[] = ['trending', 'stars', 'clones', 'newest'];
+	const VALID_SORTS: ExploreSort[] = ['trending', 'stars', 'newest'];
 	const q = searchParams.get('q') || undefined;
 	const agents = searchParams.getAll('agent').filter(Boolean);
-	const tag = searchParams.get('tag') || undefined;
-	const sortParam = searchParams.get('sort') || 'newest';
+	const sortParam = searchParams.get('sort') || 'trending';
 	const sort: ExploreSort = VALID_SORTS.includes(sortParam as ExploreSort)
 		? (sortParam as ExploreSort)
-		: 'newest';
+		: 'trending';
 	const page = Math.max(1, Number(searchParams.get('page')) || 1);
-	return { q, agents, tag, sort, page };
+	return { q, agents, sort, page };
 }
 
-const base: ExploreState = { sort: 'newest', page: 1 };
+const base: ExploreState = { sort: 'trending', page: 1 };
 
 describe('buildUrl', () => {
 	it('returns /explore with no params when state is default', () => {
@@ -84,8 +79,8 @@ describe('buildUrl', () => {
 		expect(buildUrl(base, { sort: 'stars' })).toBe('/explore?sort=stars');
 	});
 
-	it('omits sort param when sort is newest (default)', () => {
-		expect(buildUrl(base, { sort: 'newest' })).toBe('/explore');
+	it('omits sort param when sort is trending (default)', () => {
+		expect(buildUrl(base, { sort: 'trending' })).toBe('/explore');
 	});
 
 	it('includes page param when page > 1', () => {
@@ -114,15 +109,6 @@ describe('buildUrl', () => {
 		expect(buildUrl(current, { agents: [] })).toBe('/explore');
 	});
 
-	it('includes tag param when set', () => {
-		expect(buildUrl(base, { tag: 'typescript' })).toBe('/explore?tag=typescript');
-	});
-
-	it('omits tag param when tag is undefined', () => {
-		const current = { ...base, tag: 'typescript' };
-		expect(buildUrl(current, { tag: undefined })).toBe('/explore');
-	});
-
 	it('combines q and sort params correctly', () => {
 		expect(buildUrl(base, { q: 'claude', sort: 'stars' })).toBe('/explore?q=claude&sort=stars');
 	});
@@ -136,11 +122,10 @@ describe('buildUrl', () => {
 		const current: ExploreState = {
 			q: 'existing',
 			agents: ['claude'],
-			tag: 'ts',
 			sort: 'stars',
 			page: 2
 		};
-		expect(buildUrl(current)).toBe('/explore?q=existing&agent=claude&tag=ts&sort=stars&page=2');
+		expect(buildUrl(current)).toBe('/explore?q=existing&agent=claude&sort=stars&page=2');
 	});
 });
 
@@ -150,8 +135,7 @@ describe('parseExploreParams (URL → state)', () => {
 		const result = parseExploreParams(params);
 		expect(result.q).toBeUndefined();
 		expect(result.agents).toEqual([]);
-		expect(result.tag).toBeUndefined();
-		expect(result.sort).toBe('newest');
+		expect(result.sort).toBe('trending');
 		expect(result.page).toBe(1);
 	});
 
@@ -170,9 +154,9 @@ describe('parseExploreParams (URL → state)', () => {
 		expect(parseExploreParams(params).sort).toBe('stars');
 	});
 
-	it('defaults sort to newest for invalid sort value', () => {
+	it('defaults sort to trending for invalid sort value', () => {
 		const params = new URLSearchParams('sort=invalid');
-		expect(parseExploreParams(params).sort).toBe('newest');
+		expect(parseExploreParams(params).sort).toBe('trending');
 	});
 
 	it('reads page param from URL', () => {
@@ -188,11 +172,6 @@ describe('parseExploreParams (URL → state)', () => {
 	it('reads multiple agent params from URL', () => {
 		const params = new URLSearchParams('agent=claude&agent=cursor');
 		expect(parseExploreParams(params).agents).toEqual(['claude', 'cursor']);
-	});
-
-	it('reads tag param from URL', () => {
-		const params = new URLSearchParams('tag=typescript');
-		expect(parseExploreParams(params).tag).toBe('typescript');
 	});
 
 	it('reads combined q and sort params', () => {

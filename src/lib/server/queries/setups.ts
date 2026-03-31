@@ -447,8 +447,6 @@ export async function searchSetups(filters: {
 		orderClause = sql`ORDER BY ts_rank(${setups.searchVector}, plainto_tsquery('english', ${q})) DESC, ${setups.starsCount} DESC, ${setups.createdAt} DESC`;
 	} else if (sort === 'stars') {
 		orderClause = sql`ORDER BY ${setups.starsCount} DESC, ${setups.createdAt} DESC`;
-	} else if (sort === 'clones') {
-		orderClause = sql`ORDER BY ${setups.clonesCount} DESC, ${setups.createdAt} DESC`;
 	} else if (sort === 'trending') {
 		joinClause = sql`LEFT JOIN trending_setups_mv ON trending_setups_mv.setup_id = ${setups.id}`;
 		orderClause = sql`ORDER BY COALESCE(trending_setups_mv.recent_stars_count, 0) DESC, ${setups.createdAt} DESC`;

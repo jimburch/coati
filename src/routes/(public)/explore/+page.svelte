@@ -6,6 +6,7 @@
 	import AgentIcon from '$lib/components/AgentIcon.svelte';
 	import OgMeta from '$lib/components/OgMeta.svelte';
 	import { Input } from '$lib/components/ui/input';
+	import * as Select from '$lib/components/ui/select';
 	import type { ExploreSort } from '$lib/types';
 
 	const { data } = $props();
@@ -17,17 +18,15 @@
 	});
 
 	const sortLabels: Record<ExploreSort, string> = {
-		newest: 'Newest',
 		trending: 'Trending',
 		stars: 'Most Stars',
-		clones: 'Most Clones'
+		newest: 'Newest'
 	};
 
 	function buildUrl(
 		overrides: {
 			q?: string | undefined;
 			agents?: string[] | undefined;
-			tag?: string | undefined;
 			sort?: string | undefined;
 			page?: number | undefined;
 		} = {}
@@ -35,7 +34,6 @@
 		const merged = {
 			q: 'q' in overrides ? overrides.q : data.q,
 			agents: 'agents' in overrides ? overrides.agents : data.agents,
-			tag: 'tag' in overrides ? overrides.tag : data.tag,
 			sort: 'sort' in overrides ? overrides.sort : data.sort,
 			page: 'page' in overrides ? overrides.page : data.page
 		};
@@ -45,8 +43,7 @@
 		for (const slug of merged.agents ?? []) {
 			parts.push(`agent=${encodeURIComponent(slug)}`);
 		}
-		if (merged.tag) parts.push(`tag=${encodeURIComponent(String(merged.tag))}`);
-		if (merged.sort && merged.sort !== 'newest') parts.push(`sort=${merged.sort}`);
+		if (merged.sort && merged.sort !== 'trending') parts.push(`sort=${merged.sort}`);
 		if (merged.page && Number(merged.page) > 1) parts.push(`page=${String(merged.page)}`);
 
 		return `/explore${parts.length > 0 ? `?${parts.join('&')}` : ''}`;
@@ -61,10 +58,6 @@
 		goto(buildUrl({ q: searchInput || undefined, page: 1 }));
 	}
 
-	function handleFilterChange(key: string, value: string) {
-		goto(buildUrl({ [key]: value || undefined, page: 1 }));
-	}
-
 	function toggleAgent(slug: string) {
 		const current = data.agents ?? [];
 		const next = current.includes(slug) ? current.filter((s) => s !== slug) : [...current, slug];
@@ -72,7 +65,7 @@
 	}
 
 	const hasFilters = $derived(
-		!!data.q || (data.agents?.length ?? 0) > 0 || !!data.tag || data.sort !== 'newest'
+		!!data.q || (data.agents?.length ?? 0) > 0 || data.sort !== 'trending'
 	);
 </script>
 
@@ -153,28 +146,22 @@
 		</div>
 	{/if}
 
-	<!-- Filter/sort bar -->
+	<!-- Sort bar -->
 	<div class="mb-4 flex flex-wrap items-center gap-2 lg:mb-6 lg:gap-3">
-		<select
-			class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-			value={data.tag ?? ''}
-			onchange={(e) => handleFilterChange('tag', e.currentTarget.value)}
-		>
-			<option value="">All Tags</option>
-			{#each data.allTags as tag (tag.id)}
-				<option value={tag.name}>{tag.name}</option>
-			{/each}
-		</select>
-
-		<select
-			class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+		<Select.Root
+			type="single"
 			value={data.sort}
-			onchange={(e) => handleFilterChange('sort', e.currentTarget.value)}
+			onValueChange={(val: string) => goto(buildUrl({ sort: val || undefined, page: 1 }))}
 		>
-			{#each Object.entries(sortLabels) as [value, label] (value)}
-				<option {value}>{label}</option>
-			{/each}
-		</select>
+			<Select.Trigger class="h-9 w-[140px]">
+				{sortLabels[data.sort as ExploreSort] ?? 'Sort'}
+			</Select.Trigger>
+			<Select.Content>
+				{#each Object.entries(sortLabels) as [value, label] (value)}
+					<Select.Item {value} {label}>{label}</Select.Item>
+				{/each}
+			</Select.Content>
+		</Select.Root>
 
 		<!-- Active filter chips -->
 		{#if hasFilters}
@@ -188,21 +175,12 @@
 						<span aria-label="Remove search">&times;</span>
 					</a>
 				{/if}
-				{#if data.tag}
-					<a
-						href={buildUrl({ tag: undefined, page: 1 })}
-						class="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/80"
-					>
-						{data.tag}
-						<span aria-label="Remove tag filter">&times;</span>
-					</a>
-				{/if}
-				{#if data.sort !== 'newest'}
+				{#if data.sort !== 'trending'}
 					<a
 						href={buildUrl({ sort: undefined, page: 1 })}
 						class="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/80"
 					>
-						{sortLabels[data.sort]}
+						{sortLabels[data.sort as ExploreSort]}
 						<span aria-label="Remove sort">&times;</span>
 					</a>
 				{/if}

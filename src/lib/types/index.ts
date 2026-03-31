@@ -41,7 +41,7 @@ export type LayoutUser = {
 	isAdmin: boolean;
 };
 
-export type ExploreSort = 'trending' | 'stars' | 'clones' | 'newest';
+export type ExploreSort = 'trending' | 'stars' | 'newest';
 
 export type SetupCardProps = {
 	id: string;
