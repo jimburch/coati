@@ -9,15 +9,14 @@ import {
 } from './validation.js';
 
 const VALID_FILE = {
-	source: 'claude/settings.json',
-	target: '~/.claude/settings.json',
-	placement: 'global' as const
+	path: 'claude/settings.json'
 };
 
 const VALID_MANIFEST = {
 	name: 'my-setup',
 	version: '1.0.0',
 	description: 'A test setup',
+	placement: 'global' as const,
 	files: [VALID_FILE]
 };
 
@@ -37,7 +36,7 @@ describe('zodPathToField', () => {
 	});
 
 	it('uses bracket notation for numeric segments', () => {
-		expect(zodPathToField(['files', 0, 'source'])).toBe('files[0].source');
+		expect(zodPathToField(['files', 0, 'path'])).toBe('files[0].path');
 	});
 
 	it('handles multiple numeric segments', () => {
@@ -48,8 +47,12 @@ describe('zodPathToField', () => {
 // ─── manifestFilePlacementSchema ──────────────────────────────────────────────
 
 describe('manifestFilePlacementSchema', () => {
-	it.each(['global', 'project', 'relative'])('accepts "%s"', (value) => {
+	it.each(['global', 'project'])('accepts "%s"', (value) => {
 		expect(manifestFilePlacementSchema.safeParse(value).success).toBe(true);
+	});
+
+	it('rejects "relative"', () => {
+		expect(manifestFilePlacementSchema.safeParse('relative').success).toBe(false);
 	});
 
 	it('rejects unknown placement', () => {
@@ -98,7 +101,7 @@ describe('manifestCategorySchema', () => {
 // ─── manifestFileEntrySchema ──────────────────────────────────────────────────
 
 describe('manifestFileEntrySchema', () => {
-	it('accepts a valid file entry', () => {
+	it('accepts a valid file entry with path', () => {
 		expect(manifestFileEntrySchema.safeParse(VALID_FILE).success).toBe(true);
 	});
 
@@ -128,35 +131,28 @@ describe('manifestFileEntrySchema', () => {
 		}
 	});
 
-	it('rejects missing source', () => {
-		const result = manifestFileEntrySchema.safeParse({
-			target: VALID_FILE.target,
-			placement: VALID_FILE.placement
-		});
+	it('rejects missing path', () => {
+		const result = manifestFileEntrySchema.safeParse({});
 		expect(result.success).toBe(false);
 		if (!result.success) {
-			expect(result.error.issues.some((i) => i.path.includes('source'))).toBe(true);
+			expect(result.error.issues.some((i) => i.path.includes('path'))).toBe(true);
 		}
 	});
 
-	it('rejects empty source', () => {
-		const result = manifestFileEntrySchema.safeParse({ ...VALID_FILE, source: '' });
+	it('rejects empty path', () => {
+		const result = manifestFileEntrySchema.safeParse({ path: '' });
 		expect(result.success).toBe(false);
 	});
 
-	it('rejects missing target', () => {
+	it('rejects old source field without path', () => {
 		const result = manifestFileEntrySchema.safeParse({
-			source: VALID_FILE.source,
-			placement: VALID_FILE.placement
+			source: 'foo.md',
+			target: '~/.foo',
+			placement: 'global'
 		});
 		expect(result.success).toBe(false);
-	});
-
-	it('rejects invalid placement', () => {
-		const result = manifestFileEntrySchema.safeParse({ ...VALID_FILE, placement: 'nowhere' });
-		expect(result.success).toBe(false);
 		if (!result.success) {
-			expect(result.error.issues.some((i) => i.path.includes('placement'))).toBe(true);
+			expect(result.error.issues.some((i) => i.path.includes('path'))).toBe(true);
 		}
 	});
 
@@ -215,6 +211,21 @@ describe('manifestSchema', () => {
 		}
 	});
 
+	it('requires placement at top level', () => {
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		const { placement: _placement, ...withoutPlacement } = VALID_MANIFEST;
+		const result = manifestSchema.safeParse(withoutPlacement);
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues.some((i) => i.path[0] === 'placement')).toBe(true);
+		}
+	});
+
+	it('rejects "relative" as placement', () => {
+		const result = manifestSchema.safeParse({ ...VALID_MANIFEST, placement: 'relative' });
+		expect(result.success).toBe(false);
+	});
+
 	it('rejects null', () => {
 		expect(manifestSchema.safeParse(null).success).toBe(false);
 	});
@@ -223,6 +234,7 @@ describe('manifestSchema', () => {
 		const result = manifestSchema.safeParse({
 			version: VALID_MANIFEST.version,
 			description: VALID_MANIFEST.description,
+			placement: VALID_MANIFEST.placement,
 			files: VALID_MANIFEST.files
 		});
 		expect(result.success).toBe(false);
@@ -271,15 +283,15 @@ describe('manifestSchema', () => {
 		}
 	});
 
-	it('rejects file with invalid placement producing path files[0].placement', () => {
+	it('rejects file with missing path producing path files[0].path', () => {
 		const result = manifestSchema.safeParse({
 			...VALID_MANIFEST,
-			files: [{ source: 'foo', target: '~/.foo', placement: 'nowhere' }]
+			files: [{ componentType: 'skill' }]
 		});
 		expect(result.success).toBe(false);
 		if (!result.success) {
 			const paths = result.error.issues.map((i) => i.path);
-			expect(paths.some((p) => p[0] === 'files' && p[1] === 0 && p[2] === 'placement')).toBe(true);
+			expect(paths.some((p) => p[0] === 'files' && p[1] === 0 && p[2] === 'path')).toBe(true);
 		}
 	});
 
