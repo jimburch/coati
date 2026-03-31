@@ -19,7 +19,8 @@
 		"db:up": "docker compose up -d",
 		"db:down": "docker compose down",
 		"db:migrate": "drizzle-kit migrate",
-		"dispatch": "./scripts/dispatch.sh"
+		"dispatch": "./scripts/dispatch.sh",
+		"seed:dev": "tsx scripts/seed-dev.ts"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^2.0.2",
@@ -47,6 +48,7 @@
 		"svelte-check": "^4.4.2",
 		"svelte-sonner": "^1.1.0",
 		"tailwindcss": "^4.2.1",
+		"tsx": "^4.0.0",
 		"typescript": "^5.9.3",
 		"typescript-eslint": "^8.54.0",
 		"vite": "^7.3.1",
