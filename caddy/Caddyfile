@@ -1,0 +1,7 @@
+develop.coati.sh {
+	reverse_proxy localhost:3001
+}
+
+coati.sh {
+	reverse_proxy localhost:3000
+}
