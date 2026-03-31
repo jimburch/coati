@@ -11,6 +11,7 @@ import { registerSearch } from './commands/search.js';
 import { registerView } from './commands/view.js';
 import { isNonProductionApi, getEffectiveApiBase } from './api.js';
 import { createContext } from './context.js';
+import { printBanner } from './banner.js';
 
 const DEV_API_BASE = 'http://localhost:5173/api/v1';
 
@@ -52,8 +53,17 @@ registerPublish(program, ctx);
 registerSearch(program, ctx);
 registerView(program, ctx);
 
-// Show help and exit cleanly when invoked with no arguments.
+// Hide commands not yet ready for public use from --help output.
+const HIDDEN_COMMANDS = new Set(['search', 'view', 'help']);
+program.configureHelp({
+	visibleCommands: (cmd) => {
+		return cmd.commands.filter((c) => !HIDDEN_COMMANDS.has(c.name()));
+	}
+});
+
+// Show banner and help when invoked with no arguments.
 if (process.argv.length <= 2) {
+	printBanner();
 	program.outputHelp();
 	process.exit(0);
 }
