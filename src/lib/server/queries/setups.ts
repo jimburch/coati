@@ -398,7 +398,20 @@ export async function searchSetups(filters: {
 	const conditions: ReturnType<typeof sql>[] = [];
 
 	if (q) {
-		conditions.push(sql`${setups.searchVector} @@ plainto_tsquery('english', ${q})`);
+		// Build a prefix-matching tsquery: "clau" → "clau:*", "claude code" → "claude:* & code:*"
+		const prefixQuery = q
+			.trim()
+			.split(/\s+/)
+			.filter(Boolean)
+			.map((term) => term.replace(/[^a-zA-Z0-9]/g, '') + ':*')
+			.join(' & ');
+
+		if (prefixQuery) {
+			conditions.push(
+				sql`(${setups.searchVector} @@ to_tsquery('english', ${prefixQuery})
+				OR ${setups.name} ILIKE ${'%' + q.trim() + '%'})`
+			);
+		}
 	}
 
 	if (agentSlugs && agentSlugs.length > 0) {

@@ -12,7 +12,7 @@
 		agents: string[];
 	};
 
-	let { inputClass = 'h-9 w-64' }: { inputClass?: string } = $props();
+	let { inputClass = 'h-9 w-96' }: { inputClass?: string } = $props();
 
 	let query = $state('');
 	let items = $state<SearchItem[]>([]);
@@ -20,12 +20,12 @@
 	let isOpen = $state(false);
 	let highlightedIndex = $state(-1);
 	let containerEl: HTMLDivElement | undefined = $state();
-	let inputEl: HTMLInputElement | undefined = $state();
+	let inputEl: HTMLInputElement | null = $state(null);
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-	function handleInput() {
-		if (debounceTimer) clearTimeout(debounceTimer);
+	$effect(() => {
 		const trimmed = query.trim();
+		if (debounceTimer) clearTimeout(debounceTimer);
 
 		if (trimmed.length < 2) {
 			isOpen = false;
@@ -35,7 +35,7 @@
 		}
 
 		debounceTimer = setTimeout(fetchResults, 300);
-	}
+	});
 
 	async function fetchResults() {
 		const trimmed = query.trim();
@@ -157,7 +157,6 @@
 			placeholder="Search setups..."
 			class="{inputClass} pl-9 pr-8"
 			bind:value={query}
-			oninput={handleInput}
 			onkeydown={handleKeydown}
 		/>
 		{#if isLoading}
