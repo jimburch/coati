@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 // ─── Const Arrays ─────────────────────────────────────────────────────────────
 
-export const PLACEMENT_VALUES = ['global', 'project', 'relative'] as const;
+export const PLACEMENT_VALUES = ['global', 'project'] as const;
 
 export const COMPONENT_TYPE_VALUES = [
 	'instruction',

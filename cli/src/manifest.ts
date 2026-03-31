@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { manifestSchema, zodPathToField } from './validation.js';
 
-export type ManifestPlacement = 'global' | 'project' | 'relative';
+export type ManifestPlacement = 'global' | 'project';
 export type ManifestComponentType =
 	| 'instruction'
 	| 'command'
@@ -23,9 +23,7 @@ export type ManifestCategory =
 	| 'general';
 
 export interface ManifestFileEntry {
-	source: string;
-	target: string;
-	placement: ManifestPlacement;
+	path: string;
 	componentType?: ManifestComponentType;
 	description?: string;
 	agent?: string;
@@ -36,6 +34,7 @@ export interface Manifest {
 	name: string;
 	version: string;
 	description: string;
+	placement: ManifestPlacement;
 	agents?: string[];
 	tags?: string[];
 	category?: ManifestCategory;

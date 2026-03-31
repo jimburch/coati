@@ -5,7 +5,7 @@ import { AGENTS_BY_SLUG } from '@coati/agents-registry';
 import { ApiError } from '../context.js';
 import { detectInstalledAgents } from '../agent-detection.js';
 import { MANIFEST_FILENAME } from '../manifest.js';
-import type { ManifestPlacement } from '../manifest.js';
+import type { ManifestPlacement } from '../manifest.js'; // used for setup.placement type
 import type { CommandContext } from '../context.js';
 
 interface SetupMeta {
@@ -14,6 +14,7 @@ interface SetupMeta {
 	slug: string;
 	version?: string;
 	description: string;
+	placement: ManifestPlacement;
 	ownerUsername: string;
 	clonesCount: number;
 	starsCount: number;
@@ -23,9 +24,7 @@ interface SetupMeta {
 
 interface SetupFileRecord {
 	id: string;
-	source: string;
-	target: string;
-	placement: ManifestPlacement;
+	path: string;
 	content: string;
 	componentType?: string;
 	description?: string;
@@ -197,7 +196,8 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 
 			// --pick: interactive file selection (skip in JSON mode — use all files)
 			if (opts.pick && !ctx.io.isJson()) {
-				const selectedIndices = await ctx.io.pickFiles(files);
+				const pickableFiles = files.map((f) => ({ path: f.path }));
+				const selectedIndices = await ctx.io.pickFiles(pickableFiles);
 				if (selectedIndices.length === 0) {
 					ctx.io.warning('No files selected. Nothing to install.');
 					process.exit(0);
@@ -215,10 +215,9 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 				destination = 'dir';
 			} else {
 				// Prompt for install scope (interactive only)
-				// Default to 'global' when majority of filtered files are globally-scoped.
-				const globalCount = files.filter((f) => f.placement === 'global').length;
+				// Default to 'global' when the setup's placement is 'global'.
 				const defaultScope: 'current' | 'global' =
-					files.length > 0 && globalCount > files.length / 2 ? 'global' : 'current';
+					setup.placement === 'global' ? 'global' : 'current';
 
 				let dest: 'current' | 'global' = 'current';
 				if (!ctx.io.isJson()) {
@@ -245,10 +244,18 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 				}
 			}
 
+			// Convert file records to FileToWrite format
+			const filesToWrite = files.map((f) => ({
+				source: f.path,
+				target: f.path,
+				placement: setup.placement,
+				content: f.content
+			}));
+
 			// Write files
 			let writeResult;
 			try {
-				writeResult = await ctx.fs.writeSetupFiles(files, {
+				writeResult = await ctx.fs.writeSetupFiles(filesToWrite, {
 					projectDir,
 					destination,
 					force: opts.force,

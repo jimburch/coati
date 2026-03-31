@@ -10,10 +10,10 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	const { files } = detail;
 	if (files.length === 0) throw error(404, 'No files found');
 
-	const selectedPath = url.searchParams.get('file') ?? files[0].source;
-	const selectedFile = files.find((f) => f.source === selectedPath) ?? files[0];
+	const selectedPath = url.searchParams.get('file') ?? files[0].path;
+	const selectedFile = files.find((f) => f.path === selectedPath) ?? files[0];
 
-	const highlightedHtml = await highlightCode(selectedFile.content, selectedFile.source);
+	const highlightedHtml = await highlightCode(selectedFile.content, selectedFile.path);
 
 	return {
 		setup: detail,

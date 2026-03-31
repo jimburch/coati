@@ -141,7 +141,7 @@ export function registerView(program: Command, ctx: CommandContext): void {
 					const agentLabel = file.agent
 						? ` [${AGENTS_BY_SLUG[file.agent]?.displayName ?? file.agent}]`
 						: '';
-					ctx.io.print(`    ${file.source}${agentLabel}`);
+					ctx.io.print(`    ${file.path}${agentLabel}`);
 				}
 			}
 		});

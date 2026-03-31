@@ -94,9 +94,7 @@ export const createSetupSchema = z.object({
 });
 
 export const createSetupFileSchema = z.object({
-	source: z.string().min(1),
-	target: z.string().min(1),
-	placement: placementSchema,
+	path: z.string().min(1),
 	componentType: componentTypeSchema.default('instruction'),
 	description: z.string().optional(),
 	content: z.string().min(1).max(102400, 'File exceeds 100KB limit')
@@ -105,6 +103,7 @@ export const createSetupFileSchema = z.object({
 // Cross-reference: cli/src/validation.ts must stay in sync with this schema
 export const createSetupWithFilesSchema = createSetupSchema
 	.extend({
+		placement: placementSchema,
 		category: categorySchema.optional(),
 		license: z.string().max(50).optional(),
 		minToolVersion: z.string().max(20).optional(),
@@ -128,6 +127,7 @@ export const updateSetupSchema = z
 		slug: z.string().min(1).max(100).regex(SLUG_NAME_REGEX).optional(),
 		description: z.string().max(300).optional(),
 		readme: z.string().optional(),
+		placement: placementSchema.optional(),
 		category: categorySchema.nullable().optional(),
 		license: z.string().max(50).nullable().optional(),
 		minToolVersion: z.string().max(20).nullable().optional(),

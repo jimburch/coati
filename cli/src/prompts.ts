@@ -202,9 +202,7 @@ export async function confirmPostInstall(command: string): Promise<boolean> {
 }
 
 export interface PickableFile {
-	source: string;
-	target: string;
-	placement: string;
+	path: string;
 }
 
 /**
@@ -216,7 +214,7 @@ export async function pickFiles(files: PickableFile[]): Promise<number[]> {
 	if (isJsonMode()) requiresInteractivity('file picker');
 
 	const options = files.map((f, i) => ({
-		label: `${f.source} → ${f.target} (${f.placement})`,
+		label: f.path,
 		value: i
 	}));
 

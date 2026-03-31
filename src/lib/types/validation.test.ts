@@ -11,13 +11,14 @@ import {
 } from './index';
 
 function makeFile(content: string = 'x') {
-	return { source: 'a.md', target: 'a.md', placement: 'global' as const, content };
+	return { path: 'a.md', content };
 }
 
 const validSetupBase = {
 	name: 'My Setup',
 	slug: 'my-setup',
-	description: 'A setup'
+	description: 'A setup',
+	placement: 'global' as const
 };
 import { z } from 'zod';
 

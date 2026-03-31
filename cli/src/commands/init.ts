@@ -141,18 +141,21 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 	// Merge auto-detected agents with any user-provided ones from metadata
 	const allAgents = [...new Set([...autoDetectedAgents, ...metadata.agents])];
 
+	// Derive top-level placement: 'global' if any detected file is globally-scoped
+	const hasGlobal = filesToInclude.some((f) => f.placement === 'global');
+	const placement: 'global' | 'project' = hasGlobal ? 'global' : 'project';
+
 	// Build the manifest — auto-tag each file with its agent field
 	const manifest: Manifest = {
 		name: slug,
 		version: '1.0.0',
 		description: metadata.description,
+		placement,
 		...(category !== undefined && { category }),
 		...(allAgents.length > 0 && { agents: allAgents }),
 		...(metadata.tags.length > 0 && { tags: metadata.tags }),
 		files: filesToInclude.map((f) => ({
-			source: f.source,
-			target: f.target,
-			placement: f.placement,
+			path: f.source,
 			componentType: f.componentType,
 			...(f.tool && { agent: f.tool })
 		}))

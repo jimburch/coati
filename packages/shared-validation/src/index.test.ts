@@ -15,8 +15,8 @@ describe('PLACEMENT_VALUES', () => {
 	it('contains expected values', () => {
 		expect(PLACEMENT_VALUES).toContain('global');
 		expect(PLACEMENT_VALUES).toContain('project');
-		expect(PLACEMENT_VALUES).toContain('relative');
-		expect(PLACEMENT_VALUES).toHaveLength(3);
+		expect(PLACEMENT_VALUES).not.toContain('relative');
+		expect(PLACEMENT_VALUES).toHaveLength(2);
 	});
 });
 
@@ -87,7 +87,10 @@ describe('placementSchema', () => {
 	it('parses valid placements', () => {
 		expect(placementSchema.parse('global')).toBe('global');
 		expect(placementSchema.parse('project')).toBe('project');
-		expect(placementSchema.parse('relative')).toBe('relative');
+	});
+
+	it('rejects "relative" placement', () => {
+		expect(() => placementSchema.parse('relative')).toThrow();
 	});
 
 	it('rejects invalid placements', () => {

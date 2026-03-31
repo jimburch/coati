@@ -127,7 +127,7 @@ describe('runInitFlow — normal flow', () => {
 			expect.objectContaining({
 				name: 'my-setup',
 				description: 'A test setup',
-				files: expect.arrayContaining([expect.objectContaining({ source: 'CLAUDE.md' })])
+				files: expect.arrayContaining([expect.objectContaining({ path: 'CLAUDE.md' })])
 			})
 		);
 		expect(result).toBe(true);
@@ -161,7 +161,7 @@ describe('runInitFlow — file picker checklist', () => {
 
 		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
 		expect(writtenManifest.files).toHaveLength(1);
-		expect(writtenManifest.files[0].source).toBe('CLAUDE.md');
+		expect(writtenManifest.files[0].path).toBe('CLAUDE.md');
 	});
 
 	it('returns false and shows error when no files selected', async () => {
@@ -418,8 +418,8 @@ describe('runInitFlow — file tagging', () => {
 		await runInitFlow(ctx, CWD);
 
 		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
-		const claudeFile = (writtenManifest.files as Array<{ source: string; agent?: string }>).find(
-			(f) => f.source === 'CLAUDE.md'
+		const claudeFile = (writtenManifest.files as Array<{ path: string; agent?: string }>).find(
+			(f) => f.path === 'CLAUDE.md'
 		);
 		expect(claudeFile).toBeDefined();
 		expect(claudeFile!.agent).toBe('claude-code');
@@ -429,8 +429,8 @@ describe('runInitFlow — file tagging', () => {
 		await runInitFlow(ctx, CWD);
 
 		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
-		const settingsFile = (writtenManifest.files as Array<{ source: string; agent?: string }>).find(
-			(f) => f.source === '.claude/settings.json'
+		const settingsFile = (writtenManifest.files as Array<{ path: string; agent?: string }>).find(
+			(f) => f.path === '.claude/settings.json'
 		);
 		expect(settingsFile).toBeDefined();
 		expect(settingsFile!.agent).toBe('claude-code');
@@ -444,8 +444,8 @@ describe('runInitFlow — file tagging', () => {
 		await runInitFlow(ctx, CWD);
 
 		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
-		const sharedFile = (writtenManifest.files as Array<{ source: string; agent?: string }>).find(
-			(f) => f.source === 'README.md'
+		const sharedFile = (writtenManifest.files as Array<{ path: string; agent?: string }>).find(
+			(f) => f.path === 'README.md'
 		);
 		expect(sharedFile).toBeDefined();
 		expect(sharedFile!.agent).toBeUndefined();
@@ -459,8 +459,8 @@ describe('runInitFlow — file tagging', () => {
 		await runInitFlow(ctx, CWD);
 
 		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
-		const cursorFile = (writtenManifest.files as Array<{ source: string; agent?: string }>).find(
-			(f) => f.source === '.cursor/rules/main.mdc'
+		const cursorFile = (writtenManifest.files as Array<{ path: string; agent?: string }>).find(
+			(f) => f.path === '.cursor/rules/main.mdc'
 		);
 		expect(cursorFile).toBeDefined();
 		expect(cursorFile!.agent).toBe('cursor');

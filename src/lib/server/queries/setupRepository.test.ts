@@ -45,6 +45,7 @@ const MOCK_SETUP = {
 	slug: 'my-setup',
 	description: 'A great setup',
 	readme: null,
+	placement: 'project' as const,
 	category: null,
 	license: null,
 	minToolVersion: null,
@@ -55,6 +56,7 @@ const MOCK_SETUP = {
 	commentsCount: 0,
 	createdAt: new Date('2026-01-01'),
 	updatedAt: new Date('2026-01-01'),
+	featuredAt: null,
 	ownerUsername: 'alice',
 	ownerAvatarUrl: 'https://example.com/avatar.png'
 };
@@ -63,9 +65,7 @@ const MOCK_FILES = [
 	{
 		id: 'file-1',
 		setupId: 'setup-1',
-		source: 'README.md',
-		target: 'README.md',
-		placement: 'project' as const,
+		path: 'README.md',
 		componentType: 'instruction' as const,
 		description: null,
 		content: '# Hello',
@@ -160,6 +160,14 @@ describe('setupRepo.getDetail', () => {
 		expect(result!.name).toBe(MOCK_SETUP.name);
 		expect(result!.ownerUsername).toBe(MOCK_SETUP.ownerUsername);
 		expect(result!.starsCount).toBe(MOCK_SETUP.starsCount);
+	});
+
+	it('includes placement in returned detail', async () => {
+		mockGetSetupByOwnerSlug.mockResolvedValue({ ...MOCK_SETUP, placement: 'global' as const });
+
+		const result = await setupRepo.getDetail('alice', 'my-setup');
+
+		expect(result!.placement).toBe('global');
 	});
 });
 
@@ -279,6 +287,7 @@ describe('setupRepo.create', () => {
 			name: 'My Setup',
 			slug: 'my-setup',
 			description: 'A setup',
+			placement: 'project' as const,
 			files: []
 		};
 		const result = await setupRepo.create('user-1', data);

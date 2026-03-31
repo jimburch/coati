@@ -89,7 +89,6 @@ export function resolveTargetPath(
 			return path.join(os.homedir(), target);
 		}
 		case 'project':
-		case 'relative':
 			return path.resolve(projectDir, target);
 		default:
 			return path.resolve(projectDir, target);

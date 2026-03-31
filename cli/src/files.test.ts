@@ -68,11 +68,6 @@ describe('resolveTargetPath', () => {
 		expect(result).toBe(path.join(tmpDir, 'CLAUDE.md'));
 	});
 
-	it('resolves relative placement relative to projectDir', () => {
-		const result = resolveTargetPath('subdir/file.md', 'relative', { projectDir: tmpDir });
-		expect(result).toBe(path.join(tmpDir, 'subdir', 'file.md'));
-	});
-
 	it('falls back to cwd for project placement when no projectDir given', () => {
 		const result = resolveTargetPath('file.txt', 'project');
 		expect(result).toBe(path.resolve(process.cwd(), 'file.txt'));

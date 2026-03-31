@@ -322,6 +322,24 @@
 					</div>
 				</div>
 
+				<!-- Placement -->
+				<div>
+					<h3 class="mb-2 text-sm font-semibold text-muted-foreground">Placement</h3>
+					<span
+						class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium {data.setup
+							.placement === 'global'
+							? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+							: 'bg-secondary text-secondary-foreground'}"
+					>
+						{data.setup.placement === 'global' ? 'Global' : 'Project'}
+					</span>
+					<p class="mt-1 text-xs text-muted-foreground">
+						{data.setup.placement === 'global'
+							? 'Installs to your home directory (~/.claude/…)'
+							: 'Installs relative to your project directory (.claude/…)'}
+					</p>
+				</div>
+
 				<!-- Agents -->
 				{#if data.agents.length > 0}
 					<div>

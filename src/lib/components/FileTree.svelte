@@ -3,7 +3,7 @@
 	import { SvelteSet } from 'svelte/reactivity';
 
 	interface Props {
-		files: Array<{ source: string; id: string }>;
+		files: Array<{ path: string; id: string }>;
 		selectedPath: string;
 		basePath: string;
 	}
@@ -17,11 +17,11 @@
 		children: TreeNode[];
 	}
 
-	function buildTree(flatFiles: Array<{ source: string; id: string }>): TreeNode[] {
+	function buildTree(flatFiles: Array<{ path: string; id: string }>): TreeNode[] {
 		const root: TreeNode[] = [];
 
 		for (const file of flatFiles) {
-			const parts = file.source.split('/');
+			const parts = file.path.split('/');
 			let current = root;
 
 			for (let i = 0; i < parts.length; i++) {
@@ -58,7 +58,7 @@
 	$effect(() => {
 		expandedDirs.clear();
 		for (const file of files) {
-			const parts = file.source.split('/');
+			const parts = file.path.split('/');
 			for (let i = 1; i < parts.length; i++) {
 				expandedDirs.add(parts.slice(0, i).join('/'));
 			}
