@@ -12,11 +12,14 @@
 		try {
 			const res = await fetch('https://buttondown.com/api/emails/embed-subscribe/coati', {
 				method: 'POST',
+				mode: 'no-cors',
 				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 				body: new URLSearchParams({ email, tag: 'landing-page' })
 			});
 
-			if (res.ok || res.status === 303) {
+			// With no-cors mode, response is opaque (status 0) — we can't read it,
+			// but the request still reaches Buttondown successfully
+			if (res.type === 'opaque' || res.ok || res.status === 303) {
 				status = 'success';
 				email = '';
 			} else {
