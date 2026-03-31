@@ -106,6 +106,7 @@
 		isOpen = false;
 		highlightedIndex = -1;
 		const trimmed = query.trim();
+		query = '';
 		if (trimmed) {
 			goto(`/explore?q=${encodeURIComponent(trimmed)}`);
 		} else {

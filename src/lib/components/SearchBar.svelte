@@ -7,6 +7,7 @@
 	function handleSubmit(e: SubmitEvent) {
 		e.preventDefault();
 		const trimmed = query.trim();
+		query = '';
 		if (trimmed) {
 			goto(`/explore?q=${encodeURIComponent(trimmed)}`);
 		} else {
