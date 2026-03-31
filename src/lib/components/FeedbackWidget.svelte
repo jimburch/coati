@@ -27,6 +27,20 @@
 	let submitting = $state(false);
 	let errorMsg = $state('');
 
+	function getDeviceType(): 'mobile' | 'desktop' {
+		return window.innerWidth < 768 ? 'mobile' : 'desktop';
+	}
+
+	function getBrowserName(): string {
+		const ua = navigator.userAgent;
+		if (ua.includes('Firefox')) return 'Firefox';
+		if (ua.includes('Edg/')) return 'Edge';
+		if (ua.includes('OPR/') || ua.includes('Opera')) return 'Opera';
+		if (ua.includes('Chrome') && ua.includes('Safari')) return 'Chrome';
+		if (ua.includes('Safari') && !ua.includes('Chrome')) return 'Safari';
+		return 'Unknown';
+	}
+
 	const visible = $derived(
 		user !== null && (user.isBetaApproved || user.isAdmin) && page.url.pathname !== '/waitlist'
 	);
@@ -81,7 +95,9 @@
 					category,
 					title: title.trim(),
 					description: description.trim(),
-					pageUrl
+					pageUrl,
+					deviceType: getDeviceType(),
+					browser: getBrowserName()
 				})
 			});
 
@@ -151,7 +167,7 @@
 				<DialogTitle>
 					{CATEGORIES.find((c) => c.value === category)?.label ?? 'Feedback'}
 				</DialogTitle>
-				<div class="flex flex-col gap-4">
+				<div class="flex flex-col gap-4 overflow-hidden">
 					<div class="flex flex-col gap-1.5">
 						<label for="feedback-title" class="text-sm font-medium">Title</label>
 						<Input
@@ -173,8 +189,11 @@
 							data-testid="feedback-description"
 						/>
 					</div>
-					<p class="truncate text-xs text-muted-foreground" data-testid="feedback-page-url">
-						{pageUrl}
+					<p
+						class="min-w-0 truncate text-xs text-muted-foreground"
+						data-testid="feedback-page-url"
+					>
+						Page: {pageUrl.replace(/^https?:\/\/[^/]+/, '')}
 					</p>
 					{#if errorMsg}
 						<p class="text-sm text-destructive" data-testid="feedback-error">{errorMsg}</p>

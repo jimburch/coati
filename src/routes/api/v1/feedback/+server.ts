@@ -19,7 +19,9 @@ const feedbackSchema = z.object({
 	category: z.enum(['bug', 'improvement', 'feature-request']),
 	title: z.string().min(1, 'Title is required').max(200),
 	description: z.string().min(1, 'Description is required').max(2000),
-	pageUrl: z.string().url('pageUrl must be a valid URL')
+	pageUrl: z.string().url('pageUrl must be a valid URL'),
+	deviceType: z.enum(['mobile', 'desktop']),
+	browser: z.string().max(50)
 });
 
 export const POST: RequestHandler = async (event) => {
@@ -52,7 +54,9 @@ export const POST: RequestHandler = async (event) => {
 			description: parsed.description,
 			pageUrl: parsed.pageUrl,
 			username: user.username,
-			environment
+			environment,
+			deviceType: parsed.deviceType,
+			browser: parsed.browser
 		});
 		issueUrl = issue.html_url;
 	} catch {

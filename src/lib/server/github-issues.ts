@@ -89,14 +89,27 @@ export interface CreateFeedbackIssueParams {
 	pageUrl: string;
 	username: string;
 	environment: FeedbackEnvironment;
+	deviceType: 'mobile' | 'desktop';
+	browser: string;
 }
 
 /**
  * Creates a structured feedback issue with standard labels and body format.
  */
 export async function createFeedbackIssue(params: CreateFeedbackIssueParams): Promise<GitHubIssue> {
-	const { token, owner, repo, category, title, description, pageUrl, username, environment } =
-		params;
+	const {
+		token,
+		owner,
+		repo,
+		category,
+		title,
+		description,
+		pageUrl,
+		username,
+		environment,
+		deviceType,
+		browser
+	} = params;
 
 	const labels = ['beta-feedback', CATEGORY_LABEL[category], `env:${environment}`];
 	const body = [
@@ -109,7 +122,9 @@ export async function createFeedbackIssue(params: CreateFeedbackIssueParams): Pr
 		`**Page:** ${pageUrl}`,
 		`**Reported by:** @${username}`,
 		`**Category:** ${category}`,
-		`**Environment:** ${environment}`
+		`**Environment:** ${environment}`,
+		`**Device:** ${deviceType}`,
+		`**Browser:** ${browser}`
 	].join('\n');
 
 	return createIssue({ token, owner, repo, title, body, labels });

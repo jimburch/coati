@@ -65,7 +65,9 @@ const VALID_BODY = {
 	category: 'bug',
 	title: 'Something broke',
 	description: 'It stopped working after update',
-	pageUrl: 'https://coati.dev/explore'
+	pageUrl: 'https://coati.dev/explore',
+	deviceType: 'desktop',
+	browser: 'Chrome'
 };
 
 describe('POST /api/v1/feedback', () => {
