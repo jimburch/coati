@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, or, ilike } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { users } from '$lib/server/db/schema';
 
@@ -65,6 +65,25 @@ function emptyToNull(value: string | undefined): string | null | undefined {
 
 export async function updateLastLoginAt(userId: string) {
 	await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, userId));
+}
+
+export function buildUserSearchPattern(q: string): string {
+	return `${q.trim().toLowerCase()}%`;
+}
+
+export async function searchUsers(q: string, limit: number = 3) {
+	const pattern = buildUserSearchPattern(q);
+	return db
+		.select({
+			id: users.id,
+			username: users.username,
+			name: users.name,
+			avatarUrl: users.avatarUrl,
+			setupsCount: users.setupsCount
+		})
+		.from(users)
+		.where(or(ilike(users.username, pattern), ilike(users.name, pattern)))
+		.limit(limit);
 }
 
 export async function updateUserProfile(userId: string, data: UpdateProfileData) {

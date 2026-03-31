@@ -3,7 +3,15 @@
 	import { Input } from '$lib/components/ui/input';
 	import AgentIcon from '$lib/components/AgentIcon.svelte';
 
-	type SearchItem = {
+	type UserResult = {
+		id: string;
+		username: string;
+		name: string | null;
+		avatarUrl: string;
+		setupsCount: number;
+	};
+
+	type SetupResult = {
 		id: string;
 		name: string;
 		slug: string;
@@ -15,7 +23,8 @@
 	let { inputClass = 'h-9 w-96' }: { inputClass?: string } = $props();
 
 	let query = $state('');
-	let items = $state<SearchItem[]>([]);
+	let userItems = $state<UserResult[]>([]);
+	let setupItems = $state<SetupResult[]>([]);
 	let isLoading = $state(false);
 	let isOpen = $state(false);
 	let highlightedIndex = $state(-1);
@@ -29,7 +38,8 @@
 
 		if (trimmed.length < 2) {
 			isOpen = false;
-			items = [];
+			userItems = [];
+			setupItems = [];
 			highlightedIndex = -1;
 			return;
 		}
@@ -46,12 +56,14 @@
 		highlightedIndex = -1;
 
 		try {
-			const res = await fetch(`/api/v1/setups?q=${encodeURIComponent(trimmed)}&page=1`);
+			const res = await fetch(`/api/v1/search?q=${encodeURIComponent(trimmed)}`);
 			if (!res.ok) return;
 			const json = await res.json();
-			items = (json.data?.items ?? []).slice(0, 5);
+			userItems = json.data?.users ?? [];
+			setupItems = json.data?.setups ?? [];
 		} catch {
-			items = [];
+			userItems = [];
+			setupItems = [];
 		} finally {
 			isLoading = false;
 		}
@@ -76,11 +88,18 @@
 		};
 	});
 
-	function navigateToResult(username: string, slug: string) {
+	function navigateToSetup(username: string, slug: string) {
 		isOpen = false;
 		highlightedIndex = -1;
 		query = '';
 		goto(`/${username}/${slug}`);
+	}
+
+	function navigateToUser(username: string) {
+		isOpen = false;
+		highlightedIndex = -1;
+		query = '';
+		goto(`/${username}`);
 	}
 
 	function navigateToAll() {
@@ -110,9 +129,9 @@
 
 		if (e.key === 'ArrowDown') {
 			e.preventDefault();
-			if (items.length === 0) return;
+			if (setupItems.length === 0) return;
 			highlightedIndex =
-				highlightedIndex >= items.length - 1 ? items.length - 1 : highlightedIndex + 1;
+				highlightedIndex >= setupItems.length - 1 ? setupItems.length - 1 : highlightedIndex + 1;
 			return;
 		}
 
@@ -128,9 +147,9 @@
 
 		if (e.key === 'Enter') {
 			e.preventDefault();
-			if (highlightedIndex >= 0 && highlightedIndex < items.length) {
-				const item = items[highlightedIndex];
-				navigateToResult(item.ownerUsername, item.slug);
+			if (highlightedIndex >= 0 && highlightedIndex < setupItems.length) {
+				const item = setupItems[highlightedIndex];
+				navigateToSetup(item.ownerUsername, item.slug);
 			} else {
 				navigateToAll();
 			}
@@ -186,44 +205,87 @@
 		<div
 			class="bg-popover absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-lg border shadow-lg"
 		>
-			{#if isLoading && items.length === 0}
+			{#if isLoading && userItems.length === 0 && setupItems.length === 0}
 				<div class="text-muted-foreground p-4 text-center text-sm">Searching...</div>
-			{:else if items.length === 0}
+			{:else if userItems.length === 0 && setupItems.length === 0}
 				<div class="text-muted-foreground p-4 text-center text-sm">No results found</div>
 			{:else}
-				<ul role="listbox">
-					{#each items as item, index (item.id)}
-						<li role="option" aria-selected={index === highlightedIndex}>
-							<button
-								class="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors {index ===
-								highlightedIndex
-									? 'bg-accent'
-									: 'hover:bg-accent'}"
-								onclick={() => navigateToResult(item.ownerUsername, item.slug)}
-							>
-								{#if item.agents.length > 0}
-									<div class="flex shrink-0 items-center gap-0.5">
-										{#each item.agents.slice(0, 2) as agentSlug (agentSlug)}
-											<AgentIcon slug={agentSlug} size={16} />
-										{/each}
+				{#if userItems.length > 0}
+					<div
+						class="text-muted-foreground border-b px-3 py-1.5 text-xs font-medium uppercase tracking-wide"
+					>
+						Users
+					</div>
+					<ul>
+						{#each userItems as user (user.id)}
+							<li>
+								<button
+									class="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-accent"
+									onclick={() => navigateToUser(user.username)}
+								>
+									<img
+										src={user.avatarUrl}
+										alt={user.username}
+										class="h-6 w-6 shrink-0 rounded-full"
+									/>
+									<div class="min-w-0 flex-1">
+										<div class="text-foreground truncate text-sm font-medium">
+											{user.username}
+										</div>
+										{#if user.name}
+											<div class="text-muted-foreground truncate text-xs">{user.name}</div>
+										{/if}
 									</div>
-								{/if}
-								<div class="min-w-0 flex-1">
-									<div class="text-foreground truncate text-sm font-medium">{item.name}</div>
-									<div class="text-muted-foreground truncate text-xs">{item.ownerUsername}</div>
-								</div>
-								<div class="text-muted-foreground flex shrink-0 items-center gap-1 text-xs">
-									<svg class="size-3" viewBox="0 0 16 16" fill="currentColor">
-										<path
-											d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25z"
-										/>
-									</svg>
-									{item.starsCount}
-								</div>
-							</button>
-						</li>
-					{/each}
-				</ul>
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+
+				{#if setupItems.length > 0}
+					<div
+						class="text-muted-foreground px-3 py-1.5 text-xs font-medium uppercase tracking-wide {userItems.length >
+						0
+							? 'border-t'
+							: ''}"
+					>
+						Setups
+					</div>
+					<ul role="listbox">
+						{#each setupItems as item, index (item.id)}
+							<li role="option" aria-selected={index === highlightedIndex}>
+								<button
+									class="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors {index ===
+									highlightedIndex
+										? 'bg-accent'
+										: 'hover:bg-accent'}"
+									onclick={() => navigateToSetup(item.ownerUsername, item.slug)}
+								>
+									{#if item.agents.length > 0}
+										<div class="flex shrink-0 items-center gap-0.5">
+											{#each item.agents.slice(0, 2) as agentSlug (agentSlug)}
+												<AgentIcon slug={agentSlug} size={16} />
+											{/each}
+										</div>
+									{/if}
+									<div class="min-w-0 flex-1">
+										<div class="text-foreground truncate text-sm font-medium">{item.name}</div>
+										<div class="text-muted-foreground truncate text-xs">{item.ownerUsername}</div>
+									</div>
+									<div class="text-muted-foreground flex shrink-0 items-center gap-1 text-xs">
+										<svg class="size-3" viewBox="0 0 16 16" fill="currentColor">
+											<path
+												d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25z"
+											/>
+										</svg>
+										{item.starsCount}
+									</div>
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+
 				<div class="border-t px-3 py-2">
 					<button class="text-primary text-xs hover:underline" onclick={navigateToAll}>
 						View all results for "{query.trim()}"
