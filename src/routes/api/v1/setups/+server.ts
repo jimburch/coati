@@ -8,14 +8,12 @@ import { setupRepo } from '$lib/server/queries/setupRepository';
 export const GET: RequestHandler = async ({ url }) => {
 	const q = url.searchParams.get('q') ?? undefined;
 	const agentSlugs = url.searchParams.getAll('agent').filter(Boolean);
-	const tag = url.searchParams.get('tag') ?? undefined;
 	const sort = (url.searchParams.get('sort') as ExploreSort) || 'newest';
 	const page = Math.max(1, Number(url.searchParams.get('page') ?? 1));
 
 	const result = await setupRepo.search({
 		q,
 		agentSlugs: agentSlugs.length > 0 ? agentSlugs : undefined,
-		tagName: tag,
 		sort,
 		page
 	});

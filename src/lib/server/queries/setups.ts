@@ -389,11 +389,10 @@ const PAGE_SIZE = 12;
 export async function searchSetups(filters: {
 	q?: string;
 	agentSlugs?: string[];
-	tagName?: string;
 	sort: ExploreSort;
 	page: number;
 }) {
-	const { q, agentSlugs, tagName, sort, page } = filters;
+	const { q, agentSlugs, sort, page } = filters;
 	const offset = (page - 1) * PAGE_SIZE;
 
 	const conditions: ReturnType<typeof sql>[] = [];
@@ -410,7 +409,12 @@ export async function searchSetups(filters: {
 		if (prefixQuery) {
 			conditions.push(
 				sql`(${setups.searchVector} @@ to_tsquery('english', ${prefixQuery})
-				OR ${setups.name} ILIKE ${'%' + q.trim() + '%'})`
+				OR ${setups.name} ILIKE ${'%' + q.trim() + '%'}
+				OR ${setups.id} IN (
+					SELECT ${setupTags.setupId} FROM ${setupTags}
+					INNER JOIN ${tags} ON ${setupTags.tagId} = ${tags.id}
+					WHERE ${tags.name} ILIKE ${q.trim() + '%'}
+				))`
 			);
 		}
 	}
@@ -424,16 +428,6 @@ export async function searchSetups(filters: {
 					agentSlugs.map((s) => sql`${s}`),
 					sql`, `
 				)})
-			)`
-		);
-	}
-
-	if (tagName) {
-		conditions.push(
-			sql`${setups.id} IN (
-				SELECT ${setupTags.setupId} FROM ${setupTags}
-				INNER JOIN ${tags} ON ${setupTags.tagId} = ${tags.id}
-				WHERE ${tags.name} = ${tagName}
 			)`
 		);
 	}
