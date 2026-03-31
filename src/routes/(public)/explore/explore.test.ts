@@ -129,6 +129,34 @@ describe('buildUrl', () => {
 	});
 });
 
+// Pure logic: should user results row be shown
+function shouldShowUserResults(q: string | undefined, userResults: { id: string }[]): boolean {
+	return !!q && userResults.length > 0;
+}
+
+describe('shouldShowUserResults', () => {
+	it('returns false when no query is active', () => {
+		expect(shouldShowUserResults(undefined, [{ id: '1' }])).toBe(false);
+	});
+
+	it('returns false when query is present but no user results', () => {
+		expect(shouldShowUserResults('alice', [])).toBe(false);
+	});
+
+	it('returns true when query is present and user results exist', () => {
+		expect(shouldShowUserResults('alice', [{ id: '1' }])).toBe(true);
+	});
+
+	it('returns false when query is empty string (treated as undefined)', () => {
+		expect(shouldShowUserResults(undefined, [{ id: '1' }, { id: '2' }])).toBe(false);
+	});
+
+	it('returns true with multiple user results', () => {
+		const users = [{ id: '1' }, { id: '2' }, { id: '3' }];
+		expect(shouldShowUserResults('bob', users)).toBe(true);
+	});
+});
+
 describe('parseExploreParams (URL → state)', () => {
 	it('returns default state for empty params', () => {
 		const params = new URLSearchParams('');

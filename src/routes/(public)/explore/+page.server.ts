@@ -5,6 +5,7 @@ import {
 	getAllAgentsWithSetupCount,
 	getAgentsForSetups
 } from '$lib/server/queries/setups';
+import { searchUsers } from '$lib/server/queries/users';
 
 const VALID_SORTS: ExploreSort[] = ['trending', 'stars', 'newest'];
 
@@ -17,14 +18,15 @@ export const load: PageServerLoad = async ({ url }) => {
 		: 'trending';
 	const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
 
-	const [results, allAgents] = await Promise.all([
+	const [results, allAgents, userResults] = await Promise.all([
 		searchSetups({
 			q,
 			agentSlugs: agents.length > 0 ? agents : undefined,
 			sort,
 			page
 		}),
-		getAllAgentsWithSetupCount()
+		getAllAgentsWithSetupCount(),
+		q ? searchUsers(q, 6) : Promise.resolve([])
 	]);
 
 	const agentsMap = await getAgentsForSetups(results.items.map((s) => s.id));
@@ -38,6 +40,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		q,
 		agents,
 		sort,
-		allAgents
+		allAgents,
+		userResults
 	};
 };

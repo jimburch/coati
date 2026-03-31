@@ -191,6 +191,39 @@
 		{/if}
 	</div>
 
+	<!-- User results row -->
+	{#if data.userResults && data.userResults.length > 0}
+		<div class="mb-6">
+			<h2 class="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+				People
+			</h2>
+			<div class="flex flex-wrap gap-3">
+				{#each data.userResults as user (user.id)}
+					<a
+						href="/{user.username}"
+						class="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 text-card-foreground hover:bg-accent transition-colors min-w-0"
+					>
+						<img
+							src={user.avatarUrl}
+							alt={user.username}
+							class="h-9 w-9 rounded-full flex-shrink-0"
+						/>
+						<div class="min-w-0">
+							<div class="font-medium text-sm truncate">{user.username}</div>
+							{#if user.name}
+								<div class="text-xs text-muted-foreground truncate">{user.name}</div>
+							{/if}
+							<div class="text-xs text-muted-foreground">
+								{user.setupsCount}
+								{user.setupsCount === 1 ? 'setup' : 'setups'}
+							</div>
+						</div>
+					</a>
+				{/each}
+			</div>
+		</div>
+	{/if}
+
 	<!-- Results grid -->
 	{#if data.items.length > 0}
 		<div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 lg:gap-4">
