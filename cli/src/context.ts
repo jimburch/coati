@@ -97,7 +97,7 @@ export interface FsClient {
 		options?: files.WriteOptions
 	): Promise<files.WriteResult>;
 	resolveTargetPath(
-		target: string,
+		filePath: string,
 		placement: import('./manifest.js').ManifestPlacement,
 		options?: files.WriteOptions
 	): string;

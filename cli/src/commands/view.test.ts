@@ -26,6 +26,7 @@ function makeSetup(
 		name: string;
 		slug: string;
 		description: string;
+		placement: 'global' | 'project';
 		ownerUsername: string;
 		starsCount: number;
 		clonesCount: number;
@@ -39,6 +40,7 @@ function makeSetup(
 		name: 'My Setup',
 		slug: 'my-setup',
 		description: 'A test setup',
+		placement: 'project' as const,
 		ownerUsername: 'alice',
 		starsCount: 5,
 		clonesCount: 10,
@@ -52,18 +54,14 @@ function makeSetup(
 function makeFile(
 	overrides: Partial<{
 		id: string;
-		source: string;
-		target: string;
-		placement: string;
+		path: string;
 		componentType: string;
 		agent: string;
 	}> = {}
 ) {
 	return {
 		id: 'f1',
-		source: 'CLAUDE.md',
-		target: 'CLAUDE.md',
-		placement: 'project',
+		path: 'CLAUDE.md',
 		...overrides
 	};
 }
@@ -105,9 +103,9 @@ describe('coati view', () => {
 		const { program, ctx } = makeProgram();
 		const setup = makeSetup({ agents: ['claude-code', 'cursor'] });
 		const files = [
-			makeFile({ source: 'CLAUDE.md', agent: 'claude-code' }),
-			makeFile({ id: 'f2', source: '.cursorrules', agent: 'cursor' }),
-			makeFile({ id: 'f3', source: '.cursorrules2', agent: 'cursor' })
+			makeFile({ path: 'CLAUDE.md', agent: 'claude-code' }),
+			makeFile({ id: 'f2', path: '.cursorrules', agent: 'cursor' }),
+			makeFile({ id: 'f3', path: '.cursorrules2', agent: 'cursor' })
 		];
 		vi.mocked(ctx.api.get).mockResolvedValueOnce(setup).mockResolvedValueOnce(files);
 		await program.parseAsync(['view', 'alice/my-setup'], { from: 'user' });
@@ -123,8 +121,8 @@ describe('coati view', () => {
 		const { program, ctx } = makeProgram();
 		const setup = makeSetup({ agents: ['claude-code'] });
 		const files = [
-			makeFile({ source: 'CLAUDE.md', agent: 'claude-code' }),
-			makeFile({ id: 'f2', source: 'README.md' }) // no agent = shared
+			makeFile({ path: 'CLAUDE.md', agent: 'claude-code' }),
+			makeFile({ id: 'f2', path: 'README.md' }) // no agent = shared
 		];
 		vi.mocked(ctx.api.get).mockResolvedValueOnce(setup).mockResolvedValueOnce(files);
 		await program.parseAsync(['view', 'alice/my-setup'], { from: 'user' });
@@ -148,12 +146,12 @@ describe('coati view', () => {
 		expect(allPrints).not.toMatch(/Agents:/);
 	});
 
-	it('shows file list with agent labels', async () => {
+	it('shows file list with resolved project paths (./)', async () => {
 		const { program, ctx } = makeProgram();
-		const setup = makeSetup({ agents: ['claude-code'] });
+		const setup = makeSetup({ agents: ['claude-code'], placement: 'project' });
 		const files = [
-			makeFile({ source: 'CLAUDE.md', agent: 'claude-code' }),
-			makeFile({ id: 'f2', source: 'README.md' })
+			makeFile({ path: 'CLAUDE.md', agent: 'claude-code' }),
+			makeFile({ id: 'f2', path: 'README.md' })
 		];
 		vi.mocked(ctx.api.get).mockResolvedValueOnce(setup).mockResolvedValueOnce(files);
 		await program.parseAsync(['view', 'alice/my-setup'], { from: 'user' });
@@ -161,8 +159,21 @@ describe('coati view', () => {
 			.mocked(ctx.io.print)
 			.mock.calls.map((c) => c[0])
 			.join('\n');
-		expect(allPrints).toMatch(/CLAUDE\.md.*Claude Code/);
-		expect(allPrints).toMatch(/README\.md/);
+		expect(allPrints).toMatch(/\.\/CLAUDE\.md.*Claude Code/);
+		expect(allPrints).toMatch(/\.\/README\.md/);
+	});
+
+	it('shows file list with resolved global paths (~/) for global setups', async () => {
+		const { program, ctx } = makeProgram();
+		const setup = makeSetup({ agents: ['claude-code'], placement: 'global' });
+		const files = [makeFile({ path: '.claude/commands/review.md', agent: 'claude-code' })];
+		vi.mocked(ctx.api.get).mockResolvedValueOnce(setup).mockResolvedValueOnce(files);
+		await program.parseAsync(['view', 'alice/my-setup'], { from: 'user' });
+		const allPrints = vi
+			.mocked(ctx.io.print)
+			.mock.calls.map((c) => c[0])
+			.join('\n');
+		expect(allPrints).toMatch(/~\/.claude\/commands\/review\.md/);
 	});
 
 	it('outputs JSON when --json flag is set', async () => {

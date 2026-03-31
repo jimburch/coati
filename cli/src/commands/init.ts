@@ -6,7 +6,8 @@ import {
 	writeManifest,
 	MANIFEST_FILENAME,
 	type Manifest,
-	type ManifestCategory
+	type ManifestCategory,
+	type ManifestPlacement
 } from '../manifest.js';
 import { formatFileList } from '../format.js';
 import type { CommandContext } from '../context.js';
@@ -91,21 +92,25 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 			const formatted = formatFileList(detected);
 			process.stdout.write('\n' + formatted + '\n');
 
-			const fileChoices = detected.map((f) => ({ label: f.source, value: f.source }));
-			const allSources = detected.map((f) => f.source);
-			const selected = await ctx.io.checklist(
-				'Select files to include',
-				fileChoices,
-				allSources,
-				1
-			);
+			const fileChoices = detected.map((f) => ({ label: f.path, value: f.path }));
+			const allPaths = detected.map((f) => f.path);
+			const selected = await ctx.io.checklist('Select files to include', fileChoices, allPaths, 1);
 			if (selected.length === 0) {
 				ctx.io.error('At least 1 file must be selected.');
 				return false;
 			}
-			filesToInclude = detected.filter((f) => selected.includes(f.source));
+			filesToInclude = detected.filter((f) => selected.includes(f.path));
 		}
 		// In JSON mode: filesToInclude remains as detected (all files)
+	}
+
+	// Ask for setup-level placement (single question for all files)
+	let placement: ManifestPlacement = 'project';
+	if (!ctx.io.isJson()) {
+		placement = await ctx.io.select<ManifestPlacement>('Where should files be installed?', [
+			{ label: 'Global — write to ~/  (shared across all projects)', value: 'global' },
+			{ label: 'Project — write to ./  (relative to project directory)', value: 'project' }
+		]);
 	}
 
 	// Build choice lists for interactive prompts
@@ -141,10 +146,6 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 	// Merge auto-detected agents with any user-provided ones from metadata
 	const allAgents = [...new Set([...autoDetectedAgents, ...metadata.agents])];
 
-	// Derive top-level placement: 'global' if any detected file is globally-scoped
-	const hasGlobal = filesToInclude.some((f) => f.placement === 'global');
-	const placement: 'global' | 'project' = hasGlobal ? 'global' : 'project';
-
 	// Build the manifest — auto-tag each file with its agent field
 	const manifest: Manifest = {
 		name: slug,
@@ -155,7 +156,7 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 		...(allAgents.length > 0 && { agents: allAgents }),
 		...(metadata.tags.length > 0 && { tags: metadata.tags }),
 		files: filesToInclude.map((f) => ({
-			path: f.source,
+			path: f.path,
 			componentType: f.componentType,
 			...(f.tool && { agent: f.tool })
 		}))

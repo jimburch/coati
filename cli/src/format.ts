@@ -42,15 +42,17 @@ function typeBadge(componentType: ManifestComponentType, width: number): string 
  *
  *   Claude Code  (7 files)
  *   ──────────────────────
- *     command      .claude/commands/review.md → ~/.claude/commands/review.md
- *     command      .claude/commands/test-coverage.md → ~/.claude/commands/test-coverage.md
- *     hook         .claude/hooks/pre-commit.sh → ~/.claude/hooks/pre-commit.sh
- *     instruction  .claude/settings.json → ~/.claude/settings.json
- *     skill        .claude/skills/api-patterns/SKILL.md → ~/.claude/skills/api-patterns/SKILL.md
- *     mcp          .mcp.json → .mcp.json
- *     instruction  CLAUDE.md → CLAUDE.md
+ *     command      .claude/commands/review.md
+ *     command      .claude/commands/test-coverage.md
+ *     hook         .claude/hooks/pre-commit.sh
+ *     instruction  .claude/settings.json
+ *     skill        .claude/skills/api-patterns/SKILL.md
+ *     mcp          .mcp.json
+ *     instruction  CLAUDE.md
  */
 export function formatFileList(files: DetectedFile[]): string {
+	if (files.length === 0) return '';
+
 	// Group by agent
 	const groups = new Map<string, DetectedFile[]>();
 	for (const f of files) {
@@ -75,8 +77,7 @@ export function formatFileList(files: DetectedFile[]): string {
 
 		for (const f of agentFiles) {
 			const badge = typeBadge(f.componentType, maxLabelLen);
-			const arrow = pc.dim('→');
-			lines.push(`  ${badge}  ${f.source} ${arrow} ${f.target}`);
+			lines.push(`  ${badge}  ${f.path}`);
 		}
 
 		lines.push('');

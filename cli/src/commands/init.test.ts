@@ -30,17 +30,13 @@ const { runInitFlow, computeDetectedAgents } = await import('./init.js');
 
 const DETECTED_FILES = [
 	{
-		source: 'CLAUDE.md',
-		target: 'CLAUDE.md',
-		placement: 'project' as const,
+		path: 'CLAUDE.md',
 		componentType: 'instruction' as const,
 		tool: 'claude-code',
 		description: 'Claude instruction file'
 	},
 	{
-		source: '.claude/settings.json',
-		target: '~/.claude/settings.json',
-		placement: 'global' as const,
+		path: '.claude/settings.json',
 		componentType: 'config' as const,
 		tool: 'claude-code',
 		description: 'Claude settings'
@@ -49,33 +45,25 @@ const DETECTED_FILES = [
 
 const MULTI_AGENT_FILES = [
 	{
-		source: 'CLAUDE.md',
-		target: 'CLAUDE.md',
-		placement: 'project' as const,
+		path: 'CLAUDE.md',
 		componentType: 'instruction' as const,
 		tool: 'claude-code',
 		description: 'Claude instruction file'
 	},
 	{
-		source: '.claude/settings.json',
-		target: '~/.claude/settings.json',
-		placement: 'global' as const,
+		path: '.claude/settings.json',
 		componentType: 'config' as const,
 		tool: 'claude-code',
 		description: 'Claude settings'
 	},
 	{
-		source: '.cursor/rules/main.mdc',
-		target: '.cursor/rules/main.mdc',
-		placement: 'project' as const,
+		path: '.cursor/rules/main.mdc',
 		componentType: 'instruction' as const,
 		tool: 'cursor',
 		description: 'Cursor rule'
 	},
 	{
-		source: 'README.md',
-		target: 'README.md',
-		placement: 'project' as const,
+		path: 'README.md',
 		componentType: 'instruction' as const,
 		tool: '',
 		description: 'Shared README'
@@ -101,8 +89,10 @@ beforeEach(() => {
 	vi.mocked(ctx.fs.existsSync).mockReturnValue(false);
 	mockDetectFiles.mockReturnValue(DETECTED_FILES);
 	vi.mocked(ctx.io.confirm).mockResolvedValue(true);
-	// Default: checklist returns all detected file sources (all pre-selected, none deselected)
-	vi.mocked(ctx.io.checklist).mockResolvedValue(DETECTED_FILES.map((f) => f.source));
+	// Default: checklist returns all detected file paths (all pre-selected, none deselected)
+	vi.mocked(ctx.io.checklist).mockResolvedValue(DETECTED_FILES.map((f) => f.path));
+	// Default: select returns 'project' for placement question
+	vi.mocked(ctx.io.select).mockResolvedValue('project');
 	mockFormatFileList.mockReturnValue('(formatted file list)');
 	vi.mocked(ctx.io.promptMetadata).mockResolvedValue(DEFAULT_METADATA);
 	mockWriteManifest.mockReturnValue(undefined);
@@ -137,6 +127,38 @@ describe('runInitFlow — normal flow', () => {
 		await runInitFlow(ctx, CWD);
 		expect(ctx.io.success).toHaveBeenCalledWith(expect.stringContaining('coati.json'));
 	});
+
+	it('asks a single placement question', async () => {
+		await runInitFlow(ctx, CWD);
+		expect(ctx.io.select).toHaveBeenCalledWith(
+			expect.stringContaining('installed'),
+			expect.arrayContaining([
+				expect.objectContaining({ value: 'global' }),
+				expect.objectContaining({ value: 'project' })
+			])
+		);
+	});
+
+	it('writes manifest with placement from select prompt', async () => {
+		vi.mocked(ctx.io.select).mockResolvedValue('global');
+
+		await runInitFlow(ctx, CWD);
+
+		expect(mockWriteManifest).toHaveBeenCalledWith(
+			CWD,
+			expect.objectContaining({ placement: 'global' })
+		);
+	});
+
+	it('defaults to project placement in JSON mode (no select prompt)', async () => {
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
+
+		await runInitFlow(ctx, CWD);
+
+		expect(ctx.io.select).not.toHaveBeenCalled();
+		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
+		expect(writtenManifest.placement).toBe('project');
+	});
 });
 
 // ── file picker checklist ─────────────────────────────────────────────────────
@@ -147,8 +169,8 @@ describe('runInitFlow — file picker checklist', () => {
 
 		expect(ctx.io.checklist).toHaveBeenCalledWith(
 			expect.any(String),
-			DETECTED_FILES.map((f) => ({ label: f.source, value: f.source })),
-			DETECTED_FILES.map((f) => f.source),
+			DETECTED_FILES.map((f) => ({ label: f.path, value: f.path })),
+			DETECTED_FILES.map((f) => f.path),
 			1
 		);
 	});
@@ -425,7 +447,7 @@ describe('runInitFlow — file tagging', () => {
 		expect(claudeFile!.agent).toBe('claude-code');
 	});
 
-	it('sets agent field on global placement files too', async () => {
+	it('sets agent field on all files including deeply-nested paths', async () => {
 		await runInitFlow(ctx, CWD);
 
 		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
@@ -438,7 +460,7 @@ describe('runInitFlow — file tagging', () => {
 
 	it('does not set agent field on shared files with empty tool', async () => {
 		mockDetectFiles.mockReturnValue(MULTI_AGENT_FILES);
-		vi.mocked(ctx.io.checklist).mockResolvedValueOnce(MULTI_AGENT_FILES.map((f) => f.source));
+		vi.mocked(ctx.io.checklist).mockResolvedValueOnce(MULTI_AGENT_FILES.map((f) => f.path));
 		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({ ...DEFAULT_METADATA, agents: [] });
 
 		await runInitFlow(ctx, CWD);
@@ -453,7 +475,7 @@ describe('runInitFlow — file tagging', () => {
 
 	it('tags each file correctly in a multi-agent project', async () => {
 		mockDetectFiles.mockReturnValue(MULTI_AGENT_FILES);
-		vi.mocked(ctx.io.checklist).mockResolvedValueOnce(MULTI_AGENT_FILES.map((f) => f.source));
+		vi.mocked(ctx.io.checklist).mockResolvedValueOnce(MULTI_AGENT_FILES.map((f) => f.path));
 		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({ ...DEFAULT_METADATA, agents: [] });
 
 		await runInitFlow(ctx, CWD);
@@ -478,7 +500,7 @@ describe('runInitFlow — confirmation flow', () => {
 
 	it('passes multi-agent files to formatFileList', async () => {
 		mockDetectFiles.mockReturnValue(MULTI_AGENT_FILES);
-		vi.mocked(ctx.io.checklist).mockResolvedValueOnce(MULTI_AGENT_FILES.map((f) => f.source));
+		vi.mocked(ctx.io.checklist).mockResolvedValueOnce(MULTI_AGENT_FILES.map((f) => f.path));
 
 		await runInitFlow(ctx, CWD);
 
