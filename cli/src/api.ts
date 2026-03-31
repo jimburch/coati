@@ -46,9 +46,13 @@ async function request<T>(
 		'User-Agent': USER_AGENT
 	};
 
-	const { token } = getConfig();
+	const { token, cfAccessClientId, cfAccessClientSecret } = getConfig();
 	if (token) {
 		headers['Authorization'] = `Bearer ${token}`;
+	}
+	if (cfAccessClientId && cfAccessClientSecret) {
+		headers['CF-Access-Client-Id'] = cfAccessClientId;
+		headers['CF-Access-Client-Secret'] = cfAccessClientSecret;
 	}
 
 	if (body !== undefined) {

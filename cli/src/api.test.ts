@@ -161,6 +161,32 @@ describe('error responses', () => {
 	});
 });
 
+describe('CF Access headers', () => {
+	it('attaches CF-Access headers when cfAccessClientId and cfAccessClientSecret are present', async () => {
+		setConfig({ cfAccessClientId: 'test-client-id', cfAccessClientSecret: 'test-client-secret' });
+		mockFetch(makeFetchResponse({ data: null }));
+
+		await get('/setups');
+
+		const [, init] = vi.mocked(fetch).mock.calls[0]!;
+		const headers = init?.headers as Record<string, string>;
+		expect(headers['CF-Access-Client-Id']).toBe('test-client-id');
+		expect(headers['CF-Access-Client-Secret']).toBe('test-client-secret');
+	});
+
+	it('omits CF-Access headers when CF credentials are absent', async () => {
+		// clearConfig already called in beforeEach — no CF creds set
+		mockFetch(makeFetchResponse({ data: null }));
+
+		await get('/setups');
+
+		const [, init] = vi.mocked(fetch).mock.calls[0]!;
+		const headers = init?.headers as Record<string, string>;
+		expect(headers['CF-Access-Client-Id']).toBeUndefined();
+		expect(headers['CF-Access-Client-Secret']).toBeUndefined();
+	});
+});
+
 describe('custom apiBase', () => {
 	it('uses the provided apiBase override instead of config default', async () => {
 		mockFetch(makeFetchResponse({ data: [] }));
