@@ -14,11 +14,10 @@ const VALID_MANIFEST: Manifest = {
 	name: 'my-setup',
 	version: '1.0.0',
 	description: 'A test setup',
+	placement: 'global',
 	files: [
 		{
-			source: 'claude/settings.json',
-			target: '~/.claude/settings.json',
-			placement: 'global'
+			path: 'claude/settings.json'
 		}
 	]
 };
@@ -82,34 +81,64 @@ describe('validateManifest', () => {
 		expect(result.errors.some((e) => e.field === 'description')).toBe(true);
 	});
 
+	it('requires placement', () => {
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		const { placement: _placement, ...withoutPlacement } = VALID_MANIFEST;
+		const result = validateManifest(withoutPlacement);
+		expect(result.valid).toBe(false);
+		expect(result.errors.some((e) => e.field === 'placement')).toBe(true);
+	});
+
+	it('accepts global placement', () => {
+		const result = validateManifest({ ...VALID_MANIFEST, placement: 'global' });
+		expect(result.valid).toBe(true);
+	});
+
+	it('accepts project placement', () => {
+		const result = validateManifest({ ...VALID_MANIFEST, placement: 'project' });
+		expect(result.valid).toBe(true);
+	});
+
+	it('rejects relative placement', () => {
+		const result = validateManifest({ ...VALID_MANIFEST, placement: 'relative' });
+		expect(result.valid).toBe(false);
+		expect(result.errors.some((e) => e.field === 'placement')).toBe(true);
+	});
+
+	it('rejects unknown placement', () => {
+		const result = validateManifest({ ...VALID_MANIFEST, placement: 'nowhere' });
+		expect(result.valid).toBe(false);
+		expect(result.errors.some((e) => e.field === 'placement')).toBe(true);
+	});
+
 	it('requires at least one file', () => {
 		const result = validateManifest({ ...VALID_MANIFEST, files: [] });
 		expect(result.valid).toBe(false);
 		expect(result.errors.some((e) => e.field === 'files')).toBe(true);
 	});
 
-	it('rejects file entry missing source', () => {
+	it('rejects file entry missing path', () => {
 		const result = validateManifest({
 			...VALID_MANIFEST,
-			files: [{ target: '~/.foo', placement: 'global' }]
+			files: [{}]
 		});
 		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.field === 'files[0].source')).toBe(true);
+		expect(result.errors.some((e) => e.field === 'files[0].path')).toBe(true);
 	});
 
-	it('rejects file entry with invalid placement', () => {
+	it('rejects file entry with old source field (no path)', () => {
 		const result = validateManifest({
 			...VALID_MANIFEST,
-			files: [{ source: 'foo', target: '~/.foo', placement: 'nowhere' }]
+			files: [{ source: 'foo.md', target: '~/.foo', placement: 'global' }]
 		});
 		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.field === 'files[0].placement')).toBe(true);
+		expect(result.errors.some((e) => e.field === 'files[0].path')).toBe(true);
 	});
 
 	it('rejects file entry with invalid componentType', () => {
 		const result = validateManifest({
 			...VALID_MANIFEST,
-			files: [{ source: 'foo', target: '~/.foo', placement: 'global', componentType: 'widget' }]
+			files: [{ path: 'foo', componentType: 'widget' }]
 		});
 		expect(result.valid).toBe(false);
 		expect(result.errors.some((e) => e.field === 'files[0].componentType')).toBe(true);
@@ -118,7 +147,7 @@ describe('validateManifest', () => {
 	it('accepts a valid componentType', () => {
 		const result = validateManifest({
 			...VALID_MANIFEST,
-			files: [{ source: 'foo', target: '~/.foo', placement: 'global', componentType: 'skill' }]
+			files: [{ path: 'foo', componentType: 'skill' }]
 		});
 		expect(result.valid).toBe(true);
 	});
@@ -154,8 +183,9 @@ describe('writeManifest + readManifest roundtrip', () => {
 		expect(read.name).toBe(VALID_MANIFEST.name);
 		expect(read.version).toBe(VALID_MANIFEST.version);
 		expect(read.description).toBe(VALID_MANIFEST.description);
+		expect(read.placement).toBe('global');
 		expect(read.files).toHaveLength(1);
-		expect(read.files[0]!.source).toBe('claude/settings.json');
+		expect(read.files[0]!.path).toBe('claude/settings.json');
 	});
 
 	it('creates the directory if it does not exist', () => {
@@ -164,7 +194,7 @@ describe('writeManifest + readManifest roundtrip', () => {
 		expect(fs.existsSync(path.join(nested, MANIFEST_FILENAME))).toBe(true);
 	});
 
-	it('writes valid JSON to setup.json', () => {
+	it('writes valid JSON to coati.json', () => {
 		writeManifest(tmpDir, VALID_MANIFEST);
 		const raw = fs.readFileSync(path.join(tmpDir, MANIFEST_FILENAME), 'utf-8');
 		expect(() => JSON.parse(raw)).not.toThrow();
@@ -194,9 +224,7 @@ describe('writeManifest + readManifest roundtrip', () => {
 			...VALID_MANIFEST,
 			files: [
 				{
-					source: 'claude/settings.json',
-					target: '~/.claude/settings.json',
-					placement: 'global',
+					path: 'claude/settings.json',
 					agent: 'claude-code'
 				}
 			]

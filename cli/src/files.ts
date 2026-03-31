@@ -5,17 +5,15 @@ import { type ManifestPlacement } from './manifest.js';
 import { resolveConflict } from './prompts.js';
 
 export interface FileToWrite {
-	source: string;
-	target: string;
-	placement: ManifestPlacement;
+	path: string;
 	content: string;
 }
 
 export interface WriteOptions {
-	/** Project directory for project/relative-scoped files. Defaults to process.cwd(). */
+	/** Project directory for project-scoped files. Defaults to process.cwd(). */
 	projectDir?: string;
-	/** User's chosen install destination. When set, overrides per-file placement. */
-	destination?: 'current' | 'global' | 'dir';
+	/** Setup-level placement: 'global' writes to ~/, 'project' writes relative to projectDir. */
+	placement?: ManifestPlacement;
 	/** Overwrite all conflicts without prompting. */
 	force?: boolean;
 	/** Preview what would be written without actually writing anything. */
@@ -40,60 +38,22 @@ export interface WriteResult {
 }
 
 /**
- * Strip global prefixes from a target path so it can be resolved relative
- * to a chosen base directory (e.g. `~/` prefix, absolute paths).
- */
-function stripGlobalPrefix(target: string): string {
-	if (target.startsWith('~/')) return target.slice(2);
-	if (path.isAbsolute(target)) return path.relative(os.homedir(), target);
-	return target;
-}
-
-/**
- * Resolve a target path to an absolute path.
+ * Resolve a file's `path` entry to an absolute path on disk.
  *
- * When `options.destination` is set, it takes precedence over per-file placement:
- * - 'current' / 'dir': all files resolve relative to projectDir
- * - 'global': all files resolve relative to home directory
- *
- * When no destination is set, falls back to per-file placement for backwards
- * compatibility (e.g. publish preview, dry-run without prompt).
+ * - `global` placement: file goes to `~/<path>` (user's home directory)
+ * - `project` placement: file goes to `<projectDir>/<path>` (project directory or cwd)
  */
 export function resolveTargetPath(
-	target: string,
+	filePath: string,
 	placement: ManifestPlacement,
 	options: WriteOptions = {}
 ): string {
 	const projectDir = options.projectDir ?? process.cwd();
-	const dest = options.destination;
 
-	// User explicitly chose a destination — honour it for all files.
-	if (dest === 'current' || dest === 'dir') {
-		const relative = stripGlobalPrefix(target);
-		return path.resolve(projectDir, relative);
+	if (placement === 'global') {
+		return path.join(os.homedir(), filePath);
 	}
-	if (dest === 'global') {
-		const relative = stripGlobalPrefix(target);
-		return path.join(os.homedir(), relative);
-	}
-
-	// No destination override — use per-file placement (legacy / non-clone paths).
-	switch (placement) {
-		case 'global': {
-			if (target.startsWith('~/')) {
-				return path.join(os.homedir(), target.slice(2));
-			}
-			if (path.isAbsolute(target)) {
-				return target;
-			}
-			return path.join(os.homedir(), target);
-		}
-		case 'project':
-		case 'relative':
-			return path.resolve(projectDir, target);
-		default:
-			return path.resolve(projectDir, target);
-	}
+	return path.resolve(projectDir, filePath);
 }
 
 /**
@@ -110,9 +70,10 @@ export async function writeSetupFiles(
 	options: WriteOptions = {}
 ): Promise<WriteResult> {
 	const results: FileWriteResult[] = [];
+	const placement = options.placement ?? 'project';
 
 	for (const file of files) {
-		const resolvedPath = resolveTargetPath(file.target, file.placement, options);
+		const resolvedPath = resolveTargetPath(file.path, placement, options);
 
 		if (options.dryRun) {
 			results.push({ target: resolvedPath, outcome: 'written' });

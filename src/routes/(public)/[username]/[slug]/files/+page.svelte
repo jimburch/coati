@@ -39,7 +39,7 @@
 		</Button>
 		{#if mobileTreeOpen}
 			<div class="mt-2 rounded-lg border border-border p-2">
-				<FileTree files={data.files} selectedPath={data.selectedFile.source} {basePath} />
+				<FileTree files={data.files} selectedPath={data.selectedFile.path} {basePath} />
 			</div>
 		{/if}
 	</div>
@@ -49,13 +49,17 @@
 		<!-- Sidebar (desktop only) -->
 		<aside class="hidden w-64 shrink-0 md:block">
 			<div class="sticky top-8 rounded-lg border border-border p-2">
-				<FileTree files={data.files} selectedPath={data.selectedFile.source} {basePath} />
+				<FileTree files={data.files} selectedPath={data.selectedFile.path} {basePath} />
 			</div>
 		</aside>
 
 		<!-- Main content -->
 		<div class="min-w-0 flex-1">
-			<FileViewer file={data.selectedFile} highlightedHtml={data.highlightedHtml} />
+			<FileViewer
+				file={data.selectedFile}
+				highlightedHtml={data.highlightedHtml}
+				placement={data.setup.placement}
+			/>
 		</div>
 	</div>
 </div>

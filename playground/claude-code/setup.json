@@ -4,53 +4,40 @@
 	"description": "local dev playground",
 	"category": "web-dev",
 	"agents": ["claude-code"],
+	"placement": "global",
 	"files": [
 		{
-			"source": ".claude/commands/review.md",
-			"target": "~/.claude/commands/review.md",
-			"placement": "global",
+			"path": ".claude/commands/review.md",
 			"componentType": "command",
 			"agent": "claude-code"
 		},
 		{
-			"source": ".claude/commands/test-coverage.md",
-			"target": "~/.claude/commands/test-coverage.md",
-			"placement": "global",
+			"path": ".claude/commands/test-coverage.md",
 			"componentType": "command",
 			"agent": "claude-code"
 		},
 		{
-			"source": ".claude/hooks/pre-commit.sh",
-			"target": "~/.claude/hooks/pre-commit.sh",
-			"placement": "global",
+			"path": ".claude/hooks/pre-commit.sh",
 			"componentType": "hook",
 			"agent": "claude-code"
 		},
 		{
-			"source": ".claude/settings.json",
-			"target": "~/.claude/settings.json",
-			"placement": "global",
+			"path": ".claude/settings.json",
 			"componentType": "instruction",
 			"agent": "claude-code"
 		},
 		{
-			"source": ".claude/skills/api-patterns/SKILL.md",
-			"target": "~/.claude/skills/api-patterns/SKILL.md",
-			"placement": "global",
+			"path": ".claude/skills/api-patterns/SKILL.md",
 			"componentType": "skill",
 			"agent": "claude-code"
 		},
 		{
-			"source": ".mcp.json",
-			"target": ".mcp.json",
-			"placement": "project",
+			"path": ".mcp.json",
 			"componentType": "mcp_server",
 			"agent": "claude-code"
 		},
 		{
-			"source": "CLAUDE.md",
-			"target": "CLAUDE.md",
-			"placement": "project",
+			"path": "CLAUDE.md",
 			"componentType": "instruction",
 			"agent": "claude-code"
 		}

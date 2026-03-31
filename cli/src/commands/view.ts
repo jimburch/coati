@@ -1,12 +1,11 @@
 import { Command } from 'commander';
 import { AGENTS_BY_SLUG } from '@coati/agents-registry';
 import { type CommandContext, ApiError } from '../context.js';
+import type { ManifestPlacement } from '../manifest.js';
 
 interface SetupFileRecord {
 	id: string;
-	source: string;
-	target: string;
-	placement: string;
+	path: string;
 	componentType?: string;
 	description?: string;
 	agent?: string;
@@ -17,6 +16,7 @@ interface SetupDetail {
 	name: string;
 	slug: string;
 	description: string;
+	placement: ManifestPlacement;
 	ownerUsername: string;
 	starsCount: number;
 	clonesCount: number;
@@ -132,7 +132,8 @@ export function registerView(program: Command, ctx: CommandContext): void {
 
 			ctx.io.print('');
 
-			// Files list
+			// Files list with resolved install locations
+			const pathPrefix = setup.placement === 'global' ? '~/' : './';
 			if (files.length === 0) {
 				ctx.io.info('No files in this setup.');
 			} else {
@@ -141,7 +142,7 @@ export function registerView(program: Command, ctx: CommandContext): void {
 					const agentLabel = file.agent
 						? ` [${AGENTS_BY_SLUG[file.agent]?.displayName ?? file.agent}]`
 						: '';
-					ctx.io.print(`    ${file.source}${agentLabel}`);
+					ctx.io.print(`    ${pathPrefix}${file.path}${agentLabel}`);
 				}
 			}
 		});

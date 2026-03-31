@@ -118,6 +118,7 @@ export const setups = pgTable(
 		slug: varchar('slug', { length: 100 }).notNull(),
 		description: varchar('description', { length: 300 }).notNull(),
 		readme: text('readme'),
+		placement: placementEnum('placement').notNull().default('project'),
 		category: categoryEnum('category'),
 		license: varchar('license', { length: 50 }),
 		minToolVersion: varchar('min_tool_version', { length: 20 }),
@@ -178,9 +179,7 @@ export const setupFiles = pgTable(
 		setupId: uuid('setup_id')
 			.references(() => setups.id, { onDelete: 'cascade' })
 			.notNull(),
-		source: text('source').notNull(),
-		target: text('target').notNull(),
-		placement: placementEnum('placement').notNull(),
+		path: text('path').notNull(),
 		componentType: componentTypeEnum('component_type').notNull().default('instruction'),
 		description: text('description'),
 		content: text('content').notNull(),

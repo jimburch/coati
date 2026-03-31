@@ -1,12 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 import { AGENTS, matchesGlob } from '@coati/agents-registry';
-import type { ManifestComponentType, ManifestPlacement } from './manifest.js';
+import type { ManifestComponentType } from './manifest.js';
 
 export interface DetectedFile {
-	source: string;
-	target: string;
-	placement: ManifestPlacement;
+	path: string;
 	componentType: ManifestComponentType;
 	/** Agent slug from @coati/agents-registry (e.g. 'claude-code', 'cursor'). */
 	tool: string;
@@ -71,24 +69,23 @@ function makeDescription(
 /**
  * Scan `dir` for known AI agent config files using the shared @coati/agents-registry.
  *
- * Detection strategy for each file:
- *   1. Check each agent's globalGlobs — files that belong in the user's home dir.
- *      If matched: placement='global', target='~/<path>'.
- *   2. Check each agent's projectGlobs — only if no global match already recorded
- *      for that (file, agent) pair.
- *      If matched: placement='project', target='<path>'.
+ * Each detected file gets a `path` entry (relative to the scanned directory).
+ * Placement is determined at the setup level, not per-file — see ManifestPlacement.
  *
  * A single file may produce multiple DetectedFile entries when it matches
  * globs from more than one agent (e.g. a shared MCP config).
+ *
+ * Global globs are checked first; if matched, the file is not re-emitted for
+ * the same agent's project globs (one entry per (file, agent) pair).
  */
 export function detectFiles(dir: string): DetectedFile[] {
 	const allFiles = walkDir(dir, dir);
 	const detected: DetectedFile[] = [];
 
 	for (const relativePath of allFiles) {
-		// Track which (source, agentSlug) pairs have already been emitted so that
+		// Track which (path, agentSlug) pairs have already been emitted so that
 		// a file matching both globalGlobs and projectGlobs for the same agent
-		// only produces one entry (global wins).
+		// only produces one entry.
 		const emittedForAgent = new Set<string>();
 
 		for (const agent of AGENTS) {
@@ -101,9 +98,7 @@ export function detectFiles(dir: string): DetectedFile[] {
 						emittedForAgent.add(agentKey);
 						const ct = mapping.componentType as ManifestComponentType;
 						detected.push({
-							source: relativePath,
-							target: `~/${relativePath}`,
-							placement: 'global',
+							path: relativePath,
 							componentType: ct,
 							tool: agent.slug,
 							description: makeDescription(relativePath, ct, agent.displayName)
@@ -120,9 +115,7 @@ export function detectFiles(dir: string): DetectedFile[] {
 						emittedForAgent.add(agentKey);
 						const ct = mapping.componentType as ManifestComponentType;
 						detected.push({
-							source: relativePath,
-							target: relativePath,
-							placement: 'project',
+							path: relativePath,
 							componentType: ct,
 							tool: agent.slug,
 							description: makeDescription(relativePath, ct, agent.displayName)

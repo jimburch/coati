@@ -23,9 +23,7 @@ type FileInput = CreateSetupInput['files'];
 function toSetupFileRows(setupId: string, files: NonNullable<FileInput>) {
 	return files.map((f) => ({
 		setupId,
-		source: f.source,
-		target: f.target,
-		placement: f.placement,
+		path: f.path,
 		componentType: f.componentType,
 		description: f.description,
 		content: f.content
@@ -45,6 +43,7 @@ export async function getSetupByOwnerSlug(ownerUsername: string, slug: string) {
 			slug: setups.slug,
 			description: setups.description,
 			readme: setups.readme,
+			placement: setups.placement,
 			category: setups.category,
 			license: setups.license,
 			minToolVersion: setups.minToolVersion,
@@ -74,7 +73,7 @@ export async function getSetupById(id: string) {
 
 export async function createSetup(userId: string, data: CreateSetupInput) {
 	return db.transaction(async (tx) => {
-		const filePaths = (data.files ?? []).map((f) => f.source);
+		const filePaths = (data.files ?? []).map((f) => f.path);
 		const readme = generateReadme(data.name, data.description ?? '', filePaths);
 
 		const [setup] = await tx
@@ -85,6 +84,7 @@ export async function createSetup(userId: string, data: CreateSetupInput) {
 				slug: data.slug,
 				description: data.description,
 				readme,
+				placement: data.placement,
 				category: data.category,
 				license: data.license,
 				minToolVersion: data.minToolVersion,
@@ -123,6 +123,7 @@ export async function updateSetup(id: string, data: UpdateSetupInput) {
 			...(data.slug !== undefined && { slug: data.slug }),
 			...(data.description !== undefined && { description: data.description }),
 			...(data.readme !== undefined && { readme: data.readme }),
+			...(data.placement !== undefined && { placement: data.placement }),
 			...(data.category !== undefined && { category: data.category }),
 			...(data.license !== undefined && { license: data.license }),
 			...(data.minToolVersion !== undefined && { minToolVersion: data.minToolVersion }),
@@ -141,7 +142,7 @@ export async function updateSetup(id: string, data: UpdateSetupInput) {
 				.where(eq(setups.id, id));
 			const name = data.name ?? current?.name ?? '';
 			const description = data.description ?? current?.description ?? '';
-			const filePaths = data.files.map((f) => f.source);
+			const filePaths = data.files.map((f) => f.path);
 			await tx
 				.update(setups)
 				.set({ readme: generateReadme(name, description, filePaths) })
@@ -177,7 +178,7 @@ export async function getSetupFiles(setupId: string) {
 		.select()
 		.from(setupFiles)
 		.where(eq(setupFiles.setupId, setupId))
-		.orderBy(setupFiles.source);
+		.orderBy(setupFiles.path);
 }
 
 export async function getSetupTags(setupId: string) {

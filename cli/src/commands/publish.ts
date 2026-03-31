@@ -60,7 +60,7 @@ export async function validateAgentRefs(
 		for (const slug of missingSlugs) {
 			const filesForSlug = manifest.files
 				.filter((f) => f.agent === slug)
-				.map((f) => f.source)
+				.map((f) => f.path)
 				.join(', ');
 			ctx.io.warning(
 				`File(s) ${filesForSlug} reference agent "${slug}" but it's not in your agents list.`
@@ -152,28 +152,24 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 
 			// Read file contents from disk
 			const filesPayload: Array<{
-				source: string;
-				target: string;
-				placement: string;
+				path: string;
 				componentType: string;
 				description?: string;
 				content: string;
 			}> = [];
 
 			for (const file of manifest.files) {
-				const filePath = path.join(cwd, file.source);
+				const filePath = path.join(cwd, file.path);
 				let content: string;
 				try {
 					content = fs.readFileSync(filePath, 'utf-8');
 				} catch {
-					ctx.io.error(`Cannot read file: ${file.source}`);
+					ctx.io.error(`Cannot read file: ${file.path}`);
 					process.exit(1);
 					return;
 				}
 				filesPayload.push({
-					source: file.source,
-					target: file.target,
-					placement: file.placement,
+					path: file.path,
 					componentType: file.componentType ?? 'instruction',
 					...(file.description ? { description: file.description } : {}),
 					content
@@ -202,6 +198,7 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 				name: manifest.name,
 				slug: manifest.name,
 				description: manifest.description,
+				placement: manifest.placement,
 				...(manifest.category ? { category: manifest.category } : {}),
 				...(manifest.license ? { license: manifest.license } : {}),
 				...(manifest.minToolVersion ? { minToolVersion: manifest.minToolVersion } : {}),

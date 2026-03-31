@@ -37,9 +37,7 @@ afterEach(() => {
 
 function makeFile(overrides: Partial<FileToWrite> = {}): FileToWrite {
 	return {
-		source: 'CLAUDE.md',
-		target: 'CLAUDE.md',
-		placement: 'project',
+		path: 'CLAUDE.md',
 		content: '# Hello',
 		...overrides
 	};
@@ -48,19 +46,19 @@ function makeFile(overrides: Partial<FileToWrite> = {}): FileToWrite {
 // ── resolveTargetPath ─────────────────────────────────────────────────────────
 
 describe('resolveTargetPath', () => {
-	it('expands ~/ for global placement', () => {
-		const result = resolveTargetPath('~/.claude/settings.json', 'global');
+	it('resolves global placement to home directory', () => {
+		const result = resolveTargetPath('.claude/settings.json', 'global');
 		expect(result).toBe(path.join(os.homedir(), '.claude/settings.json'));
 	});
 
-	it('passes through absolute path for global placement', () => {
-		const abs = '/etc/some/config';
-		expect(resolveTargetPath(abs, 'global')).toBe(abs);
-	});
-
-	it('joins bare name to home dir for global placement (no leading ~/)', () => {
+	it('resolves bare name under home dir for global placement', () => {
 		const result = resolveTargetPath('bare-name', 'global');
 		expect(result).toBe(path.join(os.homedir(), 'bare-name'));
+	});
+
+	it('resolves deeply nested path under home dir for global placement', () => {
+		const result = resolveTargetPath('.claude/commands/review.md', 'global');
+		expect(result).toBe(path.join(os.homedir(), '.claude/commands/review.md'));
 	});
 
 	it('resolves project placement relative to projectDir', () => {
@@ -68,14 +66,16 @@ describe('resolveTargetPath', () => {
 		expect(result).toBe(path.join(tmpDir, 'CLAUDE.md'));
 	});
 
-	it('resolves relative placement relative to projectDir', () => {
-		const result = resolveTargetPath('subdir/file.md', 'relative', { projectDir: tmpDir });
-		expect(result).toBe(path.join(tmpDir, 'subdir', 'file.md'));
-	});
-
 	it('falls back to cwd for project placement when no projectDir given', () => {
 		const result = resolveTargetPath('file.txt', 'project');
 		expect(result).toBe(path.resolve(process.cwd(), 'file.txt'));
+	});
+
+	it('resolves nested project path relative to projectDir', () => {
+		const result = resolveTargetPath('.cursor/rules/main.mdc', 'project', {
+			projectDir: tmpDir
+		});
+		expect(result).toBe(path.join(tmpDir, '.cursor/rules/main.mdc'));
 	});
 });
 
@@ -83,8 +83,9 @@ describe('resolveTargetPath', () => {
 
 describe('writeSetupFiles — basic write', () => {
 	it('writes a file and returns written=1', async () => {
-		const result = await writeSetupFiles([makeFile({ target: 'out.md', content: 'hello' })], {
-			projectDir: tmpDir
+		const result = await writeSetupFiles([makeFile({ path: 'out.md', content: 'hello' })], {
+			projectDir: tmpDir,
+			placement: 'project'
 		});
 
 		expect(result.written).toBe(1);
@@ -95,8 +96,9 @@ describe('writeSetupFiles — basic write', () => {
 	});
 
 	it('creates parent directories as needed', async () => {
-		await writeSetupFiles([makeFile({ target: 'a/b/c/file.txt', content: 'deep' })], {
-			projectDir: tmpDir
+		await writeSetupFiles([makeFile({ path: 'a/b/c/file.txt', content: 'deep' })], {
+			projectDir: tmpDir,
+			placement: 'project'
 		});
 
 		const fullPath = path.join(tmpDir, 'a', 'b', 'c', 'file.txt');
@@ -105,8 +107,9 @@ describe('writeSetupFiles — basic write', () => {
 	});
 
 	it('writes atomically (no orphaned temp file on success)', async () => {
-		await writeSetupFiles([makeFile({ target: 'atomic.txt', content: 'data' })], {
-			projectDir: tmpDir
+		await writeSetupFiles([makeFile({ path: 'atomic.txt', content: 'data' })], {
+			projectDir: tmpDir,
+			placement: 'project'
 		});
 
 		expect(fs.existsSync(path.join(tmpDir, 'atomic.txt.coati-tmp'))).toBe(false);
@@ -114,8 +117,9 @@ describe('writeSetupFiles — basic write', () => {
 	});
 
 	it('returns resolved absolute target path in results', async () => {
-		const result = await writeSetupFiles([makeFile({ target: 'sub/file.md', content: '' })], {
-			projectDir: tmpDir
+		const result = await writeSetupFiles([makeFile({ path: 'sub/file.md', content: '' })], {
+			projectDir: tmpDir,
+			placement: 'project'
 		});
 		expect(result.files[0]!.target).toBe(path.join(tmpDir, 'sub', 'file.md'));
 	});
@@ -125,8 +129,9 @@ describe('writeSetupFiles — basic write', () => {
 
 describe('writeSetupFiles — dry run', () => {
 	it('does not write any files in dry-run mode', async () => {
-		const result = await writeSetupFiles([makeFile({ target: 'dry.md', content: 'x' })], {
+		const result = await writeSetupFiles([makeFile({ path: 'dry.md', content: 'x' })], {
 			projectDir: tmpDir,
+			placement: 'project',
 			dryRun: true
 		});
 
@@ -135,8 +140,9 @@ describe('writeSetupFiles — dry run', () => {
 	});
 
 	it('reports outcome "written" for dry-run entries', async () => {
-		const result = await writeSetupFiles([makeFile({ target: 'dry.md', content: 'x' })], {
+		const result = await writeSetupFiles([makeFile({ path: 'dry.md', content: 'x' })], {
 			projectDir: tmpDir,
+			placement: 'project',
 			dryRun: true
 		});
 		expect(result.files[0]!.outcome).toBe('written');
@@ -151,12 +157,10 @@ describe('writeSetupFiles — conflict: overwrite', () => {
 		fs.writeFileSync(filePath, 'old content');
 		mockResolveConflict.mockResolvedValue('overwrite');
 
-		const result = await writeSetupFiles(
-			[makeFile({ target: 'conf.md', content: 'new content' })],
-			{
-				projectDir: tmpDir
-			}
-		);
+		const result = await writeSetupFiles([makeFile({ path: 'conf.md', content: 'new content' })], {
+			projectDir: tmpDir,
+			placement: 'project'
+		});
 
 		expect(result.written).toBe(1);
 		expect(result.files[0]!.outcome).toBe('written');
@@ -170,8 +174,9 @@ describe('writeSetupFiles — conflict: skip', () => {
 		fs.writeFileSync(filePath, 'original');
 		mockResolveConflict.mockResolvedValue('skip');
 
-		const result = await writeSetupFiles([makeFile({ target: 'skip.md', content: 'new' })], {
-			projectDir: tmpDir
+		const result = await writeSetupFiles([makeFile({ path: 'skip.md', content: 'new' })], {
+			projectDir: tmpDir,
+			placement: 'project'
 		});
 
 		expect(result.skipped).toBe(1);
@@ -186,8 +191,9 @@ describe('writeSetupFiles — conflict: backup', () => {
 		fs.writeFileSync(filePath, 'old');
 		mockResolveConflict.mockResolvedValue('backup');
 
-		const result = await writeSetupFiles([makeFile({ target: 'back.md', content: 'new' })], {
-			projectDir: tmpDir
+		const result = await writeSetupFiles([makeFile({ path: 'back.md', content: 'new' })], {
+			projectDir: tmpDir,
+			placement: 'project'
 		});
 
 		expect(result.backedUp).toBe(1);
@@ -205,8 +211,9 @@ describe('writeSetupFiles — force', () => {
 		const filePath = path.join(tmpDir, 'force.md');
 		fs.writeFileSync(filePath, 'original');
 
-		const result = await writeSetupFiles([makeFile({ target: 'force.md', content: 'forced' })], {
+		const result = await writeSetupFiles([makeFile({ path: 'force.md', content: 'forced' })], {
 			projectDir: tmpDir,
+			placement: 'project',
 			force: true
 		});
 
@@ -223,8 +230,9 @@ describe('writeSetupFiles — JSON mode', () => {
 		const filePath = path.join(tmpDir, 'json.md');
 		fs.writeFileSync(filePath, 'original');
 
-		const result = await writeSetupFiles([makeFile({ target: 'json.md', content: 'new' })], {
+		const result = await writeSetupFiles([makeFile({ path: 'json.md', content: 'new' })], {
 			projectDir: tmpDir,
+			placement: 'project',
 			isJson: true
 		});
 
@@ -242,11 +250,11 @@ describe('writeSetupFiles — multiple files', () => {
 		mockResolveConflict.mockResolvedValue('skip');
 
 		const files: FileToWrite[] = [
-			makeFile({ target: 'new.md', content: 'new file' }),
-			makeFile({ target: 'existing.md', content: 'updated' })
+			makeFile({ path: 'new.md', content: 'new file' }),
+			makeFile({ path: 'existing.md', content: 'updated' })
 		];
 
-		const result = await writeSetupFiles(files, { projectDir: tmpDir });
+		const result = await writeSetupFiles(files, { projectDir: tmpDir, placement: 'project' });
 
 		expect(result.written).toBe(1);
 		expect(result.skipped).toBe(1);
@@ -257,10 +265,10 @@ describe('writeSetupFiles — multiple files', () => {
 // ── writeSetupFiles: global placement path expansion ─────────────────────────
 
 describe('writeSetupFiles — global placement', () => {
-	it('resolves global placement target to home-relative path', async () => {
+	it('resolves global placement path to home-relative path', async () => {
 		const result = await writeSetupFiles(
-			[makeFile({ target: '~/.claude/settings.json', placement: 'global', content: 'cfg' })],
-			{}
+			[makeFile({ path: '.claude/settings.json', content: 'cfg' })],
+			{ placement: 'global' }
 		);
 
 		const expectedPath = path.join(os.homedir(), '.claude', 'settings.json');

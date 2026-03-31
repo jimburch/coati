@@ -14,6 +14,7 @@ interface SetupMeta {
 	slug: string;
 	version?: string;
 	description: string;
+	placement: ManifestPlacement;
 	ownerUsername: string;
 	clonesCount: number;
 	starsCount: number;
@@ -23,9 +24,7 @@ interface SetupMeta {
 
 interface SetupFileRecord {
 	id: string;
-	source: string;
-	target: string;
-	placement: ManifestPlacement;
+	path: string;
 	content: string;
 	componentType?: string;
 	description?: string;
@@ -197,7 +196,8 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 
 			// --pick: interactive file selection (skip in JSON mode — use all files)
 			if (opts.pick && !ctx.io.isJson()) {
-				const selectedIndices = await ctx.io.pickFiles(files);
+				const pickableFiles = files.map((f) => ({ path: f.path }));
+				const selectedIndices = await ctx.io.pickFiles(pickableFiles);
 				if (selectedIndices.length === 0) {
 					ctx.io.warning('No files selected. Nothing to install.');
 					process.exit(0);
@@ -205,32 +205,15 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 				files = selectedIndices.map((i) => files[i]!);
 			}
 
-			// Resolve project directory
-			// --dir bypasses the destination prompt and directly sets projectDir
+			// Resolve project directory (used for project-scoped setups)
+			// --dir sets a custom project directory; otherwise use cwd or --project-dir
 			let projectDir: string;
-			let destination: 'current' | 'global' | 'dir' = 'current';
-
 			if (opts.dir) {
 				projectDir = path.resolve(opts.dir);
-				destination = 'dir';
+			} else if (setup.placement === 'global') {
+				projectDir = path.join(os.homedir(), '.coati', 'setups', owner, slug);
 			} else {
-				// Prompt for install scope (interactive only)
-				// Default to 'global' when majority of filtered files are globally-scoped.
-				const globalCount = files.filter((f) => f.placement === 'global').length;
-				const defaultScope: 'current' | 'global' =
-					files.length > 0 && globalCount > files.length / 2 ? 'global' : 'current';
-
-				let dest: 'current' | 'global' = 'current';
-				if (!ctx.io.isJson()) {
-					dest = await ctx.io.promptDestination(defaultScope);
-				}
-				destination = dest;
-
-				if (dest === 'global') {
-					projectDir = path.join(os.homedir(), '.coati', 'setups', owner, slug);
-				} else {
-					projectDir = opts.projectDir ? path.resolve(opts.projectDir) : process.cwd();
-				}
+				projectDir = opts.projectDir ? path.resolve(opts.projectDir) : process.cwd();
 			}
 
 			if (!ctx.io.isJson()) {
@@ -239,18 +222,25 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 			}
 
 			if (!ctx.io.isJson()) {
-				ctx.io.print(`\nCloning ${owner}/${slug} → ${projectDir}\n`);
+				const prefix = setup.placement === 'global' ? '~/' : projectDir;
+				ctx.io.print(`\nCloning ${owner}/${slug} → ${prefix}\n`);
 				if (opts.dryRun) {
 					ctx.io.info('Dry run — no files will be written.\n');
 				}
 			}
 
+			// Convert file records to FileToWrite format
+			const filesToWrite = files.map((f) => ({
+				path: f.path,
+				content: f.content
+			}));
+
 			// Write files
 			let writeResult;
 			try {
-				writeResult = await ctx.fs.writeSetupFiles(files, {
+				writeResult = await ctx.fs.writeSetupFiles(filesToWrite, {
 					projectDir,
-					destination,
+					placement: setup.placement,
 					force: opts.force,
 					dryRun: opts.dryRun
 				});
@@ -319,7 +309,7 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 			if (ctx.io.isJson()) {
 				ctx.io.json({
 					setup: { owner, slug, name: setup.name },
-					destination,
+					placement: setup.placement,
 					projectDir,
 					dryRun: opts.dryRun ?? false,
 					written: writeResult.written,
