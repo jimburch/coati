@@ -5,43 +5,34 @@
 	"category": "general",
 	"agents": ["claude-code", "gemini", "codex"],
 	"tags": ["global", "user-level", "claude-code", "gemini", "codex", "multi-agent"],
+	"placement": "global",
 	"files": [
 		{
-			"source": ".claude/settings.json",
-			"target": "~/.claude/settings.json",
-			"placement": "global",
+			"path": ".claude/settings.json",
 			"componentType": "instruction",
 			"agent": "claude-code",
 			"description": "Global Claude Code preferences: model, permissions, and behavior defaults"
 		},
 		{
-			"source": ".claude/CLAUDE.md",
-			"target": "~/.claude/CLAUDE.md",
-			"placement": "global",
+			"path": ".claude/CLAUDE.md",
 			"componentType": "instruction",
 			"agent": "claude-code",
 			"description": "Global instructions Claude Code reads for every project"
 		},
 		{
-			"source": ".claude/commands/commit.md",
-			"target": "~/.claude/commands/commit.md",
-			"placement": "global",
+			"path": ".claude/commands/commit.md",
 			"componentType": "command",
 			"agent": "claude-code",
 			"description": "Global /commit slash command: generates conventional commit messages"
 		},
 		{
-			"source": ".gemini/settings.json",
-			"target": "~/.gemini/settings.json",
-			"placement": "global",
+			"path": ".gemini/settings.json",
 			"componentType": "instruction",
 			"agent": "gemini",
 			"description": "Global Gemini CLI preferences: model, sandbox, and display settings"
 		},
 		{
-			"source": ".codex/config.toml",
-			"target": "~/.codex/config.toml",
-			"placement": "global",
+			"path": ".codex/config.toml",
 			"componentType": "instruction",
 			"agent": "codex",
 			"description": "Global Codex configuration: model, approval mode, and history settings"

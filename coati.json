@@ -5,11 +5,10 @@
 	"category": "general",
 	"tools": ["claude-code"],
 	"tags": ["coati"],
+	"placement": "project",
 	"files": [
 		{
-			"source": "CLAUDE.md",
-			"target": "CLAUDE.md",
-			"placement": "project",
+			"path": "CLAUDE.md",
 			"componentType": "instruction"
 		}
 	]

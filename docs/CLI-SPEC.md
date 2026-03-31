@@ -97,13 +97,13 @@ $ coati view alice/mcp-power-setup
   Tools: claude-code
   Tags: typescript, mcp, fullstack, nextjs
 
-  Files (6):
-    .claude/settings.json      → ~/.claude/settings.json
-    .claude/mcp.json           → ~/.claude/mcp.json
-    CLAUDE.md                  → ./CLAUDE.md (project)
-    scripts/statusline.sh      → ~/.claude/statusline.sh
-    hooks/pre-commit.sh        → .claude/hooks/pre-commit.sh
-    skills/deep-research.md    → ~/.claude/skills/deep-research.md
+  Files (6) — placement: global:
+    .claude/settings.json
+    .claude/mcp.json
+    CLAUDE.md
+    scripts/statusline.sh
+    hooks/pre-commit.sh
+    skills/deep-research.md
 
   View on web: https://coati.sh/alice/mcp-power-setup
 ```
@@ -117,14 +117,14 @@ $ coati clone alice/mcp-power-setup
 
   🐦‍⬛ Cloning alice/mcp-power-setup v1.2.0...
 
-  This setup will write 6 files:
+  This setup will write 6 files (placement: global → ~/):
 
-    1. ~/.claude/settings.json       (global)
-    2. ~/.claude/mcp.json            (global)
-    3. ./CLAUDE.md                   (project — current directory)
-    4. ~/.claude/statusline.sh       (global)
-    5. .claude/hooks/pre-commit.sh   (project)
-    6. ~/.claude/skills/deep-research.md (global)
+    1. ~/.claude/settings.json
+    2. ~/.claude/mcp.json
+    3. ~/.claude/CLAUDE.md
+    4. ~/.claude/statusline.sh
+    5. ~/.claude/hooks/pre-commit.sh
+    6. ~/.claude/skills/deep-research.md
 
   ⚠ Conflict: ~/.claude/settings.json already exists
 
@@ -152,9 +152,9 @@ $ coati clone alice/mcp-power-setup
 
 1. Fetch setup metadata from `GET /api/v1/setups/:owner/:slug`
 2. Fetch files from `GET /api/v1/setups/:id/files`
-3. Resolve target paths:
-   - `~` expanded to `os.homedir()`
-   - `./` expanded to `--project-dir` or `process.cwd()`
+3. Resolve install paths from `placement`:
+   - `"global"` → files install under `os.homedir()`
+   - `"project"` → files install under `--project-dir` or `process.cwd()`
 4. Check each target path for existing files
 5. For each conflict, prompt user (unless `--force` or `--dry-run`)
 6. Write files with `fs.writeFile`, creating parent directories with `fs.mkdir({ recursive: true })`
@@ -181,9 +181,11 @@ $ coati init
     Found: CLAUDE.md
     Found: .claude/mcp.json
 
+  ? Placement for all files: (global/project) global
+
   ? Include .claude/settings.json? (Y/n) Y
-  ? Target path for .claude/settings.json: (~/.claude/settings.json)
-  ? Placement: (global/project) global
+  ? Include CLAUDE.md? (Y/n) Y
+  ? Include .claude/mcp.json? (Y/n) Y
 
   ... (repeat for each found file)
 
@@ -265,29 +267,22 @@ Every setup has a `coati.json` at its root. This is the platform's core standard
 	"description": "My Claude Code + Cursor setup for TypeScript fullstack dev",
 	"tools": ["claude-code", "cursor"],
 	"tags": ["typescript", "nextjs", "mcp", "fullstack"],
+	"placement": "global",
 	"files": [
 		{
-			"source": "claude/settings.json",
-			"target": "~/.claude/settings.json",
-			"placement": "global",
+			"path": "claude/settings.json",
 			"description": "Global Claude Code settings with broad permissions"
 		},
 		{
-			"source": "claude/CLAUDE.md",
-			"target": "./CLAUDE.md",
-			"placement": "project",
+			"path": "claude/CLAUDE.md",
 			"description": "Project-level instructions — drop in any repo root"
 		},
 		{
-			"source": "mcp/mcp.json",
-			"target": "~/.claude/mcp.json",
-			"placement": "global",
+			"path": "mcp/mcp.json",
 			"description": "MCP server configs (GitHub, Postgres, filesystem)"
 		},
 		{
-			"source": "scripts/statusline.sh",
-			"target": "~/.claude/statusline.sh",
-			"placement": "global",
+			"path": "scripts/statusline.sh",
 			"description": "Custom statusline showing repo name + context usage"
 		}
 	],
@@ -298,25 +293,24 @@ Every setup has a `coati.json` at its root. This is the platform's core standard
 
 ### Manifest Fields
 
-| Field         | Required | Type        | Description                                    |
-| ------------- | -------- | ----------- | ---------------------------------------------- |
-| `name`        | Yes      | string      | URL-safe slug (lowercase, hyphens, 3-50 chars) |
-| `version`     | Yes      | string      | Semver (e.g. "1.0.0")                          |
-| `description` | Yes      | string      | Short description, max 300 chars               |
-| `tools`       | Yes      | string[]    | Tool identifiers (see known tools list)        |
-| `tags`        | No       | string[]    | Freeform tags, max 10, each max 30 chars       |
-| `files`       | Yes      | FileEntry[] | At least 1 file                                |
-| `postInstall` | No       | string[]    | Shell commands to run after file installation  |
-| `readme`      | No       | string      | Path to README.md relative to setup root       |
+| Field         | Required | Type        | Description                                                       |
+| ------------- | -------- | ----------- | ----------------------------------------------------------------- |
+| `name`        | Yes      | string      | URL-safe slug (lowercase, hyphens, 3-50 chars)                    |
+| `version`     | Yes      | string      | Semver (e.g. "1.0.0")                                             |
+| `description` | Yes      | string      | Short description, max 300 chars                                  |
+| `tools`       | Yes      | string[]    | Tool identifiers (see known tools list)                           |
+| `tags`        | No       | string[]    | Freeform tags, max 10, each max 30 chars                          |
+| `placement`   | Yes      | string      | Where all files install: `"global"`, `"project"`, or `"relative"` |
+| `files`       | Yes      | FileEntry[] | At least 1 file                                                   |
+| `postInstall` | No       | string[]    | Shell commands to run after file installation                     |
+| `readme`      | No       | string      | Path to README.md relative to setup root                          |
 
 ### FileEntry Fields
 
-| Field         | Required | Type   | Description                                                   |
-| ------------- | -------- | ------ | ------------------------------------------------------------- |
-| `source`      | Yes      | string | Path to file relative to setup root                           |
-| `target`      | Yes      | string | Where to install the file. `~` = home dir, `./` = project dir |
-| `placement`   | Yes      | string | `"global"`, `"project"`, or `"relative"`                      |
-| `description` | No       | string | What this file does                                           |
+| Field         | Required | Type   | Description                         |
+| ------------- | -------- | ------ | ----------------------------------- |
+| `path`        | Yes      | string | Path to file relative to setup root |
+| `description` | No       | string | What this file does                 |
 
 ### Known Tool Identifiers
 
