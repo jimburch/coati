@@ -41,6 +41,12 @@
 		return 'Unknown';
 	}
 
+	const DESCRIPTION_HINTS: Record<Category, string> = {
+		bug: 'Include steps to reproduce, what you expected, and what actually happened.',
+		improvement: 'Describe what exists today and how you think it could work better.',
+		'feature-request': 'Describe the problem this would solve and how you imagine it working.'
+	};
+
 	const visible = $derived(
 		user !== null && (user.isBetaApproved || user.isAdmin) && page.url.pathname !== '/waitlist'
 	);
@@ -178,8 +184,13 @@
 							data-testid="feedback-title"
 						/>
 					</div>
-					<div class="flex flex-col gap-1.5">
-						<label for="feedback-description" class="text-sm font-medium">Description</label>
+					<div class="flex flex-col gap-2">
+						<div class="flex flex-col gap-1">
+							<label for="feedback-description" class="text-sm font-medium">Description</label>
+							<p class="text-xs text-muted-foreground">
+								{category ? DESCRIPTION_HINTS[category] : ''}
+							</p>
+						</div>
 						<Textarea
 							id="feedback-description"
 							bind:value={description}
