@@ -52,12 +52,23 @@ export interface GeneratedSetup {
 	agentSlugs: string[];
 }
 
+export interface CommentGroup {
+	setupId: string;
+	userId: string;
+	body: string;
+	replies: Array<{ userId: string; body: string }>;
+}
+
 export interface SeedResult {
 	usersInserted: number;
 	agentsInserted: number;
 	tagsInserted: number;
 	setupsInserted: number;
 	filesInserted: number;
+	starsInserted: number;
+	followsInserted: number;
+	commentsInserted: number;
+	activitiesInserted: number;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -642,6 +653,148 @@ function getSetupTemplates(): SetupTemplate[] {
 	];
 }
 
+// ─── Social Data Constants ────────────────────────────────────────────────────
+
+export const COMMENT_BODIES_SHORT = [
+	'Nice setup!',
+	'Love this workflow.',
+	'Super useful, thanks!',
+	'Great config.',
+	'This is awesome!'
+];
+
+export const COMMENT_BODIES_MEDIUM = [
+	'This is exactly what I was looking for. The hook configuration is clean.',
+	'Great work on this. The TypeScript strict config matches what we use at work.',
+	'Really solid setup. I cloned this and it worked out of the box.',
+	'Appreciate the detailed README. Made it easy to get started quickly.',
+	'The agent definition is well structured. Copied your pattern for my project.'
+];
+
+export const COMMENT_BODIES_LONG = [
+	"I've been looking for something like this for months. The combination of strict TypeScript, the pre-commit hooks, and the TDD workflow is exactly what my team needs. We've been struggling with inconsistent setups across different devs, and this provides a great foundation to standardize on.",
+	"Really appreciate how you've organized the file structure here. Most setups I've seen either go too minimal and skip important config, or go overboard and become hard to maintain. This hits a nice balance. The MCP server integration is particularly clever.",
+	"Used this on three projects now and it's been solid. The one thing I'd suggest is adding a `.nvmrc` file for Node version pinning, but otherwise this is production-ready. Great contribution to the community!"
+];
+
+export const REPLY_BODIES = [
+	'Agreed!',
+	'Thanks for the feedback!',
+	"Good point, I'll update it.",
+	'Glad it worked for you!',
+	'Appreciate that, will consider adding it.'
+];
+
+// ─── Social Data Generation ───────────────────────────────────────────────────
+
+/**
+ * Generate star rows for seeding. Stars are capped at the number of available
+ * users (since each user can only star a setup once). Setups with starsCount=0
+ * receive no stars.
+ */
+export function generateStars(
+	seedSetups: Array<{ id: string; starsCount: number }>,
+	seedUsers: Array<{ id: string }>
+): Array<{ userId: string; setupId: string }> {
+	const stars: Array<{ userId: string; setupId: string }> = [];
+	const maxStarsPerSetup = seedUsers.length;
+
+	for (const setup of seedSetups) {
+		const starCount = Math.min(setup.starsCount, maxStarsPerSetup);
+		for (let i = 0; i < starCount; i++) {
+			stars.push({
+				userId: seedUsers[i].id,
+				setupId: setup.id
+			});
+		}
+	}
+
+	return stars;
+}
+
+/**
+ * Generate follow relationships between users with realistic distribution.
+ * Some users follow many others, some follow nobody. No self-follows, no
+ * duplicates.
+ */
+export function generateFollows(
+	seedUsers: Array<{ id: string }>
+): Array<{ followerId: string; followingId: string }> {
+	const follows: Array<{ followerId: string; followingId: string }> = [];
+	const seen = new Set<string>();
+
+	for (let i = 0; i < seedUsers.length; i++) {
+		// Every 7th user follows nobody (realistic: some users are lurkers)
+		if (i % 7 === 0) continue;
+
+		// Users at multiples of 3 follow more people (more engaged users)
+		const followCount = i % 3 === 0 ? Math.min(10, seedUsers.length - 1) : 1 + (i % 5);
+
+		for (let j = 0; j < followCount; j++) {
+			const targetIdx = (i + j + 1) % seedUsers.length;
+			const followerId = seedUsers[i].id;
+			const followingId = seedUsers[targetIdx].id;
+
+			if (followerId === followingId) continue;
+
+			const key = `${followerId}:${followingId}`;
+			if (!seen.has(key)) {
+				seen.add(key);
+				follows.push({ followerId, followingId });
+			}
+		}
+	}
+
+	return follows;
+}
+
+/**
+ * Generate comment groups (top-level comments + replies) for seeding.
+ * Some setups get no comments. Varying body lengths and tones.
+ */
+export function generateCommentGroups(
+	seedSetups: Array<{ id: string }>,
+	seedUsers: Array<{ id: string }>
+): CommentGroup[] {
+	const groups: CommentGroup[] = [];
+	const allBodies = [...COMMENT_BODIES_SHORT, ...COMMENT_BODIES_MEDIUM, ...COMMENT_BODIES_LONG];
+
+	for (let si = 0; si < seedSetups.length; si++) {
+		// Every 5th setup gets no comments (realistic: new/niche setups)
+		if (si % 5 === 4) continue;
+
+		const setup = seedSetups[si];
+		const commentCount = 1 + (si % 4); // 1–4 top-level comments per setup
+
+		for (let ci = 0; ci < commentCount; ci++) {
+			const userId = seedUsers[(si + ci) % seedUsers.length].id;
+			const body = allBodies[(si * 3 + ci) % allBodies.length];
+
+			// Every 3rd top-level comment gets a reply
+			const replies: Array<{ userId: string; body: string }> = [];
+			if (ci % 3 === 0 && seedUsers.length > 1) {
+				const replyUserId = seedUsers[(si + ci + 1) % seedUsers.length].id;
+				replies.push({
+					userId: replyUserId,
+					body: REPLY_BODIES[(si + ci) % REPLY_BODIES.length]
+				});
+			}
+
+			groups.push({ setupId: setup.id, userId, body, replies });
+		}
+	}
+
+	return groups;
+}
+
+/** Returns a deterministic past timestamp spread over the last rangeDays days. */
+function seedTimestamp(index: number, baseDateMs: number, rangeDays = 30): Date {
+	const rangeMs = rangeDays * 24 * 60 * 60 * 1000;
+	// Use a large prime for good distribution across the range
+	const offset = (index * 7919) % rangeMs;
+	return new Date(baseDateMs - offset);
+}
+
 // ─── Main Seed Function ───────────────────────────────────────────────────────
 
 type DrizzleDb = ReturnType<typeof drizzle>;
@@ -797,20 +950,165 @@ export async function seed(
 	const insertedSetups = await db.select().from(schema.setups);
 	console.log(`  ✓ Inserted ${insertedSetups.length} setups with ${totalFiles} files`);
 
+	// 8. Social graph: stars, follows, comments, activities
+	console.log('\n→ Inserting social graph...');
+	const baseDateMs = Date.now();
+	const activityRows: Array<typeof schema.activities.$inferInsert> = [];
+	let activityIdx = 0;
+
+	// 8a. Stars
+	const starDataRows = generateStars(insertedSetups, insertedUsers);
+	if (starDataRows.length > 0) {
+		await db.insert(schema.stars).values(starDataRows);
+	}
+	// Update starsCount to match actual rows (cap may differ from generated value)
+	const starCountBySetup = new Map<string, number>();
+	for (const row of starDataRows) {
+		starCountBySetup.set(row.setupId, (starCountBySetup.get(row.setupId) ?? 0) + 1);
+	}
+	for (const setup of insertedSetups) {
+		await db
+			.update(schema.setups)
+			.set({ starsCount: starCountBySetup.get(setup.id) ?? 0 })
+			.where(sql`id = ${setup.id}`);
+	}
+	// Collect star activities
+	for (let i = 0; i < starDataRows.length; i++) {
+		activityRows.push({
+			userId: starDataRows[i].userId,
+			setupId: starDataRows[i].setupId,
+			actionType: 'starred_setup',
+			createdAt: seedTimestamp(activityIdx++, baseDateMs)
+		});
+	}
+	console.log(`  ✓ Inserted ${starDataRows.length} stars`);
+
+	// 8b. Follows
+	const followDataRows = generateFollows(insertedUsers);
+	if (followDataRows.length > 0) {
+		await db.insert(schema.follows).values(followDataRows);
+	}
+	// Update follower/following denormalized counts
+	for (const user of insertedUsers) {
+		const followerCount = followDataRows.filter((f) => f.followingId === user.id).length;
+		const followingCount = followDataRows.filter((f) => f.followerId === user.id).length;
+		await db
+			.update(schema.users)
+			.set({ followersCount: followerCount, followingCount: followingCount })
+			.where(sql`id = ${user.id}`);
+	}
+	// Collect follow activities
+	for (let i = 0; i < followDataRows.length; i++) {
+		activityRows.push({
+			userId: followDataRows[i].followerId,
+			targetUserId: followDataRows[i].followingId,
+			actionType: 'followed_user',
+			createdAt: seedTimestamp(activityIdx++, baseDateMs)
+		});
+	}
+	console.log(`  ✓ Inserted ${followDataRows.length} follows`);
+
+	// 8c. Comments (two-pass: top-level first, then replies with real parentIds)
+	const commentGroups = generateCommentGroups(insertedSetups, insertedUsers);
+	let totalComments = 0;
+	const commentCountBySetup = new Map<string, number>();
+
+	for (const group of commentGroups) {
+		const [topLevel] = await db
+			.insert(schema.comments)
+			.values({ setupId: group.setupId, userId: group.userId, body: group.body })
+			.returning({ id: schema.comments.id });
+		totalComments++;
+		activityRows.push({
+			userId: group.userId,
+			setupId: group.setupId,
+			commentId: topLevel.id,
+			actionType: 'commented',
+			createdAt: seedTimestamp(activityIdx++, baseDateMs)
+		});
+
+		for (const reply of group.replies) {
+			await db.insert(schema.comments).values({
+				setupId: group.setupId,
+				userId: reply.userId,
+				body: reply.body,
+				parentId: topLevel.id
+			});
+			totalComments++;
+			activityRows.push({
+				userId: reply.userId,
+				setupId: group.setupId,
+				actionType: 'commented',
+				createdAt: seedTimestamp(activityIdx++, baseDateMs)
+			});
+		}
+
+		commentCountBySetup.set(
+			group.setupId,
+			(commentCountBySetup.get(group.setupId) ?? 0) + 1 + group.replies.length
+		);
+	}
+	// Update commentsCount on setups
+	for (const setup of insertedSetups) {
+		await db
+			.update(schema.setups)
+			.set({ commentsCount: commentCountBySetup.get(setup.id) ?? 0 })
+			.where(sql`id = ${setup.id}`);
+	}
+	console.log(`  ✓ Inserted ${totalComments} comments`);
+
+	// 8d. created_setup activities (one per setup by its owner)
+	for (let i = 0; i < insertedSetups.length; i++) {
+		const setup = insertedSetups[i];
+		activityRows.push({
+			userId: setup.userId,
+			setupId: setup.id,
+			actionType: 'created_setup',
+			// Spread setup creation over past 60 days
+			createdAt: seedTimestamp(i, baseDateMs, 60)
+		});
+	}
+
+	// 8e. cloned_setup activities — some users cloning some setups
+	for (let i = 0; i < insertedSetups.length; i++) {
+		if (i % 4 === 0) continue; // skip every 4th setup (no clones)
+		const clonerIdx = (i + insertedUsers.length - 1) % insertedUsers.length;
+		activityRows.push({
+			userId: insertedUsers[clonerIdx].id,
+			setupId: insertedSetups[i].id,
+			actionType: 'cloned_setup',
+			createdAt: seedTimestamp(activityIdx++, baseDateMs, 14)
+		});
+	}
+
+	// 8f. Insert all activities
+	if (activityRows.length > 0) {
+		await db.insert(schema.activities).values(activityRows);
+	}
+	console.log(`  ✓ Inserted ${activityRows.length} activities`);
+
 	const result: SeedResult = {
 		usersInserted: insertedUsers.length,
 		agentsInserted: insertedAgents.length,
 		tagsInserted: insertedTags.length,
 		setupsInserted: insertedSetups.length,
-		filesInserted: totalFiles
+		filesInserted: totalFiles,
+		starsInserted: starDataRows.length,
+		followsInserted: followDataRows.length,
+		commentsInserted: totalComments,
+		activitiesInserted: activityRows.length
 	};
 
 	console.log('\n✅ Seed complete!');
-	console.log(`   Users:  ${result.usersInserted}`);
-	console.log(`   Agents: ${result.agentsInserted}`);
-	console.log(`   Tags:   ${result.tagsInserted}`);
-	console.log(`   Setups: ${result.setupsInserted}`);
-	console.log(`   Files:  ${result.filesInserted}`);
+	console.log(`   Users:      ${result.usersInserted}`);
+	console.log(`   Agents:     ${result.agentsInserted}`);
+	console.log(`   Tags:       ${result.tagsInserted}`);
+	console.log(`   Setups:     ${result.setupsInserted}`);
+	console.log(`   Files:      ${result.filesInserted}`);
+	console.log(`   Stars:      ${result.starsInserted}`);
+	console.log(`   Follows:    ${result.followsInserted}`);
+	console.log(`   Comments:   ${result.commentsInserted}`);
+	console.log(`   Activities: ${result.activitiesInserted}`);
 
 	return result;
 }

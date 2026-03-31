@@ -16,8 +16,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
 	GITHUB_USERNAMES,
 	TAG_NAMES,
+	COMMENT_BODIES_SHORT,
+	COMMENT_BODIES_MEDIUM,
+	COMMENT_BODIES_LONG,
+	REPLY_BODIES,
 	generateTagNames,
 	generateSetups,
+	generateStars,
+	generateFollows,
+	generateCommentGroups,
 	fetchGitHubProfile,
 	fetchGitHubProfiles,
 	seed
@@ -487,6 +494,331 @@ describe('seed()', () => {
 				delayMs: 0
 			})
 		).rejects.toThrow(/profiles fetched/);
+	});
+});
+
+// ─── Comment Body Constants Tests ────────────────────────────────────────────
+
+describe('COMMENT_BODIES_SHORT / MEDIUM / LONG / REPLY_BODIES', () => {
+	it('COMMENT_BODIES_SHORT contains short strings (under 30 chars)', () => {
+		expect(COMMENT_BODIES_SHORT.length).toBeGreaterThan(0);
+		for (const body of COMMENT_BODIES_SHORT) {
+			expect(body.length).toBeLessThan(30);
+		}
+	});
+
+	it('COMMENT_BODIES_MEDIUM contains medium strings (30–150 chars)', () => {
+		expect(COMMENT_BODIES_MEDIUM.length).toBeGreaterThan(0);
+		for (const body of COMMENT_BODIES_MEDIUM) {
+			expect(body.length).toBeGreaterThanOrEqual(30);
+			expect(body.length).toBeLessThanOrEqual(150);
+		}
+	});
+
+	it('COMMENT_BODIES_LONG contains long strings (over 100 chars)', () => {
+		expect(COMMENT_BODIES_LONG.length).toBeGreaterThan(0);
+		for (const body of COMMENT_BODIES_LONG) {
+			expect(body.length).toBeGreaterThan(100);
+		}
+	});
+
+	it('REPLY_BODIES contains short reply strings', () => {
+		expect(REPLY_BODIES.length).toBeGreaterThan(0);
+	});
+});
+
+// ─── generateStars Tests ──────────────────────────────────────────────────────
+
+describe('generateStars', () => {
+	it('returns empty array for setup with starsCount=0', () => {
+		const setups = [{ id: 's1', starsCount: 0 }];
+		const users = [{ id: 'u1' }, { id: 'u2' }];
+		expect(generateStars(setups, users)).toHaveLength(0);
+	});
+
+	it('creates star rows matching starsCount for each setup', () => {
+		const setups = [{ id: 's1', starsCount: 3 }];
+		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
+		const stars = generateStars(setups, users);
+		expect(stars).toHaveLength(3);
+		expect(stars.every((s) => s.setupId === 's1')).toBe(true);
+	});
+
+	it('caps stars at number of available users', () => {
+		const setups = [{ id: 's1', starsCount: 100 }];
+		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
+		const stars = generateStars(setups, users);
+		expect(stars).toHaveLength(5);
+	});
+
+	it('returns no duplicate (userId, setupId) pairs', () => {
+		const setups = [{ id: 's1', starsCount: 5 }];
+		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
+		const stars = generateStars(setups, users);
+		const unique = new Set(stars.map((s) => `${s.userId}:${s.setupId}`));
+		expect(unique.size).toBe(stars.length);
+	});
+
+	it('distributes stars across multiple setups with realistic variance', () => {
+		const setups = [
+			{ id: 's1', starsCount: 50 },
+			{ id: 's2', starsCount: 2 },
+			{ id: 's3', starsCount: 0 }
+		];
+		const users = Array.from({ length: 35 }, (_, i) => ({ id: `u${i}` }));
+		const stars = generateStars(setups, users);
+		const s1Stars = stars.filter((s) => s.setupId === 's1');
+		const s2Stars = stars.filter((s) => s.setupId === 's2');
+		const s3Stars = stars.filter((s) => s.setupId === 's3');
+		expect(s1Stars).toHaveLength(35); // capped at user count
+		expect(s2Stars).toHaveLength(2);
+		expect(s3Stars).toHaveLength(0);
+	});
+
+	it('returns objects with userId and setupId fields', () => {
+		const setups = [{ id: 's1', starsCount: 2 }];
+		const users = [{ id: 'u1' }, { id: 'u2' }];
+		const stars = generateStars(setups, users);
+		expect(stars[0]).toHaveProperty('userId');
+		expect(stars[0]).toHaveProperty('setupId');
+	});
+
+	it('is deterministic', () => {
+		const setups = [{ id: 's1', starsCount: 5 }];
+		const users = Array.from({ length: 10 }, (_, i) => ({ id: `u${i}` }));
+		const stars1 = generateStars(setups, users);
+		const stars2 = generateStars(setups, users);
+		expect(stars1).toEqual(stars2);
+	});
+});
+
+// ─── generateFollows Tests ────────────────────────────────────────────────────
+
+describe('generateFollows', () => {
+	it('returns no self-follows', () => {
+		const users = Array.from({ length: 10 }, (_, i) => ({ id: `u${i}` }));
+		const follows = generateFollows(users);
+		expect(follows.every((f) => f.followerId !== f.followingId)).toBe(true);
+	});
+
+	it('returns no duplicate follows', () => {
+		const users = Array.from({ length: 15 }, (_, i) => ({ id: `u${i}` }));
+		const follows = generateFollows(users);
+		const unique = new Set(follows.map((f) => `${f.followerId}:${f.followingId}`));
+		expect(unique.size).toBe(follows.length);
+	});
+
+	it('creates follow relationships between users', () => {
+		const users = Array.from({ length: 15 }, (_, i) => ({ id: `u${i}` }));
+		const follows = generateFollows(users);
+		expect(follows.length).toBeGreaterThan(0);
+	});
+
+	it('some users have followers (popular users)', () => {
+		const users = Array.from({ length: 15 }, (_, i) => ({ id: `u${i}` }));
+		const follows = generateFollows(users);
+		const followedUsers = new Set(follows.map((f) => f.followingId));
+		expect(followedUsers.size).toBeGreaterThan(0);
+	});
+
+	it('some users follow nobody (realistic distribution)', () => {
+		const users = Array.from({ length: 15 }, (_, i) => ({ id: `u${i}` }));
+		const follows = generateFollows(users);
+		const followingUsers = new Set(follows.map((f) => f.followerId));
+		const usersWithNoFollowing = users.filter((u) => !followingUsers.has(u.id));
+		expect(usersWithNoFollowing.length).toBeGreaterThan(0);
+	});
+
+	it('returns objects with followerId and followingId fields', () => {
+		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
+		const follows = generateFollows(users);
+		if (follows.length > 0) {
+			expect(follows[0]).toHaveProperty('followerId');
+			expect(follows[0]).toHaveProperty('followingId');
+		}
+	});
+
+	it('is deterministic', () => {
+		const users = Array.from({ length: 15 }, (_, i) => ({ id: `u${i}` }));
+		const follows1 = generateFollows(users);
+		const follows2 = generateFollows(users);
+		expect(follows1).toEqual(follows2);
+	});
+});
+
+// ─── generateCommentGroups Tests ──────────────────────────────────────────────
+
+describe('generateCommentGroups', () => {
+	it('returns comment groups with required fields', () => {
+		const setups = Array.from({ length: 5 }, (_, i) => ({ id: `s${i}` }));
+		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
+		const groups = generateCommentGroups(setups, users);
+		expect(groups.length).toBeGreaterThan(0);
+		for (const g of groups) {
+			expect(g).toHaveProperty('setupId');
+			expect(g).toHaveProperty('userId');
+			expect(g).toHaveProperty('body');
+			expect(g).toHaveProperty('replies');
+			expect(Array.isArray(g.replies)).toBe(true);
+		}
+	});
+
+	it('some setups have no comments (realistic distribution)', () => {
+		const setups = Array.from({ length: 20 }, (_, i) => ({ id: `s${i}` }));
+		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
+		const groups = generateCommentGroups(setups, users);
+		const setupsWithComments = new Set(groups.map((g) => g.setupId));
+		expect(setupsWithComments.size).toBeLessThan(setups.length);
+	});
+
+	it('some comment groups have replies', () => {
+		const setups = Array.from({ length: 20 }, (_, i) => ({ id: `s${i}` }));
+		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
+		const groups = generateCommentGroups(setups, users);
+		const withReplies = groups.filter((g) => g.replies.length > 0);
+		expect(withReplies.length).toBeGreaterThan(0);
+	});
+
+	it('comment bodies have varying lengths (short and long)', () => {
+		const setups = Array.from({ length: 40 }, (_, i) => ({ id: `s${i}` }));
+		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
+		const groups = generateCommentGroups(setups, users);
+		const shortComments = groups.filter((g) => g.body.length < 30);
+		const longComments = groups.filter((g) => g.body.length > 100);
+		expect(shortComments.length).toBeGreaterThan(0);
+		expect(longComments.length).toBeGreaterThan(0);
+	});
+
+	it('replies have userId and body fields', () => {
+		const setups = Array.from({ length: 20 }, (_, i) => ({ id: `s${i}` }));
+		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
+		const groups = generateCommentGroups(setups, users);
+		const groupWithReplies = groups.find((g) => g.replies.length > 0);
+		expect(groupWithReplies).toBeDefined();
+		if (groupWithReplies) {
+			expect(groupWithReplies.replies[0]).toHaveProperty('userId');
+			expect(groupWithReplies.replies[0]).toHaveProperty('body');
+		}
+	});
+
+	it('is deterministic', () => {
+		const setups = Array.from({ length: 10 }, (_, i) => ({ id: `s${i}` }));
+		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
+		const groups1 = generateCommentGroups(setups, users);
+		const groups2 = generateCommentGroups(setups, users);
+		expect(groups1.map((g) => g.body)).toEqual(groups2.map((g) => g.body));
+		expect(groups1.map((g) => g.setupId)).toEqual(groups2.map((g) => g.setupId));
+	});
+});
+
+// ─── SeedResult social fields Tests ───────────────────────────────────────────
+
+describe('SeedResult social fields', () => {
+	it('seed() result includes starsInserted, followsInserted, commentsInserted, activitiesInserted', async () => {
+		// Build a mock DB that supports a successful full seed run
+		const insertedData: Record<string, unknown[]> = {};
+		let commentInsertCount = 0;
+
+		const mockInsert = vi.fn((table: unknown) => {
+			const tableName = (table as { _?: { name?: string } })._?.name ?? 'unknown';
+			return {
+				values: vi.fn((rows: unknown | unknown[]) => {
+					const arr = Array.isArray(rows) ? rows : [rows];
+					insertedData[tableName] = [...(insertedData[tableName] ?? []), ...arr];
+					if (tableName === 'comments') commentInsertCount++;
+					const idx = commentInsertCount;
+					return {
+						returning: vi.fn(() =>
+							Promise.resolve(
+								arr.map((r, i) => ({ id: `inserted-${tableName}-${idx}-${i}`, ...r }))
+							)
+						),
+						then: (resolve: (v: unknown[]) => unknown) =>
+							resolve(arr.map((r, i) => ({ id: `inserted-${tableName}-${idx}-${i}`, ...r })))
+					};
+				})
+			};
+		});
+
+		// 5 mock profiles so seed doesn't throw
+		const mockUsers = Array.from({ length: 5 }, (_, i) => ({
+			id: `u${i}`,
+			username: `user${i}`,
+			githubId: i + 1,
+			setupsCount: 0,
+			followersCount: 0,
+			followingCount: 0
+		}));
+		const mockSetups = Array.from({ length: 6 }, (_, i) => ({
+			id: `s${i}`,
+			userId: `u${i % 5}`,
+			starsCount: i === 0 ? 3 : i === 1 ? 0 : 1,
+			clonesCount: i
+		}));
+		const mockSelectData: Record<string, unknown[]> = {
+			agents: [{ id: 'a1', slug: 'claude-code' }],
+			users: mockUsers,
+			tags: TAG_NAMES.slice(0, 3).map((n, i) => ({ id: `t${i}`, name: n })),
+			setups: mockSetups
+		};
+
+		const mockSelect = vi.fn(() => ({
+			from: vi.fn((table: unknown) => {
+				const tableName = (table as { _?: { name?: string } })._?.name ?? 'unknown';
+				return Promise.resolve(mockSelectData[tableName] ?? []);
+			})
+		}));
+
+		const mockUpdate = vi.fn(() => ({
+			set: vi.fn(() => ({
+				where: vi.fn(() => Promise.resolve())
+			}))
+		}));
+
+		const mockDb = {
+			execute: vi.fn(),
+			insert: mockInsert,
+			select: mockSelect,
+			update: mockUpdate
+		};
+
+		const mockProfiles = Array.from({ length: 5 }, (_, i) => ({
+			login: `user${i}`,
+			id: i + 1,
+			avatar_url: `https://avatars.githubusercontent.com/u/${i + 1}`,
+			name: `User ${i}`,
+			bio: null,
+			email: null,
+			blog: null,
+			location: null
+		}));
+
+		// Override the fetch to cycle through profiles
+		let fetchCallIdx = 0;
+		const cyclicFetch = vi.fn().mockImplementation(() => {
+			const profile = mockProfiles[fetchCallIdx % mockProfiles.length];
+			fetchCallIdx++;
+			return Promise.resolve({
+				ok: true,
+				status: 200,
+				json: async () => ({ ...profile, id: fetchCallIdx }),
+				headers: { get: () => null }
+			});
+		});
+
+		const result = await seed(
+			mockDb as unknown as ReturnType<typeof import('drizzle-orm/postgres-js').drizzle>,
+			{ fetcher: cyclicFetch, delayMs: 0 }
+		);
+
+		expect(result).toHaveProperty('starsInserted');
+		expect(result).toHaveProperty('followsInserted');
+		expect(result).toHaveProperty('commentsInserted');
+		expect(result).toHaveProperty('activitiesInserted');
+		expect(result.starsInserted).toBeGreaterThanOrEqual(0);
+		expect(result.followsInserted).toBeGreaterThanOrEqual(0);
+		expect(result.commentsInserted).toBeGreaterThanOrEqual(0);
+		expect(result.activitiesInserted).toBeGreaterThanOrEqual(0);
 	});
 });
 
