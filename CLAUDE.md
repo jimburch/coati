@@ -17,6 +17,8 @@ The platform has two surfaces:
 1. **Web app** — discovery, profiles, social features, setup browsing/creation
 2. **CLI tool (`coati`)** — clone/install setups to local machines, publish setups, search/star/follow from terminal
 
+When discussing domain concepts, use the canonical terms defined in [`docs/UBIQUITOUS_LANGUAGE.md`](docs/UBIQUITOUS_LANGUAGE.md). Avoid the listed aliases (e.g., say **Setup** not "workflow", **Agent** not "tool", **Clone** not "download").
+
 ## Tech Stack
 
 - **Framework:** SvelteKit (latest, App Router)
