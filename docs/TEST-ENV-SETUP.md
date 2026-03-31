@@ -33,11 +33,11 @@ Before starting, you need:
 
 Gather these before proceeding:
 
-| Item | Where to get it |
-|---|---|
-| VPS IP address | Hostinger dashboard → VPS → Overview |
-| VPS root password (or SSH key) | Hostinger dashboard → VPS → SSH Access |
-| Cloudflare API token (optional) | Cloudflare dashboard → My Profile → API Tokens |
+| Item                            | Where to get it                                                 |
+| ------------------------------- | --------------------------------------------------------------- |
+| VPS IP address                  | Hostinger dashboard → VPS → Overview                            |
+| VPS root password (or SSH key)  | Hostinger dashboard → VPS → SSH Access                          |
+| Cloudflare API token (optional) | Cloudflare dashboard → My Profile → API Tokens                  |
 | GitHub PAT with `read:packages` | GitHub → Settings → Developer Settings → Personal Access Tokens |
 
 ---
@@ -264,16 +264,16 @@ Go to GitHub → `jimburch/coati` → Settings → Secrets and variables → Act
 
 Add each of these:
 
-| Secret name | Value | Notes |
-|---|---|---|
-| `DEPLOY_SSH_KEY` | Contents of `~/.ssh/coati-deploy` (private key) | The ed25519 key generated in step 4c |
-| `DEPLOY_HOST` | Your VPS IP address | e.g., `123.45.67.89` |
-| `DEPLOY_USER` | `deploy` | The deploy user created by bootstrap |
-| `DEV_DATABASE_URL` | `postgresql://coati:<pw>@localhost:5432/coati_dev` | Same as in the VPS `.env` |
-| `DEV_GITHUB_CLIENT_ID` | Test OAuth app Client ID | From step 3 |
-| `DEV_GITHUB_CLIENT_SECRET` | Test OAuth app Client Secret | From step 3 |
-| `CF_ACCESS_CLIENT_ID` | Cloudflare service token Client ID | From step 2c |
-| `CF_ACCESS_CLIENT_SECRET` | Cloudflare service token Client Secret | From step 2c |
+| Secret name                | Value                                              | Notes                                |
+| -------------------------- | -------------------------------------------------- | ------------------------------------ |
+| `DEPLOY_SSH_KEY`           | Contents of `~/.ssh/coati-deploy` (private key)    | The ed25519 key generated in step 4c |
+| `DEPLOY_HOST`              | Your VPS IP address                                | e.g., `123.45.67.89`                 |
+| `DEPLOY_USER`              | `deploy`                                           | The deploy user created by bootstrap |
+| `DEV_DATABASE_URL`         | `postgresql://coati:<pw>@localhost:5432/coati_dev` | Same as in the VPS `.env`            |
+| `DEV_GITHUB_CLIENT_ID`     | Test OAuth app Client ID                           | From step 3                          |
+| `DEV_GITHUB_CLIENT_SECRET` | Test OAuth app Client Secret                       | From step 3                          |
+| `CF_ACCESS_CLIENT_ID`      | Cloudflare service token Client ID                 | From step 2c                         |
+| `CF_ACCESS_CLIENT_SECRET`  | Cloudflare service token Client Secret             | From step 2c                         |
 
 Also set up authentication for GitHub Packages publishing. Go to Settings → Secrets and variables → Actions and confirm that `GITHUB_TOKEN` has write access to packages (this is automatic for GitHub Actions in the same repo).
 
@@ -399,10 +399,10 @@ Or manually edit `~/.coati/config.json`:
 
 ```json
 {
-  "apiBase": "https://develop.coati.sh/api/v1",
-  "cfAccessClientId": "<your-CF-Access-Client-Id>",
-  "cfAccessClientSecret": "<your-CF-Access-Client-Secret>",
-  "token": "<your-auth-token-after-login>"
+	"apiBase": "https://develop.coati.sh/api/v1",
+	"cfAccessClientId": "<your-CF-Access-Client-Id>",
+	"cfAccessClientSecret": "<your-CF-Access-Client-Secret>",
+	"token": "<your-auth-token-after-login>"
 }
 ```
 
@@ -433,6 +433,7 @@ npm update -g @jimburch/coati-dev --registry=https://npm.pkg.github.com
 **Triggers**: Push to `develop` branch
 
 **Steps**:
+
 1. Checkout `develop`
 2. Set up Node.js 22 + pnpm
 3. `pnpm install`
@@ -450,6 +451,7 @@ npm update -g @jimburch/coati-dev --registry=https://npm.pkg.github.com
 **Triggers**: Push to `develop` branch, only when files in `cli/` change
 
 **Steps**:
+
 1. Checkout `develop`
 2. Set up Node.js 22 + pnpm + GitHub Packages auth
 3. `cd cli && pnpm install && pnpm build`
@@ -461,6 +463,7 @@ npm update -g @jimburch/coati-dev --registry=https://npm.pkg.github.com
 **Triggers**: Manual (workflow_dispatch) only
 
 **Steps**:
+
 1. SSH into VPS
 2. Run `cd /opt/coati/dev && node scripts/seed-dev.js`
 
@@ -534,7 +537,7 @@ ssh deploy@<your-vps-ip> "pm2 restart coati-dev"
 
 ### Cloudflare Access blocks the OAuth callback
 
-This shouldn't happen because you authenticate with Cloudflare Access *before* clicking "Sign in with GitHub." The CF Access session cookie persists through the OAuth redirect. If it does happen:
+This shouldn't happen because you authenticate with Cloudflare Access _before_ clicking "Sign in with GitHub." The CF Access session cookie persists through the OAuth redirect. If it does happen:
 
 1. Clear cookies for `develop.coati.sh`
 2. Visit `https://develop.coati.sh` fresh — authenticate with Cloudflare Access

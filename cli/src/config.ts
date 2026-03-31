@@ -6,6 +6,8 @@ export interface Config {
 	token?: string;
 	apiBase: string;
 	username?: string;
+	cfAccessClientId?: string;
+	cfAccessClientSecret?: string;
 }
 
 const DEFAULT_CONFIG: Config = {
