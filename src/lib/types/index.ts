@@ -148,6 +148,12 @@ export const updateProfileSchema = z.object({
 	bio: z.string().max(500).optional(),
 	websiteUrl: z
 		.string()
+		.transform((v) => {
+			if (!v || v.trim() === '') return '';
+			const trimmed = v.trim();
+			if (!/^https?:\/\//i.test(trimmed)) return `https://${trimmed}`;
+			return trimmed;
+		})
 		.refine((v) => v === '' || z.string().url().safeParse(v).success, {
 			message: 'Must be a valid URL or empty string'
 		})

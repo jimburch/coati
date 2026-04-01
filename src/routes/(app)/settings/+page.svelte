@@ -78,7 +78,7 @@
 				<Input
 					id="websiteUrl"
 					name="websiteUrl"
-					type="url"
+					type="text"
 					placeholder="https://yoursite.com"
 					value={form?.fields?.websiteUrl ?? user?.websiteUrl ?? ''}
 					data-testid="input-website"
