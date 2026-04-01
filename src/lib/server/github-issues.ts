@@ -89,8 +89,8 @@ export interface CreateFeedbackIssueParams {
 	pageUrl: string;
 	username: string;
 	environment: FeedbackEnvironment;
-	deviceType: 'mobile' | 'desktop';
-	browser: string;
+	deviceType?: 'mobile' | 'desktop';
+	browser?: string;
 }
 
 /**
@@ -112,7 +112,7 @@ export async function createFeedbackIssue(params: CreateFeedbackIssueParams): Pr
 	} = params;
 
 	const labels = ['beta-feedback', CATEGORY_LABEL[category], `env:${environment}`];
-	const body = [
+	const bodyLines = [
 		`## ${title}`,
 		'',
 		description,
@@ -122,10 +122,11 @@ export async function createFeedbackIssue(params: CreateFeedbackIssueParams): Pr
 		`**Page:** ${pageUrl}`,
 		`**Reported by:** @${username}`,
 		`**Category:** ${category}`,
-		`**Environment:** ${environment}`,
-		`**Device:** ${deviceType}`,
-		`**Browser:** ${browser}`
-	].join('\n');
+		`**Environment:** ${environment}`
+	];
+	if (deviceType) bodyLines.push(`**Device:** ${deviceType}`);
+	if (browser) bodyLines.push(`**Browser:** ${browser}`);
+	const body = bodyLines.join('\n');
 
 	return createIssue({ token, owner, repo, title, body, labels });
 }
