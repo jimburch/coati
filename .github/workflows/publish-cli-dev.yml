@@ -1,0 +1,54 @@
+name: Publish CLI (dev)
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'cli/**'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@jimburch'
+
+      - name: Install dependencies
+        working-directory: cli
+        run: pnpm install --frozen-lockfile
+
+      - name: Patch default API base for dev build
+        working-directory: cli
+        run: |
+          sed -i "s|https://coati.sh/api/v1|https://develop.coati.sh/api/v1|g" src/config.ts
+
+      - name: Build CLI
+        working-directory: cli
+        run: pnpm build
+
+      - name: Override package name for dev publish
+        working-directory: cli
+        run: npm pkg set name='@jimburch/coati-dev'
+
+      - name: Publish to GitHub Packages
+        working-directory: cli
+        run: npm publish --registry=https://npm.pkg.github.com
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
