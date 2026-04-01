@@ -5,80 +5,80 @@
 | Term          | Definition                                                                                    | Aliases to avoid                  |
 | ------------- | --------------------------------------------------------------------------------------------- | --------------------------------- |
 | **Setup**     | A shareable, installable package of AI coding tool configuration — the platform's atomic unit | Workflow, config, repo, package   |
-| **SetupFile** | An individual file within a setup, tagged by component type and optional agent scope           | Asset, attachment, config file    |
-| **Manifest**  | The `coati.json` file that describes a setup's metadata, files, and install behavior           | Config, setup.json, package.json  |
-| **User**      | A person with a Coati account, authenticated via GitHub OAuth                                  | Account, member, developer        |
-| **Tag**       | A freeform lowercase label for categorizing and discovering setups                             | Label, keyword, topic             |
+| **SetupFile** | An individual file within a setup, tagged by component type and optional agent scope          | Asset, attachment, config file    |
+| **Manifest**  | The `coati.json` file that describes a setup's metadata, files, and install behavior          | Config, setup.json, package.json  |
+| **User**      | A person with a Coati account, authenticated via GitHub OAuth                                 | Account, member, developer        |
+| **Tag**       | A freeform lowercase label for categorizing and discovering setups                            | Label, keyword, topic             |
 | **Agent**     | An AI coding tool that a setup targets (e.g., Claude Code, Cursor, Windsurf)                  | Tool, assistant, provider, editor |
 
 ## File taxonomy (ComponentType)
 
-| Term              | Definition                                                              | Aliases to avoid          |
-| ----------------- | ----------------------------------------------------------------------- | ------------------------- |
-| **Instruction**   | A CLAUDE.md-style file providing project context and guidelines          | Docs, readme, rules       |
-| **Command**       | A reusable slash-command prompt template (`.claude/commands/*.md`)       | Action, macro              |
-| **Skill**         | A richer command with YAML frontmatter and trigger conditions            | Plugin, extension          |
-| **MCP Server**    | An external tool integration configured in settings (Model Context Protocol) | Integration, plugin   |
-| **Hook**          | A shell command triggered on AI tool lifecycle events                    | Listener, callback, event  |
-| **Config**        | A generic configuration file (catch-all for non-specific types)         | Settings                   |
-| **Setup Script**  | A shell script intended to run during or after installation             | Installer, post-install    |
+| Term             | Definition                                                                   | Aliases to avoid          |
+| ---------------- | ---------------------------------------------------------------------------- | ------------------------- |
+| **Instruction**  | A CLAUDE.md-style file providing project context and guidelines              | Docs, readme, rules       |
+| **Command**      | A reusable slash-command prompt template (`.claude/commands/*.md`)           | Action, macro             |
+| **Skill**        | A richer command with YAML frontmatter and trigger conditions                | Plugin, extension         |
+| **MCP Server**   | An external tool integration configured in settings (Model Context Protocol) | Integration, plugin       |
+| **Hook**         | A shell command triggered on AI tool lifecycle events                        | Listener, callback, event |
+| **Config**       | A generic configuration file (catch-all for non-specific types)              | Settings                  |
+| **Setup Script** | A shell script intended to run during or after installation                  | Installer, post-install   |
 
 ## Setup lifecycle (verbs)
 
-| Term        | Definition                                                                    | Aliases to avoid         |
-| ----------- | ----------------------------------------------------------------------------- | ------------------------ |
-| **Publish** | Upload a setup from local disk to the Coati platform via CLI or API           | Upload, push, deploy     |
-| **Clone**   | Download and install a setup's files to the local machine                     | Download, install, pull  |
-| **Star**    | Bookmark a setup as a favorite (one per user per setup, toggleable)           | Like, favorite, upvote   |
-| **Follow**  | Subscribe to another user's activity (one per pair, toggleable)               | Subscribe, watch         |
-| **Feature** | Admin action to editorially highlight a setup (sets `featuredAt` timestamp)   | Promote, pin, spotlight  |
+| Term        | Definition                                                                  | Aliases to avoid        |
+| ----------- | --------------------------------------------------------------------------- | ----------------------- |
+| **Publish** | Upload a setup from local disk to the Coati platform via CLI or API         | Upload, push, deploy    |
+| **Clone**   | Download and install a setup's files to the local machine                   | Download, install, pull |
+| **Star**    | Bookmark a setup as a favorite (one per user per setup, toggleable)         | Like, favorite, upvote  |
+| **Follow**  | Subscribe to another user's activity (one per pair, toggleable)             | Subscribe, watch        |
+| **Feature** | Admin action to editorially highlight a setup (sets `featuredAt` timestamp) | Promote, pin, spotlight |
 
 ## Placement and scope
 
-| Term        | Definition                                                                               | Aliases to avoid    |
-| ----------- | ---------------------------------------------------------------------------------------- | ------------------- |
-| **Placement** | Where a setup's files install: **global** (`~/`) or **project** (`./`)                | Scope, target, mode |
-| **Global**  | Placement value meaning files install to the user's home directory, shared across projects | System-wide, user   |
-| **Project** | Placement value meaning files install to the current working directory                    | Local, repo-level   |
+| Term          | Definition                                                                                 | Aliases to avoid    |
+| ------------- | ------------------------------------------------------------------------------------------ | ------------------- |
+| **Placement** | Where a setup's files install: **global** (`~/`) or **project** (`./`)                     | Scope, target, mode |
+| **Global**    | Placement value meaning files install to the user's home directory, shared across projects | System-wide, user   |
+| **Project**   | Placement value meaning files install to the current working directory                     | Local, repo-level   |
 
 ## Discovery and ranking
 
-| Term         | Definition                                                                                       | Aliases to avoid      |
-| ------------ | ------------------------------------------------------------------------------------------------ | --------------------- |
-| **Trending** | Algorithmically ranked setups using time-decayed scoring of stars, clones, and comments           | Popular, hot          |
-| **Featured** | Admin-curated setups highlighted on the platform (distinct from algorithmic trending)              | Promoted, editorial   |
-| **Category** | A fixed classification for setups: web-dev, mobile, data-science, devops, systems, general        | Type, genre           |
-| **Explore**  | The browsable, filterable, sortable page for discovering setups                                    | Browse, search, index |
+| Term         | Definition                                                                                 | Aliases to avoid      |
+| ------------ | ------------------------------------------------------------------------------------------ | --------------------- |
+| **Trending** | Algorithmically ranked setups using time-decayed scoring of stars, clones, and comments    | Popular, hot          |
+| **Featured** | Admin-curated setups highlighted on the platform (distinct from algorithmic trending)      | Promoted, editorial   |
+| **Category** | A fixed classification for setups: web-dev, mobile, data-science, devops, systems, general | Type, genre           |
+| **Explore**  | The browsable, filterable, sortable page for discovering setups                            | Browse, search, index |
 
 ## Social features
 
-| Term         | Definition                                                                        | Aliases to avoid      |
-| ------------ | --------------------------------------------------------------------------------- | --------------------- |
-| **Comment**  | User-authored discussion on a setup, supporting single-level threading via parent  | Reply, review, note   |
-| **Activity** | An audit-log entry recording a user action (star, clone, comment, follow, create) | Event, action, log    |
-| **Feed**     | Chronological list of activities from users the current user follows               | Timeline, stream      |
+| Term         | Definition                                                                        | Aliases to avoid    |
+| ------------ | --------------------------------------------------------------------------------- | ------------------- |
+| **Comment**  | User-authored discussion on a setup, supporting single-level threading via parent | Reply, review, note |
+| **Activity** | An audit-log entry recording a user action (star, clone, comment, follow, create) | Event, action, log  |
+| **Feed**     | Chronological list of activities from users the current user follows              | Timeline, stream    |
 
 ## Authentication
 
-| Term             | Definition                                                                          | Aliases to avoid               |
-| ---------------- | ----------------------------------------------------------------------------------- | ------------------------------ |
-| **Session**      | An authenticated connection, stored in the database and validated on every request   | Token (ambiguous), login state |
-| **Device Flow**  | OAuth 2.0 Device Authorization Grant used by the CLI for GitHub login               | CLI auth, device code login    |
-| **Bearer Token** | The session token sent by the CLI as `Authorization: Bearer <token>`                | API key, access token          |
+| Term             | Definition                                                                         | Aliases to avoid               |
+| ---------------- | ---------------------------------------------------------------------------------- | ------------------------------ |
+| **Session**      | An authenticated connection, stored in the database and validated on every request | Token (ambiguous), login state |
+| **Device Flow**  | OAuth 2.0 Device Authorization Grant used by the CLI for GitHub login              | CLI auth, device code login    |
+| **Bearer Token** | The session token sent by the CLI as `Authorization: Bearer <token>`               | API key, access token          |
 
 ## Moderation
 
-| Term       | Definition                                                                        | Aliases to avoid |
-| ---------- | --------------------------------------------------------------------------------- | ---------------- |
-| **Report** | A user-submitted flag on a setup (malicious, spam, inappropriate, other)          | Flag, complaint  |
+| Term       | Definition                                                               | Aliases to avoid |
+| ---------- | ------------------------------------------------------------------------ | ---------------- |
+| **Report** | A user-submitted flag on a setup (malicious, spam, inappropriate, other) | Flag, complaint  |
 
 ## Identifiers
 
-| Term             | Definition                                                                          | Aliases to avoid    |
-| ---------------- | ----------------------------------------------------------------------------------- | ------------------- |
-| **Slug**         | A URL-safe, lowercase, hyphen-separated identifier (used for usernames and setups)  | Handle, URL name    |
-| **Setup path**   | The `owner/slug` URL pattern that uniquely identifies a setup (e.g., `alice/my-workflow`) | URL, route    |
-| **Search vector** | PostgreSQL `tsvector` column enabling full-text search on setup name and description | Index, FTS field   |
+| Term              | Definition                                                                                | Aliases to avoid |
+| ----------------- | ----------------------------------------------------------------------------------------- | ---------------- |
+| **Slug**          | A URL-safe, lowercase, hyphen-separated identifier (used for usernames and setups)        | Handle, URL name |
+| **Setup path**    | The `owner/slug` URL pattern that uniquely identifies a setup (e.g., `alice/my-workflow`) | URL, route       |
+| **Search vector** | PostgreSQL `tsvector` column enabling full-text search on setup name and description      | Index, FTS field |
 
 ---
 

@@ -200,10 +200,7 @@
 							data-testid="feedback-description"
 						/>
 					</div>
-					<p
-						class="min-w-0 truncate text-xs text-muted-foreground"
-						data-testid="feedback-page-url"
-					>
+					<p class="min-w-0 truncate text-xs text-muted-foreground" data-testid="feedback-page-url">
 						Page: {pageUrl.replace(/^https?:\/\/[^/]+/, '')}
 					</p>
 					{#if errorMsg}
