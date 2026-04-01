@@ -1,0 +1,3 @@
+- [Issue labels](feedback_issue_labels.md) — PRD child issues get ralph/AFK/priority labels, not prd
+- [Public repo security](feedback_security_public_repo.md) — All scripts/workflows must be hardened; repo is 100% public and open source
+- [Beta mode is prod-only](project_beta_mode.md) — PUBLIC_BETA_MODE is for production launch, not the test environment

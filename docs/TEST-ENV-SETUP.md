@@ -235,7 +235,6 @@ GITHUB_CLIENT_SECRET=<test-oauth-client-secret>
 
 # Public URL
 PUBLIC_SITE_URL=https://develop.coati.sh
-PUBLIC_BETA_MODE=true
 
 # Server
 PORT=3001

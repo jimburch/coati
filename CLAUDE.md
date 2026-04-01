@@ -230,6 +230,15 @@ export const actions = {
 };
 ```
 
+## Security
+
+This repository is **100% public and open source**. All scripts, workflows, and configuration files are visible to everyone. Keep this in mind at all times:
+
+- Never hardcode secrets, IPs, passwords, or credentials in any file — use GitHub Actions secrets, environment variables, or `.env` files (which are gitignored)
+- CI workflows must use minimal permissions and validate inputs — assume PRs can come from untrusted forks
+- Deploy scripts must not expose internal infrastructure details (paths are fine, credentials are not)
+- Review all scripts and workflows for abuse vectors before committing
+
 ## Don't
 
 - Don't add any ORM other than Drizzle
