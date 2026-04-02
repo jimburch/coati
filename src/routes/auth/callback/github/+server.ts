@@ -24,7 +24,8 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 	try {
 		const tokens = await github.validateAuthorizationCode(code);
 		accessToken = tokens.accessToken();
-	} catch {
+	} catch (err) {
+		console.error('[OAuth] Code exchange failed:', err);
 		return error('Failed to exchange authorization code', 'OAUTH_ERROR', 400);
 	}
 
