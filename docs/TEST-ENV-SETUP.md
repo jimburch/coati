@@ -244,7 +244,7 @@ The seed script populates the test database with mock data. You can trigger it v
 3. Select `develop` branch
 4. Click "Run workflow"
 
-**Note**: The seed workflow SSHs into the VPS and runs the seed script. This workflow needs updating to work with the Coolify/Docker setup (see [CI/CD Pipeline Reference](#9-cicd-pipeline-reference)).
+The workflow SSHs into the VPS and runs `docker exec` on the Coolify app container to execute the seed script. The seed script and its dependencies are included in the Docker image.
 
 ### What the seed script creates
 
@@ -355,7 +355,7 @@ The CLI is tested locally — no registry publishing needed. See [Test CLI Setup
 
 **Triggers**: Manual (workflow_dispatch) only
 
-**Note**: This workflow needs updating to execute the seed script inside the Coolify Docker container or via the Coolify terminal.
+**Steps**: SSHs into VPS → finds the running Coolify app container → runs `docker exec npx tsx scripts/seed-dev.ts` inside it.
 
 ---
 

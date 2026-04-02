@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: SSH and run seed script
+      - name: SSH and seed via Docker exec
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -16,7 +16,22 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             set -e
-            cd /opt/coati/dev
+
+            # Find the running Coolify app container
+            CONTAINER=$(docker ps --filter "label=coolify.applicationId" --filter "ancestor=$(docker ps --format '{{.Image}}' | grep coati | head -1)" --format '{{.Names}}' | head -1)
+
+            if [ -z "$CONTAINER" ]; then
+              # Fallback: find by image name pattern
+              CONTAINER=$(docker ps --filter "name=usnp1cm6cl4b3g75l7yykla2" --format '{{.Names}}' | head -1)
+            fi
+
+            if [ -z "$CONTAINER" ]; then
+              echo "ERROR: Could not find running Coati container"
+              docker ps
+              exit 1
+            fi
+
+            echo "Found container: $CONTAINER"
             echo "Running seed script..."
-            pnpm seed:dev
+            docker exec "$CONTAINER" npx tsx scripts/seed-dev.ts
             echo "Seed completed successfully."

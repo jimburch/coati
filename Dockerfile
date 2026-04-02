@@ -56,9 +56,15 @@ COPY --from=builder /app/packages ./packages
 COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/drizzle.config.ts ./
 
-# Copy entrypoint script
+# Copy scripts (entrypoint + seed)
 COPY scripts/docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x docker-entrypoint.sh
+
+# Copy seed script and its dependencies (for `docker exec` seeding)
+COPY scripts/seed-dev.ts ./scripts/seed-dev.ts
+COPY --from=builder /app/src/lib/server/db/schema.ts ./src/lib/server/db/schema.ts
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
+COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
 ENV NODE_ENV=production
 ENV PORT=3000
