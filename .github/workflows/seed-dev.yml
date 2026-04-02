@@ -32,6 +32,8 @@ jobs:
             fi
 
             echo "Found container: $CONTAINER"
+            echo "Running migrations..."
+            docker exec "$CONTAINER" npx drizzle-kit migrate
             echo "Running seed script..."
             docker exec "$CONTAINER" npx tsx scripts/seed-dev.ts
             echo "Seed completed successfully."
