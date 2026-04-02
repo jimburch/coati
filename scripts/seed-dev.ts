@@ -813,11 +813,17 @@ export async function seed(
 
 	// 1. Truncate all tables (CASCADE handles FK order)
 	console.log('\n→ Truncating all tables...');
-	await db.execute(
-		sql`TRUNCATE TABLE IF EXISTS setup_reports, feedback_submissions, activities, comments, stars,
-        setup_agents, setup_tags, setup_files, follows, device_flow_states, sessions,
-        setups, users, agents, tags RESTART IDENTITY CASCADE`
-	);
+	await db.execute(sql`
+		DO $$ DECLARE t text;
+		BEGIN
+			FOR t IN
+				SELECT tablename FROM pg_tables
+				WHERE schemaname = 'public' AND tablename != '__drizzle_migrations'
+			LOOP
+				EXECUTE format('TRUNCATE TABLE %I RESTART IDENTITY CASCADE', t);
+			END LOOP;
+		END $$
+	`);
 	console.log('  ✓ All tables truncated');
 
 	// 2. Insert agents from registry
