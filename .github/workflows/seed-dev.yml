@@ -2,6 +2,12 @@ name: Seed Dev Database
 
 on:
   workflow_dispatch:
+    inputs:
+      reset:
+        description: 'Reset database first (drops everything, re-runs all migrations)'
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   seed:
@@ -14,16 +20,11 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          command_timeout: 10m
           script: |
             set -e
 
-            # Find the running Coolify app container
-            CONTAINER=$(docker ps --filter "label=coolify.applicationId" --filter "ancestor=$(docker ps --format '{{.Image}}' | grep coati | head -1)" --format '{{.Names}}' | head -1)
-
-            if [ -z "$CONTAINER" ]; then
-              # Fallback: find by image name pattern
-              CONTAINER=$(docker ps --filter "name=usnp1cm6cl4b3g75l7yykla2" --format '{{.Names}}' | head -1)
-            fi
+            CONTAINER=$(docker ps --filter "name=usnp1cm6cl4b3g75l7yykla2" --format '{{.Names}}' | head -1)
 
             if [ -z "$CONTAINER" ]; then
               echo "ERROR: Could not find running Coati container"
@@ -32,8 +33,17 @@ jobs:
             fi
 
             echo "Found container: $CONTAINER"
-            echo "Running migrations..."
+
+            RESET="${{ inputs.reset }}"
+            if [ "$RESET" = "true" ]; then
+              echo "=== Resetting database ==="
+              docker exec "$CONTAINER" npx tsx scripts/reset-db.ts
+            fi
+
+            echo "=== Running migrations ==="
             docker exec "$CONTAINER" npx drizzle-kit migrate
-            echo "Running seed script..."
+
+            echo "=== Running seed script ==="
             docker exec "$CONTAINER" npx tsx scripts/seed-dev.ts
-            echo "Seed completed successfully."
+
+            echo "=== Done ==="

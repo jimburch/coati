@@ -62,6 +62,7 @@ RUN chmod +x docker-entrypoint.sh
 
 # Copy seed script and its dependencies (for `docker exec` seeding)
 COPY scripts/seed-dev.ts ./scripts/seed-dev.ts
+COPY scripts/reset-db.ts ./scripts/reset-db.ts
 COPY --from=builder /app/src/lib/server/db/schema.ts ./src/lib/server/db/schema.ts
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
