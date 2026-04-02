@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock $env/static/public (must be before other mocks and imports)
+// Mock $env/dynamic/public (must be before other mocks and imports)
 let mockPublicBetaMode = '';
-vi.mock('$env/static/public', () => ({
-	get PUBLIC_BETA_MODE() {
-		return mockPublicBetaMode;
-	},
-	PUBLIC_SITE_URL: 'http://localhost:5173'
+vi.mock('$env/dynamic/public', () => ({
+	env: {
+		get PUBLIC_BETA_MODE() {
+			return mockPublicBetaMode;
+		},
+		PUBLIC_SITE_URL: 'http://localhost:5173'
+	}
 }));
 
 // Mock auth module

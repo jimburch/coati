@@ -6,7 +6,7 @@ import {
 	setSessionCookie
 } from '$lib/server/auth';
 import { checkRateLimit } from '$lib/server/rate-limit';
-import { PUBLIC_BETA_MODE } from '$env/static/public';
+import { env } from '$env/dynamic/public';
 import { startScheduler } from '$lib/server/scheduler';
 
 startScheduler();
@@ -77,7 +77,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	// Beta gate check (runs after auth so event.locals.user is populated, before rate limit)
-	const gateResponse = betaGate(event, PUBLIC_BETA_MODE === 'true');
+	const gateResponse = betaGate(event, env.PUBLIC_BETA_MODE === 'true');
 	if (gateResponse) return gateResponse;
 
 	// Rate limit check (runs after auth so event.locals.user is already populated)
