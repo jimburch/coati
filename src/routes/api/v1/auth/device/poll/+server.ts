@@ -5,7 +5,9 @@ import { deviceFlowStates, users } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { upsertGithubUser, generateSessionToken, createSession } from '$lib/server/auth';
 import { success, error, parseRequestBody } from '$lib/server/responses';
-import { GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET } from '$env/static/private';
+import { env } from '$env/dynamic/private';
+const GITHUB_CLIENT_ID = env.GITHUB_CLIENT_ID!;
+const GITHUB_CLIENT_SECRET = env.GITHUB_CLIENT_SECRET!;
 import { updateLastLoginAt } from '$lib/server/queries/users';
 
 const deviceCodeSchema = z.object({ deviceCode: z.string().min(1) });

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { PUBLIC_SITE_URL } from '$env/static/public';
+	import { env } from '$env/dynamic/public';
 
 	interface Props {
 		title: string;
@@ -13,16 +13,16 @@
 	let {
 		title,
 		description,
-		url = PUBLIC_SITE_URL,
-		image = `${PUBLIC_SITE_URL}/og-image.png`,
+		url = env.PUBLIC_SITE_URL,
+		image = `${env.PUBLIC_SITE_URL}/og-image.png`,
 		type = 'website',
 		twitterCard = 'summary'
 	}: Props = $props();
 
 	const siteName = 'Coati';
 
-	const absoluteUrl = $derived(url.startsWith('http') ? url : `${PUBLIC_SITE_URL}${url}`);
-	const absoluteImage = $derived(image.startsWith('http') ? image : `${PUBLIC_SITE_URL}${image}`);
+	const absoluteUrl = $derived(url.startsWith('http') ? url : `${env.PUBLIC_SITE_URL}${url}`);
+	const absoluteImage = $derived(image.startsWith('http') ? image : `${env.PUBLIC_SITE_URL}${image}`);
 </script>
 
 <svelte:head>

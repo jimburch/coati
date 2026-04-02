@@ -3,7 +3,8 @@ import type { RequestHandler } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { deviceFlowStates } from '$lib/server/db/schema';
 import { success, error } from '$lib/server/responses';
-import { GITHUB_CLIENT_ID } from '$env/static/private';
+import { env } from '$env/dynamic/private';
+const GITHUB_CLIENT_ID = env.GITHUB_CLIENT_ID!;
 
 export const POST: RequestHandler = async () => {
 	// Request device code from GitHub

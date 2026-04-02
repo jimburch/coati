@@ -3,13 +3,13 @@ import crypto from 'node:crypto';
 import { db } from '$lib/server/db';
 import { sessions, users } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
-import { GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 import { dev } from '$app/environment';
 import type { Cookies } from '@sveltejs/kit';
 
 // ─── Arctic GitHub Provider ────────────────────────────────────────────────
 
-export const github = new GitHub(GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, null);
+export const github = new GitHub(env.GITHUB_CLIENT_ID!, env.GITHUB_CLIENT_SECRET!, null);
 
 // ─── Token Helpers ─────────────────────────────────────────────────────────
 

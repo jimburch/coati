@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock environment variables
-vi.mock('$env/static/private', () => ({
-	GITHUB_CLIENT_ID: 'test-client-id',
-	GITHUB_CLIENT_SECRET: 'test-client-secret'
+vi.mock('$env/dynamic/private', () => ({
+	env: {
+		GITHUB_CLIENT_ID: 'test-client-id',
+		GITHUB_CLIENT_SECRET: 'test-client-secret'
+	}
 }));
 
 // Mock DB

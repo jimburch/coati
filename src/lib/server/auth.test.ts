@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import crypto from 'node:crypto';
 
-// Mock $env/static/private
-vi.mock('$env/static/private', () => ({
-	GITHUB_CLIENT_ID: 'test-client-id',
-	GITHUB_CLIENT_SECRET: 'test-client-secret'
+// Mock $env/dynamic/private
+vi.mock('$env/dynamic/private', () => ({
+	env: {
+		GITHUB_CLIENT_ID: 'test-client-id',
+		GITHUB_CLIENT_SECRET: 'test-client-secret'
+	}
 }));
 
 // Mock the database

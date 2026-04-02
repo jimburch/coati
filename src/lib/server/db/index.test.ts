@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('$env/static/private', () => ({
-	DATABASE_URL: 'postgres://test:test@localhost/test'
+vi.mock('$env/dynamic/private', () => ({
+	env: { DATABASE_URL: 'postgres://test:test@localhost/test' }
 }));
 
 const mockPostgres = vi.fn(() => ({}));

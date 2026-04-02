@@ -11,13 +11,15 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 
 // Must be declared before any module imports so that the hoisted mock is in
 // place when $lib/server/db initialises its postgres connection.
-vi.mock('$env/static/private', () => ({
-	DATABASE_URL:
-		process.env.DATABASE_URL_TEST ??
-		process.env.DATABASE_URL ??
-		'postgresql://coati:coati@localhost:5432/coati_dev',
-	GITHUB_CLIENT_ID: 'test',
-	GITHUB_CLIENT_SECRET: 'test'
+vi.mock('$env/dynamic/private', () => ({
+	env: {
+		DATABASE_URL:
+			process.env.DATABASE_URL_TEST ??
+			process.env.DATABASE_URL ??
+			'postgresql://coati:coati@localhost:5432/coati_dev',
+		GITHUB_CLIENT_ID: 'test',
+		GITHUB_CLIENT_SECRET: 'test'
+	}
 }));
 
 import { eq } from 'drizzle-orm';

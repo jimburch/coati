@@ -5,7 +5,7 @@
  * cleanup utilities. Imported by star and follow query integration tests.
  *
  * Prerequisites:
- * - The test file must mock `$env/static/private` before importing this module.
+ * - The test file must mock `$env/dynamic/private` before importing this module.
  * - Cleaning up test users cascades to all dependent rows (setups, stars, follows, etc.)
  *   thanks to `onDelete: 'cascade'` constraints on the schema.
  */
