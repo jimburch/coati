@@ -31,7 +31,19 @@ function toSetupFileRows(setupId: string, files: NonNullable<FileInput>) {
 }
 
 export async function getSetupsByUserId(userId: string) {
-	return db.select().from(setups).where(eq(setups.userId, userId)).orderBy(desc(setups.createdAt));
+	return db
+		.select({
+			id: setups.id,
+			name: setups.name,
+			slug: setups.slug,
+			description: setups.description,
+			starsCount: setups.starsCount,
+			clonesCount: setups.clonesCount,
+			updatedAt: setups.updatedAt
+		})
+		.from(setups)
+		.where(eq(setups.userId, userId))
+		.orderBy(desc(setups.createdAt));
 }
 
 export async function getSetupByOwnerSlug(ownerUsername: string, slug: string) {
@@ -67,7 +79,30 @@ export async function getSetupByOwnerSlug(ownerUsername: string, slug: string) {
 }
 
 export async function getSetupById(id: string) {
-	const result = await db.select().from(setups).where(eq(setups.id, id)).limit(1);
+	const result = await db
+		.select({
+			id: setups.id,
+			userId: setups.userId,
+			name: setups.name,
+			slug: setups.slug,
+			description: setups.description,
+			readme: setups.readme,
+			placement: setups.placement,
+			category: setups.category,
+			license: setups.license,
+			minToolVersion: setups.minToolVersion,
+			postInstall: setups.postInstall,
+			prerequisites: setups.prerequisites,
+			starsCount: setups.starsCount,
+			clonesCount: setups.clonesCount,
+			commentsCount: setups.commentsCount,
+			featuredAt: setups.featuredAt,
+			createdAt: setups.createdAt,
+			updatedAt: setups.updatedAt
+		})
+		.from(setups)
+		.where(eq(setups.id, id))
+		.limit(1);
 	return result[0] ?? null;
 }
 
