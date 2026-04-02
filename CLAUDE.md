@@ -29,7 +29,7 @@ When discussing domain concepts, use the canonical terms defined in [`docs/UBIQU
 - **Auth:** Lucia Auth v3 + Arctic (GitHub OAuth)
 - **Markdown rendering:** mdsvex + shiki for syntax highlighting
 - **SSR Strategy:** Hybrid — SSR for public routes, SPA for authenticated routes
-- **Deployment:** adapter-node → PM2 behind Caddy on DigitalOcean
+- **Deployment:** Coolify (self-hosted) on Hostinger VPS — Docker builds from `Dockerfile`, Traefik reverse proxy, PostgreSQL managed by Coolify
 - **CLI framework:** commander (published to npm as `coati`)
 
 ## Project Structure

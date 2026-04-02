@@ -20,38 +20,40 @@ Coati is a monolithic SvelteKit application backed by PostgreSQL, with a separat
          │                     │  Authorization: Bearer <token>
          ▼                     ▼
 ┌─────────────────────────────────────────────────┐
-│              Caddy (reverse proxy)               │
-│              Auto-HTTPS via Let's Encrypt         │
+│       Cloudflare (DNS + Access gate)             │
+│       develop.coati.sh → VPS IP (proxied)        │
 └──────────────────────┬──────────────────────────┘
                        │
                        ▼
 ┌─────────────────────────────────────────────────┐
-│          SvelteKit Node Server (PM2)             │
-│                                                   │
-│  ┌─────────────┐  ┌──────────────┐               │
-│  │ SSR Routes   │  │ API Routes   │               │
-│  │ (public)/    │  │ /api/v1/*    │               │
-│  │              │  │              │               │
-│  │ +page.server │  │ +server.ts   │               │
-│  │ +page.svelte │  │ JSON in/out  │               │
-│  └──────┬───────┘  └──────┬───────┘               │
-│         │                 │                        │
-│         ▼                 ▼                        │
-│  ┌─────────────────────────────────┐              │
-│  │     lib/server/ (shared)        │              │
-│  │  ┌───────────┐ ┌─────────────┐  │              │
-│  │  │  Lucia    │ │  Drizzle    │  │              │
-│  │  │  Auth     │ │  ORM        │  │              │
-│  │  └───────────┘ └──────┬──────┘  │              │
-│  └───────────────────────┼─────────┘              │
-└──────────────────────────┼────────────────────────┘
-                           │
-                           ▼
-                 ┌───────────────────┐
-                 │    PostgreSQL     │
-                 │  (same VPS or    │
-                 │   DO Managed)    │
-                 └───────────────────┘
+│    Coolify (self-hosted on Hostinger VPS)         │
+│    ┌───────────────────────────────────────┐     │
+│    │  Traefik (reverse proxy, auto-HTTPS)  │     │
+│    └──────────────────┬────────────────────┘     │
+│                       │                           │
+│    ┌──────────────────▼────────────────────┐     │
+│    │  Docker: SvelteKit Node Server        │     │
+│    │                                        │     │
+│    │  ┌─────────────┐  ┌──────────────┐    │     │
+│    │  │ SSR Routes   │  │ API Routes   │    │     │
+│    │  │ (public)/    │  │ /api/v1/*    │    │     │
+│    │  └──────┬───────┘  └──────┬───────┘    │     │
+│    │         │                 │             │     │
+│    │         ▼                 ▼             │     │
+│    │  ┌─────────────────────────────────┐   │     │
+│    │  │     lib/server/ (shared)        │   │     │
+│    │  │  ┌───────────┐ ┌─────────────┐  │   │     │
+│    │  │  │  Lucia    │ │  Drizzle    │  │   │     │
+│    │  │  │  Auth     │ │  ORM        │  │   │     │
+│    │  │  └───────────┘ └──────┬──────┘  │   │     │
+│    │  └───────────────────────┼─────────┘   │     │
+│    └──────────────────────────┼─────────────┘     │
+│                               │                   │
+│    ┌──────────────────────────▼─────────────┐     │
+│    │  Docker: PostgreSQL 18                  │     │
+│    │  (managed by Coolify, internal network) │     │
+│    └─────────────────────────────────────────┘     │
+└─────────────────────────────────────────────────┘
 ```
 
 ## Request Flows
@@ -59,7 +61,7 @@ Coati is a monolithic SvelteKit application backed by PostgreSQL, with a separat
 ### Web: Viewing a Setup Page (SSR)
 
 1. Browser requests `GET /alice/my-claude-workflow`
-2. Caddy proxies to SvelteKit Node server
+2. Cloudflare proxies to VPS → Traefik routes to the SvelteKit Docker container
 3. SvelteKit matches `(public)/[username]/[slug]/+page.server.ts`
 4. `load()` function queries PostgreSQL via Drizzle for setup + files + comments
 5. SvelteKit renders `+page.svelte` to HTML on the server
@@ -180,8 +182,7 @@ Stars are weighted less than clones because a clone represents someone actually 
 
 - All auth tokens stored as HTTP-only cookies (web) or local file with restricted permissions (CLI)
 - API rate limiting via `RateLimiterMemory` from `rate-limiter-flexible` (one counter per IP).
-  **Note:** In-memory state resets on restart and is not shared across PM2 cluster workers —
-  effective limits are multiplied by worker count. For horizontal scaling, switch to the
+  **Note:** In-memory state resets on container restart. For horizontal scaling, switch to the
   drop-in `RateLimiterPostgres` or `RateLimiterRedis` variants from the same package.
 - Input validation with Zod on all API endpoints
 - Setup file contents are stored as text — no executable uploads

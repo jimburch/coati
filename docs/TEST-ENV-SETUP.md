@@ -1,6 +1,6 @@
 # Test Environment Setup & Deploy Guide
 
-This document walks through every step to set up the Coati test environment from scratch: a fresh Hostinger KVM 2 VPS running `develop.coati.sh` behind Cloudflare Access, with CI/CD that auto-deploys on push to `develop`.
+This document walks through every step to set up the Coati test environment from scratch: a Hostinger KVM 2 VPS running Coolify, deploying `develop.coati.sh` behind Cloudflare Access.
 
 ---
 
@@ -9,15 +9,14 @@ This document walks through every step to set up the Coati test environment from
 1. [Prerequisites](#1-prerequisites)
 2. [Cloudflare DNS & Access Setup](#2-cloudflare-dns--access-setup)
 3. [GitHub OAuth App for Test Environment](#3-github-oauth-app-for-test-environment)
-4. [VPS Bootstrap](#4-vps-bootstrap)
-5. [Environment Variables on the VPS](#5-environment-variables-on-the-vps)
-6. [GitHub Actions Secrets](#6-github-actions-secrets)
-7. [First Deploy (Manual Verification)](#7-first-deploy-manual-verification)
-8. [Seeding Mock Data](#8-seeding-mock-data)
-9. [Test CLI Setup](#9-test-cli-setup)
-10. [CI/CD Pipeline Reference](#10-cicd-pipeline-reference)
-11. [Day-to-Day Operations](#11-day-to-day-operations)
-12. [Troubleshooting](#12-troubleshooting)
+4. [VPS Setup & Coolify Installation](#4-vps-setup--coolify-installation)
+5. [Coolify Configuration](#5-coolify-configuration)
+6. [First Deploy](#6-first-deploy)
+7. [Seeding Mock Data](#7-seeding-mock-data)
+8. [Test CLI Setup](#8-test-cli-setup)
+9. [CI/CD Pipeline Reference](#9-cicd-pipeline-reference)
+10. [Day-to-Day Operations](#10-day-to-day-operations)
+11. [Troubleshooting](#11-troubleshooting)
 
 ---
 
@@ -25,20 +24,17 @@ This document walks through every step to set up the Coati test environment from
 
 Before starting, you need:
 
-- **Hostinger KVM 2 VPS** — fresh Ubuntu 22.04+ (or Debian 12+) with root SSH access
+- **Hostinger KVM 2 VPS** — fresh Ubuntu 24.04 with root SSH access (8GB RAM recommended)
 - **Domain**: `coati.sh` with DNS managed by Cloudflare
 - **Cloudflare account** (free plan is fine)
 - **GitHub account** with admin access to `jimburch/coati`
-- **GitHub Personal Access Token (PAT)** with `read:packages` scope (for installing the test CLI from GitHub Packages)
 
 Gather these before proceeding:
 
-| Item                            | Where to get it                                                 |
-| ------------------------------- | --------------------------------------------------------------- |
-| VPS IP address                  | Hostinger dashboard → VPS → Overview                            |
-| VPS root password (or SSH key)  | Hostinger dashboard → VPS → SSH Access                          |
-| Cloudflare API token (optional) | Cloudflare dashboard → My Profile → API Tokens                  |
-| GitHub PAT with `read:packages` | GitHub → Settings → Developer Settings → Personal Access Tokens |
+| Item                           | Where to get it                                |
+| ------------------------------ | ---------------------------------------------- |
+| VPS IP address                 | Hostinger dashboard → VPS → Overview           |
+| VPS root password (or SSH key) | Hostinger dashboard → VPS → SSH Access         |
 
 ---
 
@@ -51,7 +47,7 @@ Gather these before proceeding:
    - **Type**: A
    - **Name**: `develop`
    - **IPv4 address**: your VPS IP
-   - **Proxy status**: Proxied (orange cloud) — this is required for Cloudflare Access
+   - **Proxy status**: Proxied (orange cloud) — required for Cloudflare Access
    - **TTL**: Auto
 3. Click Save
 
@@ -82,7 +78,7 @@ Verify: `dig develop.coati.sh` should resolve (may take a few minutes to propaga
 3. **Immediately copy both values** — the secret is only shown once:
    - `CF-Access-Client-Id`: (e.g., `abc123.access`)
    - `CF-Access-Client-Secret`: (e.g., `def456secret...`)
-4. Store these securely — you'll need them for GitHub Actions secrets and your local CLI config
+4. Store these securely — you'll need them for your local CLI config
 
 ### 2d. Add service token to the Access policy
 
@@ -110,267 +106,156 @@ You need a separate GitHub OAuth app for the test subdomain because OAuth callba
 4. Copy the **Client ID**
 5. Click "Generate a new client secret" and copy the **Client Secret**
 
-Store both — you'll need them for the VPS environment file and GitHub Actions secrets.
+Store both — you'll need them for Coolify environment variables.
 
 ---
 
-## 4. VPS Bootstrap
+## 4. VPS Setup & Coolify Installation
 
-### 4a. SSH into the VPS
+### 4a. Provision the VPS
+
+1. In Hostinger hPanel, create a **KVM 2 VPS** with **Ubuntu 24.04** (plain OS, no control panel)
+2. Note the IP address and set a root password or upload your SSH key
+
+### 4b. SSH into the VPS
 
 ```bash
 ssh root@<your-vps-ip>
 ```
 
-If this is your first connection, accept the host key fingerprint.
-
-### 4b. Upload and run the bootstrap script
-
-From your local machine (in the coati repo root):
+If you get a host key warning after reprovisioning, clear the old key:
 
 ```bash
-scp scripts/bootstrap-vps.sh root@<your-vps-ip>:/tmp/bootstrap-vps.sh
-ssh root@<your-vps-ip> 'chmod +x /tmp/bootstrap-vps.sh && /tmp/bootstrap-vps.sh'
+ssh-keygen -R <your-vps-ip>
 ```
 
-The bootstrap script does the following (all idempotent — safe to re-run):
+### 4c. Install Coolify
 
-1. **System updates**: `apt update && apt upgrade`
-2. **Node.js 22**: Installs via NodeSource repository
-3. **pnpm**: Installs globally via corepack
-4. **PM2**: Installs globally via npm, configures startup on boot
-5. **PostgreSQL 17**: Installs, starts, enables on boot
-6. **Creates databases**:
-   - `coati_dev` (test environment)
-   - `coati_prod` (placeholder for production)
-   - Database user `coati` with a generated password
-7. **Caddy**: Installs from official Caddy repository, enables on boot
-8. **Deploy user**: Creates a `deploy` system user with:
-   - Home directory at `/opt/coati`
-   - SSH authorized_keys (you'll add your CI key here)
-   - Ownership of `/opt/coati/dev` and `/opt/coati/prod` directories
-9. **Directory structure**:
-   ```
-   /opt/coati/
-   ├── dev/          # Test environment app
-   │   ├── .env      # Environment variables (template created)
-   │   └── build/    # SvelteKit build output (after first deploy)
-   └── prod/         # Production app (placeholder)
-       └── .env
-   ```
-10. **Caddy config**: Copies `caddy/Caddyfile` to `/etc/caddy/Caddyfile` and reloads
-
-### 4c. Set up SSH key for CI deployments
-
-Generate a dedicated deploy key (on your local machine):
+Run the one-line installer on the VPS:
 
 ```bash
-ssh-keygen -t ed25519 -C "coati-deploy-ci" -f ~/.ssh/coati-deploy -N ""
+curl -fsSL https://cdn.coollabs.io/coolify/install.sh | bash
 ```
 
-Copy the public key to the VPS:
+This installs Docker, Coolify, and all dependencies. Takes a few minutes.
 
-```bash
-ssh root@<your-vps-ip> "mkdir -p /home/deploy/.ssh && chmod 700 /home/deploy/.ssh"
-scp ~/.ssh/coati-deploy.pub root@<your-vps-ip>:/home/deploy/.ssh/authorized_keys
-ssh root@<your-vps-ip> "chmod 600 /home/deploy/.ssh/authorized_keys && chown -R deploy:deploy /home/deploy/.ssh"
-```
+### 4d. Initial Coolify setup
 
-Test the connection:
-
-```bash
-ssh -i ~/.ssh/coati-deploy deploy@<your-vps-ip> "whoami"
-# Should output: deploy
-```
-
-The **private key** (`~/.ssh/coati-deploy`) contents go into the GitHub Actions secret `DEPLOY_SSH_KEY`.
-
-### 4d. Verify the bootstrap
-
-SSH into the VPS and verify each component:
-
-```bash
-# Node.js
-node --version        # Should show v22.x.x
-
-# pnpm
-pnpm --version        # Should show 9.x.x
-
-# PM2
-pm2 --version         # Should show 5.x.x
-
-# PostgreSQL
-sudo -u postgres psql -c "\l"
-# Should list coati_dev and coati_prod databases
-
-# Caddy
-systemctl status caddy
-# Should show active (running)
-
-# Directory structure
-ls -la /opt/coati/dev/
-ls -la /opt/coati/prod/
-```
+1. Open `http://<your-vps-ip>:8000` in your browser
+2. Create your admin account
+3. On the server setup screen, select **"This Machine"**
+4. Create a project (name it "Coati")
+5. Rename the default environment to "develop" (for the test environment)
 
 ---
 
-## 5. Environment Variables on the VPS
+## 5. Coolify Configuration
 
-Edit the test environment file on the VPS:
+### 5a. Create the PostgreSQL database
 
-```bash
-ssh root@<your-vps-ip>
-nano /opt/coati/dev/.env
-```
+1. In Coolify, go to **Projects** → **Coati** → **develop** → **+ New Resource**
+2. Select **PostgreSQL** → **PostgreSQL 18 (default)**
+3. Configure:
+   - **Name**: `coati-dev-db`
+   - **Username**: `coati`
+   - **Initial Database**: `coati_dev`
+   - **Password**: Copy and save the auto-generated password
+   - **Ports Mappings**: Clear (leave empty — internal Docker network only)
+4. Click **Save**, then **Start**
+5. Copy the **Postgres URL (internal)** — you'll need it for the app
 
-Fill in all values:
+### 5b. Create the application resource
 
-```env
-# Database
-DATABASE_URL=postgresql://coati:<db-password>@localhost:5432/coati_dev
+1. Go to **+ New Resource** → **Public Repository**
+2. Configure:
+   - **Repository URL**: `https://github.com/jimburch/coati`
+   - **Branch**: `develop`
+   - **Build Pack**: `Dockerfile`
+3. Click **Continue**
 
-# GitHub OAuth (Test App — from step 3)
-GITHUB_CLIENT_ID=<test-oauth-client-id>
-GITHUB_CLIENT_SECRET=<test-oauth-client-secret>
+### 5c. Configure the application
 
-# Public URL
-PUBLIC_SITE_URL=https://develop.coati.sh
+On the app Configuration page:
 
-# Server
-PORT=3001
-HOST=127.0.0.1
-ORIGIN=https://develop.coati.sh
-```
+1. **General**:
+   - **Name**: `coati-dev`
+   - **Domains**: `https://develop.coati.sh`
+2. **Environment Variables** — add these:
 
-The `<db-password>` was generated by the bootstrap script — it prints it to stdout during setup. If you missed it, you can reset it:
+   | Key | Value |
+   |---|---|
+   | `DATABASE_URL` | Postgres URL (internal) from step 5a |
+   | `GITHUB_CLIENT_ID` | Test OAuth app Client ID (from step 3) |
+   | `GITHUB_CLIENT_SECRET` | Test OAuth app Client Secret (from step 3) |
+   | `PUBLIC_SITE_URL` | `https://develop.coati.sh` |
+   | `ORIGIN` | `https://develop.coati.sh` |
+   | `PORT` | `3000` |
+   | `HOST` | `0.0.0.0` |
 
-```bash
-sudo -u postgres psql -c "ALTER USER coati WITH PASSWORD 'new-password-here';"
-```
+3. Click **Save**
 
-Set correct permissions:
+### 5d. How it works
 
-```bash
-chown deploy:deploy /opt/coati/dev/.env
-chmod 600 /opt/coati/dev/.env
-```
+Coolify pulls the `develop` branch from GitHub, builds a Docker image using the repo's `Dockerfile`, and runs it as a container. The `Dockerfile`:
 
----
+1. **Build stage**: Installs all dependencies (including devDependencies), runs `pnpm build` to compile the SvelteKit app with `adapter-node`
+2. **Runtime stage**: Copies only the built app, production `node_modules`, drizzle migrations, and an entrypoint script
+3. **Entrypoint** (`scripts/docker-entrypoint.sh`): Runs `drizzle-kit migrate` on startup, then starts the Node.js server
+4. **Healthcheck**: Pings `/api/v1/health` every 30 seconds
 
-## 6. GitHub Actions Secrets
-
-Go to GitHub → `jimburch/coati` → Settings → Secrets and variables → Actions → New repository secret
-
-Add each of these:
-
-| Secret name                | Value                                              | Notes                                |
-| -------------------------- | -------------------------------------------------- | ------------------------------------ |
-| `DEPLOY_SSH_KEY`           | Contents of `~/.ssh/coati-deploy` (private key)    | The ed25519 key generated in step 4c |
-| `DEPLOY_HOST`              | Your VPS IP address                                | e.g., `123.45.67.89`                 |
-| `DEPLOY_USER`              | `deploy`                                           | The deploy user created by bootstrap |
-| `DEV_DATABASE_URL`         | `postgresql://coati:<pw>@localhost:5432/coati_dev` | Same as in the VPS `.env`            |
-| `DEV_GITHUB_CLIENT_ID`     | Test OAuth app Client ID                           | From step 3                          |
-| `DEV_GITHUB_CLIENT_SECRET` | Test OAuth app Client Secret                       | From step 3                          |
-| `CF_ACCESS_CLIENT_ID`      | Cloudflare service token Client ID                 | From step 2c                         |
-| `CF_ACCESS_CLIENT_SECRET`  | Cloudflare service token Client Secret             | From step 2c                         |
-
-Also set up authentication for GitHub Packages publishing. Go to Settings → Secrets and variables → Actions and confirm that `GITHUB_TOKEN` has write access to packages (this is automatic for GitHub Actions in the same repo).
+Environment variables are injected at runtime by Coolify — the Docker image itself contains no secrets.
 
 ---
 
-## 7. First Deploy (Manual Verification)
+## 6. First Deploy
 
-After all secrets are set, push to `develop` to trigger the CI/CD pipeline:
-
-```bash
-git checkout develop
-git push origin develop
-```
-
-Monitor the deploy:
-
-1. Go to GitHub → Actions → "Deploy Dev" workflow
-2. Watch for green checkmarks on each step: build → rsync → migrate → restart
-
-### Verify the deploy
-
-```bash
-# SSH into VPS
-ssh deploy@<your-vps-ip>
-
-# Check PM2
-pm2 status
-# Should show coati-dev as "online"
-
-# Check logs
-pm2 logs coati-dev --lines 20
-# Should show SvelteKit startup with "Listening on 127.0.0.1:3001"
-
-# Check Caddy is proxying
-curl -I http://localhost:3001
-# Should return 200 OK
-```
-
-In your browser:
-
-1. Visit `https://develop.coati.sh`
-2. Cloudflare Access should prompt you for authentication (email OTP or GitHub)
-3. After authenticating, you should see the Coati homepage
+1. Click **Deploy** on the app configuration page in Coolify
+2. Monitor the deployment logs — you should see:
+   - Docker image building (pnpm install, pnpm build)
+   - Container starting
+   - Migrations running
+   - Healthcheck passing
+3. Once deployed, visit `https://develop.coati.sh`:
+   - Cloudflare Access should prompt for authentication
+   - After authenticating, the Coati homepage should load
 4. Test GitHub OAuth: click "Sign in with GitHub" — should redirect and return correctly
 
 ---
 
-## 8. Seeding Mock Data
+## 7. Seeding Mock Data
 
 ### Run the seed script
 
-The seed script is run on-demand, not on every deploy. You can trigger it two ways:
-
-**Option A: From your local machine (requires DATABASE_URL tunnel)**
-
-```bash
-# Open an SSH tunnel to the VPS PostgreSQL
-ssh -L 15432:localhost:5432 deploy@<your-vps-ip> -N &
-
-# Run the seed script through the tunnel
-DATABASE_URL=postgresql://coati:<pw>@localhost:15432/coati_dev pnpm run seed:dev
-
-# Kill the tunnel when done
-kill %1
-```
-
-**Option B: Via GitHub Actions (manual trigger)**
+The seed script populates the test database with mock data. You can trigger it via the GitHub Actions workflow:
 
 1. Go to GitHub → Actions → "Seed Dev Database" workflow
 2. Click "Run workflow"
 3. Select `develop` branch
 4. Click "Run workflow"
 
-The workflow SSHs into the VPS and runs the seed script remotely.
+**Note**: The seed workflow SSHs into the VPS and runs the seed script. This workflow needs updating to work with the Coolify/Docker setup (see [CI/CD Pipeline Reference](#9-cicd-pipeline-reference)).
 
 ### What the seed script creates
 
-- **~30-45 users**: Real GitHub profiles (torvalds, gaearon, sindresorhus, etc.) with actual avatars and bios fetched from the GitHub API
-- **~90-150 setups**: Distributed across all component types (skills, hooks, commands, MCP servers, config files), with varying file counts, tags, and agents
+- **~30-45 users**: Real GitHub profiles with actual avatars and bios fetched from the GitHub API
+- **~90-150 setups**: Distributed across all component types, with varying file counts, tags, and agents
 - **Stars**: Randomly distributed, with some setups being highly starred (trending) and others with zero
 - **Follows**: A social graph between users
 - **Comments**: Including threaded replies on various setups
 - **Activity feed**: Entries for recent actions
 - **Edge cases**: Setups with no files, users with no setups, very long descriptions, maximum tags
 
-### Resetting the test database
+### Seed script rate limits
 
-To wipe all data and re-seed:
+The seed script fetches real GitHub profiles. Unauthenticated GitHub API requests are limited to 60/hour. Set a `GITHUB_TOKEN` env var to raise the limit to 5,000/hour:
 
 ```bash
-pnpm run seed:dev
+GITHUB_TOKEN=ghp_xxxx pnpm run seed:dev
 ```
-
-The script truncates all tables before inserting, so it's safe to run repeatedly.
 
 ---
 
-## 9. Test CLI Setup
+## 8. Test CLI Setup
 
 ### Install the test CLI
 
@@ -390,7 +275,6 @@ npm install -g @jimburch/coati-dev --registry=https://npm.pkg.github.com
 The test CLI needs the Cloudflare Access service token to reach the protected API:
 
 ```bash
-# The test CLI binary is named `coati-dev` to avoid conflict with production
 coati-dev login
 ```
 
@@ -415,35 +299,21 @@ coati-dev view torvalds/some-setup-slug
 # Should display a setup from the mock data
 ```
 
-### Updating the test CLI
-
-When new CLI changes are pushed to `develop`, the GitHub Actions workflow publishes a new version. Update with:
-
-```bash
-npm update -g @jimburch/coati-dev --registry=https://npm.pkg.github.com
-```
-
 ---
 
-## 10. CI/CD Pipeline Reference
+## 9. CI/CD Pipeline Reference
 
-### Deploy Dev (`.github/workflows/deploy-dev.yml`)
+### Deploy (Coolify)
 
-**Triggers**: Push to `develop` branch
+**Triggers**: Push to `develop` branch (via Coolify webhook or manual deploy in dashboard)
 
-**Steps**:
+**Steps** (handled automatically by Coolify):
 
-1. Checkout `develop`
-2. Set up Node.js 22 + pnpm
-3. `pnpm install`
-4. `pnpm build` (SvelteKit production build)
-5. rsync to VPS:
-   - `build/` → `/opt/coati/dev/build/`
-   - `package.json` + `pnpm-lock.yaml` → `/opt/coati/dev/`
-   - `drizzle/` → `/opt/coati/dev/drizzle/` (migrations)
-   - `node_modules/` or run `pnpm install --prod` on server
-6. SSH: `cd /opt/coati/dev && pnpm db:migrate`
-7. SSH: `pm2 restart coati-dev`
+1. Pull latest code from `develop` branch
+2. Build Docker image using `Dockerfile`
+3. Start new container with environment variables
+4. Run database migrations (via `docker-entrypoint.sh`)
+5. Healthcheck passes → old container removed (zero-downtime rolling update)
 
 ### Publish Test CLI (`.github/workflows/publish-cli-dev.yml`)
 
@@ -461,78 +331,49 @@ npm update -g @jimburch/coati-dev --registry=https://npm.pkg.github.com
 
 **Triggers**: Manual (workflow_dispatch) only
 
-**Steps**:
-
-1. SSH into VPS
-2. Run `cd /opt/coati/dev && node scripts/seed-dev.js`
+**Note**: This workflow needs updating to execute the seed script inside the Coolify Docker container or via the Coolify terminal.
 
 ---
 
-## 11. Day-to-Day Operations
+## 10. Day-to-Day Operations
 
 ### Deploying changes
 
-Just push to `develop`. CI handles everything.
-
-```bash
-git checkout develop
-git merge feature/my-feature
-git push origin develop
-# Watch GitHub Actions for deploy status
-```
+Push to `develop`. Coolify auto-deploys (if webhook is configured) or manually trigger a deploy in the Coolify dashboard.
 
 ### Checking server health
 
-```bash
-# PM2 process status
-ssh deploy@<your-vps-ip> "pm2 status"
-
-# Application logs (last 50 lines)
-ssh deploy@<your-vps-ip> "pm2 logs coati-dev --lines 50"
-
-# PostgreSQL status
-ssh root@<your-vps-ip> "systemctl status postgresql"
-
-# Caddy status
-ssh root@<your-vps-ip> "systemctl status caddy"
-
-# Disk usage
-ssh root@<your-vps-ip> "df -h"
-```
+- **Coolify dashboard**: Shows container status, resource usage, and deployment history at `http://<vps-ip>:8000`
+- **Application logs**: Available in Coolify → App → Logs tab
+- **Health endpoint**: `curl https://develop.coati.sh/api/v1/health`
 
 ### Running migrations manually
 
-```bash
-ssh deploy@<your-vps-ip> "cd /opt/coati/dev && node_modules/.bin/drizzle-kit migrate"
-```
-
-### Restarting the test environment
+Migrations run automatically on every deploy via `docker-entrypoint.sh`. To run manually, use the **Terminal** tab in Coolify's app resource to open a shell in the running container:
 
 ```bash
-ssh deploy@<your-vps-ip> "pm2 restart coati-dev"
+npx drizzle-kit migrate
 ```
 
-### Viewing Caddy access logs
+### Restarting the app
 
-```bash
-ssh root@<your-vps-ip> "journalctl -u caddy -f"
-```
+In Coolify dashboard → App → click **Restart**.
+
+### Rolling back
+
+In Coolify dashboard → App → **Rollback** tab — select a previous deployment to roll back to.
 
 ---
 
-## 12. Troubleshooting
+## 11. Troubleshooting
 
 ### "502 Bad Gateway" on develop.coati.sh
 
-The SvelteKit process isn't running or isn't listening on port 3001.
+The container isn't running or isn't healthy.
 
-```bash
-ssh deploy@<your-vps-ip> "pm2 status"
-# If coati-dev shows "errored" or "stopped":
-ssh deploy@<your-vps-ip> "pm2 logs coati-dev --lines 50"
-# Fix the issue, then:
-ssh deploy@<your-vps-ip> "pm2 restart coati-dev"
-```
+1. Check Coolify dashboard → App → is the container running?
+2. Check **Logs** tab for startup errors
+3. Try **Restart** or **Redeploy**
 
 ### Cloudflare Access blocks the OAuth callback
 
@@ -553,40 +394,20 @@ cat ~/.coati/config.json
 
 # Test directly with curl
 curl -H "CF-Access-Client-Id: <id>" -H "CF-Access-Client-Secret: <secret>" https://develop.coati.sh/api/v1/health
-# Should return { "data": "ok" } or similar
+# Should return { "data": { "status": "ok", ... } }
 ```
 
-If the service token expired, create a new one in Cloudflare Zero Trust and update your config + GitHub Actions secrets.
+If the service token expired, create a new one in Cloudflare Zero Trust and update your config.
 
-### Database migration fails on deploy
+### Database connection errors
 
-```bash
-# Check migration logs
-ssh deploy@<your-vps-ip> "pm2 logs coati-dev --lines 50"
+1. In Coolify, check that the PostgreSQL resource is running
+2. Verify the `DATABASE_URL` environment variable in the app matches the database's **Postgres URL (internal)**
+3. Both containers must be on the same Coolify network (this is automatic when created in the same project/environment)
 
-# Run migration manually with verbose output
-ssh deploy@<your-vps-ip> "cd /opt/coati/dev && DATABASE_URL=<url> node_modules/.bin/drizzle-kit migrate"
-```
+### Build fails in Coolify
 
-### PM2 process disappears after VPS reboot
-
-The PM2 startup script may not have been saved:
-
-```bash
-ssh root@<your-vps-ip>
-pm2 startup
-# Follow the output instructions
-su - deploy
-pm2 start ecosystem.config.cjs
-pm2 save
-```
-
-### Seed script fails with GitHub API rate limit
-
-The seed script fetches real GitHub profiles. Unauthenticated GitHub API requests are limited to 60/hour. If you're rate-limited:
-
-1. Wait an hour, or
-2. Set a `GITHUB_TOKEN` env var before running the seed script — this raises the limit to 5,000/hour:
-   ```bash
-   GITHUB_TOKEN=ghp_xxxx pnpm run seed:dev
-   ```
+1. Check deployment logs in Coolify → App → Deployments → click the failed deployment
+2. Common issues:
+   - `pnpm-lock.yaml` out of sync → run `pnpm install` locally and push the updated lockfile
+   - Missing environment variable at build time → the `Dockerfile` provides placeholder build-time values; if a new `$env/static/*` import is added, update the `Dockerfile`'s build-time `ENV` block
