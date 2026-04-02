@@ -8,7 +8,8 @@
 		"test": "vitest run",
 		"lint": "eslint src/",
 		"reset": "git checkout -- . && git clean -fd .",
-		"coati": "COATI_API_BASE=http://localhost:5173/api/v1 npx tsx ../../cli/src/index.ts"
+		"coati": "COATI_API_BASE=http://localhost:5173/api/v1 npx tsx ../../cli/src/index.ts",
+		"coati-test": "COATI_API_BASE=https://develop.coati.sh/api/v1 npx tsx ../../cli/src/index.ts"
 	},
 	"dependencies": {
 		"express": "^4.18.0"

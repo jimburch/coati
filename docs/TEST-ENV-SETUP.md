@@ -141,7 +141,7 @@ This installs Docker, Coolify, and all dependencies. Takes a few minutes.
 
 ### 4d. Initial Coolify setup
 
-1. Open `http://<your-vps-ip>:8000` in your browser
+1. Open `http://<your-vps-ip>:8000` in your browser (later accessible at `https://coolify.coati.sh` once Cloudflare Tunnel is set up)
 2. Create your admin account
 3. On the server setup screen, select **"This Machine"**
 4. Create a project (name it "Coati")
@@ -164,16 +164,27 @@ This installs Docker, Coolify, and all dependencies. Takes a few minutes.
 4. Click **Save**, then **Start**
 5. Copy the **Postgres URL (internal)** — you'll need it for the app
 
-### 5b. Create the application resource
+### 5b. Set up GitHub App integration
 
-1. Go to **+ New Resource** → **Public Repository**
-2. Configure:
-   - **Repository URL**: `https://github.com/jimburch/coati`
-   - **Branch**: `develop`
-   - **Build Pack**: `Dockerfile`
-3. Click **Continue**
+For auto-deploy on push, Coolify needs a GitHub App (not "Public Repository"):
 
-### 5c. Configure the application
+1. In Coolify **Settings** → **General**, set the instance URL to `https://coolify.coati.sh`
+2. Go to **Sources** → **Add GitHub App**
+   - **Name**: `coati-coolify`
+   - **Organization**: leave empty (personal account)
+   - **System Wide**: unchecked
+3. Select `https://coolify.coati.sh` as the **Webhook Endpoint**, then click **Register Now**
+4. Complete the GitHub authorization flow — Coolify auto-populates App ID, keys, etc.
+5. Verify by clicking **Sync Name** — should show success
+
+### 5c. Create the application resource
+
+1. Go to **+ New Resource** → select your **coati-coolify** GitHub App source
+2. Select repository `jimburch/coati`, branch `develop`
+3. **Build Pack**: `Dockerfile`
+4. Click **Continue**
+
+### 5d. Configure the application
 
 On the app Configuration page:
 
@@ -194,7 +205,7 @@ On the app Configuration page:
 
 3. Click **Save**
 
-### 5d. How it works
+### 5e. How it works
 
 Coolify pulls the `develop` branch from GitHub, builds a Docker image using the repo's `Dockerfile`, and runs it as a container. The `Dockerfile`:
 
@@ -257,28 +268,51 @@ GITHUB_TOKEN=ghp_xxxx pnpm run seed:dev
 
 ## 8. Test CLI Setup
 
-### Install the test CLI
+The CLI is tested locally against `develop.coati.sh` — no npm registry publishing required. Each playground directory has a `coati-test` script that runs the CLI source code with the API base pointed at the test environment.
+
+### Using the playground scripts
+
+From any playground directory (e.g., `playground/clean`):
 
 ```bash
-# Authenticate with GitHub Packages (one-time)
-npm login --registry=https://npm.pkg.github.com
-# Username: your GitHub username
-# Password: your GitHub PAT (with read:packages scope)
-# Email: your email
+# Clone a setup from the test environment
+pnpm coati-test clone owner/setup-slug
 
-# Install the test CLI globally
-npm install -g @jimburch/coati-dev --registry=https://npm.pkg.github.com
+# Publish the current directory to the test environment
+pnpm coati-test publish
+
+# Login via GitHub Device Flow against the test environment
+pnpm coati-test login
+
+# Any other CLI command works the same way
+pnpm coati-test init
 ```
+
+### Using the `--staging` flag directly
+
+From the `cli/` directory, you can use the `--staging` flag:
+
+```bash
+cd cli
+pnpm dev -- --staging clone owner/setup-slug
+pnpm dev -- --staging search claude
+```
+
+### Other API target options
+
+The CLI supports several ways to override the API base:
+
+| Method | Target | Usage |
+|--------|--------|-------|
+| `pnpm coati-test` (playground) | `develop.coati.sh` | `pnpm coati-test clone owner/slug` |
+| `--staging` flag | `develop.coati.sh` | `pnpm dev -- --staging clone owner/slug` |
+| `--dev` flag | `localhost:5173` | `pnpm dev -- --dev clone owner/slug` |
+| `--api-base` flag | any URL | `pnpm dev -- --api-base https://example.com/api/v1 clone owner/slug` |
+| `COATI_API_BASE` env var | any URL | `COATI_API_BASE=https://... pnpm dev -- clone owner/slug` |
 
 ### Configure Cloudflare Access credentials
 
-The test CLI needs the Cloudflare Access service token to reach the protected API:
-
-```bash
-coati-dev login
-```
-
-Or manually edit `~/.coati/config.json`:
+If the test environment is behind Cloudflare Access, the CLI needs the service token to reach the API. Manually edit `~/.coati/config.json`:
 
 ```json
 {
@@ -292,11 +326,9 @@ Or manually edit `~/.coati/config.json`:
 ### Verify the CLI
 
 ```bash
-coati-dev search claude
+cd playground/clean
+pnpm coati-test search claude
 # Should return setups from the seeded test data
-
-coati-dev view torvalds/some-setup-slug
-# Should display a setup from the mock data
 ```
 
 ---
@@ -305,7 +337,7 @@ coati-dev view torvalds/some-setup-slug
 
 ### Deploy (Coolify)
 
-**Triggers**: Push to `develop` branch (via Coolify webhook or manual deploy in dashboard)
+**Triggers**: Push to `develop` branch (automatic via Coolify GitHub App webhook)
 
 **Steps** (handled automatically by Coolify):
 
@@ -315,17 +347,9 @@ coati-dev view torvalds/some-setup-slug
 4. Run database migrations (via `docker-entrypoint.sh`)
 5. Healthcheck passes → old container removed (zero-downtime rolling update)
 
-### Publish Test CLI (`.github/workflows/publish-cli-dev.yml`)
+### Test CLI
 
-**Triggers**: Push to `develop` branch, only when files in `cli/` change
-
-**Steps**:
-
-1. Checkout `develop`
-2. Set up Node.js 22 + pnpm + GitHub Packages auth
-3. `cd cli && pnpm install && pnpm build`
-4. Override package name to `@jimburch/coati-dev` and API base to `https://develop.coati.sh/api/v1`
-5. `npm publish --registry=https://npm.pkg.github.com`
+The CLI is tested locally — no registry publishing needed. See [Test CLI Setup](#8-test-cli-setup) for details. Each `playground/` directory has a `coati-test` script that runs the CLI source against `develop.coati.sh`.
 
 ### Seed Dev Database (`.github/workflows/seed-dev.yml`)
 
@@ -339,11 +363,11 @@ coati-dev view torvalds/some-setup-slug
 
 ### Deploying changes
 
-Push to `develop`. Coolify auto-deploys (if webhook is configured) or manually trigger a deploy in the Coolify dashboard.
+Push to `develop`. Coolify auto-deploys via the GitHub App webhook. You can also manually trigger a deploy in the Coolify dashboard.
 
 ### Checking server health
 
-- **Coolify dashboard**: Shows container status, resource usage, and deployment history at `http://<vps-ip>:8000`
+- **Coolify dashboard**: Shows container status, resource usage, and deployment history at `https://coolify.coati.sh`
 - **Application logs**: Available in Coolify → App → Logs tab
 - **Health endpoint**: `curl https://develop.coati.sh/api/v1/health`
 

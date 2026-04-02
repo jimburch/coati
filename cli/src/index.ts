@@ -14,6 +14,7 @@ import { createContext } from './context.js';
 import { printBanner } from './banner.js';
 
 const DEV_API_BASE = 'http://localhost:5173/api/v1';
+const STAGING_API_BASE = 'https://develop.coati.sh/api/v1';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -29,13 +30,16 @@ program
 	.description('Coati CLI — clone, publish, and manage AI coding setups')
 	.version(pkg.version)
 	.option('--dev', `Use local dev server (${DEV_API_BASE})`)
+	.option('--staging', `Use test environment (${STAGING_API_BASE})`)
 	.option('--api-base <url>', 'Override API base URL');
 
 program.hook('preAction', () => {
-	const opts = program.opts<{ dev?: boolean; apiBase?: string }>();
+	const opts = program.opts<{ dev?: boolean; staging?: boolean; apiBase?: string }>();
 
 	if (opts.apiBase) {
 		process.env.COATI_API_BASE = opts.apiBase;
+	} else if (opts.staging) {
+		process.env.COATI_API_BASE = STAGING_API_BASE;
 	} else if (opts.dev) {
 		process.env.COATI_API_BASE = DEV_API_BASE;
 	}
