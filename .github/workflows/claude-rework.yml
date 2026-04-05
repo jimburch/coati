@@ -1,0 +1,184 @@
+name: Claude Re-work
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  rework:
+    if: |
+      github.event.review.state == 'changes_requested' &&
+      contains(github.event.pull_request.labels.*.name, 'ralph')
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          token: ${{ secrets.PAT_WORKFLOWS }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Configure git
+        run: |
+          git config user.name "Claude"
+          git config user.email "noreply@anthropic.com"
+
+      - name: Collect review context
+        id: context
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+
+          # Collect inline review comments for this PR
+          gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}/comments" \
+            --jq '[.[] | {path: .path, line: .line, body: .body, user: .user.login}]' \
+            > /tmp/review_comments.json
+
+          # Extract linked issue number from PR body (Closes/Fixes/Resolves #NNN)
+          PR_BODY=$(gh pr view "$PR_NUMBER" --json body -q '.body')
+          ISSUE_NUM=$(echo "$PR_BODY" | grep -oP '(?i)(closes|fixes|resolves)\s+#\K\d+' | head -1 || echo "")
+
+          if [ -n "$ISSUE_NUM" ]; then
+            gh issue view "$ISSUE_NUM" --json number,title,body > /tmp/issue_context.json 2>/dev/null \
+              || echo '{}' > /tmp/issue_context.json
+          else
+            echo '{}' > /tmp/issue_context.json
+          fi
+
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Run Claude to address feedback
+        id: claude
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REVIEW_BODY: ${{ github.event.review.body }}
+          REVIEWER: ${{ github.event.review.user.login }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          COMMIT_BEFORE=$(git rev-parse HEAD)
+          echo "commit_before=$COMMIT_BEFORE" >> "$GITHUB_OUTPUT"
+
+          # Build prompt safely via file to avoid shell quoting issues with arbitrary review text
+          {
+            echo "You are addressing code review feedback on a pull request."
+            echo ""
+            echo "## Branch: $BRANCH"
+            echo ""
+            echo "## Reviewer: $REVIEWER requested changes"
+            echo ""
+            echo "## Review Summary"
+            echo "$REVIEW_BODY"
+            echo ""
+            echo "## Inline Review Comments (JSON)"
+            cat /tmp/review_comments.json
+            echo ""
+            echo "## Original Issue Context (JSON)"
+            cat /tmp/issue_context.json
+            echo ""
+            echo "## Instructions"
+            echo "1. Read and understand ALL the reviewer feedback above."
+            echo "2. Make the necessary code changes to address every comment."
+            echo "3. Run quality gates: pnpm check && pnpm lint && pnpm test:unit --run"
+            echo "4. Only commit if ALL gates pass. Do NOT commit if any gate fails."
+            echo "5. Commit message format: 'fix: address review feedback from $REVIEWER'"
+            echo ""
+            echo "Do not make changes beyond what the reviewer requested."
+          } > /tmp/rework_prompt.txt
+
+          timeout 900 claude -p \
+            --dangerously-skip-permissions \
+            --output-format stream-json \
+            --verbose \
+            < /tmp/rework_prompt.txt \
+          | grep --line-buffered '^{' \
+          | jq --unbuffered -rj \
+            'select(.type == "assistant").message.content[]? | select(.type == "text").text // empty | gsub("\n"; "\r\n") | . + "\r\n\n"' \
+          || true
+
+          COMMIT_AFTER=$(git rev-parse HEAD)
+          if [ "$COMMIT_AFTER" != "$COMMIT_BEFORE" ]; then
+            echo "committed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify quality gates
+        id: gates
+        if: steps.claude.outputs.committed == 'true'
+        run: |
+          GATE_OUTPUT_FILE=$(mktemp)
+          if pnpm check 2>&1 | tee "$GATE_OUTPUT_FILE" && \
+             pnpm lint 2>&1 | tee -a "$GATE_OUTPUT_FILE" && \
+             pnpm test:unit --run 2>&1 | tee -a "$GATE_OUTPUT_FILE"; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            # Roll back the failed commit so the branch stays clean
+            git reset HEAD~1 --hard
+          fi
+          rm -f "$GATE_OUTPUT_FILE"
+
+      - name: Push changes
+        if: steps.claude.outputs.committed == 'true' && steps.gates.outputs.passed == 'true'
+        run: |
+          git push origin "${{ github.event.pull_request.head.ref }}"
+
+      - name: Post summary comment
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REVIEWER: ${{ github.event.review.user.login }}
+        run: |
+          PR_NUMBER="${{ steps.context.outputs.pr_number }}"
+          COMMITTED="${{ steps.claude.outputs.committed }}"
+          GATES_PASSED="${{ steps.gates.outputs.passed }}"
+
+          if [ "$COMMITTED" = "true" ] && [ "$GATES_PASSED" = "true" ]; then
+            LAST_COMMIT=$(git log -1 --pretty='%s' 2>/dev/null || echo "changes made")
+            COMMENT="## Ralph Re-work Complete ✅
+
+Addressed review feedback from @${REVIEWER}.
+
+**Changes:** ${LAST_COMMIT}
+
+All quality gates passed (\`pnpm check\`, \`pnpm lint\`, \`pnpm test:unit\`)."
+          elif [ "$COMMITTED" = "true" ] && [ "$GATES_PASSED" != "true" ]; then
+            COMMENT="## Ralph Re-work Failed ❌
+
+Ralph made changes to address feedback from @${REVIEWER} but quality gates did not pass. The commit was reverted.
+
+Manual intervention required."
+          else
+            COMMENT="## Ralph Re-work — No Changes Made
+
+Ralph reviewed the feedback from @${REVIEWER} but did not produce any commits. Manual intervention may be required."
+          fi
+
+          gh pr comment "$PR_NUMBER" --body "$COMMENT"

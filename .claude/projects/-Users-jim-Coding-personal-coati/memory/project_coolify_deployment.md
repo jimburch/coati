@@ -9,6 +9,7 @@ Deployment stack changed from PM2 + Caddy + rsync to **Coolify** (self-hosted) o
 **Why:** The rsync + pnpm install --prod approach was fragile due to pnpm workspace package resolution issues, drizzle-kit requiring dev dependencies, and general complexity of maintaining a bare-metal deploy pipeline.
 
 **How to apply:**
+
 - The app builds via `Dockerfile` at repo root (multi-stage: build + runtime)
 - Coolify manages Docker containers, Traefik reverse proxy, and PostgreSQL 18
 - Environment variables are set in the Coolify dashboard, not in .env files on the VPS
