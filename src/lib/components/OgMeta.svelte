@@ -22,7 +22,9 @@
 	const siteName = 'Coati';
 
 	const absoluteUrl = $derived(url.startsWith('http') ? url : `${env.PUBLIC_SITE_URL}${url}`);
-	const absoluteImage = $derived(image.startsWith('http') ? image : `${env.PUBLIC_SITE_URL}${image}`);
+	const absoluteImage = $derived(
+		image.startsWith('http') ? image : `${env.PUBLIC_SITE_URL}${image}`
+	);
 </script>
 
 <svelte:head>

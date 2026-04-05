@@ -31,10 +31,10 @@ Before starting, you need:
 
 Gather these before proceeding:
 
-| Item                           | Where to get it                                |
-| ------------------------------ | ---------------------------------------------- |
-| VPS IP address                 | Hostinger dashboard → VPS → Overview           |
-| VPS root password (or SSH key) | Hostinger dashboard → VPS → SSH Access         |
+| Item                           | Where to get it                        |
+| ------------------------------ | -------------------------------------- |
+| VPS IP address                 | Hostinger dashboard → VPS → Overview   |
+| VPS root password (or SSH key) | Hostinger dashboard → VPS → SSH Access |
 
 ---
 
@@ -193,15 +193,15 @@ On the app Configuration page:
    - **Domains**: `https://develop.coati.sh`
 2. **Environment Variables** — add these:
 
-   | Key | Value |
-   |---|---|
-   | `DATABASE_URL` | Postgres URL (internal) from step 5a |
-   | `GITHUB_CLIENT_ID` | Test OAuth app Client ID (from step 3) |
+   | Key                    | Value                                      |
+   | ---------------------- | ------------------------------------------ |
+   | `DATABASE_URL`         | Postgres URL (internal) from step 5a       |
+   | `GITHUB_CLIENT_ID`     | Test OAuth app Client ID (from step 3)     |
    | `GITHUB_CLIENT_SECRET` | Test OAuth app Client Secret (from step 3) |
-   | `PUBLIC_SITE_URL` | `https://develop.coati.sh` |
-   | `ORIGIN` | `https://develop.coati.sh` |
-   | `PORT` | `3000` |
-   | `HOST` | `0.0.0.0` |
+   | `PUBLIC_SITE_URL`      | `https://develop.coati.sh`                 |
+   | `ORIGIN`               | `https://develop.coati.sh`                 |
+   | `PORT`                 | `3000`                                     |
+   | `HOST`                 | `0.0.0.0`                                  |
 
 3. Click **Save**
 
@@ -302,13 +302,13 @@ pnpm dev -- --staging search claude
 
 The CLI supports several ways to override the API base:
 
-| Method | Target | Usage |
-|--------|--------|-------|
-| `pnpm coati-test` (playground) | `develop.coati.sh` | `pnpm coati-test clone owner/slug` |
-| `--staging` flag | `develop.coati.sh` | `pnpm dev -- --staging clone owner/slug` |
-| `--dev` flag | `localhost:5173` | `pnpm dev -- --dev clone owner/slug` |
-| `--api-base` flag | any URL | `pnpm dev -- --api-base https://example.com/api/v1 clone owner/slug` |
-| `COATI_API_BASE` env var | any URL | `COATI_API_BASE=https://... pnpm dev -- clone owner/slug` |
+| Method                         | Target             | Usage                                                                |
+| ------------------------------ | ------------------ | -------------------------------------------------------------------- |
+| `pnpm coati-test` (playground) | `develop.coati.sh` | `pnpm coati-test clone owner/slug`                                   |
+| `--staging` flag               | `develop.coati.sh` | `pnpm dev -- --staging clone owner/slug`                             |
+| `--dev` flag                   | `localhost:5173`   | `pnpm dev -- --dev clone owner/slug`                                 |
+| `--api-base` flag              | any URL            | `pnpm dev -- --api-base https://example.com/api/v1 clone owner/slug` |
+| `COATI_API_BASE` env var       | any URL            | `COATI_API_BASE=https://... pnpm dev -- clone owner/slug`            |
 
 ### Configure Cloudflare Access credentials
 
