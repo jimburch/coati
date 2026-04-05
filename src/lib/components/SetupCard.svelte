@@ -23,8 +23,8 @@
 <a
 	href="/{username}/{setup.slug}"
 	class={featured
-		? 'block w-full rounded-lg border border-primary/50 bg-card p-5 transition-colors hover:border-foreground/20 hover:bg-accent/50 lg:p-6'
-		: 'block rounded-lg border border-border bg-card p-3 transition-colors hover:border-foreground/20 hover:bg-accent/50 lg:p-4'}
+		? 'flex h-full flex-col rounded-lg border border-primary/50 bg-card p-5 transition-colors hover:border-foreground/20 hover:bg-accent/50 lg:p-6'
+		: 'flex h-full flex-col rounded-lg border border-border bg-card p-3 transition-colors hover:border-foreground/20 hover:bg-accent/50 lg:p-4'}
 >
 	<h3
 		class={featured
@@ -44,23 +44,21 @@
 		</p>
 	{/if}
 
-	{#if visibleAgents.length > 0}
-		<div class="mt-2 flex flex-wrap items-center gap-1.5">
-			{#each visibleAgents as agent (agent.id)}
-				<span
-					class="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground"
-				>
-					<AgentIcon slug={agent.slug} size={12} />
-					{agent.displayName}
-				</span>
-			{/each}
-			{#if overflowCount > 0}
-				<span class="text-xs text-muted-foreground">+{overflowCount}</span>
-			{/if}
-		</div>
-	{/if}
+	<div class="mt-2 flex h-6 flex-nowrap items-center gap-1.5 overflow-hidden">
+		{#each visibleAgents as agent (agent.id)}
+			<span
+				class="inline-flex shrink-0 items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground"
+			>
+				<AgentIcon slug={agent.slug} size={16} />
+				{agent.displayName}
+			</span>
+		{/each}
+		{#if overflowCount > 0}
+			<span class="shrink-0 text-xs text-muted-foreground">+{overflowCount}</span>
+		{/if}
+	</div>
 
-	<div class="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
+	<div class="mt-auto flex items-center gap-3 pt-3 text-xs text-muted-foreground">
 		<span class="inline-flex items-center gap-1">
 			<svg class="size-3.5" viewBox="0 0 16 16" fill="currentColor">
 				<path
