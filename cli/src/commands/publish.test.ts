@@ -55,18 +55,22 @@ const MOCK_CONFIG = {
 	apiBase: 'https://coati.sh/api/v1'
 };
 
-const MOCK_MANIFEST = {
+const MOCK_MANIFEST: Manifest = {
 	name: 'my-setup',
 	version: '1.0.0',
 	description: 'A test setup',
+	placement: 'global',
 	files: [
 		{
-			source: '.claude/commands/foo.md',
-			target: '.claude/commands/foo.md',
-			placement: 'global',
+			path: '.claude/commands/foo.md',
 			componentType: 'command'
 		}
 	]
+};
+
+const MOCK_MANIFEST_WITH_ID: Manifest = {
+	...MOCK_MANIFEST,
+	id: 'setup-uuid-123'
 };
 
 const MOCK_SETUP_RESPONSE = {
@@ -102,8 +106,6 @@ beforeEach(() => {
 	});
 	mockReadManifest.mockReturnValue(MOCK_MANIFEST);
 	mockReadFileSync.mockReturnValue('file content here');
-	// Default: setup doesn't exist (404)
-	vi.mocked(ctx.api.get).mockRejectedValue(new ApiError('Not Found', 'NOT_FOUND', 404));
 	vi.mocked(ctx.api.post).mockResolvedValue(MOCK_SETUP_RESPONSE);
 	vi.mocked(ctx.api.patch).mockResolvedValue(MOCK_SETUP_RESPONSE);
 	mockRunInitFlow.mockResolvedValue(true);
@@ -184,10 +186,10 @@ describe('missing setup.json', () => {
 	});
 });
 
-// ── create new setup (POST) ───────────────────────────────────────────────────
+// ── Branch 1: no id in manifest → POST → write id back ───────────────────────
 
-describe('create new setup', () => {
-	it('calls POST /setups when setup does not exist', async () => {
+describe('create new setup (no id in manifest)', () => {
+	it('calls POST /setups when manifest has no id', async () => {
 		const program = makeProgram();
 		await program.parseAsync(['node', 'coati', 'publish']);
 
@@ -199,21 +201,61 @@ describe('create new setup', () => {
 				description: 'A test setup',
 				files: expect.arrayContaining([
 					expect.objectContaining({
-						source: '.claude/commands/foo.md',
-						target: '.claude/commands/foo.md',
-						placement: 'global',
+						path: '.claude/commands/foo.md',
 						componentType: 'command',
 						content: 'file content here'
 					})
 				])
 			})
 		);
-		const postCall = vi.mocked(ctx.api.post).mock.calls[0][1] as Record<string, unknown>;
-		expect(postCall).not.toHaveProperty('version');
 		expect(ctx.api.patch).not.toHaveBeenCalled();
 	});
 
-	it('displays success message with setup URL', async () => {
+	it('does not include version in POST payload', async () => {
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		const postCall = vi.mocked(ctx.api.post).mock.calls[0][1] as Record<string, unknown>;
+		expect(postCall).not.toHaveProperty('version');
+	});
+
+	it('writes the returned id back into coati.json', async () => {
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		expect(mockWriteManifest).toHaveBeenCalledWith(
+			expect.any(String),
+			expect.objectContaining({ id: 'setup-123' })
+		);
+	});
+
+	it('places id after $schema and before name in written manifest', async () => {
+		mockReadManifest.mockReturnValue({ ...MOCK_MANIFEST, $schema: 'https://example.com/schema' });
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		const [, writtenManifest] = mockWriteManifest.mock.calls[0] as [
+			string,
+			Record<string, unknown>
+		];
+		const keys = Object.keys(writtenManifest);
+		expect(keys.indexOf('$schema')).toBeLessThan(keys.indexOf('id'));
+		expect(keys.indexOf('id')).toBeLessThan(keys.indexOf('name'));
+	});
+
+	it('places id before name when no $schema field', async () => {
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		const [, writtenManifest] = mockWriteManifest.mock.calls[0] as [
+			string,
+			Record<string, unknown>
+		];
+		const keys = Object.keys(writtenManifest);
+		expect(keys.indexOf('id')).toBeLessThan(keys.indexOf('name'));
+	});
+
+	it('displays published success message with setup URL', async () => {
 		const program = makeProgram();
 		await program.parseAsync(['node', 'coati', 'publish']);
 
@@ -222,19 +264,19 @@ describe('create new setup', () => {
 	});
 });
 
-// ── update existing setup (PATCH) ─────────────────────────────────────────────
+// ── Branch 2: has id, owns it → PATCH /setups/{id} ────────────────────────────
 
-describe('update existing setup', () => {
+describe('update existing setup (has id in manifest)', () => {
 	beforeEach(() => {
-		vi.mocked(ctx.api.get).mockResolvedValue(MOCK_SETUP_RESPONSE);
+		mockReadManifest.mockReturnValue(MOCK_MANIFEST_WITH_ID);
 	});
 
-	it('calls PATCH /setups/{owner}/{slug} when setup exists', async () => {
+	it('calls PATCH /setups/{id} when manifest has id', async () => {
 		const program = makeProgram();
 		await program.parseAsync(['node', 'coati', 'publish']);
 
 		expect(ctx.api.patch).toHaveBeenCalledWith(
-			'/setups/alice/my-setup',
+			'/setups/setup-uuid-123',
 			expect.objectContaining({
 				name: 'my-setup',
 				files: expect.arrayContaining([expect.objectContaining({ content: 'file content here' })])
@@ -243,12 +285,70 @@ describe('update existing setup', () => {
 		expect(ctx.api.post).not.toHaveBeenCalled();
 	});
 
-	it('displays updated message with setup URL', async () => {
+	it('does not include id or version in PATCH payload', async () => {
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		const patchCall = vi.mocked(ctx.api.patch).mock.calls[0][1] as Record<string, unknown>;
+		expect(patchCall).not.toHaveProperty('id');
+		expect(patchCall).not.toHaveProperty('version');
+	});
+
+	it('displays updated success message with setup URL', async () => {
 		const program = makeProgram();
 		await program.parseAsync(['node', 'coati', 'publish']);
 
 		expect(ctx.io.success).toHaveBeenCalledWith(expect.stringContaining('updated'));
 		expect(ctx.io.print).toHaveBeenCalledWith(expect.stringContaining('alice/my-setup'));
+	});
+
+	it('does not write id back to coati.json on update', async () => {
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		expect(mockWriteManifest).not.toHaveBeenCalled();
+	});
+});
+
+// ── Branch 3: has id, server returns 404 ─────────────────────────────────────
+
+describe('update with id — 404 response', () => {
+	beforeEach(() => {
+		mockReadManifest.mockReturnValue(MOCK_MANIFEST_WITH_ID);
+		vi.mocked(ctx.api.patch).mockRejectedValue(new ApiError('Not Found', 'NOT_FOUND', 404));
+	});
+
+	it('shows error telling user to remove id from coati.json', async () => {
+		const program = makeProgram();
+		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+			throw new Error('process.exit');
+		});
+
+		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
+		expect(ctx.io.error).toHaveBeenCalledWith(
+			'Setup with this ID no longer exists. Remove `id` from coati.json to publish as new.'
+		);
+		expect(exitSpy).toHaveBeenCalledWith(1);
+	});
+});
+
+// ── Branch 4: has id, server returns 403 ─────────────────────────────────────
+
+describe('update with id — 403 response', () => {
+	beforeEach(() => {
+		mockReadManifest.mockReturnValue(MOCK_MANIFEST_WITH_ID);
+		vi.mocked(ctx.api.patch).mockRejectedValue(new ApiError('Forbidden', 'FORBIDDEN', 403));
+	});
+
+	it('shows ownership error message', async () => {
+		const program = makeProgram();
+		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+			throw new Error('process.exit');
+		});
+
+		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
+		expect(ctx.io.error).toHaveBeenCalledWith("You don't own the setup with this ID.");
+		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 });
 
@@ -277,7 +377,7 @@ describe('--json mode', () => {
 
 	it('outputs structured JSON on successful update', async () => {
 		vi.mocked(ctx.io.isJson).mockReturnValue(true);
-		vi.mocked(ctx.api.get).mockResolvedValue(MOCK_SETUP_RESPONSE);
+		mockReadManifest.mockReturnValue(MOCK_MANIFEST_WITH_ID);
 		const program = makeProgram();
 		await program.parseAsync(['node', 'coati', 'publish', '--json']);
 
@@ -300,6 +400,7 @@ describe('validateAgentRefs', () => {
 			name: 'my-setup',
 			version: '1.0.0',
 			description: 'test',
+			placement: 'global',
 			files: [],
 			...overrides
 		};
@@ -307,7 +408,7 @@ describe('validateAgentRefs', () => {
 
 	it('returns manifest unchanged when no files have agent fields', async () => {
 		const manifest = makeManifest({
-			files: [{ source: 'README.md', target: 'README.md', placement: 'project' }]
+			files: [{ path: 'README.md' }]
 		});
 		const result = await validateAgentRefs(ctx, manifest, CWD);
 		expect(result).toEqual(manifest);
@@ -317,14 +418,7 @@ describe('validateAgentRefs', () => {
 	it('returns manifest unchanged when all file agents are in agents array', async () => {
 		const manifest = makeManifest({
 			agents: ['claude-code'],
-			files: [
-				{
-					source: 'CLAUDE.md',
-					target: 'CLAUDE.md',
-					placement: 'project',
-					agent: 'claude-code'
-				}
-			]
+			files: [{ path: 'CLAUDE.md', agent: 'claude-code' }]
 		});
 		const result = await validateAgentRefs(ctx, manifest, CWD);
 		expect(result).toEqual(manifest);
@@ -334,7 +428,7 @@ describe('validateAgentRefs', () => {
 
 	it('returns null and errors for unknown agent slug', async () => {
 		const manifest = makeManifest({
-			files: [{ source: '.foo', target: '.foo', placement: 'project', agent: 'totally-unknown' }]
+			files: [{ path: '.foo', agent: 'totally-unknown' }]
 		});
 		const result = await validateAgentRefs(ctx, manifest, CWD);
 		expect(result).toBeNull();
@@ -344,8 +438,8 @@ describe('validateAgentRefs', () => {
 	it('returns null for multiple unknown agent slugs', async () => {
 		const manifest = makeManifest({
 			files: [
-				{ source: '.foo', target: '.foo', placement: 'project', agent: 'bad-agent-1' },
-				{ source: '.bar', target: '.bar', placement: 'project', agent: 'bad-agent-2' }
+				{ path: '.foo', agent: 'bad-agent-1' },
+				{ path: '.bar', agent: 'bad-agent-2' }
 			]
 		});
 		const result = await validateAgentRefs(ctx, manifest, CWD);
@@ -357,9 +451,7 @@ describe('validateAgentRefs', () => {
 		vi.mocked(ctx.io.confirm).mockResolvedValue(false);
 		const manifest = makeManifest({
 			agents: [],
-			files: [
-				{ source: '.cursorrules', target: '.cursorrules', placement: 'project', agent: 'cursor' }
-			]
+			files: [{ path: '.cursorrules', agent: 'cursor' }]
 		});
 		const result = await validateAgentRefs(ctx, manifest, CWD);
 		expect(result).not.toBeNull();
@@ -372,9 +464,7 @@ describe('validateAgentRefs', () => {
 		vi.mocked(ctx.io.confirm).mockResolvedValue(true);
 		const manifest = makeManifest({
 			agents: [],
-			files: [
-				{ source: '.cursorrules', target: '.cursorrules', placement: 'project', agent: 'cursor' }
-			]
+			files: [{ path: '.cursorrules', agent: 'cursor' }]
 		});
 		const result = await validateAgentRefs(ctx, manifest, CWD);
 		expect(result).not.toBeNull();
@@ -389,9 +479,7 @@ describe('validateAgentRefs', () => {
 		vi.mocked(ctx.io.confirm).mockResolvedValue(false);
 		const manifest = makeManifest({
 			agents: [],
-			files: [
-				{ source: '.cursorrules', target: '.cursorrules', placement: 'project', agent: 'cursor' }
-			]
+			files: [{ path: '.cursorrules', agent: 'cursor' }]
 		});
 		const result = await validateAgentRefs(ctx, manifest, CWD);
 		expect(result).not.toBeNull();
@@ -406,8 +494,8 @@ describe('validateAgentRefs', () => {
 		const manifest = makeManifest({
 			agents: [],
 			files: [
-				{ source: 'CLAUDE.md', target: 'CLAUDE.md', placement: 'project', agent: 'claude-code' },
-				{ source: '.cursorrules', target: '.cursorrules', placement: 'project', agent: 'cursor' }
+				{ path: 'CLAUDE.md', agent: 'claude-code' },
+				{ path: '.cursorrules', agent: 'cursor' }
 			]
 		});
 		const result = await validateAgentRefs(ctx, manifest, CWD);
@@ -420,9 +508,7 @@ describe('validateAgentRefs', () => {
 		vi.mocked(ctx.io.isJson).mockReturnValue(true);
 		const manifest = makeManifest({
 			agents: [],
-			files: [
-				{ source: '.cursorrules', target: '.cursorrules', placement: 'project', agent: 'cursor' }
-			]
+			files: [{ path: '.cursorrules', agent: 'cursor' }]
 		});
 		const result = await validateAgentRefs(ctx, manifest, CWD);
 		expect(result).not.toBeNull();
@@ -438,9 +524,7 @@ describe('agent validation during publish', () => {
 			...MOCK_MANIFEST,
 			files: [
 				{
-					source: '.claude/commands/foo.md',
-					target: '.claude/commands/foo.md',
-					placement: 'global',
+					path: '.claude/commands/foo.md',
 					componentType: 'command',
 					agent: 'nonexistent-agent'
 				}
@@ -462,14 +546,7 @@ describe('agent validation during publish', () => {
 		mockReadManifest.mockReturnValue({
 			...MOCK_MANIFEST,
 			agents: [],
-			files: [
-				{
-					source: '.cursorrules',
-					target: '.cursorrules',
-					placement: 'project',
-					agent: 'cursor'
-				}
-			]
+			files: [{ path: '.cursorrules', agent: 'cursor' }]
 		});
 		const program = makeProgram();
 		await program.parseAsync(['node', 'coati', 'publish']);
@@ -483,14 +560,7 @@ describe('agent validation during publish', () => {
 		mockReadManifest.mockReturnValue({
 			...MOCK_MANIFEST,
 			agents: [],
-			files: [
-				{
-					source: '.cursorrules',
-					target: '.cursorrules',
-					placement: 'project',
-					agent: 'cursor'
-				}
-			]
+			files: [{ path: '.cursorrules', agent: 'cursor' }]
 		});
 		const program = makeProgram();
 		await program.parseAsync(['node', 'coati', 'publish']);

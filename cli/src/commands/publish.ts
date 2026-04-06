@@ -81,6 +81,18 @@ export async function validateAgentRefs(
 	return manifest;
 }
 
+/**
+ * Return a copy of the manifest with `id` inserted after `$schema` (if present)
+ * and before `name`. This preserves the conventional field ordering in coati.json.
+ */
+function insertIdIntoManifest(manifest: Manifest, id: string): Manifest {
+	const { $schema, ...rest } = manifest;
+	if ($schema !== undefined) {
+		return { $schema, id, ...rest };
+	}
+	return { id, ...rest };
+}
+
 interface SetupResponse {
 	id: string;
 	slug: string;
@@ -108,7 +120,7 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 
 			const owner = config.username!;
 
-			// Check for setup.json; auto-run init if absent
+			// Check for coati.json; auto-run init if absent
 			const manifestPath = path.join(cwd, MANIFEST_FILENAME);
 			if (!ctx.fs.existsSync(manifestPath)) {
 				if (ctx.io.isJson()) {
@@ -132,12 +144,12 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 				ctx.io.print('');
 			}
 
-			// Read and validate setup.json
+			// Read and validate coati.json
 			let manifest;
 			try {
 				manifest = readManifest(cwd);
 			} catch (e) {
-				ctx.io.error(e instanceof Error ? e.message : 'Failed to read setup.json.');
+				ctx.io.error(e instanceof Error ? e.message : 'Failed to read coati.json.');
 				process.exit(1);
 				return;
 			}
@@ -176,24 +188,7 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 				});
 			}
 
-			const slug = manifest.name;
-
-			// Determine create vs update: check if setup exists
-			let setupExists = false;
-			try {
-				await ctx.api.get(`/setups/${owner}/${slug}`);
-				setupExists = true;
-			} catch (e) {
-				if (e instanceof ApiError && e.status === 404) {
-					setupExists = false;
-				} else if (e instanceof Error) {
-					ctx.io.error(`Failed to check setup: ${e.message}`);
-					process.exit(1);
-					return;
-				}
-			}
-
-			// Build payload
+			// Build payload (excludes id, version, and clone-tracking fields)
 			const payload = {
 				name: manifest.name,
 				slug: manifest.name,
@@ -205,20 +200,32 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 				files: filesPayload
 			};
 
+			const isUpdate = !!manifest.id;
+
 			if (!ctx.io.isJson()) {
-				ctx.io.print(`${setupExists ? 'Updating' : 'Publishing'} ${owner}/${slug}...`);
+				ctx.io.print(`${isUpdate ? 'Updating' : 'Publishing'} ${owner}/${manifest.name}...`);
 			}
 
 			let result: SetupResponse;
 			try {
-				if (setupExists) {
-					result = await ctx.api.patch<SetupResponse>(`/setups/${owner}/${slug}`, payload);
-				} else {
+				if (!isUpdate) {
+					// First publish: create via POST, then write id back to coati.json
 					result = await ctx.api.post<SetupResponse>(`/setups`, payload);
+					const updatedManifest = insertIdIntoManifest(manifest, result.id);
+					writeManifest(cwd, updatedManifest);
+				} else {
+					// Subsequent publish: update by UUID
+					result = await ctx.api.patch<SetupResponse>(`/setups/${manifest.id}`, payload);
 				}
 			} catch (e) {
 				if (e instanceof ApiError) {
-					if (e.status === 401 || e.status === 403) {
+					if (isUpdate && e.status === 404) {
+						ctx.io.error(
+							'Setup with this ID no longer exists. Remove `id` from coati.json to publish as new.'
+						);
+					} else if (isUpdate && e.status === 403) {
+						ctx.io.error("You don't own the setup with this ID.");
+					} else if (e.status === 401 || e.status === 403) {
 						ctx.io.error('Authentication failed. Run `coati login` to re-authenticate.');
 					} else if (e.status === 409 && e.code === 'SLUG_TAKEN') {
 						ctx.io.error('A setup with this slug already exists. Choose a different name or slug.');
@@ -227,7 +234,7 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 					} else if (e.status === 500) {
 						ctx.io.error('Server error. Please try again later.');
 					} else {
-						ctx.io.error(`Failed to ${setupExists ? 'update' : 'publish'} setup: ${e.message}`);
+						ctx.io.error(`Failed to ${isUpdate ? 'update' : 'publish'} setup: ${e.message}`);
 					}
 				} else if (e instanceof Error) {
 					if (
@@ -238,7 +245,7 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 					) {
 						ctx.io.error('Could not reach the Coati API. Check your internet connection.');
 					} else {
-						ctx.io.error(`Failed to ${setupExists ? 'update' : 'publish'} setup: ${e.message}`);
+						ctx.io.error(`Failed to ${isUpdate ? 'update' : 'publish'} setup: ${e.message}`);
 					}
 				} else {
 					ctx.io.error('An unexpected error occurred.');
@@ -252,14 +259,14 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 
 			if (ctx.io.isJson()) {
 				ctx.io.json({
-					action: setupExists ? 'updated' : 'created',
+					action: isUpdate ? 'updated' : 'created',
 					owner,
 					slug: result.slug,
 					url: setupUrl
 				});
 			} else {
 				ctx.io.print('');
-				ctx.io.success(`Setup ${setupExists ? 'updated' : 'published'} successfully.`);
+				ctx.io.success(`Setup ${isUpdate ? 'updated' : 'published'} successfully.`);
 				ctx.io.print(`  ${setupUrl}`);
 			}
 		});

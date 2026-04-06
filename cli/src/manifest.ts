@@ -31,6 +31,10 @@ export interface ManifestFileEntry {
 
 export interface Manifest {
 	$schema?: string;
+	/** UUID assigned by the server on first publish. Written back to coati.json automatically. */
+	id?: string;
+	/** UUID of the upstream setup this was cloned from. Written by `coati clone`. */
+	sourceId?: string;
 	name: string;
 	version: string;
 	description: string;
