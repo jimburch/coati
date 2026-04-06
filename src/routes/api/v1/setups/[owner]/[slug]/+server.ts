@@ -7,6 +7,13 @@ import { setupRepo } from '$lib/server/queries/setupRepository';
 export const GET: RequestHandler = async ({ params }) => {
 	const setup = await setupRepo.getByOwnerSlug(params.owner, params.slug);
 	if (!setup) {
+		const currentSlug = await setupRepo.getSlugRedirect(params.owner, params.slug);
+		if (currentSlug) {
+			return new Response(null, {
+				status: 301,
+				headers: { Location: `/api/v1/setups/${params.owner}/${currentSlug}` }
+			});
+		}
 		return error('Setup not found', 'NOT_FOUND', 404);
 	}
 	return success(setup);

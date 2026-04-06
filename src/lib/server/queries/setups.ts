@@ -79,6 +79,20 @@ export async function getSetupByOwnerSlug(ownerUsername: string, slug: string) {
 	return result[0] ?? null;
 }
 
+export async function getSlugRedirect(
+	ownerUsername: string,
+	oldSlug: string
+): Promise<string | null> {
+	const result = await db
+		.select({ currentSlug: setups.slug })
+		.from(setupSlugRedirects)
+		.innerJoin(users, eq(setupSlugRedirects.userId, users.id))
+		.innerJoin(setups, eq(setupSlugRedirects.setupId, setups.id))
+		.where(and(eq(users.username, ownerUsername), eq(setupSlugRedirects.oldSlug, oldSlug)))
+		.limit(1);
+	return result[0]?.currentSlug ?? null;
+}
+
 export async function getSetupById(id: string) {
 	const result = await db
 		.select({

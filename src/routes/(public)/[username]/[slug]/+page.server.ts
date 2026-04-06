@@ -20,7 +20,11 @@ import { isUniqueViolation } from '$lib/server/responses';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const detail = await setupRepo.getDetail(params.username, params.slug, locals.user?.id);
-	if (!detail) throw error(404, 'Setup not found');
+	if (!detail) {
+		const currentSlug = await setupRepo.getSlugRedirect(params.username, params.slug);
+		if (currentSlug) throw redirect(301, `/${params.username}/${currentSlug}`);
+		throw error(404, 'Setup not found');
+	}
 
 	const { files } = detail;
 
