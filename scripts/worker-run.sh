@@ -22,6 +22,10 @@ ATTEMPT_TIMEOUT=1000
 echo "Processing $TASK_COUNT tasks sequentially (max $MAX_ATTEMPTS attempts each)..."
 echo ""
 
+# --- Track issues completed in this run (avoids GitHub API label propagation delays) ---
+
+COMPLETED_IN_RUN=""
+
 # --- Fetch recent commits on this branch ---
 
 echo "Fetching recent commits on branch..."
@@ -55,15 +59,15 @@ while [ "$INDEX" -lt "$TASK_COUNT" ]; do
   ISSUE_BODY=$(gh issue view "$ISSUE_NUM" --json body -q '.body')
   BLOCKED=false
   for blocker in $(echo "$ISSUE_BODY" | grep -oP '(?<=Blocked by #)\d+' || true); do
+    # Check if the blocker was completed earlier in this run
+    if echo "$COMPLETED_IN_RUN" | grep -qw "$blocker"; then
+      continue
+    fi
     BLOCKER_STATE=$(gh issue view "$blocker" --json state -q '.state' 2>/dev/null || echo "UNKNOWN")
     if [ "$BLOCKER_STATE" = "OPEN" ]; then
-      # Check if the blocker was completed earlier in this run (labeled 'complete')
-      BLOCKER_LABELS=$(gh issue view "$blocker" --json labels -q '.labels[].name' 2>/dev/null || echo "")
-      if ! echo "$BLOCKER_LABELS" | grep -q '^complete$'; then
-        echo "Issue #$ISSUE_NUM is blocked by open issue #$blocker. Skipping."
-        BLOCKED=true
-        break
-      fi
+      echo "Issue #$ISSUE_NUM is blocked by open issue #$blocker. Skipping."
+      BLOCKED=true
+      break
     fi
   done
 
@@ -250,6 +254,8 @@ Fix these issues. Re-run the quality gates (pnpm check && pnpm lint && pnpm test
     RECENT_COMMITS=$(git log develop..HEAD -n 10 --format="%H%n%ad%n%B---" --date=short 2>/dev/null || echo "No prior commits on this branch")
 
     rm -f "$tmpfile"
+
+    COMPLETED_IN_RUN="$COMPLETED_IN_RUN $ISSUE_NUM"
 
     echo ""
     echo "Issue #$ISSUE_NUM complete."
