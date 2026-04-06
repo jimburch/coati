@@ -123,22 +123,27 @@ jobs:
           # Use the first commit message as the PR title (it follows semantic convention)
           PR_TITLE=$(git log develop..HEAD --format="%s" -1 2>/dev/null || echo "$BRANCH")
 
+          # Build PR body in a temp file to avoid YAML parsing issues with heredocs
+          PR_BODY_FILE=$(mktemp)
+          {
+            echo "## Summary"
+            echo ""
+            echo "$COMMIT_LOG"
+            echo ""
+            echo "$CLOSES_LINES"
+            echo ""
+            echo "## Test plan"
+            echo ""
+            echo "See individual issue acceptance criteria for testing details."
+            echo ""
+            echo "🤖 Generated with [Claude Code](https://claude.com/claude-code)"
+          } > "$PR_BODY_FILE"
+
           gh pr create \
             --base develop \
             --head "$BRANCH" \
             --title "$PR_TITLE" \
             --label "ralph" \
-            --body "$(cat <<EOF
-## Summary
+            --body-file "$PR_BODY_FILE"
 
-${COMMIT_LOG}
-
-${CLOSES_LINES}
-
-## Test plan
-
-See individual issue acceptance criteria for testing details.
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-EOF
-)"
+          rm -f "$PR_BODY_FILE"
