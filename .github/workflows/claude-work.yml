@@ -87,11 +87,12 @@ jobs:
         if: steps.check-commits.outputs.count != '0'
         env:
           GH_TOKEN: ${{ secrets.PAT_WORKFLOWS }}
+          TASKS_JSON: ${{ inputs.tasks }}
         run: |
           BRANCH="${{ inputs.branch }}"
 
           # Collect completed issue numbers (those labeled 'complete' by the worker)
-          ISSUE_NUMS=$(echo '${{ inputs.tasks }}' | jq -r '.[].issue_number')
+          ISSUE_NUMS=$(echo "$TASKS_JSON" | jq -r '.[].issue_number')
           CLOSES_LINES=""
           for num in $ISSUE_NUMS; do
             # Only add Closes for issues the worker actually completed
