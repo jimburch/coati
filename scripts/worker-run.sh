@@ -22,6 +22,10 @@ ATTEMPT_TIMEOUT=1000
 echo "Processing $TASK_COUNT tasks sequentially (max $MAX_ATTEMPTS attempts each)..."
 echo ""
 
+# --- Ensure the 'complete' label exists (needed to mark finished issues) ---
+
+gh label create "complete" --description "Issue completed by Ralph worker" --color "0e8a16" 2>/dev/null || true
+
 # --- Track issues completed in this run (avoids GitHub API label propagation delays) ---
 
 COMPLETED_IN_RUN=""
