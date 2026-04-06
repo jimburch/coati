@@ -84,6 +84,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - Always include the `Co-Authored-By` trailer.
 
 Examples:
+
 - `feat(ui): add agent chips to setup cards (#212)`
 - `fix(api): handle missing slug in setup lookup (#45)`
 - `chore(db): add index on stars table (#99)`
