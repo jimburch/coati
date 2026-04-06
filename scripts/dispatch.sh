@@ -40,8 +40,8 @@ RESULT=$(echo "$PROMPT" | claude -p \
 
 echo "$RESULT"
 
-# Extract branch name from <branch_name> tags
-BRANCH_NAME=$(echo "$RESULT" | sed -n '/<branch_name>/,/<\/branch_name>/p' | sed '1d;$d' | tr -d '[:space:]')
+# Extract branch name from <branch_name> tags (handles single-line and multi-line)
+BRANCH_NAME=$(echo "$RESULT" | perl -0777 -ne 'print $1 if /<branch_name>\s*(.*?)\s*<\/branch_name>/s')
 
 if [ -z "$BRANCH_NAME" ]; then
   echo ""
@@ -51,8 +51,8 @@ fi
 
 echo "Branch: $BRANCH_NAME"
 
-# Extract JSON from <task_json> tags in the result
-TASKS=$(echo "$RESULT" | sed -n '/<task_json>/,/<\/task_json>/p' | sed '1d;$d')
+# Extract JSON from <task_json> tags (handles single-line and multi-line)
+TASKS=$(echo "$RESULT" | perl -0777 -ne 'print $1 if /<task_json>\s*(.*?)\s*<\/task_json>/s')
 
 # Validate we got valid JSON array
 if ! echo "$TASKS" | jq -e 'type == "array"' > /dev/null 2>&1; then
