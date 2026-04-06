@@ -5,7 +5,7 @@ You are a worker agent. You have been assigned a specific task from a GitHub iss
 ## Context
 
 - Issue context JSON is provided at the start of your prompt. Parse it to get the issue you've been assigned, with its body and comments.
-- You've also been passed recent RALPH commits (SHA, date, full message). Review these to understand what recent work has been done.
+- You've also been passed recent commits on this branch (SHA, date, full message). Review these to understand what recent work has been done.
 - Read the CLAUDE.md file for project conventions and coding standards.
 
 ## Workflow
@@ -66,17 +66,28 @@ Do this incrementally as you work, not all at once at the end. This gives visibi
 
 **Only commit if all quality gates pass.** If gates fail and you cannot fix them, **do not commit**. Instead, explain what's blocking you in your output so the runner can retry with that context.
 
-When gates pass, make a git commit. The commit message MUST follow this format:
+When gates pass, make a git commit. The commit message MUST follow **semantic release convention**:
 
 ```
-RALPH: <short description> (#<issue-number>)
+<type>(<scope>): <short description> (#<issue-number>)
 
 - What was implemented
 - Key decisions made
 - Files changed
+
+Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
-Keep it concise but informative.
+- **type**: Use the `commit_type` provided in the "Commit Type" section above (e.g., `feat`, `fix`, `chore`, `refactor`, `docs`, `test`).
+- **scope**: A short identifier for the area of code changed (e.g., `ui`, `api`, `auth`, `cli`, `db`). Infer from the files you changed.
+- **description**: Imperative mood, lowercase, no period at end.
+- Always include the `Co-Authored-By` trailer.
+
+Examples:
+
+- `feat(ui): add agent chips to setup cards (#212)`
+- `fix(api): handle missing slug in setup lookup (#45)`
+- `chore(db): add index on stars table (#99)`
 
 ### 6. Testing Instructions
 

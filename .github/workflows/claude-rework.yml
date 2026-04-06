@@ -45,8 +45,8 @@ jobs:
 
       - name: Configure git
         run: |
-          git config user.name "Claude"
-          git config user.email "noreply@anthropic.com"
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
 
       - name: Collect review context
         id: context
@@ -160,25 +160,35 @@ jobs:
           COMMITTED="${{ steps.claude.outputs.committed }}"
           GATES_PASSED="${{ steps.gates.outputs.passed }}"
 
+          # Build comment in a temp file to avoid YAML parsing issues with markdown headers
+          COMMENT_FILE=$(mktemp)
+
           if [ "$COMMITTED" = "true" ] && [ "$GATES_PASSED" = "true" ]; then
             LAST_COMMIT=$(git log -1 --pretty='%s' 2>/dev/null || echo "changes made")
-            COMMENT="## Ralph Re-work Complete ✅
-
-Addressed review feedback from @${REVIEWER}.
-
-**Changes:** ${LAST_COMMIT}
-
-All quality gates passed (\`pnpm check\`, \`pnpm lint\`, \`pnpm test:unit\`)."
+            {
+              echo "## Ralph Re-work Complete ✅"
+              echo ""
+              echo "Addressed review feedback from @${REVIEWER}."
+              echo ""
+              echo "**Changes:** ${LAST_COMMIT}"
+              echo ""
+              echo "All quality gates passed (\`pnpm check\`, \`pnpm lint\`, \`pnpm test:unit\`)."
+            } > "$COMMENT_FILE"
           elif [ "$COMMITTED" = "true" ] && [ "$GATES_PASSED" != "true" ]; then
-            COMMENT="## Ralph Re-work Failed ❌
-
-Ralph made changes to address feedback from @${REVIEWER} but quality gates did not pass. The commit was reverted.
-
-Manual intervention required."
+            {
+              echo "## Ralph Re-work Failed ❌"
+              echo ""
+              echo "Ralph made changes to address feedback from @${REVIEWER} but quality gates did not pass. The commit was reverted."
+              echo ""
+              echo "Manual intervention required."
+            } > "$COMMENT_FILE"
           else
-            COMMENT="## Ralph Re-work — No Changes Made
-
-Ralph reviewed the feedback from @${REVIEWER} but did not produce any commits. Manual intervention may be required."
+            {
+              echo "## Ralph Re-work — No Changes Made"
+              echo ""
+              echo "Ralph reviewed the feedback from @${REVIEWER} but did not produce any commits. Manual intervention may be required."
+            } > "$COMMENT_FILE"
           fi
 
-          gh pr comment "$PR_NUMBER" --body "$COMMENT"
+          gh pr comment "$PR_NUMBER" --body-file "$COMMENT_FILE"
+          rm -f "$COMMENT_FILE"

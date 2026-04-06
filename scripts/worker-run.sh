@@ -22,10 +22,10 @@ ATTEMPT_TIMEOUT=1000
 echo "Processing $TASK_COUNT tasks sequentially (max $MAX_ATTEMPTS attempts each)..."
 echo ""
 
-# --- Fetch recent RALPH commits ---
+# --- Fetch recent commits on this branch ---
 
-echo "Fetching recent RALPH commits..."
-RALPH_COMMITS=$(git log --grep="RALPH" -n 10 --format="%H%n%ad%n%B---" --date=short 2>/dev/null || echo "No RALPH commits found")
+echo "Fetching recent commits on branch..."
+RECENT_COMMITS=$(git log develop..HEAD -n 10 --format="%H%n%ad%n%B---" --date=short 2>/dev/null || echo "No prior commits on this branch")
 
 # --- Process each task ---
 
@@ -57,9 +57,13 @@ while [ "$INDEX" -lt "$TASK_COUNT" ]; do
   for blocker in $(echo "$ISSUE_BODY" | grep -oP '(?<=Blocked by #)\d+' || true); do
     BLOCKER_STATE=$(gh issue view "$blocker" --json state -q '.state' 2>/dev/null || echo "UNKNOWN")
     if [ "$BLOCKER_STATE" = "OPEN" ]; then
-      echo "Issue #$ISSUE_NUM is blocked by open issue #$blocker. Skipping."
-      BLOCKED=true
-      break
+      # Check if the blocker was completed earlier in this run (labeled 'complete')
+      BLOCKER_LABELS=$(gh issue view "$blocker" --json labels -q '.labels[].name' 2>/dev/null || echo "")
+      if ! echo "$BLOCKER_LABELS" | grep -q '^complete$'; then
+        echo "Issue #$ISSUE_NUM is blocked by open issue #$blocker. Skipping."
+        BLOCKED=true
+        break
+      fi
     fi
   done
 
@@ -79,6 +83,8 @@ while [ "$INDEX" -lt "$TASK_COUNT" ]; do
 
   WORKER_PROMPT=$(cat "$SCRIPT_DIR/worker-prompt.md")
 
+  COMMIT_TYPE=$(echo "$TASK" | jq -r '.commit_type // "feat"')
+
   FULL_PROMPT="## Your Task
 
 ${TASK_PROMPT}
@@ -87,9 +93,13 @@ ${TASK_PROMPT}
 
 ${ISSUE_JSON}
 
-## Previous RALPH Commits
+## Commit Type
 
-${RALPH_COMMITS}
+Use \`${COMMIT_TYPE}\` as the semantic commit type for this task.
+
+## Previous Commits on This Branch
+
+${RECENT_COMMITS}
 
 ${WORKER_PROMPT}"
 
@@ -224,20 +234,20 @@ Fix these issues. Re-run the quality gates (pnpm check && pnpm lint && pnpm test
       echo ""
     } >> "$SUMMARY_FILE"
 
-    # --- Push to ralph branch ---
+    # --- Push to feature branch ---
 
-    echo "Pushing to ralph branch..."
-    git push origin ralph
+    echo "Pushing to ${BRANCH_NAME} branch..."
+    git push origin "$BRANCH_NAME"
 
-    # --- Close the issue ---
+    # --- Mark issue as complete (stays open until PR merges) ---
 
-    echo "Closing issue #$ISSUE_NUM..."
-    gh issue close "$ISSUE_NUM" --comment "Completed by Ralph (attempt $ATTEMPT/$MAX_ATTEMPTS). Committed to \`ralph\` branch, will be merged into \`develop\`."
-    gh issue edit "$ISSUE_NUM" --remove-label "ralph" 2>/dev/null || true
+    echo "Marking issue #$ISSUE_NUM as complete..."
+    gh issue comment "$ISSUE_NUM" --body "Completed by Ralph (attempt $ATTEMPT/$MAX_ATTEMPTS). Committed to \`${BRANCH_NAME}\` branch. Issue will close when the PR is merged."
+    gh issue edit "$ISSUE_NUM" --add-label "complete" 2>/dev/null || true
 
-    # --- Update RALPH commits for next iteration ---
+    # --- Update recent commits for next iteration ---
 
-    RALPH_COMMITS=$(git log --grep="RALPH" -n 10 --format="%H%n%ad%n%B---" --date=short 2>/dev/null || echo "No RALPH commits found")
+    RECENT_COMMITS=$(git log develop..HEAD -n 10 --format="%H%n%ad%n%B---" --date=short 2>/dev/null || echo "No prior commits on this branch")
 
     rm -f "$tmpfile"
 
@@ -291,39 +301,6 @@ echo "MANUAL TESTING GUIDE"
 echo "=========================================="
 echo ""
 cat "$SUMMARY_FILE"
-
-# --- Close parent PRD issues if all child issues are done ---
-
-echo ""
-echo "Checking for completed PRD issues..."
-
-# Find all PRD issues (labeled 'prd' and open)
-PRD_ISSUES=$(gh issue list --label "prd" --state open --json number -q '.[].number' 2>/dev/null || echo "")
-
-for PRD_NUM in $PRD_ISSUES; do
-  # Get the PRD issue body
-  PRD_BODY=$(gh issue view "$PRD_NUM" --json body -q '.body' 2>/dev/null || echo "")
-
-  # Find all issues that reference this PRD as parent (look for "#<PRD_NUM>" in "Parent PRD" section)
-  CHILD_ISSUES=$(gh issue list --state all --limit 100 --json number,body,state -q \
-    "[.[] | select(.body | test(\"Parent PRD\\\\s*\\\\n\\\\s*#${PRD_NUM}(\\\\s|$)\"))]" 2>/dev/null || echo "[]")
-
-  CHILD_COUNT=$(echo "$CHILD_ISSUES" | jq 'length')
-
-  if [ "$CHILD_COUNT" -eq 0 ]; then
-    continue
-  fi
-
-  # Check if all child issues are closed
-  OPEN_CHILDREN=$(echo "$CHILD_ISSUES" | jq '[.[] | select(.state == "OPEN")] | length')
-
-  if [ "$OPEN_CHILDREN" -eq 0 ]; then
-    echo "All $CHILD_COUNT child issues for PRD #$PRD_NUM are closed. Closing PRD..."
-    gh issue close "$PRD_NUM" --comment "All implementation issues are complete. Closing PRD."
-  else
-    echo "PRD #$PRD_NUM has $OPEN_CHILDREN/$CHILD_COUNT child issues still open. Skipping."
-  fi
-done
 
 # --- Write summary to file for workflow to pick up ---
 

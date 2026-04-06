@@ -4,7 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       tasks:
-        description: 'JSON array of ordered tasks, each with issue_number and prompt'
+        description: 'JSON array of ordered tasks, each with issue_number, commit_type, and prompt'
+        required: true
+        type: string
+      branch:
+        description: 'Semantic branch name (e.g., feat/setup-card-grid-212)'
         required: true
         type: string
 
@@ -17,6 +21,7 @@ jobs:
     permissions:
       contents: write
       issues: write
+      pull-requests: write
       id-token: write
 
     steps:
@@ -45,19 +50,20 @@ jobs:
 
       - name: Configure git
         run: |
-          git config user.name "Claude"
-          git config user.email "noreply@anthropic.com"
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
 
-      - name: Create ralph branch from develop
+      - name: Create feature branch from develop
         run: |
-          git checkout -b ralph
-          git push -u origin ralph
+          git checkout -b "${{ inputs.branch }}"
+          git push -u origin "${{ inputs.branch }}"
 
       - name: Process tasks sequentially
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TASKS_JSON: ${{ inputs.tasks }}
+          BRANCH_NAME: ${{ inputs.branch }}
         run: |
           chmod +x scripts/worker-run.sh
           ./scripts/worker-run.sh
@@ -71,13 +77,73 @@ jobs:
             cat /tmp/ralph_summary.txt >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Merge ralph into develop
+      - name: Check for commits
+        id: check-commits
         run: |
-          git checkout develop
-          git merge ralph --no-edit
-          git push origin develop
+          COMMIT_COUNT=$(git rev-list develop..HEAD --count 2>/dev/null || echo "0")
+          echo "count=$COMMIT_COUNT" >> "$GITHUB_OUTPUT"
 
-      - name: Delete ralph branch
+      - name: Create pull request
+        if: steps.check-commits.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ secrets.PAT_WORKFLOWS }}
         run: |
-          git push origin --delete ralph 2>/dev/null || true
-          git branch -d ralph 2>/dev/null || true
+          BRANCH="${{ inputs.branch }}"
+
+          # Collect completed issue numbers (those labeled 'complete' by the worker)
+          ISSUE_NUMS=$(echo '${{ inputs.tasks }}' | jq -r '.[].issue_number')
+          CLOSES_LINES=""
+          for num in $ISSUE_NUMS; do
+            # Only add Closes for issues the worker actually completed
+            if gh issue view "$num" --json labels -q '.labels[].name' 2>/dev/null | grep -q '^complete$'; then
+              CLOSES_LINES="${CLOSES_LINES}Closes #${num}"$'\n'
+            fi
+          done
+
+          # Check if any parent PRD issues should also close
+          # (all their child issues are either already closed or will be closed by this PR)
+          PRD_ISSUES=$(gh issue list --label "prd" --state open --json number -q '.[].number' 2>/dev/null || echo "")
+          for PRD_NUM in $PRD_ISSUES; do
+            CHILD_ISSUES=$(gh issue list --state all --limit 100 --json number,body,state,labels -q \
+              "[.[] | select(.body | test(\"Parent PRD\\\\s*\\\\n\\\\s*#${PRD_NUM}(\\\\s|$)\"))]" 2>/dev/null || echo "[]")
+
+            CHILD_COUNT=$(echo "$CHILD_ISSUES" | jq 'length')
+            [ "$CHILD_COUNT" -eq 0 ] && continue
+
+            # Check: every child is either closed OR labeled 'complete' (will close with this PR)
+            INCOMPLETE=$(echo "$CHILD_ISSUES" | jq '[.[] | select(.state == "OPEN" and ([.labels[].name] | index("complete") | not))] | length')
+            if [ "$INCOMPLETE" -eq 0 ]; then
+              CLOSES_LINES="${CLOSES_LINES}Closes #${PRD_NUM}"$'\n'
+            fi
+          done
+
+          # Get commit summaries for the PR body
+          COMMIT_LOG=$(git log develop..HEAD --format="- %s" 2>/dev/null || echo "")
+
+          # Use the first commit message as the PR title (it follows semantic convention)
+          PR_TITLE=$(git log develop..HEAD --format="%s" -1 2>/dev/null || echo "$BRANCH")
+
+          # Build PR body in a temp file to avoid YAML parsing issues with heredocs
+          PR_BODY_FILE=$(mktemp)
+          {
+            echo "## Summary"
+            echo ""
+            echo "$COMMIT_LOG"
+            echo ""
+            echo "$CLOSES_LINES"
+            echo ""
+            echo "## Test plan"
+            echo ""
+            echo "See individual issue acceptance criteria for testing details."
+            echo ""
+            echo "🤖 Generated with [Claude Code](https://claude.com/claude-code)"
+          } > "$PR_BODY_FILE"
+
+          gh pr create \
+            --base develop \
+            --head "$BRANCH" \
+            --title "$PR_TITLE" \
+            --label "ralph" \
+            --body-file "$PR_BODY_FILE"
+
+          rm -f "$PR_BODY_FILE"
