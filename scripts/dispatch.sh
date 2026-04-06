@@ -40,6 +40,17 @@ RESULT=$(echo "$PROMPT" | claude -p \
 
 echo "$RESULT"
 
+# Extract branch name from <branch_name> tags
+BRANCH_NAME=$(echo "$RESULT" | sed -n '/<branch_name>/,/<\/branch_name>/p' | sed '1d;$d' | tr -d '[:space:]')
+
+if [ -z "$BRANCH_NAME" ]; then
+  echo ""
+  echo "Error: Orchestrator did not return a branch name."
+  exit 1
+fi
+
+echo "Branch: $BRANCH_NAME"
+
 # Extract JSON from <task_json> tags in the result
 TASKS=$(echo "$RESULT" | sed -n '/<task_json>/,/<\/task_json>/p' | sed '1d;$d')
 
@@ -73,6 +84,7 @@ done
 echo ""
 
 gh workflow run claude-work.yml \
-  -f tasks="$(echo "$TASKS" | jq -c '.')"
+  -f tasks="$(echo "$TASKS" | jq -c '.')" \
+  -f branch="$BRANCH_NAME"
 
 echo "Dispatched. Run 'gh run list --workflow=claude-work.yml' to monitor."

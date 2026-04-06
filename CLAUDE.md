@@ -249,7 +249,7 @@ This repository is **100% public and open source**. All scripts, workflows, and 
 - Don't add WebSocket support yet — polling or SvelteKit invalidation is fine for MVP
 - Don't create separate API and frontend projects — SvelteKit handles both
 - Don't implement email/password auth — GitHub OAuth only for MVP
-- Don't use git to add, commit, or push code - only the user will do that. **Exception:** Ralph worker agents running in CI (`scripts/worker-run.sh`) may commit and push to `claude/*` branches.
+- Don't use git to add, commit, or push code - only the user will do that. **Exception:** Ralph worker agents running in CI (`scripts/worker-run.sh`) may commit and push to feature branches (e.g., `feat/*`, `fix/*`).
 - Don't run `pnpm dispatch` or `./scripts/dispatch.sh` — only the user dispatches Ralph. You may create issues for Ralph to pick up, but never trigger the dispatch.
 
 ## UI Testing Workflow

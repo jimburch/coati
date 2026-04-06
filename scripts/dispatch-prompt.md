@@ -31,25 +31,43 @@ You are given a JSON array of open GitHub issues with their number, title, body,
 
 First, explain your reasoning: classify each issue, note blocking relationships, show the dependency graph, and justify your ordering.
 
-Then, wrap your final JSON array in `<task_json>` XML tags. The array must be **ordered** — first element is worked on first. Each element:
+Then, output TWO things:
+
+### 1. Branch name
+
+Wrap a **semantic branch name** in `<branch_name>` tags. The branch name must follow the convention `<type>/<short-description>` where type is one of: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`. Base the type and description on the **primary task** (first in priority order). Use kebab-case, keep it short, and include the primary issue number.
+
+Examples: `feat/setup-card-grid-212`, `fix/auth-callback-error-45`, `chore/update-deps-99`
+
+<branch_name>fix/setup-card-height-212</branch_name>
+
+### 2. Task JSON
+
+Wrap your final JSON array in `<task_json>` XML tags. The array must be **ordered** — first element is worked on first. Each element:
 
 ```json
 {
 	"issue_number": 42,
+	"commit_type": "feat",
 	"prompt": "Implement the feature described in issue #42. See acceptance criteria in the issue body."
 }
 ```
 
+The `commit_type` field must be one of: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`. Choose the type that best describes the work for that specific issue.
+
 For example:
 
+<branch_name>fix/profile-url-crash-4</branch_name>
 <task_json>
 [
 {
 "issue_number": 4,
+"commit_type": "fix",
 "prompt": "Fix the URL crash bug on the profile page. See issue #4 for acceptance criteria."
 },
 {
 "issue_number": 5,
+"commit_type": "test",
 "prompt": "Add integration tests for star queries. See issue #5 for details."
 }
 ]
@@ -58,6 +76,7 @@ For example:
 Rules for the output:
 
 - `issue_number`: The GitHub issue number.
+- `commit_type`: One of `feat`, `fix`, `chore`, `refactor`, `docs`, `test`.
 - `prompt`: A clear, specific instruction for the worker. Reference the issue number so the worker can fetch full details.
 - The array MUST be ordered by execution priority (first = highest priority, worked on first).
 
