@@ -63,8 +63,8 @@ while [ "$INDEX" -lt "$TASK_COUNT" ]; do
     if echo "$COMPLETED_IN_RUN" | grep -qw "$blocker"; then
       continue
     fi
-    BLOCKER_STATE=$(gh issue view "$blocker" --json state -q '.state' 2>/dev/null || echo "UNKNOWN")
-    if [ "$BLOCKER_STATE" = "OPEN" ]; then
+    BLOCKER_STATE=$(gh issue view "$blocker" --json state,labels -q '{state: .state, labels: [.labels[].name]}' 2>/dev/null || echo '{"state":"UNKNOWN","labels":[]}')
+    if echo "$BLOCKER_STATE" | jq -e '.state == "OPEN" and (.labels | index("complete") | not)' > /dev/null 2>&1; then
       echo "Issue #$ISSUE_NUM is blocked by open issue #$blocker. Skipping."
       BLOCKED=true
       break
