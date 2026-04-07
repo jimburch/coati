@@ -14,7 +14,6 @@ const VALID_MANIFEST: Manifest = {
 	name: 'my-setup',
 	version: '1.0.0',
 	description: 'A test setup',
-	placement: 'global',
 	files: [
 		{
 			path: 'claude/settings.json'
@@ -81,34 +80,19 @@ describe('validateManifest', () => {
 		expect(result.errors.some((e) => e.field === 'description')).toBe(true);
 	});
 
-	it('requires placement', () => {
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		const { placement: _placement, ...withoutPlacement } = VALID_MANIFEST;
-		const result = validateManifest(withoutPlacement);
-		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.field === 'placement')).toBe(true);
+	it('accepts manifest without placement field', () => {
+		const result = validateManifest(VALID_MANIFEST);
+		expect(result.valid).toBe(true);
 	});
 
-	it('accepts global placement', () => {
+	it('accepts manifest with placement field (legacy — ignored)', () => {
 		const result = validateManifest({ ...VALID_MANIFEST, placement: 'global' });
 		expect(result.valid).toBe(true);
 	});
 
-	it('accepts project placement', () => {
+	it('accepts manifest with any placement value (field is stripped/ignored)', () => {
 		const result = validateManifest({ ...VALID_MANIFEST, placement: 'project' });
 		expect(result.valid).toBe(true);
-	});
-
-	it('rejects relative placement', () => {
-		const result = validateManifest({ ...VALID_MANIFEST, placement: 'relative' });
-		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.field === 'placement')).toBe(true);
-	});
-
-	it('rejects unknown placement', () => {
-		const result = validateManifest({ ...VALID_MANIFEST, placement: 'nowhere' });
-		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.field === 'placement')).toBe(true);
 	});
 
 	it('requires at least one file', () => {
@@ -183,9 +167,18 @@ describe('writeManifest + readManifest roundtrip', () => {
 		expect(read.name).toBe(VALID_MANIFEST.name);
 		expect(read.version).toBe(VALID_MANIFEST.version);
 		expect(read.description).toBe(VALID_MANIFEST.description);
-		expect(read.placement).toBe('global');
 		expect(read.files).toHaveLength(1);
 		expect(read.files[0]!.path).toBe('claude/settings.json');
+	});
+
+	it('reads back a legacy manifest with placement field without error', () => {
+		const legacyManifest = { ...VALID_MANIFEST, placement: 'global' };
+		fs.writeFileSync(
+			path.join(tmpDir, MANIFEST_FILENAME),
+			JSON.stringify(legacyManifest, null, '\t') + '\n',
+			'utf-8'
+		);
+		expect(() => readManifest(tmpDir)).not.toThrow();
 	});
 
 	it('creates the directory if it does not exist', () => {

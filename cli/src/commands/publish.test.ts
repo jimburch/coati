@@ -59,7 +59,6 @@ const MOCK_MANIFEST: Manifest = {
 	name: 'my-setup',
 	version: '1.0.0',
 	description: 'A test setup',
-	placement: 'global',
 	files: [
 		{
 			path: '.claude/commands/foo.md',
@@ -219,6 +218,15 @@ describe('create new setup (no id in manifest)', () => {
 		expect(postCall).not.toHaveProperty('version');
 	});
 
+	it('does not include placement in POST payload', async () => {
+		mockReadManifest.mockReturnValue({ ...MOCK_MANIFEST, placement: 'global' });
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		const postCall = vi.mocked(ctx.api.post).mock.calls[0][1] as Record<string, unknown>;
+		expect(postCall).not.toHaveProperty('placement');
+	});
+
 	it('writes the returned id back into coati.json', async () => {
 		const program = makeProgram();
 		await program.parseAsync(['node', 'coati', 'publish']);
@@ -292,6 +300,15 @@ describe('update existing setup (has id in manifest)', () => {
 		const patchCall = vi.mocked(ctx.api.patch).mock.calls[0][1] as Record<string, unknown>;
 		expect(patchCall).not.toHaveProperty('id');
 		expect(patchCall).not.toHaveProperty('version');
+	});
+
+	it('does not include placement in PATCH payload', async () => {
+		mockReadManifest.mockReturnValue({ ...MOCK_MANIFEST_WITH_ID, placement: 'global' });
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		const patchCall = vi.mocked(ctx.api.patch).mock.calls[0][1] as Record<string, unknown>;
+		expect(patchCall).not.toHaveProperty('placement');
 	});
 
 	it('displays updated success message with setup URL', async () => {
@@ -400,7 +417,6 @@ describe('validateAgentRefs', () => {
 			name: 'my-setup',
 			version: '1.0.0',
 			description: 'test',
-			placement: 'global',
 			files: [],
 			...overrides
 		};
@@ -579,6 +595,19 @@ describe('publish — version field in coati.json', () => {
 
 		const postCall = vi.mocked(ctx.api.post).mock.calls[0][1] as Record<string, unknown>;
 		expect(postCall).not.toHaveProperty('version');
+		expect(ctx.io.error).not.toHaveBeenCalled();
+	});
+});
+
+// ── placement field (ignored) ─────────────────────────────────────────────────
+
+describe('publish — placement field in coati.json', () => {
+	it('accepts manifest with placement field and publishes without errors', async () => {
+		mockReadManifest.mockReturnValue({ ...MOCK_MANIFEST, placement: 'global' });
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		expect(ctx.api.post).toHaveBeenCalled();
 		expect(ctx.io.error).not.toHaveBeenCalled();
 	});
 });
