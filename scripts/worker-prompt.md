@@ -62,7 +62,21 @@ gh issue edit <issue-number> --body "$UPDATED"
 
 Do this incrementally as you work, not all at once at the end. This gives visibility into progress.
 
-### 5. Commit
+### 5. Generate Database Migrations (if needed)
+
+If you changed `src/lib/server/db/schema.ts`, you MUST generate a migration file before committing:
+
+```bash
+pnpm db:generate
+```
+
+This runs `drizzle-kit generate`, which diffs your schema changes against the existing migration snapshots and creates a new `.sql` file in `drizzle/` plus updates `drizzle/meta/_journal.json`. Include ALL generated files in your commit (the `.sql` file, the updated `_journal.json`, and any snapshot files in `drizzle/meta/`).
+
+If `drizzle-kit generate` fails (e.g. it reports "No schema changes detected"), verify your schema.ts changes actually affect database structure. Relation definitions and TypeScript-only type changes don't need migrations.
+
+If it fails for any other reason, do not commit — explain the error in your output.
+
+### 6. Commit
 
 **Only commit if all quality gates pass.** If gates fail and you cannot fix them, **do not commit**. Instead, explain what's blocking you in your output so the runner can retry with that context.
 
@@ -89,7 +103,7 @@ Examples:
 - `fix(api): handle missing slug in setup lookup (#45)`
 - `chore(db): add index on stars table (#99)`
 
-### 6. Testing Instructions
+### 7. Testing Instructions
 
 After committing, output manual testing instructions wrapped in XML tags. These tell the reviewer how to verify your changes work correctly.
 

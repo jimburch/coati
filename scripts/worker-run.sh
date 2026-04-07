@@ -185,7 +185,36 @@ Fix these issues. Re-run the quality gates (pnpm check && pnpm lint && pnpm test
     CURRENT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "none")
 
     if [ "$CURRENT_COMMIT" != "$LAST_COMMIT_BEFORE" ]; then
-      echo "New commit detected. Running external quality gates..."
+      echo "New commit detected."
+
+      # --- Schema migration gate: if schema.ts changed, ensure migration was generated ---
+
+      SCHEMA_CHANGED=$(git diff --name-only HEAD~1 -- 'src/lib/server/db/schema.ts' 2>/dev/null || echo "")
+      MIGRATION_ADDED=$(git diff --name-only HEAD~1 -- 'drizzle/*.sql' 2>/dev/null || echo "")
+
+      if [ -n "$SCHEMA_CHANGED" ] && [ -z "$MIGRATION_ADDED" ]; then
+        echo "schema.ts changed but no migration file found in commit. Generating migration..."
+
+        if pnpm db:generate 2>&1; then
+          # Check if drizzle-kit actually produced new files
+          NEW_MIGRATION_FILES=$(git diff --name-only -- 'drizzle/*.sql' 'drizzle/meta/*' 2>/dev/null || echo "")
+          if [ -n "$NEW_MIGRATION_FILES" ]; then
+            echo "Migration generated. Amending commit with migration files..."
+            git add drizzle/
+            git commit --amend --no-edit
+            CURRENT_COMMIT=$(git rev-parse HEAD)
+          else
+            echo "drizzle-kit generate ran but produced no new files (schema change may not affect DB structure)."
+          fi
+        else
+          echo "ERROR: drizzle-kit generate failed. Resetting commit."
+          GATE_OUTPUT="drizzle-kit generate failed after schema.ts was changed. Ensure DATABASE_URL is set or that the schema change is valid."
+          git reset HEAD~1 --hard
+          continue
+        fi
+      fi
+
+      echo "Running external quality gates..."
 
       # --- Run quality gates externally ---
 
