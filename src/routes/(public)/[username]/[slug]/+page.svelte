@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Avatar, AvatarImage, AvatarFallback } from '$lib/components/ui/avatar';
-	import { Separator } from '$lib/components/ui/separator';
 	import { Button } from '$lib/components/ui/button';
 	import StarButton from '$lib/components/StarButton.svelte';
 	import AgentIcon from '$lib/components/AgentIcon.svelte';
@@ -92,16 +91,6 @@
 />
 
 <div class="mx-auto max-w-5xl px-4 py-6 lg:py-8">
-	<!-- Header -->
-	<div class="mb-4 lg:mb-6">
-		<div class="min-w-0">
-			<h1 class="text-xl font-bold lg:text-2xl">{data.setup.name}</h1>
-			<p class="mt-1 text-sm text-muted-foreground lg:text-base">{data.setup.description}</p>
-		</div>
-	</div>
-
-	<Separator class="mb-6 lg:mb-8" />
-
 	<!-- Two-column layout -->
 	<div class="flex flex-col gap-6 lg:flex-row lg:gap-8">
 		<!-- Main content -->
@@ -117,7 +106,7 @@
 					{/if}
 				</div>
 				{#if displayedReadmeHtml}
-					<div class="prose dark:prose-invert max-w-none">
+					<div class="prose dark:prose-invert max-w-none [&_pre]:!bg-secondary">
 						{@html displayedReadmeHtml}
 					</div>
 				{:else}
@@ -179,7 +168,7 @@
 							{#if previewing}
 								<p class="text-sm text-muted-foreground">Rendering preview...</p>
 							{:else if previewHtml}
-								<div class="prose dark:prose-invert max-w-none">
+								<div class="prose dark:prose-invert max-w-none [&_pre]:!bg-secondary">
 									{@html previewHtml}
 								</div>
 							{:else}
@@ -230,6 +219,13 @@
 		<!-- Sidebar -->
 		<div class="w-full shrink-0 lg:w-72">
 			<div class="space-y-6">
+				<!-- About -->
+				<div>
+					<h3 class="mb-2 text-sm font-semibold text-muted-foreground">About</h3>
+					<h2 class="text-lg font-semibold">{data.setup.name}</h2>
+					<p class="mt-1 text-sm text-muted-foreground">{data.setup.description}</p>
+				</div>
+
 				<!-- Author -->
 				<div>
 					<h3 class="mb-2 text-sm font-semibold text-muted-foreground">Author</h3>
@@ -330,7 +326,7 @@
 							{#each data.agents as agent (agent.id)}
 								<a
 									href="/agents/{agent.slug}"
-									class="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/80"
+									class="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground hover:bg-secondary/80"
 								>
 									<AgentIcon slug={agent.slug} size={12} />
 									{agent.displayName}
