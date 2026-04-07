@@ -53,11 +53,6 @@ test('shows line count in file header', async ({ page }) => {
 	await expect(page.getByText(/\d+ lines?/)).toBeVisible();
 });
 
-test('shows placement badge', async ({ page }) => {
-	await page.goto(FILES_URL);
-	await expect(page.getByText('project')).toBeVisible();
-});
-
 test('mobile shows toggle button instead of sidebar', async ({ page, isMobile }) => {
 	test.skip(!isMobile, 'mobile-only test');
 	await page.goto(FILES_URL);

@@ -15,7 +15,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import { sql } from 'drizzle-orm';
 import * as schema from '../src/lib/server/db/schema.js';
 import { AGENTS as AGENT_DEFS } from '@coati/agents-registry';
-import type { ComponentType, Placement, Category } from '@coati/validation';
+import type { ComponentType, Category } from '@coati/validation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,7 +42,6 @@ export interface GeneratedSetup {
 	slug: string;
 	description: string;
 	readme: string | null;
-	placement: Placement;
 	category: Category | null;
 	license: string | null;
 	starsCount: number;
@@ -277,7 +276,6 @@ function buildSetup(
 		slug,
 		description: description.slice(0, 300),
 		readme: template.readme,
-		placement: idx % 3 === 0 ? 'global' : 'project',
 		category: template.category,
 		license: idx % 4 === 0 ? 'MIT' : idx % 4 === 1 ? 'Apache-2.0' : null,
 		starsCount,
@@ -900,7 +898,6 @@ export async function seed(
 				slug: setupData.slug,
 				description: setupData.description,
 				readme: setupData.readme,
-				placement: setupData.placement,
 				category: setupData.category ?? undefined,
 				license: setupData.license ?? undefined,
 				starsCount: setupData.starsCount,

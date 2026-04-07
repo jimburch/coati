@@ -55,11 +55,7 @@
 
 		<!-- Main content -->
 		<div class="min-w-0 flex-1">
-			<FileViewer
-				file={data.selectedFile}
-				highlightedHtml={data.highlightedHtml}
-				placement={data.setup.placement}
-			/>
+			<FileViewer file={data.selectedFile} highlightedHtml={data.highlightedHtml} />
 		</div>
 	</div>
 </div>

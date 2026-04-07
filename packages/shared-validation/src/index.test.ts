@@ -5,7 +5,6 @@ import {
 	CATEGORY_VALUES,
 	SLUG_NAME_REGEX,
 	SEMVER_REGEX,
-	placementSchema,
 	componentTypeSchema,
 	categorySchema,
 	postInstallSchema
@@ -80,22 +79,6 @@ describe('SEMVER_REGEX', () => {
 		expect(SEMVER_REGEX.test('1.0.0.0')).toBe(false);
 		expect(SEMVER_REGEX.test('v1.0.0')).toBe(false);
 		expect(SEMVER_REGEX.test('1.0.x')).toBe(false);
-	});
-});
-
-describe('placementSchema', () => {
-	it('parses valid placements', () => {
-		expect(placementSchema.parse('global')).toBe('global');
-		expect(placementSchema.parse('project')).toBe('project');
-	});
-
-	it('rejects "relative" placement', () => {
-		expect(() => placementSchema.parse('relative')).toThrow();
-	});
-
-	it('rejects invalid placements', () => {
-		expect(() => placementSchema.parse('invalid')).toThrow();
-		expect(() => placementSchema.parse('')).toThrow();
 	});
 });
 

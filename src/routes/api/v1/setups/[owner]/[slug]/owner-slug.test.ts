@@ -25,7 +25,6 @@ const MOCK_SETUP = {
 	slug: 'my-setup',
 	description: 'A great setup',
 	readme: null,
-	placement: 'project',
 	category: null,
 	license: null,
 	minToolVersion: null,
@@ -60,6 +59,14 @@ describe('GET /api/v1/setups/[owner]/[slug]', () => {
 		expect(res.status).toBe(200);
 		const body = await res.json();
 		expect(body.data.slug).toBe('my-setup');
+	});
+
+	it('GET response does not include placement field', async () => {
+		mockGetByOwnerSlug.mockResolvedValue(MOCK_SETUP);
+		const { GET } = await import('./+server');
+		const res = await GET(makeGetEvent('alice', 'my-setup'));
+		const body = await res.json();
+		expect(body.data).not.toHaveProperty('placement');
 	});
 
 	it('returns 301 redirect to current slug when old slug found in redirects', async () => {
