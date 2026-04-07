@@ -6,13 +6,17 @@ import { resolveTargetPath, writeSetupFiles, type FileToWrite } from './files.js
 
 // ── hoisted mocks ─────────────────────────────────────────────────────────────
 
-const { mockResolveConflict } = vi.hoisted(() => ({
-	mockResolveConflict:
-		vi.fn<(filePath: string, incomingContent: string) => Promise<'overwrite' | 'skip' | 'backup'>>()
+const { mockResolveConflicts } = vi.hoisted(() => ({
+	mockResolveConflicts: vi.fn<
+		(
+			files: { relativePath: string; absolutePath: string; incomingContent: string }[]
+		) => Promise<Map<string, 'overwrite' | 'skip' | 'backup'>>
+	>()
 }));
 
 vi.mock('./prompts.js', () => ({
-	resolveConflict: mockResolveConflict,
+	resolveConflicts: mockResolveConflicts,
+	resolveConflict: vi.fn(),
 	confirm: vi.fn(),
 	select: vi.fn(),
 	input: vi.fn(),
@@ -155,7 +159,7 @@ describe('writeSetupFiles — conflict: overwrite', () => {
 	it('overwrites existing file when user picks overwrite', async () => {
 		const filePath = path.join(tmpDir, 'conf.md');
 		fs.writeFileSync(filePath, 'old content');
-		mockResolveConflict.mockResolvedValue('overwrite');
+		mockResolveConflicts.mockResolvedValue(new Map([[filePath, 'overwrite']]));
 
 		const result = await writeSetupFiles([makeFile({ path: 'conf.md', content: 'new content' })], {
 			projectDir: tmpDir,
@@ -172,7 +176,7 @@ describe('writeSetupFiles — conflict: skip', () => {
 	it('skips existing file when user picks skip', async () => {
 		const filePath = path.join(tmpDir, 'skip.md');
 		fs.writeFileSync(filePath, 'original');
-		mockResolveConflict.mockResolvedValue('skip');
+		mockResolveConflicts.mockResolvedValue(new Map([[filePath, 'skip']]));
 
 		const result = await writeSetupFiles([makeFile({ path: 'skip.md', content: 'new' })], {
 			projectDir: tmpDir,
@@ -189,7 +193,7 @@ describe('writeSetupFiles — conflict: backup', () => {
 	it('copies existing file to .coati-backup then writes new file', async () => {
 		const filePath = path.join(tmpDir, 'back.md');
 		fs.writeFileSync(filePath, 'old');
-		mockResolveConflict.mockResolvedValue('backup');
+		mockResolveConflicts.mockResolvedValue(new Map([[filePath, 'backup']]));
 
 		const result = await writeSetupFiles([makeFile({ path: 'back.md', content: 'new' })], {
 			projectDir: tmpDir,
@@ -217,7 +221,7 @@ describe('writeSetupFiles — force', () => {
 			force: true
 		});
 
-		expect(mockResolveConflict).not.toHaveBeenCalled();
+		expect(mockResolveConflicts).not.toHaveBeenCalled();
 		expect(result.written).toBe(1);
 		expect(fs.readFileSync(filePath, 'utf-8')).toBe('forced');
 	});
@@ -236,7 +240,7 @@ describe('writeSetupFiles — JSON mode', () => {
 			isJson: true
 		});
 
-		expect(mockResolveConflict).not.toHaveBeenCalled();
+		expect(mockResolveConflicts).not.toHaveBeenCalled();
 		expect(result.skipped).toBe(1);
 		expect(fs.readFileSync(filePath, 'utf-8')).toBe('original');
 	});
@@ -246,8 +250,9 @@ describe('writeSetupFiles — JSON mode', () => {
 
 describe('writeSetupFiles — multiple files', () => {
 	it('handles multiple files with mixed outcomes', async () => {
-		fs.writeFileSync(path.join(tmpDir, 'existing.md'), 'old');
-		mockResolveConflict.mockResolvedValue('skip');
+		const existingPath = path.join(tmpDir, 'existing.md');
+		fs.writeFileSync(existingPath, 'old');
+		mockResolveConflicts.mockResolvedValue(new Map([[existingPath, 'skip']]));
 
 		const files: FileToWrite[] = [
 			makeFile({ path: 'new.md', content: 'new file' }),

@@ -356,9 +356,15 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 				ctx.io.print('');
 				for (const f of writeResult.files) {
 					const icon = f.outcome === 'written' ? '✓' : f.outcome === 'backed-up' ? '↻' : '-';
-					ctx.io.print(`  ${icon} ${f.target}`);
+					const displayPath = f.target.startsWith(projectDir + path.sep)
+						? f.target.slice(projectDir.length + 1)
+						: f.target;
+					ctx.io.print(`  ${icon} ${displayPath}`);
 					if (f.backupPath) {
-						ctx.io.print(`    (backup: ${f.backupPath})`);
+						const displayBackup = f.backupPath.startsWith(projectDir + path.sep)
+							? f.backupPath.slice(projectDir.length + 1)
+							: f.backupPath;
+						ctx.io.print(`    (backup: ${displayBackup})`);
 					}
 				}
 			}

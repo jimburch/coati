@@ -55,29 +55,169 @@ export async function input(question: string, defaultValue?: string): Promise<st
 }
 
 export type ConflictResolution = 'overwrite' | 'skip' | 'backup';
-type ConflictChoice = ConflictResolution | 'show-diff';
 
-/** Prompt the user to resolve a file conflict. When "Show diff" is selected,
- *  prints a colorized unified diff and re-prompts with the same 4 options. */
-export async function resolveConflict(
-	filePath: string,
-	incomingContent: string
-): Promise<ConflictResolution> {
-	p.log.warn(`Conflict: ${filePath} already exists`);
+export interface ConflictFile {
+	/** Relative path shown to the user (e.g. `.claude/commands/test.md`). */
+	relativePath: string;
+	/** Absolute path on disk — used to read existing content for diffs. */
+	absolutePath: string;
+	/** The incoming file content that would be written. */
+	incomingContent: string;
+}
+
+const RESOLUTION_LABELS: Record<ConflictResolution, string> = {
+	overwrite: 'overwrite',
+	skip: 'skip',
+	backup: 'backup'
+};
+
+const RESOLUTION_ICONS: Record<ConflictResolution, string> = {
+	overwrite: '✓',
+	skip: '-',
+	backup: '↻'
+};
+
+/**
+ * Batch conflict resolver. Shows all conflicting files in a single interactive
+ * menu. The user can change per-file actions, view diffs, or apply bulk actions
+ * before confirming.
+ *
+ * Returns a Map from absolutePath → resolution for every conflict file.
+ */
+export async function resolveConflicts(
+	files: ConflictFile[]
+): Promise<Map<string, ConflictResolution>> {
+	if (isJsonMode()) requiresInteractivity('conflict resolution');
+
+	const resolutions = new Map<string, ConflictResolution>();
+	for (const f of files) {
+		resolutions.set(f.absolutePath, 'overwrite');
+	}
+
+	if (files.length === 1) {
+		// Single file — simpler inline prompt
+		const f = files[0]!;
+		p.log.warn(`Conflict: ${f.relativePath} already exists`);
+		const result = await resolveSingleConflict(f);
+		resolutions.set(f.absolutePath, result);
+		return resolutions;
+	}
+
+	p.log.warn(`${files.length} files already exist and will conflict:`);
 
 	for (;;) {
-		const choice = await select<ConflictChoice>('How do you want to handle this?', [
+		// Build the current state display
+		const fileOptions = files.map((f) => {
+			const res = resolutions.get(f.absolutePath)!;
+			const icon = RESOLUTION_ICONS[res];
+			const label = RESOLUTION_LABELS[res];
+			return {
+				label: `${icon} ${f.relativePath}  (${label})`,
+				value: f.absolutePath
+			};
+		});
+
+		type MenuChoice = string | 'bulk-overwrite' | 'bulk-skip' | 'bulk-backup' | 'confirm';
+
+		const allChoices: { label: string; value: MenuChoice }[] = [
+			...fileOptions,
+			{ label: '─────────────────────────', value: 'sep-1' as MenuChoice },
+			{ label: 'Overwrite all', value: 'bulk-overwrite' },
+			{ label: 'Skip all', value: 'bulk-skip' },
+			{ label: 'Backup all', value: 'bulk-backup' },
+			{ label: '─────────────────────────', value: 'sep-2' as MenuChoice },
+			{ label: 'Confirm & proceed', value: 'confirm' }
+		];
+
+		const choice = await select<MenuChoice>('Review conflicts (select a file to change action)', allChoices);
+
+		if (choice === 'confirm') break;
+
+		if (choice === 'bulk-overwrite') {
+			for (const f of files) resolutions.set(f.absolutePath, 'overwrite');
+			continue;
+		}
+		if (choice === 'bulk-skip') {
+			for (const f of files) resolutions.set(f.absolutePath, 'skip');
+			continue;
+		}
+		if (choice === 'bulk-backup') {
+			for (const f of files) resolutions.set(f.absolutePath, 'backup');
+			continue;
+		}
+
+		// Separator items — ignore
+		if (choice === 'sep-1' || choice === 'sep-2') continue;
+
+		// User selected a file — show per-file action sub-menu
+		const selected = files.find((f) => f.absolutePath === choice);
+		if (!selected) continue;
+
+		await resolveFileAction(selected, resolutions);
+	}
+
+	return resolutions;
+}
+
+/** Sub-menu for a single file within the batch resolver. */
+async function resolveFileAction(
+	file: ConflictFile,
+	resolutions: Map<string, ConflictResolution>
+): Promise<void> {
+	type FileChoice = ConflictResolution | 'show-diff';
+
+	for (;;) {
+		const choice = await select<FileChoice>(`${file.relativePath}`, [
 			{ label: 'Overwrite', value: 'overwrite' },
 			{ label: 'Skip', value: 'skip' },
-			{ label: `Backup existing (→ ${filePath}.bak)`, value: 'backup' },
+			{ label: 'Backup existing', value: 'backup' },
+			{ label: 'Show diff', value: 'show-diff' }
+		]);
+
+		if (choice === 'show-diff') {
+			const existingContent = fs.readFileSync(file.absolutePath, 'utf-8');
+			process.stdout.write(
+				'\n' + generateDiff(existingContent, file.incomingContent, file.relativePath) + '\n'
+			);
+			continue;
+		}
+
+		resolutions.set(file.absolutePath, choice);
+		return;
+	}
+}
+
+/** Prompt for a single conflict file (used when there's only one conflict). */
+async function resolveSingleConflict(file: ConflictFile): Promise<ConflictResolution> {
+	type Choice = ConflictResolution | 'show-diff';
+
+	for (;;) {
+		const choice = await select<Choice>('How do you want to handle this?', [
+			{ label: 'Overwrite', value: 'overwrite' },
+			{ label: 'Skip', value: 'skip' },
+			{ label: `Backup existing (→ ${file.relativePath}.bak)`, value: 'backup' },
 			{ label: 'Show diff', value: 'show-diff' }
 		]);
 
 		if (choice !== 'show-diff') return choice;
 
-		const existingContent = fs.readFileSync(filePath, 'utf-8');
-		process.stdout.write('\n' + generateDiff(existingContent, incomingContent, filePath) + '\n');
+		const existingContent = fs.readFileSync(file.absolutePath, 'utf-8');
+		process.stdout.write(
+			'\n' + generateDiff(existingContent, file.incomingContent, file.relativePath) + '\n'
+		);
 	}
+}
+
+/** @deprecated Use resolveConflicts (plural) for batch resolution. */
+export async function resolveConflict(
+	filePath: string,
+	incomingContent: string
+): Promise<ConflictResolution> {
+	return resolveSingleConflict({
+		relativePath: filePath,
+		absolutePath: filePath,
+		incomingContent
+	});
 }
 
 export type InstallDestination = 'current' | 'global';

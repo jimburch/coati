@@ -2,7 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { type ManifestPlacement } from './manifest.js';
-import { resolveConflict } from './prompts.js';
+import { resolveConflicts, type ConflictFile, type ConflictResolution } from './prompts.js';
 
 export interface FileToWrite {
 	path: string;
@@ -61,65 +61,82 @@ export function resolveTargetPath(
  *
  * - Creates parent directories as needed.
  * - Writes atomically (temp file + rename).
- * - Prompts for per-file conflict resolution (overwrite / skip / backup) unless
- *   --force is set or JSON mode is active (JSON mode auto-skips conflicts).
+ * - Collects all conflicts and presents them in a single batch prompt (unless
+ *   --force is set or JSON mode is active).
  * - Backup copies are written to `<target>.coati-backup`.
  */
 export async function writeSetupFiles(
 	files: FileToWrite[],
 	options: WriteOptions = {}
 ): Promise<WriteResult> {
-	const results: FileWriteResult[] = [];
 	const placement = options.placement ?? 'project';
 
-	for (const file of files) {
-		const resolvedPath = resolveTargetPath(file.path, placement, options);
+	// Phase 1: resolve paths and detect conflicts
+	const resolved = files.map((file) => {
+		const absolutePath = resolveTargetPath(file.path, placement, options);
+		return { file, absolutePath, exists: !options.dryRun && fs.existsSync(absolutePath) };
+	});
 
+	// Phase 2: batch-resolve conflicts
+	let resolutions = new Map<string, ConflictResolution>();
+
+	if (!options.dryRun && !options.force && !options.isJson) {
+		const conflicts: ConflictFile[] = resolved
+			.filter((r) => r.exists)
+			.map((r) => ({
+				relativePath: r.file.path,
+				absolutePath: r.absolutePath,
+				incomingContent: r.file.content
+			}));
+
+		if (conflicts.length > 0) {
+			resolutions = await resolveConflicts(conflicts);
+		}
+	}
+
+	// Phase 3: write files using resolutions
+	const results: FileWriteResult[] = [];
+
+	for (const { file, absolutePath, exists } of resolved) {
 		if (options.dryRun) {
-			results.push({ target: resolvedPath, outcome: 'written' });
+			results.push({ target: absolutePath, outcome: 'written' });
 			continue;
 		}
-
-		const exists = fs.existsSync(resolvedPath);
 
 		let shouldWrite = true;
 		let outcome: WriteOutcome = 'written';
 		let backupPath: string | undefined;
 
 		if (exists) {
-			let resolution: 'overwrite' | 'skip' | 'backup';
+			let resolution: ConflictResolution;
 
 			if (options.force) {
 				resolution = 'overwrite';
 			} else if (options.isJson) {
-				// Non-interactive mode: skip conflicts rather than hanging on a prompt.
 				resolution = 'skip';
 			} else {
-				resolution = await resolveConflict(resolvedPath, file.content);
+				resolution = resolutions.get(absolutePath) ?? 'overwrite';
 			}
 
 			if (resolution === 'skip') {
 				shouldWrite = false;
 				outcome = 'skipped';
 			} else if (resolution === 'backup') {
-				backupPath = resolvedPath + '.coati-backup';
-				fs.copyFileSync(resolvedPath, backupPath);
+				backupPath = absolutePath + '.coati-backup';
+				fs.copyFileSync(absolutePath, backupPath);
 				outcome = 'backed-up';
 			}
-			// 'overwrite' → shouldWrite stays true, outcome stays 'written'
 		}
 
 		if (shouldWrite) {
-			const dir = path.dirname(resolvedPath);
+			const dir = path.dirname(absolutePath);
 			fs.mkdirSync(dir, { recursive: true });
 
-			// Atomic write: write to a temp file then rename into place.
-			const tmpPath = resolvedPath + '.coati-tmp';
+			const tmpPath = absolutePath + '.coati-tmp';
 			try {
 				fs.writeFileSync(tmpPath, file.content, 'utf-8');
-				fs.renameSync(tmpPath, resolvedPath);
+				fs.renameSync(tmpPath, absolutePath);
 			} catch (err) {
-				// Clean up the orphaned temp file before re-throwing.
 				try {
 					fs.unlinkSync(tmpPath);
 				} catch {
@@ -130,7 +147,7 @@ export async function writeSetupFiles(
 		}
 
 		results.push({
-			target: resolvedPath,
+			target: absolutePath,
 			outcome,
 			...(backupPath !== undefined && { backupPath })
 		});

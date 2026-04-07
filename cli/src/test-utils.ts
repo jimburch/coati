@@ -36,6 +36,7 @@ export function createTestContext(overrides?: Partial<CommandContext>): CommandC
 			select: vi.fn(),
 			text: vi.fn(),
 			resolveConflict: vi.fn(),
+			resolveConflicts: vi.fn(),
 			promptDestination: vi.fn(),
 			promptAgentSelection: vi.fn(),
 			checklist: vi.fn(),

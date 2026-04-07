@@ -14,6 +14,7 @@ const execAsync = promisify(exec);
 export type { ApiClientOptions } from './api.js';
 export type { OutputMode, TableColumn } from './output.js';
 export type {
+	ConflictFile,
 	ConflictResolution,
 	InstallDestination,
 	PickableFile,
@@ -56,6 +57,7 @@ export interface IoClient {
 	select<T extends string>(message: string, options: { label: string; value: T }[]): Promise<T>;
 	text(message: string, opts?: { placeholder?: string; defaultValue?: string }): Promise<string>;
 	resolveConflict(filePath: string, incomingContent: string): Promise<prompts.ConflictResolution>;
+	resolveConflicts(files: prompts.ConflictFile[]): Promise<Map<string, prompts.ConflictResolution>>;
 	promptDestination(defaultScope?: prompts.InstallDestination): Promise<prompts.InstallDestination>;
 	promptAgentSelection(agents: { slug: string; displayName: string }[]): Promise<string>;
 	checklist<T extends string>(
@@ -150,6 +152,7 @@ export function createContext(): CommandContext {
 			select: prompts.select,
 			text: (message, opts?) => prompts.input(message, opts?.defaultValue),
 			resolveConflict: prompts.resolveConflict,
+			resolveConflicts: prompts.resolveConflicts,
 			promptDestination: prompts.promptDestination,
 			promptAgentSelection: prompts.promptAgentSelection,
 			checklist: prompts.checklist,
