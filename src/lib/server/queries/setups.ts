@@ -27,6 +27,7 @@ function toSetupFileRows(setupId: string, files: NonNullable<FileInput>) {
 		path: f.path,
 		componentType: f.componentType,
 		description: f.description,
+		agent: f.agent,
 		content: f.content
 	}));
 }
@@ -145,10 +146,22 @@ export async function createSetup(userId: string, data: CreateSetupInput) {
 			await tx.insert(setupFiles).values(toSetupFileRows(setup.id, data.files));
 		}
 
+		// Resolve agent slugs from files and populate setupAgents junction table
+		const fileSlugs = [...new Set((data.files ?? []).map((f) => f.agent).filter(Boolean))] as string[];
 		if (data.agentIds && data.agentIds.length > 0) {
 			await tx
 				.insert(setupAgents)
 				.values(data.agentIds.map((agentId) => ({ setupId: setup.id, agentId })));
+		} else if (fileSlugs.length > 0) {
+			const matched = await tx
+				.select({ id: agents.id })
+				.from(agents)
+				.where(inArray(agents.slug, fileSlugs));
+			if (matched.length > 0) {
+				await tx
+					.insert(setupAgents)
+					.values(matched.map((a) => ({ setupId: setup.id, agentId: a.id })));
+			}
 		}
 
 		if (data.tagIds && data.tagIds.length > 0) {
@@ -197,6 +210,21 @@ export async function updateSetup(id: string, data: UpdateSetupInput) {
 			await tx.delete(setupFiles).where(eq(setupFiles.setupId, id));
 			if (data.files.length > 0) {
 				await tx.insert(setupFiles).values(toSetupFileRows(id, data.files));
+			}
+
+			// Refresh setupAgents from file agent slugs
+			const fileSlugs = [...new Set(data.files.map((f) => f.agent).filter(Boolean))] as string[];
+			await tx.delete(setupAgents).where(eq(setupAgents.setupId, id));
+			if (fileSlugs.length > 0) {
+				const matched = await tx
+					.select({ id: agents.id })
+					.from(agents)
+					.where(inArray(agents.slug, fileSlugs));
+				if (matched.length > 0) {
+					await tx
+						.insert(setupAgents)
+						.values(matched.map((a) => ({ setupId: id, agentId: a.id })));
+				}
 			}
 		}
 
@@ -620,6 +648,21 @@ export async function updateSetupByIdWithSlugRedirects(
 			await tx.delete(setupFiles).where(eq(setupFiles.setupId, id));
 			if (data.files.length > 0) {
 				await tx.insert(setupFiles).values(toSetupFileRows(id, data.files));
+			}
+
+			// Refresh setupAgents from file agent slugs
+			const fileSlugs = [...new Set(data.files.map((f) => f.agent).filter(Boolean))] as string[];
+			await tx.delete(setupAgents).where(eq(setupAgents.setupId, id));
+			if (fileSlugs.length > 0) {
+				const matched = await tx
+					.select({ id: agents.id })
+					.from(agents)
+					.where(inArray(agents.slug, fileSlugs));
+				if (matched.length > 0) {
+					await tx
+						.insert(setupAgents)
+						.values(matched.map((a) => ({ setupId: id, agentId: a.id })));
+				}
 			}
 		}
 

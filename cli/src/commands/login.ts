@@ -34,6 +34,88 @@ interface LoginOptions {
 	json?: boolean;
 }
 
+/**
+ * Run the interactive login flow (GitHub Device Flow).
+ * Can be called from the login command or from other commands that need auth.
+ * Returns the username on success, or exits the process on failure.
+ */
+export async function runLoginFlow(
+	ctx: CommandContext,
+	options: { browser?: boolean } = {}
+): Promise<string> {
+	// Step 1: Request device code
+	let deviceInfo: Awaited<ReturnType<typeof ctx.auth.requestDeviceCode>>;
+	try {
+		deviceInfo = await ctx.auth.requestDeviceCode();
+	} catch (err) {
+		ctx.io.error(err instanceof Error ? err.message : 'Failed to start device flow');
+		process.exit(1);
+	}
+
+	// Step 2: Show user code + verification URL
+	if (ctx.io.isJson()) {
+		ctx.io.json({
+			userCode: deviceInfo.userCode,
+			verificationUri: deviceInfo.verificationUri
+		});
+	} else {
+		ctx.io.print('');
+		ctx.io.print(`  Open: ${pc.bold(deviceInfo.verificationUri)}`);
+		ctx.io.print(`  Code: ${pc.bold(pc.yellow(deviceInfo.userCode))}`);
+		ctx.io.print('');
+	}
+
+	// Step 3: Auto-open browser
+	if (options.browser !== false) {
+		try {
+			const { default: open } = await import('open');
+			await open(deviceInfo.verificationUri);
+		} catch {
+			// Silently ignore browser open failures
+		}
+	}
+
+	// Step 4: Poll with spinner
+	const spinner = createSpinner('Waiting for authorization...', ctx.io.isJson());
+
+	let token: string;
+	let username: string;
+	try {
+		const result = await ctx.auth.pollForToken(
+			deviceInfo.deviceCode,
+			deviceInfo.interval,
+			deviceInfo.expiresIn
+		);
+		token = result.token;
+		username = result.username;
+	} catch (err) {
+		spinner.stop();
+		ctx.io.error(err instanceof Error ? err.message : 'Authorization failed');
+		process.exit(1);
+	}
+
+	spinner.stop();
+
+	// Step 5: Store credentials
+	ctx.auth.storeCredentials(token, username);
+
+	// Step 6: Verify token (non-fatal if it fails)
+	try {
+		await ctx.auth.verifyToken();
+	} catch {
+		// Credentials are stored; verification failure is non-fatal
+	}
+
+	// Step 7: Print success
+	if (ctx.io.isJson()) {
+		ctx.io.json({ success: true, username });
+	} else {
+		ctx.io.success(`Logged in as ${pc.bold(username)}`);
+	}
+
+	return username;
+}
+
 export function registerLogin(program: Command, ctx: CommandContext): void {
 	program
 		.command('login')
@@ -52,74 +134,6 @@ export function registerLogin(program: Command, ctx: CommandContext): void {
 				process.exit(1);
 			}
 
-			// Step 1: Request device code
-			let deviceInfo: Awaited<ReturnType<typeof ctx.auth.requestDeviceCode>>;
-			try {
-				deviceInfo = await ctx.auth.requestDeviceCode();
-			} catch (err) {
-				ctx.io.error(err instanceof Error ? err.message : 'Failed to start device flow');
-				process.exit(1);
-			}
-
-			// Step 2: Show user code + verification URL
-			if (ctx.io.isJson()) {
-				ctx.io.json({
-					userCode: deviceInfo.userCode,
-					verificationUri: deviceInfo.verificationUri
-				});
-			} else {
-				ctx.io.print('');
-				ctx.io.print(`  Open: ${pc.bold(deviceInfo.verificationUri)}`);
-				ctx.io.print(`  Code: ${pc.bold(pc.yellow(deviceInfo.userCode))}`);
-				ctx.io.print('');
-			}
-
-			// Step 3: Auto-open browser (unless --no-browser)
-			if (options.browser !== false) {
-				try {
-					const { default: open } = await import('open');
-					await open(deviceInfo.verificationUri);
-				} catch {
-					// Silently ignore browser open failures
-				}
-			}
-
-			// Step 4: Poll with spinner
-			const spinner = createSpinner('Waiting for authorization...', ctx.io.isJson());
-
-			let token: string;
-			let username: string;
-			try {
-				const result = await ctx.auth.pollForToken(
-					deviceInfo.deviceCode,
-					deviceInfo.interval,
-					deviceInfo.expiresIn
-				);
-				token = result.token;
-				username = result.username;
-			} catch (err) {
-				spinner.stop();
-				ctx.io.error(err instanceof Error ? err.message : 'Authorization failed');
-				process.exit(1);
-			}
-
-			spinner.stop();
-
-			// Step 5: Store credentials
-			ctx.auth.storeCredentials(token, username);
-
-			// Step 6: Verify token (non-fatal if it fails)
-			try {
-				await ctx.auth.verifyToken();
-			} catch {
-				// Credentials are stored; verification failure is non-fatal
-			}
-
-			// Step 7: Print success
-			if (ctx.io.isJson()) {
-				ctx.io.json({ success: true, username });
-			} else {
-				ctx.io.success(`Logged in as ${pc.bold(username)}`);
-			}
+			await runLoginFlow(ctx, { browser: options.browser });
 		});
 }

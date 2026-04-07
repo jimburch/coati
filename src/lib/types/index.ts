@@ -96,6 +96,7 @@ export const createSetupFileSchema = z.object({
 	path: z.string().min(1),
 	componentType: componentTypeSchema.default('instruction'),
 	description: z.string().optional(),
+	agent: z.string().max(100).optional(),
 	content: z.string().min(1).max(102400, 'File exceeds 100KB limit')
 });
 

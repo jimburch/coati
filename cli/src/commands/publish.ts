@@ -6,6 +6,8 @@ import { ApiError } from '../context.js';
 import { readManifest, writeManifest, MANIFEST_FILENAME, type Manifest } from '../manifest.js';
 import type { CommandContext } from '../context.js';
 import { runInitFlow } from './init.js';
+import { runLoginFlow } from './login.js';
+import { confirm } from '../prompts.js';
 
 interface PublishOptions {
 	json?: boolean;
@@ -111,14 +113,26 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 			const cwd = process.cwd();
 			const config = ctx.fs.readConfig();
 
-			// Require authentication
+			// Require authentication — offer to log in interactively
 			if (!ctx.auth.isLoggedIn()) {
-				ctx.io.error('Not logged in. Run `coati login` to authenticate.');
-				process.exit(1);
-				return;
+				if (ctx.io.isJson()) {
+					ctx.io.error('Not logged in. Run `coati login` to authenticate.');
+					process.exit(1);
+					return;
+				}
+
+				ctx.io.warning('You are not logged in.');
+				const shouldLogin = await confirm('Would you like to log in now?', true);
+				if (!shouldLogin) {
+					ctx.io.print('Run `coati login` when you are ready to authenticate.');
+					process.exit(0);
+					return;
+				}
+
+				await runLoginFlow(ctx);
 			}
 
-			const owner = config.username!;
+			const owner = ctx.fs.readConfig().username!;
 
 			// Check for coati.json; auto-run init if absent
 			const manifestPath = path.join(cwd, MANIFEST_FILENAME);
@@ -167,6 +181,7 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 				path: string;
 				componentType: string;
 				description?: string;
+				agent?: string;
 				content: string;
 			}> = [];
 
@@ -184,6 +199,7 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 					path: file.path,
 					componentType: file.componentType ?? 'instruction',
 					...(file.description ? { description: file.description } : {}),
+					...(file.agent ? { agent: file.agent } : {}),
 					content
 				});
 			}
@@ -205,19 +221,51 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 				ctx.io.print(`${isUpdate ? 'Updating' : 'Publishing'} ${owner}/${manifest.name}...`);
 			}
 
+			const doPublish = async (): Promise<SetupResponse> => {
+				const currentOwner = ctx.fs.readConfig().username!;
+				const currentPayload = { ...payload, owner: currentOwner };
+				if (!isUpdate) {
+					const res = await ctx.api.post<SetupResponse>(`/setups`, currentPayload);
+					const updatedManifest = insertIdIntoManifest(manifest, res.id);
+					writeManifest(cwd, updatedManifest);
+					return res;
+				} else {
+					return await ctx.api.patch<SetupResponse>(`/setups/${manifest.id}`, currentPayload);
+				}
+			};
+
 			let result: SetupResponse;
 			try {
-				if (!isUpdate) {
-					// First publish: create via POST, then write id back to coati.json
-					result = await ctx.api.post<SetupResponse>(`/setups`, payload);
-					const updatedManifest = insertIdIntoManifest(manifest, result.id);
-					writeManifest(cwd, updatedManifest);
-				} else {
-					// Subsequent publish: update by UUID
-					result = await ctx.api.patch<SetupResponse>(`/setups/${manifest.id}`, payload);
-				}
+				result = await doPublish();
 			} catch (e) {
-				if (e instanceof ApiError) {
+				// On auth failure, offer to log in and retry
+				if (
+					e instanceof ApiError &&
+					(e.status === 401 || (e.status === 403 && !isUpdate)) &&
+					!ctx.io.isJson()
+				) {
+					ctx.io.warning('Authentication failed. Your session may have expired.');
+					const shouldLogin = await confirm('Would you like to log in again?', true);
+					if (shouldLogin) {
+						await runLoginFlow(ctx);
+						ctx.io.print('Retrying publish...');
+						try {
+							result = await doPublish();
+						} catch (retryErr) {
+							ctx.io.error(
+								retryErr instanceof Error
+									? `Publish failed after re-login: ${retryErr.message}`
+									: 'Publish failed after re-login.'
+							);
+							process.exit(1);
+							return;
+						}
+					} else {
+						ctx.io.print('Run `coati login` when you are ready to re-authenticate.');
+						process.exit(0);
+						return;
+					}
+				} else if (e instanceof ApiError) {
 					if (isUpdate && e.status === 404) {
 						ctx.io.error(
 							'Setup with this ID no longer exists. Remove `id` from coati.json to publish as new.'
@@ -235,6 +283,8 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 					} else {
 						ctx.io.error(`Failed to ${isUpdate ? 'update' : 'publish'} setup: ${e.message}`);
 					}
+					process.exit(1);
+					return;
 				} else if (e instanceof Error) {
 					if (
 						e.message.includes('ECONNREFUSED') ||
@@ -246,20 +296,23 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 					} else {
 						ctx.io.error(`Failed to ${isUpdate ? 'update' : 'publish'} setup: ${e.message}`);
 					}
+					process.exit(1);
+					return;
 				} else {
 					ctx.io.error('An unexpected error occurred.');
+					process.exit(1);
+					return;
 				}
-				process.exit(1);
-				return;
 			}
 
-			const platformBase = config.apiBase.replace('/api/v1', '');
-			const setupUrl = `${platformBase}/${owner}/${result.slug}`;
+			const currentConfig = ctx.fs.readConfig();
+			const platformBase = currentConfig.apiBase.replace('/api/v1', '');
+			const setupUrl = `${platformBase}/${currentConfig.username}/${result.slug}`;
 
 			if (ctx.io.isJson()) {
 				ctx.io.json({
 					action: isUpdate ? 'updated' : 'created',
-					owner,
+					owner: currentConfig.username,
 					slug: result.slug,
 					url: setupUrl
 				});
