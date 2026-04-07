@@ -5,7 +5,6 @@ import { AGENTS_BY_SLUG } from '@coati/agents-registry';
 import { ApiError } from '../context.js';
 import { detectInstalledAgents } from '../agent-detection.js';
 import { MANIFEST_FILENAME } from '../manifest.js';
-import type { ManifestPlacement } from '../manifest.js';
 import type { CommandContext } from '../context.js';
 
 interface SetupMeta {
@@ -14,7 +13,6 @@ interface SetupMeta {
 	slug: string;
 	version?: string;
 	description: string;
-	placement: ManifestPlacement;
 	ownerUsername: string;
 	clonesCount: number;
 	starsCount: number;
@@ -41,6 +39,8 @@ interface CloneOptions {
 	projectDir?: string;
 	dir?: string;
 	agent?: string;
+	global?: boolean;
+	project?: boolean;
 }
 
 function isNetworkError(err: Error): boolean {
@@ -62,7 +62,12 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 		.option('--force', 'Overwrite all conflicts without prompting')
 		.option('--pick', 'Interactively select which files to install')
 		.option('--no-post-install', 'Skip post-install commands')
-		.option('--dir <path>', 'Override destination directory for project-scoped files')
+		.option('--global', 'Install to global path (~/.coati/setups/owner/slug)')
+		.option('--project', 'Install to the current working directory')
+		.option(
+			'--dir <path>',
+			'Override destination directory (takes precedence over --global/--project)'
+		)
 		.option('--project-dir <path>', 'Project directory for project-scoped files (default: cwd)')
 		.option('--agent <slug>', 'Override agent detection and install files for this agent only')
 		.option('--json', 'Output results as JSON')
@@ -205,14 +210,27 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 				files = selectedIndices.map((i) => files[i]!);
 			}
 
-			// Resolve project directory (used for project-scoped setups)
-			// --dir sets a custom project directory; otherwise use cwd or --project-dir
+			// ── Resolve project directory ──────────────────────────────────────────
+			// Priority: --dir > --global/--project flags > interactive prompt > JSON default
 			let projectDir: string;
+
 			if (opts.dir) {
+				// --dir takes precedence over everything
 				projectDir = path.resolve(opts.dir);
-			} else if (setup.placement === 'global') {
+			} else if (opts.global) {
 				projectDir = path.join(os.homedir(), '.coati', 'setups', owner, slug);
+			} else if (opts.project) {
+				projectDir = opts.projectDir ? path.resolve(opts.projectDir) : process.cwd();
+			} else if (!ctx.io.isJson()) {
+				// Prompt user to choose placement
+				const destination = await ctx.io.promptDestination();
+				if (destination === 'global') {
+					projectDir = path.join(os.homedir(), '.coati', 'setups', owner, slug);
+				} else {
+					projectDir = opts.projectDir ? path.resolve(opts.projectDir) : process.cwd();
+				}
 			} else {
+				// JSON mode with no placement flag — default to project (cwd)
 				projectDir = opts.projectDir ? path.resolve(opts.projectDir) : process.cwd();
 			}
 
@@ -222,8 +240,7 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 			}
 
 			if (!ctx.io.isJson()) {
-				const prefix = setup.placement === 'global' ? '~/' : projectDir;
-				ctx.io.print(`\nCloning ${owner}/${slug} → ${prefix}\n`);
+				ctx.io.print(`\nCloning ${owner}/${slug} → ${projectDir}\n`);
 				if (opts.dryRun) {
 					ctx.io.info('Dry run — no files will be written.\n');
 				}
@@ -240,7 +257,6 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 			try {
 				writeResult = await ctx.fs.writeSetupFiles(filesToWrite, {
 					projectDir,
-					placement: setup.placement,
 					force: opts.force,
 					dryRun: opts.dryRun
 				});
@@ -310,7 +326,6 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 			if (ctx.io.isJson()) {
 				ctx.io.json({
 					setup: { owner, slug, name: setup.name },
-					placement: setup.placement,
 					projectDir,
 					dryRun: opts.dryRun ?? false,
 					written: writeResult.written,

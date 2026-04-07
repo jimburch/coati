@@ -37,14 +37,8 @@ const SETUP_META = {
 };
 
 const SETUP_FILES = [
-	{ id: 'f1', source: 'CLAUDE.md', target: 'CLAUDE.md', placement: 'project', content: '# Hello' },
-	{
-		id: 'f2',
-		source: 'settings.json',
-		target: '~/.claude/settings.json',
-		placement: 'global',
-		content: '{}'
-	}
+	{ id: 'f1', path: 'CLAUDE.md', content: '# Hello' },
+	{ id: 'f2', path: '.claude/settings.json', content: '{}' }
 ];
 
 const WRITE_RESULT = {
@@ -167,7 +161,7 @@ describe('clone — basic flow', () => {
 		expect(ctx.api.get).toHaveBeenCalledWith('/setups/alice/my-setup');
 		expect(ctx.api.get).toHaveBeenCalledWith('/setups/alice/my-setup/files');
 		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith(
-			SETUP_FILES,
+			SETUP_FILES.map((f) => ({ path: f.path, content: f.content })),
 			expect.objectContaining({ projectDir: expect.any(String) })
 		);
 	});
@@ -289,9 +283,12 @@ describe('clone — --pick', () => {
 		const program = makeProgram();
 		await program.parseAsync(['clone', 'alice/my-setup', '--pick'], { from: 'user' });
 
-		expect(ctx.io.pickFiles).toHaveBeenCalledWith(SETUP_FILES);
+		expect(ctx.io.pickFiles).toHaveBeenCalledWith(SETUP_FILES.map((f) => ({ path: f.path })));
 		// Only the first file should be passed to writeSetupFiles
-		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith([SETUP_FILES[0]], expect.anything());
+		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith(
+			[{ path: SETUP_FILES[0]!.path, content: SETUP_FILES[0]!.content }],
+			expect.anything()
+		);
 	});
 
 	it('exits with warning when no files selected via --pick', async () => {
@@ -312,7 +309,10 @@ describe('clone — --pick', () => {
 		await program.parseAsync(['clone', 'alice/my-setup', '--pick', '--json'], { from: 'user' });
 
 		expect(ctx.io.pickFiles).not.toHaveBeenCalled();
-		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith(SETUP_FILES, expect.anything());
+		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith(
+			SETUP_FILES.map((f) => ({ path: f.path, content: f.content })),
+			expect.anything()
+		);
 	});
 
 	it('--pick + --force passes force=true to writeSetupFiles with filtered files', async () => {
@@ -321,8 +321,81 @@ describe('clone — --pick', () => {
 		await program.parseAsync(['clone', 'alice/my-setup', '--pick', '--force'], { from: 'user' });
 
 		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith(
-			[SETUP_FILES[1]],
+			[{ path: SETUP_FILES[1]!.path, content: SETUP_FILES[1]!.content }],
 			expect.objectContaining({ force: true })
+		);
+	});
+});
+
+// ── placement prompt ──────────────────────────────────────────────────────────
+
+describe('clone — placement prompt', () => {
+	it('prompts for destination when no placement flag is passed', async () => {
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' });
+
+		expect(ctx.io.promptDestination).toHaveBeenCalled();
+	});
+
+	it('selecting "current" installs to cwd', async () => {
+		vi.mocked(ctx.io.promptDestination).mockResolvedValue('current');
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' });
+
+		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({ projectDir: process.cwd() })
+		);
+	});
+
+	it('selecting "global" installs to ~/.coati/setups/owner/slug', async () => {
+		vi.mocked(ctx.io.promptDestination).mockResolvedValue('global');
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' });
+
+		const globalPath = path.join(os.homedir(), '.coati', 'setups', 'alice', 'my-setup');
+		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({ projectDir: globalPath })
+		);
+	});
+
+	it('skips placement prompt in JSON mode', async () => {
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup', '--json'], { from: 'user' });
+
+		expect(ctx.io.promptDestination).not.toHaveBeenCalled();
+	});
+});
+
+// ── --global flag ─────────────────────────────────────────────────────────────
+
+describe('clone — --global flag', () => {
+	it('skips prompt and installs to ~/.coati/setups/owner/slug', async () => {
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup', '--global'], { from: 'user' });
+
+		const globalPath = path.join(os.homedir(), '.coati', 'setups', 'alice', 'my-setup');
+		expect(ctx.io.promptDestination).not.toHaveBeenCalled();
+		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({ projectDir: globalPath })
+		);
+	});
+});
+
+// ── --project flag ────────────────────────────────────────────────────────────
+
+describe('clone — --project flag', () => {
+	it('skips prompt and installs to cwd', async () => {
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup', '--project'], { from: 'user' });
+
+		expect(ctx.io.promptDestination).not.toHaveBeenCalled();
+		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({ projectDir: process.cwd() })
 		);
 	});
 });
@@ -352,6 +425,30 @@ describe('clone — --dir', () => {
 		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith(
 			expect.anything(),
 			expect.objectContaining({ projectDir: path.resolve('relative/path') })
+		);
+	});
+
+	it('--dir takes precedence over --global', async () => {
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup', '--dir', '/tmp/custom', '--global'], {
+			from: 'user'
+		});
+
+		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({ projectDir: path.resolve('/tmp/custom') })
+		);
+	});
+
+	it('--dir takes precedence over --project', async () => {
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup', '--dir', '/tmp/custom', '--project'], {
+			from: 'user'
+		});
+
+		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({ projectDir: path.resolve('/tmp/custom') })
 		);
 	});
 });
