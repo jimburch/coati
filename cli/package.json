@@ -7,6 +7,10 @@
 	"bin": {
 		"coati": "bin/coati.js"
 	},
+	"files": [
+		"dist",
+		"bin"
+	],
 	"scripts": {
 		"build": "tsup src/index.ts --format esm --dts --outDir dist",
 		"dev": "tsx src/index.ts",

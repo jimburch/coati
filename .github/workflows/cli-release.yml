@@ -1,0 +1,81 @@
+name: CLI Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'cli/**'
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Determine version bump
+        id: bump
+        run: |
+          # Get commits since last CLI version tag that touch cli/
+          LAST_TAG=$(git tag -l 'cli-v*' --sort=-v:refname | head -n1)
+          if [ -z "$LAST_TAG" ]; then
+            RANGE="HEAD"
+          else
+            RANGE="${LAST_TAG}..HEAD"
+          fi
+
+          COMMITS=$(git log "$RANGE" --oneline -- cli/)
+
+          if echo "$COMMITS" | grep -qiE 'BREAKING CHANGE|!:'; then
+            echo "type=major" >> "$GITHUB_OUTPUT"
+          elif echo "$COMMITS" | grep -qiE '^[a-f0-9]+ feat'; then
+            echo "type=minor" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=patch" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Bump version
+        working-directory: cli
+        run: |
+          npm version ${{ steps.bump.outputs.type }} --no-git-tag-version
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Build CLI
+        working-directory: cli
+        run: pnpm build
+
+      - name: Publish to npm
+        working-directory: cli
+        run: npm publish --access public --provenance
+
+      - name: Tag release
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add cli/package.json
+          git commit -m "chore(cli): release v${VERSION}"
+          git tag "cli-v${VERSION}"
+          git push origin main --tags
