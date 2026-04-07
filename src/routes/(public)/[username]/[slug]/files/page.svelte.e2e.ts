@@ -6,8 +6,8 @@ test('renders file tree and file viewer', async ({ page }) => {
 	await page.goto(FILES_URL);
 	// File tree should show files
 	await expect(page.locator('nav')).toBeVisible();
-	// File viewer should show a file header
-	await expect(page.getByText('Installs to:')).toBeVisible();
+	// File viewer should show a file with line count
+	await expect(page.getByText(/\d+ lines?/)).toBeVisible();
 });
 
 test('first file is selected by default', async ({ page }) => {
