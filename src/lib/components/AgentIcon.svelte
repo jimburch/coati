@@ -14,7 +14,7 @@
 
 {#if svgContent}
 	<span
-		class="agent-icon inline-block shrink-0 {className}"
+		class="agent-icon inline-flex shrink-0 items-center justify-center overflow-hidden [&>svg]:h-full [&>svg]:w-full {className}"
 		style="width:{size}px;height:{size}px"
 		aria-hidden="true"
 	>
