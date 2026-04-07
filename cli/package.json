@@ -1,5 +1,5 @@
 {
-	"name": "coati",
+	"name": "@coati/sh",
 	"version": "0.1.0",
 	"description": "Coati CLI — clone, publish, and manage AI coding setups",
 	"type": "module",

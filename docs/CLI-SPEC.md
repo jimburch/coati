@@ -7,7 +7,7 @@
 ## Installation
 
 ```bash
-npm install -g coati
+npm install -g @coati/sh
 ```
 
 ## Command Reference

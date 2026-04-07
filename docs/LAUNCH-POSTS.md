@@ -152,7 +152,7 @@ Send 2-3 emails between waitlist signup and platform launch to build anticipatio
 
 > Install the CLI:
 >
->     npm install -g coati
+>     npm install -g @coati/sh
 >
 > Clone a setup:
 >
@@ -244,7 +244,7 @@ Send 2-3 emails between waitlist signup and platform launch to build anticipatio
 >
 > Share your complete AI coding workflow. Clone anyone else's with one command.
 >
-> `npm install -g coati`
+> `npm install -g @coati/sh`
 > `coati clone jimburch/fullstack-claude`
 >
 > [link]
@@ -288,7 +288,7 @@ Send 2-3 emails between waitlist signup and platform launch to build anticipatio
 > I built this because I kept wanting to share my own workflow and there was no clean way to do it.
 >
 > Try it: [link]
-> Install the CLI: `npm install -g coati`
+> Install the CLI: `npm install -g @coati/sh`
 
 **Note:** Adjust the "200 developers" number to the actual waitlist count at launch. If significantly lower, reframe the opener around what you learned from early testers instead.
 
@@ -342,7 +342,7 @@ Send 2-3 emails between waitlist signup and platform launch to build anticipatio
 >
 > ## Try It
 >
-> The platform is live at [link]. Install the CLI with `npm install -g coati`.
+> The platform is live at [link]. Install the CLI with `npm install -g @coati/sh`.
 >
 > I've published several starter setups covering different tools and use cases. Would love feedback — and would love to see your setups on there.
 
