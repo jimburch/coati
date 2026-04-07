@@ -4,7 +4,8 @@
  * Tests cover:
  * - Data generation correctness
  * - All component types represented
- * - Edge cases (no files, long desc, max tags, empty bio)
+ * - Agent-specific file structures
+ * - Edge cases (long desc, max tags, empty bio)
  * - GitHub API rate limiting handling
  * - Idempotency via truncate-then-insert pattern
  *
@@ -44,7 +45,9 @@ function makeTags(names = TAG_NAMES) {
 	return names.map((name, i) => ({ id: `tag-${i}`, name }));
 }
 
-function makeAgents(slugs = ['claude-code', 'cursor', 'copilot']) {
+function makeAgents(
+	slugs = ['claude-code', 'cursor', 'copilot', 'codex', 'gemini', 'opencode']
+) {
 	return slugs.map((slug, i) => ({ id: `agent-${i}`, slug }));
 }
 
@@ -103,6 +106,13 @@ describe('generateTagNames', () => {
 			expect(tag).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
 		}
 	});
+
+	it('includes agent name tags', () => {
+		const tags = generateTagNames();
+		expect(tags).toContain('claude-code');
+		expect(tags).toContain('cursor');
+		expect(tags).toContain('copilot');
+	});
 });
 
 // ─── generateSetups Tests ─────────────────────────────────────────────────────
@@ -144,11 +154,47 @@ describe('generateSetups', () => {
 		expect(allComponentTypes.has('setup_script')).toBe(true);
 	});
 
-	it('includes at least one setup with no files (edge case)', () => {
+	it('every setup has at least 2 files', () => {
 		const manyUsers = makeUsers(35);
 		const setups = generateSetups(manyUsers, tags, agents);
-		const noFilesSetup = setups.find((s) => s.files.length === 0);
-		expect(noFilesSetup).toBeDefined();
+		for (const setup of setups) {
+			expect(setup.files.length).toBeGreaterThanOrEqual(2);
+		}
+	});
+
+	it('every setup has at least one agent slug', () => {
+		const manyUsers = makeUsers(35);
+		const setups = generateSetups(manyUsers, tags, agents);
+		for (const setup of setups) {
+			expect(setup.agentSlugs.length).toBeGreaterThanOrEqual(1);
+		}
+	});
+
+	it('all license values are null', () => {
+		const manyUsers = makeUsers(35);
+		const setups = generateSetups(manyUsers, tags, agents);
+		for (const setup of setups) {
+			expect(setup.license).toBeNull();
+		}
+	});
+
+	it('file agent fields are valid slugs or undefined', () => {
+		const manyUsers = makeUsers(35);
+		const setups = generateSetups(manyUsers, tags, agents);
+		const validSlugs = new Set([
+			'claude-code',
+			'cursor',
+			'copilot',
+			'codex',
+			'gemini',
+			'opencode',
+			undefined
+		]);
+		for (const setup of setups) {
+			for (const file of setup.files) {
+				expect(validSlugs.has(file.agent)).toBe(true);
+			}
+		}
 	});
 
 	it('includes at least one setup with a very long description (edge case)', () => {
@@ -222,9 +268,16 @@ describe('generateSetups', () => {
 		}
 	});
 
-	it('agent slugs reference valid agents from input', () => {
+	it('agent slugs reference valid agent slugs', () => {
 		const setups = generateSetups(users, tags, agents);
-		const validSlugs = new Set(agents.map((a) => a.slug));
+		const validSlugs = new Set([
+			'claude-code',
+			'cursor',
+			'copilot',
+			'codex',
+			'gemini',
+			'opencode'
+		]);
 		for (const setup of setups) {
 			for (const slug of setup.agentSlugs) {
 				expect(validSlugs.has(slug)).toBe(true);
@@ -237,6 +290,38 @@ describe('generateSetups', () => {
 		const setups2 = generateSetups(users, tags, agents);
 		expect(setups1.map((s) => s.slug)).toEqual(setups2.map((s) => s.slug));
 		expect(setups1.map((s) => s.name)).toEqual(setups2.map((s) => s.name));
+	});
+
+	it('includes setups for all 6 agents', () => {
+		const manyUsers = makeUsers(35);
+		const setups = generateSetups(manyUsers, tags, agents);
+		const allAgentSlugs = new Set(setups.flatMap((s) => s.agentSlugs));
+		expect(allAgentSlugs.has('claude-code')).toBe(true);
+		expect(allAgentSlugs.has('cursor')).toBe(true);
+		expect(allAgentSlugs.has('copilot')).toBe(true);
+		expect(allAgentSlugs.has('codex')).toBe(true);
+		expect(allAgentSlugs.has('gemini')).toBe(true);
+		expect(allAgentSlugs.has('opencode')).toBe(true);
+	});
+
+	it('includes multi-agent setups', () => {
+		const manyUsers = makeUsers(35);
+		const setups = generateSetups(manyUsers, tags, agents);
+		const multiAgent = setups.filter((s) => s.agentSlugs.length > 1);
+		expect(multiAgent.length).toBeGreaterThan(0);
+	});
+
+	it('has a mix of boilerplate and custom readmes', () => {
+		const manyUsers = makeUsers(35);
+		const setups = generateSetups(manyUsers, tags, agents);
+		const boilerplate = setups.filter(
+			(s) => s.readme !== null && !s.readme.includes("## What's Included")
+		);
+		const custom = setups.filter(
+			(s) => s.readme !== null && s.readme.includes("## What's Included")
+		);
+		expect(boilerplate.length).toBeGreaterThan(0);
+		expect(custom.length).toBeGreaterThan(0);
 	});
 });
 
