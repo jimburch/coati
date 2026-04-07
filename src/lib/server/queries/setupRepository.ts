@@ -14,7 +14,8 @@ import {
 	recordClone,
 	searchSetups,
 	getAllAgentsWithSetupCount,
-	getAgentBySlugWithSetups
+	getAgentBySlugWithSetups,
+	getSlugRedirect
 } from '$lib/server/queries/setups';
 
 export type SetupListItem = NonNullable<Awaited<ReturnType<typeof getSetupByOwnerSlug>>>;
@@ -99,5 +100,9 @@ export const setupRepo = {
 
 	async getAgentBySlug(slug: string) {
 		return getAgentBySlugWithSetups(slug);
+	},
+
+	async getSlugRedirect(ownerUsername: string, oldSlug: string): Promise<string | null> {
+		return getSlugRedirect(ownerUsername, oldSlug);
 	}
 };

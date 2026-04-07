@@ -263,7 +263,8 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 
 				// Write clone-tracking coati.json to the destination directory
 				ctx.fs.writeJson(path.join(projectDir, MANIFEST_FILENAME), {
-					source: `${owner}/${slug}`,
+					source: `${setup.ownerUsername}/${setup.slug}`,
+					sourceId: setup.id,
 					clonedAt: new Date().toISOString(),
 					revision: setup.version ?? setup.id
 				});

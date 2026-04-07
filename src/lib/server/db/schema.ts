@@ -328,6 +328,25 @@ export const setupReports = pgTable(
 	]
 );
 
+export const setupSlugRedirects = pgTable(
+	'setup_slug_redirects',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		userId: uuid('user_id')
+			.references(() => users.id, { onDelete: 'cascade' })
+			.notNull(),
+		oldSlug: varchar('old_slug', { length: 100 }).notNull(),
+		setupId: uuid('setup_id')
+			.references(() => setups.id, { onDelete: 'cascade' })
+			.notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(table) => [
+		uniqueIndex('setup_slug_redirects_user_id_old_slug_idx').on(table.userId, table.oldSlug),
+		index('setup_slug_redirects_setup_id_idx').on(table.setupId)
+	]
+);
+
 // ─── Relations ──────────────────────────────────────────────────────────────
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -475,3 +494,6 @@ export type NewFeedbackSubmission = typeof feedbackSubmissions.$inferInsert;
 
 export type SetupReport = typeof setupReports.$inferSelect;
 export type NewSetupReport = typeof setupReports.$inferInsert;
+
+export type SetupSlugRedirect = typeof setupSlugRedirects.$inferSelect;
+export type NewSetupSlugRedirect = typeof setupSlugRedirects.$inferInsert;

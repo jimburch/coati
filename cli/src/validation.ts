@@ -30,6 +30,8 @@ export const manifestFileEntrySchema = z.object({
 
 export const manifestSchema = z.object({
 	$schema: z.string().optional(),
+	id: z.string().uuid().optional(),
+	sourceId: z.string().uuid().optional(),
 	name: z
 		.string()
 		.min(1, 'Required, must be a non-empty string')

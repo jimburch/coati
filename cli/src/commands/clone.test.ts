@@ -471,6 +471,35 @@ describe('clone — tracking file', () => {
 
 		expect(ctx.fs.writeJson).not.toHaveBeenCalled();
 	});
+
+	it('writes sourceId (UUID) from setup metadata into coati.json', async () => {
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' });
+
+		expect(ctx.fs.writeJson).toHaveBeenCalledWith(
+			expect.stringContaining('coati.json'),
+			expect.objectContaining({
+				sourceId: 'setup-1'
+			})
+		);
+	});
+
+	it('refreshes source from server ownerUsername/slug (handles renamed setups)', async () => {
+		vi.mocked(ctx.api.get).mockImplementation((url: string) => {
+			if (url.endsWith('/files')) return Promise.resolve(SETUP_FILES);
+			return Promise.resolve({ ...SETUP_META, ownerUsername: 'alice', slug: 'renamed-setup' });
+		});
+
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' });
+
+		expect(ctx.fs.writeJson).toHaveBeenCalledWith(
+			expect.stringContaining('coati.json'),
+			expect.objectContaining({
+				source: 'alice/renamed-setup'
+			})
+		);
+	});
 });
 
 // ── error messages ────────────────────────────────────────────────────────────

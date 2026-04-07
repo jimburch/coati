@@ -7,6 +7,7 @@ import {
 	setupFiles,
 	setupTags,
 	setupAgents,
+	setupSlugRedirects,
 	tags,
 	agents,
 	stars,
@@ -76,6 +77,20 @@ export async function getSetupByOwnerSlug(ownerUsername: string, slug: string) {
 		.limit(1);
 
 	return result[0] ?? null;
+}
+
+export async function getSlugRedirect(
+	ownerUsername: string,
+	oldSlug: string
+): Promise<string | null> {
+	const result = await db
+		.select({ currentSlug: setups.slug })
+		.from(setupSlugRedirects)
+		.innerJoin(users, eq(setupSlugRedirects.userId, users.id))
+		.innerJoin(setups, eq(setupSlugRedirects.setupId, setups.id))
+		.where(and(eq(users.username, ownerUsername), eq(setupSlugRedirects.oldSlug, oldSlug)))
+		.limit(1);
+	return result[0]?.currentSlug ?? null;
 }
 
 export async function getSetupById(id: string) {
@@ -535,6 +550,107 @@ export async function searchSetups(filters: {
 		pageSize: PAGE_SIZE,
 		totalPages: Math.ceil(total / PAGE_SIZE)
 	};
+}
+
+function slugFromName(name: string): string {
+	return name
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-|-$/g, '');
+}
+
+export async function getSetupByIdWithOwner(id: string) {
+	const result = await db
+		.select({
+			id: setups.id,
+			userId: setups.userId,
+			name: setups.name,
+			slug: setups.slug,
+			description: setups.description,
+			readme: setups.readme,
+			placement: setups.placement,
+			category: setups.category,
+			license: setups.license,
+			minToolVersion: setups.minToolVersion,
+			postInstall: setups.postInstall,
+			prerequisites: setups.prerequisites,
+			starsCount: setups.starsCount,
+			clonesCount: setups.clonesCount,
+			commentsCount: setups.commentsCount,
+			featuredAt: setups.featuredAt,
+			createdAt: setups.createdAt,
+			updatedAt: setups.updatedAt,
+			ownerUsername: users.username
+		})
+		.from(setups)
+		.innerJoin(users, eq(setups.userId, users.id))
+		.where(eq(setups.id, id))
+		.limit(1);
+	return result[0] ?? null;
+}
+
+export async function updateSetupByIdWithSlugRedirects(
+	id: string,
+	data: UpdateSetupInput,
+	context: { userId: string; currentSlug: string }
+) {
+	return db.transaction(async (tx) => {
+		const newSlug = data.name !== undefined ? slugFromName(data.name) : undefined;
+		const slugChanged = newSlug !== undefined && newSlug !== context.currentSlug;
+
+		const updateFields = {
+			...(data.name !== undefined && { name: data.name }),
+			...(slugChanged && { slug: newSlug }),
+			...(data.description !== undefined && { description: data.description }),
+			...(data.readme !== undefined && { readme: data.readme }),
+			...(data.placement !== undefined && { placement: data.placement }),
+			...(data.category !== undefined && { category: data.category }),
+			...(data.license !== undefined && { license: data.license }),
+			...(data.minToolVersion !== undefined && { minToolVersion: data.minToolVersion }),
+			...(data.postInstall !== undefined && { postInstall: data.postInstall }),
+			...(data.prerequisites !== undefined && { prerequisites: data.prerequisites }),
+			updatedAt: new Date()
+		};
+
+		const [setup] = await tx.update(setups).set(updateFields).where(eq(setups.id, id)).returning();
+
+		if (data.files !== undefined) {
+			const name = data.name ?? setup.name;
+			const description = data.description ?? setup.description;
+			const filePaths = data.files.map((f) => f.path);
+			await tx
+				.update(setups)
+				.set({ readme: generateReadme(name, description, filePaths) })
+				.where(eq(setups.id, id));
+
+			await tx.delete(setupFiles).where(eq(setupFiles.setupId, id));
+			if (data.files.length > 0) {
+				await tx.insert(setupFiles).values(toSetupFileRows(id, data.files));
+			}
+		}
+
+		if (slugChanged && newSlug !== undefined) {
+			// Insert the old slug as a redirect
+			await tx
+				.insert(setupSlugRedirects)
+				.values({
+					userId: context.userId,
+					oldSlug: context.currentSlug,
+					setupId: id
+				})
+				.onConflictDoNothing();
+
+			// Flatten chains: update all existing redirects for this setup to point to the new slug
+			// (but don't update the one we just inserted — it's already correct)
+			// Actually we want to ensure all old redirects still exist, just no chains form
+			// The old redirects still point to the same setupId, so no chain exists.
+			// "Flatten chains" means: if there were A→B→C redirects, after renaming to C
+			// we want A→C (not A→B→C). Since redirects store oldSlug→setupId (not oldSlug→newSlug),
+			// there are no chains at the DB level. All redirects resolve directly to the setup by UUID.
+		}
+
+		return setup;
+	});
 }
 
 export async function recordClone(setupId: string): Promise<void> {
