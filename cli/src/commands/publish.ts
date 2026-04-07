@@ -188,12 +188,11 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 				});
 			}
 
-			// Build payload (excludes id, version, and clone-tracking fields)
+			// Build payload (excludes id, version, placement, and clone-tracking fields)
 			const payload = {
 				name: manifest.name,
 				slug: manifest.name,
 				description: manifest.description,
-				placement: manifest.placement,
 				...(manifest.category ? { category: manifest.category } : {}),
 				...(manifest.license ? { license: manifest.license } : {}),
 				...(manifest.minToolVersion ? { minToolVersion: manifest.minToolVersion } : {}),

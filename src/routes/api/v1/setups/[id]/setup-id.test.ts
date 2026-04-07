@@ -25,7 +25,6 @@ const MOCK_SETUP = {
 	slug: 'my-setup',
 	description: 'A great setup',
 	readme: null,
-	placement: 'project',
 	category: null,
 	license: null,
 	minToolVersion: null,
@@ -152,6 +151,24 @@ describe('PATCH /api/v1/setups/[id]', () => {
 		const body = await res.json();
 		expect(body.data.slug).toBe('renamed-setup');
 		expect(body.data.ownerUsername).toBe('alice');
+	});
+
+	it('PATCH ignores placement field (stripped by schema)', async () => {
+		mockGetSetupByIdWithOwner.mockResolvedValue(MOCK_SETUP);
+		const updatedSetup = { ...MOCK_SETUP, description: 'Updated' };
+		mockUpdateSetupByIdWithSlugRedirects.mockResolvedValue(updatedSetup);
+
+		const { PATCH } = await import('./+server');
+		const res = await PATCH(
+			makePatchEvent('setup-uuid-1', { description: 'Updated', placement: 'global' })
+		);
+		expect(res.status).toBe(200);
+		// placement should not be forwarded to the update function
+		expect(mockUpdateSetupByIdWithSlugRedirects).toHaveBeenCalledWith(
+			'setup-uuid-1',
+			expect.not.objectContaining({ placement: expect.anything() }),
+			expect.any(Object)
+		);
 	});
 
 	it('returns 409 when slug already taken', async () => {

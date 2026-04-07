@@ -42,7 +42,6 @@ export const manifestSchema = z.object({
 		.min(1, 'Required, must be a non-empty string')
 		.regex(SEMVER_REGEX, 'Must be semver format (e.g. 1.0.0)'),
 	description: z.string().max(300, 'Must be 300 characters or fewer'),
-	placement: manifestFilePlacementSchema,
 	files: z.array(manifestFileEntrySchema).min(1, 'Must contain at least one file'),
 	category: manifestCategorySchema.optional(),
 	license: z.string().max(50, 'Must be a string of 50 characters or fewer').optional(),

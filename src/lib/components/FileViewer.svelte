@@ -8,22 +8,12 @@
 			content: string;
 		};
 		highlightedHtml: string | null | undefined;
-		placement: 'global' | 'project';
 	}
 
-	const { file, highlightedHtml, placement }: Props = $props();
+	const { file, highlightedHtml }: Props = $props();
 
 	const isEmpty = $derived(file.content === '');
 	const lineCount = $derived(isEmpty ? 0 : file.content.split('\n').length);
-
-	function resolveInstallPath(filePath: string, p: 'global' | 'project'): string {
-		if (p === 'global') {
-			return `~/${filePath}`;
-		}
-		return `./${filePath}`;
-	}
-
-	const installPath = $derived(resolveInstallPath(file.path, placement));
 </script>
 
 <div class="overflow-hidden rounded-lg border border-border">
@@ -34,7 +24,6 @@
 			{file.path}
 		</div>
 		<div class="flex items-center gap-3 text-xs text-muted-foreground">
-			<span>Installs to: {installPath}</span>
 			<span>{lineCount} line{lineCount !== 1 ? 's' : ''}</span>
 		</div>
 	</div>

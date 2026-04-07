@@ -6,8 +6,8 @@ test('renders file tree and file viewer', async ({ page }) => {
 	await page.goto(FILES_URL);
 	// File tree should show files
 	await expect(page.locator('nav')).toBeVisible();
-	// File viewer should show a file header
-	await expect(page.getByText('Installs to:')).toBeVisible();
+	// File viewer should show a file with line count
+	await expect(page.getByText(/\d+ lines?/)).toBeVisible();
 });
 
 test('first file is selected by default', async ({ page }) => {
@@ -51,11 +51,6 @@ test('shows syntax-highlighted code', async ({ page }) => {
 test('shows line count in file header', async ({ page }) => {
 	await page.goto(FILES_URL);
 	await expect(page.getByText(/\d+ lines?/)).toBeVisible();
-});
-
-test('shows placement badge', async ({ page }) => {
-	await page.goto(FILES_URL);
-	await expect(page.getByText('project')).toBeVisible();
 });
 
 test('mobile shows toggle button instead of sidebar', async ({ page, isMobile }) => {

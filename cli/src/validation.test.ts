@@ -16,7 +16,6 @@ const VALID_MANIFEST = {
 	name: 'my-setup',
 	version: '1.0.0',
 	description: 'A test setup',
-	placement: 'global' as const,
 	files: [VALID_FILE]
 };
 
@@ -211,19 +210,19 @@ describe('manifestSchema', () => {
 		}
 	});
 
-	it('requires placement at top level', () => {
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		const { placement: _placement, ...withoutPlacement } = VALID_MANIFEST;
-		const result = manifestSchema.safeParse(withoutPlacement);
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			expect(result.error.issues.some((i) => i.path[0] === 'placement')).toBe(true);
-		}
+	it('accepts manifest without placement field', () => {
+		const result = manifestSchema.safeParse(VALID_MANIFEST);
+		expect(result.success).toBe(true);
 	});
 
-	it('rejects "relative" as placement', () => {
+	it('accepts manifest with legacy placement field (field is stripped)', () => {
+		const result = manifestSchema.safeParse({ ...VALID_MANIFEST, placement: 'global' });
+		expect(result.success).toBe(true);
+	});
+
+	it('accepts manifest with any placement value (field is not validated)', () => {
 		const result = manifestSchema.safeParse({ ...VALID_MANIFEST, placement: 'relative' });
-		expect(result.success).toBe(false);
+		expect(result.success).toBe(true);
 	});
 
 	it('rejects null', () => {
@@ -234,7 +233,6 @@ describe('manifestSchema', () => {
 		const result = manifestSchema.safeParse({
 			version: VALID_MANIFEST.version,
 			description: VALID_MANIFEST.description,
-			placement: VALID_MANIFEST.placement,
 			files: VALID_MANIFEST.files
 		});
 		expect(result.success).toBe(false);

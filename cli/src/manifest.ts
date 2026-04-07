@@ -38,7 +38,8 @@ export interface Manifest {
 	name: string;
 	version: string;
 	description: string;
-	placement: ManifestPlacement;
+	/** @deprecated Placement is no longer part of the manifest schema. Field is ignored if present. */
+	placement?: ManifestPlacement;
 	agents?: string[];
 	tags?: string[];
 	category?: ManifestCategory;

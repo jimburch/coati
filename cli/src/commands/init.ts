@@ -6,8 +6,7 @@ import {
 	writeManifest,
 	MANIFEST_FILENAME,
 	type Manifest,
-	type ManifestCategory,
-	type ManifestPlacement
+	type ManifestCategory
 } from '../manifest.js';
 import { formatFileList } from '../format.js';
 import type { CommandContext } from '../context.js';
@@ -104,15 +103,6 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 		// In JSON mode: filesToInclude remains as detected (all files)
 	}
 
-	// Ask for setup-level placement (single question for all files)
-	let placement: ManifestPlacement = 'project';
-	if (!ctx.io.isJson()) {
-		placement = await ctx.io.select<ManifestPlacement>('Where should files be installed?', [
-			{ label: 'Global — write to ~/  (shared across all projects)', value: 'global' },
-			{ label: 'Project — write to ./  (relative to project directory)', value: 'project' }
-		]);
-	}
-
 	// Build choice lists for interactive prompts
 	const agentChoices = AGENTS.map((a) => ({ label: a.displayName, value: a.slug }));
 	const categoryChoices: { label: string; value: string }[] = [
@@ -151,7 +141,6 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 		name: slug,
 		version: '1.0.0',
 		description: metadata.description,
-		placement,
 		...(category !== undefined && { category }),
 		...(allAgents.length > 0 && { agents: allAgents }),
 		...(metadata.tags.length > 0 && { tags: metadata.tags }),

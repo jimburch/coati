@@ -17,8 +17,7 @@ function makeFile(content: string = 'x') {
 const validSetupBase = {
 	name: 'My Setup',
 	slug: 'my-setup',
-	description: 'A setup',
-	placement: 'global' as const
+	description: 'A setup'
 };
 import { z } from 'zod';
 
@@ -249,6 +248,33 @@ describe('File size limit schemas', () => {
 				...validSetupBase,
 				files: [makeFile('small content'), makeFile('another file')]
 			});
+			expect(result.success).toBe(true);
+		});
+	});
+
+	describe('placement removed from schemas', () => {
+		it('createSetupWithFilesSchema strips unknown placement field', () => {
+			const result = createSetupWithFilesSchema.safeParse({
+				...validSetupBase,
+				placement: 'global'
+			});
+			// Zod strips unknown keys by default in object schemas — placement should be absent
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data).not.toHaveProperty('placement');
+			}
+		});
+
+		it('updateSetupSchema strips unknown placement field', () => {
+			const result = updateSetupSchema.safeParse({ placement: 'project' });
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data).not.toHaveProperty('placement');
+			}
+		});
+
+		it('createSetupWithFilesSchema succeeds without placement', () => {
+			const result = createSetupWithFilesSchema.safeParse(validSetupBase);
 			expect(result.success).toBe(true);
 		});
 	});

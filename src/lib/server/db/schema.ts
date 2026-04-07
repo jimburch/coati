@@ -19,11 +19,9 @@ const tsvector = customType<{ data: string }>({
 		return 'tsvector';
 	}
 });
-import { PLACEMENT_VALUES, COMPONENT_TYPE_VALUES, CATEGORY_VALUES } from '@coati/validation';
+import { COMPONENT_TYPE_VALUES, CATEGORY_VALUES } from '@coati/validation';
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
-
-export const placementEnum = pgEnum('placement', PLACEMENT_VALUES);
 
 export const componentTypeEnum = pgEnum('component_type', COMPONENT_TYPE_VALUES);
 
@@ -118,7 +116,6 @@ export const setups = pgTable(
 		slug: varchar('slug', { length: 100 }).notNull(),
 		description: varchar('description', { length: 300 }).notNull(),
 		readme: text('readme'),
-		placement: placementEnum('placement').notNull().default('project'),
 		category: categoryEnum('category'),
 		license: varchar('license', { length: 50 }),
 		minToolVersion: varchar('min_tool_version', { length: 20 }),

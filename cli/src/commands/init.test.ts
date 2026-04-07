@@ -91,8 +91,6 @@ beforeEach(() => {
 	vi.mocked(ctx.io.confirm).mockResolvedValue(true);
 	// Default: checklist returns all detected file paths (all pre-selected, none deselected)
 	vi.mocked(ctx.io.checklist).mockResolvedValue(DETECTED_FILES.map((f) => f.path));
-	// Default: select returns 'project' for placement question
-	vi.mocked(ctx.io.select).mockResolvedValue('project');
 	mockFormatFileList.mockReturnValue('(formatted file list)');
 	vi.mocked(ctx.io.promptMetadata).mockResolvedValue(DEFAULT_METADATA);
 	mockWriteManifest.mockReturnValue(undefined);
@@ -128,36 +126,15 @@ describe('runInitFlow — normal flow', () => {
 		expect(ctx.io.success).toHaveBeenCalledWith(expect.stringContaining('coati.json'));
 	});
 
-	it('asks a single placement question', async () => {
+	it('does not prompt for placement', async () => {
 		await runInitFlow(ctx, CWD);
-		expect(ctx.io.select).toHaveBeenCalledWith(
-			expect.stringContaining('installed'),
-			expect.arrayContaining([
-				expect.objectContaining({ value: 'global' }),
-				expect.objectContaining({ value: 'project' })
-			])
-		);
-	});
-
-	it('writes manifest with placement from select prompt', async () => {
-		vi.mocked(ctx.io.select).mockResolvedValue('global');
-
-		await runInitFlow(ctx, CWD);
-
-		expect(mockWriteManifest).toHaveBeenCalledWith(
-			CWD,
-			expect.objectContaining({ placement: 'global' })
-		);
-	});
-
-	it('defaults to project placement in JSON mode (no select prompt)', async () => {
-		vi.mocked(ctx.io.isJson).mockReturnValue(true);
-
-		await runInitFlow(ctx, CWD);
-
 		expect(ctx.io.select).not.toHaveBeenCalled();
+	});
+
+	it('does not include placement in written manifest', async () => {
+		await runInitFlow(ctx, CWD);
 		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
-		expect(writtenManifest.placement).toBe('project');
+		expect(writtenManifest).not.toHaveProperty('placement');
 	});
 });
 

@@ -181,14 +181,6 @@ describe('generateSetups', () => {
 		expect(usersWithoutSetups.length).toBeGreaterThanOrEqual(1);
 	});
 
-	it('includes both global and project placements', () => {
-		const manyUsers = makeUsers(35);
-		const setups = generateSetups(manyUsers, tags, agents);
-		const placements = new Set(setups.map((s) => s.placement));
-		expect(placements.has('global')).toBe(true);
-		expect(placements.has('project')).toBe(true);
-	});
-
 	it('includes varying engagement levels (trending + new)', () => {
 		const manyUsers = makeUsers(35);
 		const setups = generateSetups(manyUsers, tags, agents);
