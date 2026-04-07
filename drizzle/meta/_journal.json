@@ -113,6 +113,13 @@
 			"when": 1743724800000,
 			"tag": "0014_path_based_manifest",
 			"breakpoints": true
+		},
+		{
+			"idx": 16,
+			"version": "7",
+			"when": 1773811200000,
+			"tag": "0015_setup_slug_redirects",
+			"breakpoints": true
 		}
 	]
 }
