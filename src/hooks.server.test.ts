@@ -1,5 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// Mock $env/dynamic/public (must be before other mocks and imports)
+let mockPublicBetaMode = '';
+vi.mock('$env/dynamic/public', () => ({
+	env: {
+		get PUBLIC_BETA_MODE() {
+			return mockPublicBetaMode;
+		},
+		PUBLIC_SITE_URL: 'http://localhost:5173'
+	}
+}));
+
 // Mock auth module
 const mockValidateSessionToken = vi.fn();
 const mockGetSessionToken = vi.fn();
@@ -13,7 +24,14 @@ vi.mock('$lib/server/auth', () => ({
 	setSessionCookie: (...args: unknown[]) => mockSetSessionCookie(...args)
 }));
 
-import { handle } from './hooks.server';
+// Mock rate-limit module
+const mockCheckRateLimit = vi.fn();
+
+vi.mock('$lib/server/rate-limit', () => ({
+	checkRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args)
+}));
+
+import { handle, betaGate } from './hooks.server';
 
 function makeEvent(opts: { cookie?: string; bearerToken?: string } = {}) {
 	const locals: Record<string, unknown> = {};
@@ -36,12 +54,25 @@ function makeEvent(opts: { cookie?: string; bearerToken?: string } = {}) {
 }
 
 function makeResolve() {
-	return vi.fn().mockImplementation((event: unknown) => new Response('ok'));
+	return vi.fn().mockImplementation(() => new Response('ok'));
+}
+
+function makeGateEvent(
+	pathname: string,
+	user: { isBetaApproved: boolean; isAdmin: boolean } | null
+) {
+	return {
+		locals: { user },
+		url: { pathname }
+	};
 }
 
 describe('hooks.server handle', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mockPublicBetaMode = '';
+		// Default: not rate limited
+		mockCheckRateLimit.mockResolvedValue({ limited: false, retryAfter: 0 });
 	});
 
 	it('sets user and session to null when no token present', async () => {
@@ -157,5 +188,136 @@ describe('hooks.server handle', () => {
 		await handle({ event, resolve } as never);
 
 		expect(mockSetSessionCookie).not.toHaveBeenCalled();
+	});
+
+	describe('rate limiting', () => {
+		it('returns 429 when checkRateLimit reports limited: true', async () => {
+			const { event } = makeEvent();
+			const resolve = makeResolve();
+			mockGetSessionToken.mockReturnValue(undefined);
+			mockCheckRateLimit.mockResolvedValue({ limited: true, retryAfter: 30 });
+
+			const response = await handle({ event, resolve } as never);
+
+			expect(response.status).toBe(429);
+			expect(resolve).not.toHaveBeenCalled();
+			const body = await response.json();
+			expect(body).toEqual({ error: 'Too many requests', code: 'RATE_LIMITED' });
+		});
+
+		it('calls resolve normally when checkRateLimit reports limited: false', async () => {
+			const { event } = makeEvent();
+			const resolve = makeResolve();
+			mockGetSessionToken.mockReturnValue(undefined);
+			mockCheckRateLimit.mockResolvedValue({ limited: false, retryAfter: 0 });
+
+			const response = await handle({ event, resolve } as never);
+
+			expect(resolve).toHaveBeenCalledWith(event);
+			expect(response.status).toBe(200);
+		});
+
+		it('sets Retry-After header to retryAfter value from checkRateLimit', async () => {
+			const { event } = makeEvent();
+			const resolve = makeResolve();
+			mockGetSessionToken.mockReturnValue(undefined);
+			mockCheckRateLimit.mockResolvedValue({ limited: true, retryAfter: 42 });
+
+			const response = await handle({ event, resolve } as never);
+
+			expect(response.headers.get('Retry-After')).toBe('42');
+		});
+
+		it('calls checkRateLimit after auth resolution', async () => {
+			const { event } = makeEvent();
+			const resolve = makeResolve();
+			const user = { id: 'u1', username: 'test' };
+			const session = { id: 'sess-1', expiresAt: new Date() };
+
+			mockGetSessionToken.mockReturnValue('cookie-token');
+			mockValidateSessionToken.mockResolvedValue({ user, session });
+			mockCheckRateLimit.mockResolvedValue({ limited: false, retryAfter: 0 });
+
+			await handle({ event, resolve } as never);
+
+			// checkRateLimit is called with event that already has locals.user set
+			expect(mockCheckRateLimit).toHaveBeenCalledWith(event);
+			expect(event.locals.user).toBe(user);
+		});
+	});
+
+	describe('handle uses betaGate', () => {
+		it('returns 302 for unauthenticated user on protected route when beta mode enabled', async () => {
+			mockPublicBetaMode = 'true';
+			const { event } = makeEvent();
+			const resolve = makeResolve();
+			mockGetSessionToken.mockReturnValue(undefined);
+			// Provide a URL with a protected pathname
+			(event as Record<string, unknown>).url = { pathname: '/explore' };
+
+			const response = await handle({ event, resolve } as never);
+
+			expect(response.status).toBe(302);
+			expect(response.headers.get('Location')).toBe('/auth/login/github');
+			expect(resolve).not.toHaveBeenCalled();
+		});
+	});
+});
+
+describe('betaGate', () => {
+	it('betaGate returns null when betaModeEnabled is false', () => {
+		const event = makeGateEvent('/explore', null);
+		expect(betaGate(event, false)).toBeNull();
+	});
+
+	it('betaGate returns null for API routes even when beta mode enabled', () => {
+		const event = makeGateEvent('/api/v1/setups', null);
+		expect(betaGate(event, true)).toBeNull();
+	});
+
+	it('betaGate redirects unauthenticated user on protected route to login', () => {
+		const event = makeGateEvent('/explore', null);
+		const response = betaGate(event, true);
+		expect(response).not.toBeNull();
+		expect(response?.status).toBe(302);
+		expect(response?.headers.get('Location')).toBe('/auth/login/github');
+	});
+
+	it('betaGate allows unauthenticated user on landing page', () => {
+		const event = makeGateEvent('/', null);
+		expect(betaGate(event, true)).toBeNull();
+	});
+
+	it('betaGate allows unauthenticated user on auth routes', () => {
+		const event = makeGateEvent('/auth/login/github', null);
+		expect(betaGate(event, true)).toBeNull();
+	});
+
+	it('betaGate allows unauthenticated user on waitlist page', () => {
+		const event = makeGateEvent('/waitlist', null);
+		expect(betaGate(event, true)).toBeNull();
+	});
+
+	it('betaGate redirects non-approved authenticated user to waitlist', () => {
+		const event = makeGateEvent('/explore', { isBetaApproved: false, isAdmin: false });
+		const response = betaGate(event, true);
+		expect(response).not.toBeNull();
+		expect(response?.status).toBe(302);
+		expect(response?.headers.get('Location')).toBe('/waitlist');
+	});
+
+	it('betaGate allows approved authenticated user through', () => {
+		const event = makeGateEvent('/explore', { isBetaApproved: true, isAdmin: false });
+		expect(betaGate(event, true)).toBeNull();
+	});
+
+	it('betaGate allows admin user through regardless of isBetaApproved', () => {
+		const event = makeGateEvent('/explore', { isBetaApproved: false, isAdmin: true });
+		expect(betaGate(event, true)).toBeNull();
+	});
+
+	it('betaGate does not redirect non-approved user already on waitlist page', () => {
+		const event = makeGateEvent('/waitlist', { isBetaApproved: false, isAdmin: false });
+		expect(betaGate(event, true)).toBeNull();
 	});
 });

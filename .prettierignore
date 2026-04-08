@@ -7,3 +7,15 @@ bun.lockb
 
 # Miscellaneous
 /static/
+
+# Workflow files (avoid needing workflows permission in CI)
+.github/workflows/
+
+# CLI build output
+cli/dist/
+
+# Site build output
+site/build/
+
+# SvelteKit generated files
+**/.svelte-kit/

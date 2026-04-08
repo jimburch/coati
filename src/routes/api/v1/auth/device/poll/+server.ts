@@ -1,24 +1,23 @@
 import type { RequestHandler } from '@sveltejs/kit';
+import { z } from 'zod';
 import { db } from '$lib/server/db';
-import { deviceFlowStates } from '$lib/server/db/schema';
+import { deviceFlowStates, users } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
-import {
-	upsertGithubUser,
-	generateSessionToken,
-	createSession
-} from '$lib/server/auth';
-import { success, error } from '$lib/server/responses';
-import { GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET } from '$env/static/private';
+import { upsertGithubUser, generateSessionToken, createSession } from '$lib/server/auth';
+import { success, error, parseRequestBody } from '$lib/server/responses';
+import { env } from '$env/dynamic/private';
+const GITHUB_CLIENT_ID = env.GITHUB_CLIENT_ID!;
+const GITHUB_CLIENT_SECRET = env.GITHUB_CLIENT_SECRET!;
+import { updateLastLoginAt } from '$lib/server/queries/users';
+
+const deviceCodeSchema = z.object({ deviceCode: z.string().min(1) });
 
 export const POST: RequestHandler = async ({ request }) => {
-	const body = (await request.json()) as { deviceCode?: string };
-
-	if (!body.deviceCode) {
-		return error('deviceCode is required', 'VALIDATION_ERROR', 400);
-	}
+	const parsed = await parseRequestBody(request, deviceCodeSchema);
+	if (parsed instanceof Response) return parsed;
 
 	const state = await db.query.deviceFlowStates.findFirst({
-		where: eq(deviceFlowStates.deviceCode, body.deviceCode)
+		where: eq(deviceFlowStates.deviceCode, parsed.deviceCode)
 	});
 
 	if (!state) {
@@ -72,9 +71,13 @@ export const POST: RequestHandler = async ({ request }) => {
 	const userId = await upsertGithubUser(ghData.access_token);
 	const token = generateSessionToken();
 	await createSession(token, userId);
+	await updateLastLoginAt(userId);
 
 	// Clean up device flow state
 	await db.delete(deviceFlowStates).where(eq(deviceFlowStates.id, state.id));
 
-	return success({ token });
+	const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
+	const username = user?.username ?? '';
+
+	return success({ token, username });
 };

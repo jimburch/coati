@@ -77,7 +77,7 @@
 
 ## Week 3: Social Features + CLI Foundation
 
-**Goal:** Stars, follows, comments work. CLI can authenticate and search.
+**Goal:** Stars, follows, comments work. CLI can authenticate.
 
 ### Tasks
 
@@ -86,31 +86,31 @@
   - Form action in setup detail page
   - API route: `POST/DELETE /api/v1/setups/:id/star`
   - Denormalized count update in transaction
-- [ ] Follow system:
+- [x] Follow system:
   - FollowButton component
   - API route: `POST/DELETE /api/v1/users/:username/follow`
   - Followers/following counts on user profile
-- [ ] Comments:
+- [x] Comments:
   - CommentThread component (single-level threading)
   - Form action for posting comments
   - API route: `GET/POST /api/v1/setups/:id/comments`
   - Markdown rendering in comment bodies
-- [ ] CLI project scaffold:
+- [x] CLI project scaffold:
   - `cli/` directory with its own `package.json`
   - Commander setup with command structure
   - API client module (`api.ts`)
-  - Config module (`config.ts` — read/write `~/.magpie/config.json`)
-- [ ] CLI auth:
+  - Config module (`config.ts` — read/write `~/.coati/config.json`)
+- [x] CLI auth:
   - GitHub Device Flow endpoint: `POST /api/v1/auth/device`
   - Polling endpoint: `POST /api/v1/auth/device/poll`
-  - `magpie login` command
-  - `magpie logout` command
-- [ ] CLI search:
-  - `magpie search <query>` — calls explore API, formats results
-  - `magpie trending` — calls trending API
-  - `magpie view <owner>/<slug>` — calls setup detail API
+  - `coati login` command
+  - `coati logout` command
+- ~CLI search (descoped — discovery features belong on web, not CLI):~
+  - ~`coati search <query>`~
+  - ~`coati trending`~
+  - ~`coati view <owner>/<slug>`~
 
-### Milestone: Can star/follow/comment on web. CLI can login and search.
+### Milestone: Can star/follow/comment on web. CLI can login. (COMPLETE)
 
 ---
 
@@ -120,27 +120,28 @@
 
 ### Tasks
 
-- [ ] `magpie clone <owner>/<slug>`:
+- [x] `coati clone <owner>/<slug>`:
   - Fetch setup + files from API
+  - Interactive prompt: install to current directory or globally
   - Resolve target paths (expand `~`, `./`)
   - Conflict detection (check existing files)
   - Interactive prompts: overwrite / skip / backup / diff
   - Write files to disk
   - Post-install command execution (with confirmation)
   - Clone event recording (API call)
-  - `--dry-run`, `--force`, `--pick` flags
-- [ ] `magpie init`:
-  - Auto-detect common AI config files in cwd
-  - Interactive prompts for name, description, tools, tags
-  - File mapping prompts for each detected file
-  - Generate `setup.json`
-- [ ] `magpie publish`:
-  - Read and validate `setup.json` (Zod schema)
+  - `--dry-run`, `--force`, `--pick`, `--dir` flags
+- [x] `coati init`:
+  - Auto-detect existing AI config files in cwd (`.claude/`, `.cursor/`, etc.)
+  - Confirm detected files with user, prompt for name/description/tools/tags
+  - Generate `coati.json` manifest from detected files
+- [x] `coati publish`:
+  - Auto-run `init` flow if no `coati.json` exists
+  - Read and validate `coati.json` (Zod schema)
   - Collect referenced files
-  - `POST /api/v1/setups` with full payload
-  - `--update` flag for updating existing setups
-- [ ] `magpie star/unstar` and `magpie follow/unfollow`
-- [ ] Validate `setup.json` schema with Zod (shared between CLI and server)
+  - Create or update setup on platform (determined by owner/slug match)
+  - `POST /api/v1/setups` for new, `PATCH` for existing
+- ~`coati star/unstar` and `coati follow/unfollow` (descoped — social features are web-only)~
+- [x] Validate `coati.json` schema with Zod (shared between CLI and server)
 
 ### Milestone: Full publish → discover → clone loop works end-to-end
 
@@ -152,26 +153,35 @@
 
 ### Tasks
 
-- [ ] Activity feed (`(app)/feed/+page.svelte`):
+- [x] Activity feed (`(app)/feed/+page.svelte`):
   - Show recent activity from followed users (new setups, updates)
   - Simple chronological list for MVP
-- [ ] User profile enhancements:
+- [x] User profile enhancements:
   - Edit bio, website
   - "Starred setups" tab
   - Setup count, follower/following counts
-- [ ] Setup detail enhancements:
-  - Open Graph meta tags for social sharing (title, description, image)
-  - "Copy CLI command" button
-  - Related setups (same tools/tags) — simple query
-- [ ] Settings page (`(app)/settings/+page.svelte`):
-  - Edit profile info
-  - View/revoke CLI sessions
-- [ ] Error handling pass:
-  - 404 pages for missing users/setups
-  - Rate limiting on API (simple in-memory)
-  - Input validation everywhere (Zod)
-  - Loading states and error states in UI
-- [ ] Mobile responsiveness pass
+- [x] Settings page (`(app)/settings/+page.svelte`):
+  - Edit profile info (name, bio, website, location)
+- [x] "Copy CLI command" button on setup detail page
+- [x] Input validation everywhere (Zod) — comprehensive schemas in place
+- [x] Open Graph meta tags for social sharing:
+  - `og:title`, `og:description`, `og:url`, `og:image` on public routes (setup detail, user profile, explore, landing)
+  - Static placeholder image for `og:image` (swap for real logo later)
+- [x] Global error page (`+error.svelte`):
+  - Styled 404/500 page with navbar, friendly message, and link home
+- [x] Simple global rate limiting:
+  - Lightweight per-IP middleware (general-purpose, not per-endpoint)
+  - Protect against basic abuse without overengineering
+- [x] Loading/error states audit:
+  - Verify all pages handle loading and error states gracefully
+  - Fill remaining gaps (file viewer, profile pages, etc.)
+- [x] Mobile responsiveness pass:
+  - Full pass across all routes — nothing should be broken on mobile
+  - Priority on public-facing pages (landing, explore, setup detail, profiles)
+  - Navbar, file tree/viewer, and settings need attention
+  - Desktop is primary; mobile should be functional, not necessarily pixel-perfect
+- ~CLI session management (descoped — `coati logout` suffices for MVP)~
+- ~Related setups on detail page (descoped — explore page covers discovery for MVP)~
 
 ### Milestone: Platform feels complete and polished for launch
 
@@ -183,7 +193,7 @@
 
 ### Tasks
 
-- [ ] Set up DigitalOcean Droplet
+- [ ] Set up Hostinger VPS (already purchased)
 - [ ] Install PostgreSQL, Caddy, PM2, Node.js
 - [ ] Configure Caddy for HTTPS + reverse proxy
 - [ ] Set up GitHub Actions CI/CD:
@@ -191,7 +201,7 @@
   - SCP build output to droplet
   - Restart PM2 process
 - [ ] Database backup cron job
-- [ ] Publish `magpie` CLI to npm
+- [ ] Publish `coati` CLI to npm
 - [ ] Seed platform with 5-10 real setups:
   - Your own Claude Code setup
   - A minimal starter setup

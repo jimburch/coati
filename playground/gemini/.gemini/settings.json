@@ -1,0 +1,49 @@
+{
+	"mcpServers": {
+		"filesystem": {
+			"command": "npx",
+			"args": ["-y", "@modelcontextprotocol/server-filesystem", "./src"]
+		},
+		"fetch": {
+			"command": "npx",
+			"args": ["-y", "@modelcontextprotocol/server-fetch"]
+		},
+		"postgres": {
+			"command": "npx",
+			"args": ["-y", "@modelcontextprotocol/server-postgres"],
+			"env": {
+				"DATABASE_URL": "${DATABASE_URL}"
+			}
+		}
+	},
+	"coreTools": {
+		"shell": {
+			"allowedCommands": [
+				"npm run *",
+				"npx vitest *",
+				"npx eslint *",
+				"npx tsc --noEmit",
+				"cat *",
+				"ls *"
+			]
+		},
+		"readFile": {
+			"enabled": true
+		},
+		"writeFile": {
+			"enabled": true,
+			"requireConfirmation": false
+		},
+		"editFile": {
+			"enabled": true,
+			"requireConfirmation": false
+		}
+	},
+	"contextWindow": {
+		"maxTokens": 1048576
+	},
+	"history": {
+		"saveConversations": true,
+		"maxConversations": 50
+	}
+}

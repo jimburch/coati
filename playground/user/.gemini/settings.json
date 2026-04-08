@@ -1,0 +1,16 @@
+{
+	"model": "gemini-2.5-pro",
+	"theme": "Default",
+	"preferences": {
+		"verboseResponses": false,
+		"showTokenCounts": false,
+		"autoApprove": false
+	},
+	"sandbox": {
+		"enabled": true
+	},
+	"contextWindow": {
+		"includeWorkingDirectory": true,
+		"maxFiles": 50
+	}
+}

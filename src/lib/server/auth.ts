@@ -3,13 +3,13 @@ import crypto from 'node:crypto';
 import { db } from '$lib/server/db';
 import { sessions, users } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
-import { GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 import { dev } from '$app/environment';
 import type { Cookies } from '@sveltejs/kit';
 
 // ─── Arctic GitHub Provider ────────────────────────────────────────────────
 
-export const github = new GitHub(GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, null);
+export const github = new GitHub(env.GITHUB_CLIENT_ID!, env.GITHUB_CLIENT_SECRET!, null);
 
 // ─── Token Helpers ─────────────────────────────────────────────────────────
 
@@ -25,15 +25,12 @@ function hashToken(token: string): string {
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const SESSION_REFRESH_THRESHOLD_MS = 15 * 24 * 60 * 60 * 1000; // 15 days
-const COOKIE_NAME = 'magpie_session';
+const COOKIE_NAME = 'coati_session';
 
 export async function createSession(token: string, userId: string) {
 	const id = hashToken(token);
 	const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
-	const [session] = await db
-		.insert(sessions)
-		.values({ id, userId, expiresAt })
-		.returning();
+	const [session] = await db.insert(sessions).values({ id, userId, expiresAt }).returning();
 	return session;
 }
 
@@ -56,10 +53,7 @@ export async function validateSessionToken(token: string) {
 	const timeRemaining = session.expiresAt.getTime() - Date.now();
 	if (timeRemaining < SESSION_REFRESH_THRESHOLD_MS) {
 		const newExpiresAt = new Date(Date.now() + SESSION_DURATION_MS);
-		await db
-			.update(sessions)
-			.set({ expiresAt: newExpiresAt })
-			.where(eq(sessions.id, id));
+		await db.update(sessions).set({ expiresAt: newExpiresAt }).where(eq(sessions.id, id));
 		session.expiresAt = newExpiresAt;
 	}
 
@@ -169,7 +163,7 @@ async function fetchGitHubJson<T>(url: string, accessToken: string): Promise<T> 
 		headers: {
 			Authorization: `Bearer ${accessToken}`,
 			Accept: 'application/json',
-			'User-Agent': 'Magpie'
+			'User-Agent': 'Coati'
 		}
 	});
 	if (!res.ok) {

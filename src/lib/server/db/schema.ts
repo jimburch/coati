@@ -1,4 +1,4 @@
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import {
 	pgTable,
 	pgEnum,
@@ -10,29 +10,22 @@ import {
 	timestamp,
 	primaryKey,
 	uniqueIndex,
-	index
+	index,
+	customType
 } from 'drizzle-orm/pg-core';
+
+const tsvector = customType<{ data: string }>({
+	dataType() {
+		return 'tsvector';
+	}
+});
+import { COMPONENT_TYPE_VALUES, CATEGORY_VALUES } from '@coati/validation';
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
-export const placementEnum = pgEnum('placement', ['global', 'project', 'relative']);
+export const componentTypeEnum = pgEnum('component_type', COMPONENT_TYPE_VALUES);
 
-export const componentTypeEnum = pgEnum('component_type', [
-	'instruction',
-	'command',
-	'skill',
-	'mcp_server',
-	'hook'
-]);
-
-export const categoryEnum = pgEnum('category', [
-	'web-dev',
-	'mobile',
-	'data-science',
-	'devops',
-	'systems',
-	'general'
-]);
+export const categoryEnum = pgEnum('category', CATEGORY_VALUES);
 
 export const actionTypeEnum = pgEnum('action_type', [
 	'created_setup',
@@ -40,6 +33,26 @@ export const actionTypeEnum = pgEnum('action_type', [
 	'commented',
 	'followed_user',
 	'cloned_setup'
+]);
+
+export const feedbackCategoryEnum = pgEnum('feedback_category', [
+	'bug',
+	'improvement',
+	'feature-request'
+]);
+
+export const setupReportReasonEnum = pgEnum('setup_report_reason', [
+	'malicious',
+	'spam',
+	'inappropriate',
+	'other'
+]);
+
+export const setupReportStatusEnum = pgEnum('setup_report_status', [
+	'pending',
+	'reviewed',
+	'dismissed',
+	'actioned'
 ]);
 
 // ─── Tier 1: No FK dependencies ─────────────────────────────────────────────
@@ -50,13 +63,17 @@ export const users = pgTable('users', {
 	username: varchar('username', { length: 50 }).unique().notNull(),
 	email: text('email').notNull(),
 	avatarUrl: text('avatar_url').notNull(),
+	name: varchar('name', { length: 100 }),
 	bio: varchar('bio', { length: 500 }),
 	websiteUrl: text('website_url'),
+	location: varchar('location', { length: 100 }),
 	githubUsername: text('github_username').notNull(),
 	setupsCount: integer('setups_count').default(0).notNull(),
 	followersCount: integer('followers_count').default(0).notNull(),
 	followingCount: integer('following_count').default(0).notNull(),
 	isAdmin: boolean('is_admin').default(false).notNull(),
+	isBetaApproved: boolean('is_beta_approved').default(false).notNull(),
+	lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 	updatedAt: timestamp('updated_at', { withTimezone: true })
 		.defaultNow()
@@ -69,10 +86,13 @@ export const tags = pgTable('tags', {
 	name: varchar('name', { length: 50 }).unique().notNull()
 });
 
-export const tools = pgTable('tools', {
+export const agents = pgTable('agents', {
 	id: uuid('id').defaultRandom().primaryKey(),
-	name: varchar('name', { length: 100 }).unique().notNull(),
-	slug: varchar('slug', { length: 100 }).unique().notNull()
+	slug: varchar('slug', { length: 100 }).unique().notNull(),
+	displayName: varchar('display_name', { length: 100 }).unique().notNull(),
+	icon: text('icon'),
+	website: text('website'),
+	official: boolean('official').default(false).notNull()
 });
 
 // ─── Tier 2: Depends on users ───────────────────────────────────────────────
@@ -94,26 +114,28 @@ export const setups = pgTable(
 			.notNull(),
 		name: varchar('name', { length: 100 }).notNull(),
 		slug: varchar('slug', { length: 100 }).notNull(),
-		version: varchar('version', { length: 20 }).default('0.1.0').notNull(),
 		description: varchar('description', { length: 300 }).notNull(),
-		readmePath: text('readme_path'),
+		readme: text('readme'),
 		category: categoryEnum('category'),
 		license: varchar('license', { length: 50 }),
 		minToolVersion: varchar('min_tool_version', { length: 20 }),
-		postInstall: text('post_install'),
+		postInstall: text('post_install').array(),
 		prerequisites: text('prerequisites').array(),
 		starsCount: integer('stars_count').default(0).notNull(),
 		clonesCount: integer('clones_count').default(0).notNull(),
 		commentsCount: integer('comments_count').default(0).notNull(),
+		featuredAt: timestamp('featured_at', { withTimezone: true }),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-		updatedAt: timestamp('updated_at', { withTimezone: true })
-			.defaultNow()
-			.$onUpdate(() => new Date())
-			.notNull()
+		updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+		searchVector: tsvector('search_vector').generatedAlwaysAs(
+			sql`setweight(to_tsvector('english', coalesce(name, '')), 'A') || setweight(to_tsvector('english', coalesce(description, '')), 'B')`
+		)
 	},
 	(table) => [
 		uniqueIndex('setups_user_id_slug_idx').on(table.userId, table.slug),
-		index('setups_user_id_idx').on(table.userId)
+		index('setups_user_id_idx').on(table.userId),
+		index('setups_created_at_idx').on(table.createdAt),
+		index('setups_search_vector_idx').using('gin', table.searchVector)
 	]
 );
 
@@ -154,12 +176,14 @@ export const setupFiles = pgTable(
 		setupId: uuid('setup_id')
 			.references(() => setups.id, { onDelete: 'cascade' })
 			.notNull(),
-		source: text('source').notNull(),
-		target: text('target').notNull(),
-		placement: placementEnum('placement').notNull(),
+		path: text('path').notNull(),
 		componentType: componentTypeEnum('component_type').notNull().default('instruction'),
 		description: text('description'),
 		content: text('content').notNull(),
+		agent: varchar('agent', { length: 100 }).references(() => agents.slug, {
+			onDelete: 'set null',
+			onUpdate: 'cascade'
+		}),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 	},
 	(table) => [index('setup_files_setup_id_idx').on(table.setupId)]
@@ -177,23 +201,25 @@ export const setupTags = pgTable(
 	},
 	(table) => [
 		primaryKey({ columns: [table.setupId, table.tagId] }),
-		index('setup_tags_tag_id_idx').on(table.tagId)
+		index('setup_tags_tag_id_idx').on(table.tagId),
+		index('setup_tags_setup_id_tag_id_idx').on(table.setupId, table.tagId)
 	]
 );
 
-export const setupTools = pgTable(
-	'setup_tools',
+export const setupAgents = pgTable(
+	'setup_agents',
 	{
 		setupId: uuid('setup_id')
 			.references(() => setups.id, { onDelete: 'cascade' })
 			.notNull(),
-		toolId: uuid('tool_id')
-			.references(() => tools.id, { onDelete: 'cascade' })
+		agentId: uuid('agent_id')
+			.references(() => agents.id, { onDelete: 'cascade' })
 			.notNull()
 	},
 	(table) => [
-		primaryKey({ columns: [table.setupId, table.toolId] }),
-		index('setup_tools_tool_id_idx').on(table.toolId)
+		primaryKey({ columns: [table.setupId, table.agentId] }),
+		index('setup_agents_agent_id_idx').on(table.agentId),
+		index('setup_agents_setup_id_agent_id_idx').on(table.setupId, table.agentId)
 	]
 );
 
@@ -211,7 +237,8 @@ export const stars = pgTable(
 	},
 	(table) => [
 		uniqueIndex('stars_user_id_setup_id_idx').on(table.userId, table.setupId),
-		index('stars_setup_id_idx').on(table.setupId)
+		index('stars_setup_id_idx').on(table.setupId),
+		index('stars_created_at_idx').on(table.createdAt)
 	]
 );
 
@@ -233,7 +260,10 @@ export const comments = pgTable(
 			.$onUpdate(() => new Date())
 			.notNull()
 	},
-	(table) => [index('comments_setup_id_idx').on(table.setupId)]
+	(table) => [
+		index('comments_setup_id_idx').on(table.setupId),
+		index('comments_user_id_idx').on(table.userId)
+	]
 );
 
 export const activities = pgTable(
@@ -244,10 +274,74 @@ export const activities = pgTable(
 			.references(() => users.id, { onDelete: 'cascade' })
 			.notNull(),
 		setupId: uuid('setup_id').references(() => setups.id, { onDelete: 'set null' }),
+		targetUserId: uuid('target_user_id').references(() => users.id, { onDelete: 'set null' }),
+		commentId: uuid('comment_id').references(() => comments.id, { onDelete: 'set null' }),
 		actionType: actionTypeEnum('action_type').notNull(),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 	},
 	(table) => [index('activities_user_id_created_at_idx').on(table.userId, table.createdAt)]
+);
+
+// ─── Feedback ────────────────────────────────────────────────────────────────
+
+export const feedbackSubmissions = pgTable(
+	'feedback_submissions',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		userId: uuid('user_id')
+			.references(() => users.id, { onDelete: 'cascade' })
+			.notNull(),
+		category: feedbackCategoryEnum('category').notNull(),
+		title: text('title').notNull(),
+		description: text('description').notNull(),
+		pageUrl: text('page_url').notNull(),
+		githubIssueUrl: text('github_issue_url').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(table) => [index('feedback_submissions_user_id_idx').on(table.userId)]
+);
+
+export const setupReports = pgTable(
+	'setup_reports',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		setupId: uuid('setup_id')
+			.references(() => setups.id, { onDelete: 'cascade' })
+			.notNull(),
+		reporterId: uuid('reporter_id')
+			.references(() => users.id, { onDelete: 'cascade' })
+			.notNull(),
+		reason: setupReportReasonEnum('reason').notNull(),
+		description: text('description'),
+		status: setupReportStatusEnum('status').default('pending').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+		reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+		reviewedBy: uuid('reviewed_by').references(() => users.id, { onDelete: 'set null' })
+	},
+	(table) => [
+		uniqueIndex('setup_reports_setup_id_reporter_id_idx').on(table.setupId, table.reporterId),
+		index('setup_reports_setup_id_idx').on(table.setupId),
+		index('setup_reports_status_idx').on(table.status)
+	]
+);
+
+export const setupSlugRedirects = pgTable(
+	'setup_slug_redirects',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		userId: uuid('user_id')
+			.references(() => users.id, { onDelete: 'cascade' })
+			.notNull(),
+		oldSlug: varchar('old_slug', { length: 100 }).notNull(),
+		setupId: uuid('setup_id')
+			.references(() => setups.id, { onDelete: 'cascade' })
+			.notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(table) => [
+		uniqueIndex('setup_slug_redirects_user_id_old_slug_idx').on(table.userId, table.oldSlug),
+		index('setup_slug_redirects_setup_id_idx').on(table.setupId)
+	]
 );
 
 // ─── Relations ──────────────────────────────────────────────────────────────
@@ -259,7 +353,8 @@ export const usersRelations = relations(users, ({ many }) => ({
 	comments: many(comments),
 	activities: many(activities),
 	followers: many(follows, { relationName: 'following' }),
-	following: many(follows, { relationName: 'follower' })
+	following: many(follows, { relationName: 'follower' }),
+	reports: many(setupReports, { relationName: 'reporter' })
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -270,10 +365,11 @@ export const setupsRelations = relations(setups, ({ one, many }) => ({
 	user: one(users, { fields: [setups.userId], references: [users.id] }),
 	files: many(setupFiles),
 	setupTags: many(setupTags),
-	setupTools: many(setupTools),
+	setupAgents: many(setupAgents),
 	stars: many(stars),
 	comments: many(comments),
-	activities: many(activities)
+	activities: many(activities),
+	reports: many(setupReports)
 }));
 
 export const followsRelations = relations(follows, ({ one }) => ({
@@ -294,7 +390,8 @@ export const deviceFlowStatesRelations = relations(deviceFlowStates, ({ one }) =
 }));
 
 export const setupFilesRelations = relations(setupFiles, ({ one }) => ({
-	setup: one(setups, { fields: [setupFiles.setupId], references: [setups.id] })
+	setup: one(setups, { fields: [setupFiles.setupId], references: [setups.id] }),
+	agent: one(agents, { fields: [setupFiles.agent], references: [agents.slug] })
 }));
 
 export const setupTagsRelations = relations(setupTags, ({ one }) => ({
@@ -306,13 +403,13 @@ export const tagsRelations = relations(tags, ({ many }) => ({
 	setupTags: many(setupTags)
 }));
 
-export const setupToolsRelations = relations(setupTools, ({ one }) => ({
-	setup: one(setups, { fields: [setupTools.setupId], references: [setups.id] }),
-	tool: one(tools, { fields: [setupTools.toolId], references: [tools.id] })
+export const setupAgentsRelations = relations(setupAgents, ({ one }) => ({
+	setup: one(setups, { fields: [setupAgents.setupId], references: [setups.id] }),
+	agent: one(agents, { fields: [setupAgents.agentId], references: [agents.id] })
 }));
 
-export const toolsRelations = relations(tools, ({ many }) => ({
-	setupTools: many(setupTools)
+export const agentsRelations = relations(agents, ({ many }) => ({
+	setupAgents: many(setupAgents)
 }));
 
 export const starsRelations = relations(stars, ({ one }) => ({
@@ -333,7 +430,19 @@ export const commentsRelations = relations(comments, ({ one, many }) => ({
 
 export const activitiesRelations = relations(activities, ({ one }) => ({
 	user: one(users, { fields: [activities.userId], references: [users.id] }),
-	setup: one(setups, { fields: [activities.setupId], references: [setups.id] })
+	setup: one(setups, { fields: [activities.setupId], references: [setups.id] }),
+	targetUser: one(users, { fields: [activities.targetUserId], references: [users.id] }),
+	comment: one(comments, { fields: [activities.commentId], references: [comments.id] })
+}));
+
+export const setupReportsRelations = relations(setupReports, ({ one }) => ({
+	setup: one(setups, { fields: [setupReports.setupId], references: [setups.id] }),
+	reporter: one(users, {
+		fields: [setupReports.reporterId],
+		references: [users.id],
+		relationName: 'reporter'
+	}),
+	reviewer: one(users, { fields: [setupReports.reviewedBy], references: [users.id] })
 }));
 
 // ─── Type Exports ───────────────────────────────────────────────────────────
@@ -344,8 +453,8 @@ export type NewUser = typeof users.$inferInsert;
 export type Tag = typeof tags.$inferSelect;
 export type NewTag = typeof tags.$inferInsert;
 
-export type Tool = typeof tools.$inferSelect;
-export type NewTool = typeof tools.$inferInsert;
+export type Agent = typeof agents.$inferSelect;
+export type NewAgent = typeof agents.$inferInsert;
 
 export type Session = typeof sessions.$inferSelect;
 export type NewSession = typeof sessions.$inferInsert;
@@ -365,8 +474,8 @@ export type NewSetupFile = typeof setupFiles.$inferInsert;
 export type SetupTag = typeof setupTags.$inferSelect;
 export type NewSetupTag = typeof setupTags.$inferInsert;
 
-export type SetupTool = typeof setupTools.$inferSelect;
-export type NewSetupTool = typeof setupTools.$inferInsert;
+export type SetupAgent = typeof setupAgents.$inferSelect;
+export type NewSetupAgent = typeof setupAgents.$inferInsert;
 
 export type Star = typeof stars.$inferSelect;
 export type NewStar = typeof stars.$inferInsert;
@@ -376,3 +485,12 @@ export type NewComment = typeof comments.$inferInsert;
 
 export type Activity = typeof activities.$inferSelect;
 export type NewActivity = typeof activities.$inferInsert;
+
+export type FeedbackSubmission = typeof feedbackSubmissions.$inferSelect;
+export type NewFeedbackSubmission = typeof feedbackSubmissions.$inferInsert;
+
+export type SetupReport = typeof setupReports.$inferSelect;
+export type NewSetupReport = typeof setupReports.$inferInsert;
+
+export type SetupSlugRedirect = typeof setupSlugRedirects.$inferSelect;
+export type NewSetupSlugRedirect = typeof setupSlugRedirects.$inferInsert;

@@ -1,40 +1,49 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import SetupCard from '$lib/components/SetupCard.svelte';
 	import Pagination from '$lib/components/Pagination.svelte';
+	import AgentIcon from '$lib/components/AgentIcon.svelte';
+	import OgMeta from '$lib/components/OgMeta.svelte';
 	import { Input } from '$lib/components/ui/input';
+	import * as Select from '$lib/components/ui/select';
 	import type { ExploreSort } from '$lib/types';
 
 	const { data } = $props();
 
 	// eslint-disable-next-line svelte/prefer-writable-derived -- needs two-way binding for search input
-	let searchInput = $state(data.q ?? '');
+	let searchInput = $state(untrack(() => data.q ?? ''));
 	$effect(() => {
 		searchInput = data.q ?? '';
 	});
 
 	const sortLabels: Record<ExploreSort, string> = {
-		newest: 'Newest',
 		trending: 'Trending',
 		stars: 'Most Stars',
-		clones: 'Most Clones'
+		newest: 'Newest'
 	};
 
-	function buildUrl(overrides: Record<string, string | number | undefined> = {}): string {
+	function buildUrl(
+		overrides: {
+			q?: string | undefined;
+			agents?: string[] | undefined;
+			sort?: string | undefined;
+			page?: number | undefined;
+		} = {}
+	): string {
 		const merged = {
-			q: data.q,
-			tool: data.tool,
-			tag: data.tag,
-			sort: data.sort,
-			page: data.page,
-			...overrides
+			q: 'q' in overrides ? overrides.q : data.q,
+			agents: 'agents' in overrides ? overrides.agents : data.agents,
+			sort: 'sort' in overrides ? overrides.sort : data.sort,
+			page: 'page' in overrides ? overrides.page : data.page
 		};
 
 		const parts: string[] = [];
-		if (merged.q) parts.push(`q=${encodeURIComponent(String(merged.q))}`);
-		if (merged.tool) parts.push(`tool=${encodeURIComponent(String(merged.tool))}`);
-		if (merged.tag) parts.push(`tag=${encodeURIComponent(String(merged.tag))}`);
-		if (merged.sort && merged.sort !== 'newest') parts.push(`sort=${String(merged.sort)}`);
+		if (merged.q) parts.push(`q=${encodeURIComponent(merged.q)}`);
+		for (const slug of merged.agents ?? []) {
+			parts.push(`agent=${encodeURIComponent(slug)}`);
+		}
+		if (merged.sort && merged.sort !== 'trending') parts.push(`sort=${merged.sort}`);
 		if (merged.page && Number(merged.page) > 1) parts.push(`page=${String(merged.page)}`);
 
 		return `/explore${parts.length > 0 ? `?${parts.join('&')}` : ''}`;
@@ -49,21 +58,33 @@
 		goto(buildUrl({ q: searchInput || undefined, page: 1 }));
 	}
 
-	function handleFilterChange(key: string, value: string) {
-		goto(buildUrl({ [key]: value || undefined, page: 1 }));
+	function toggleAgent(slug: string) {
+		const current = data.agents ?? [];
+		const next = current.includes(slug) ? current.filter((s) => s !== slug) : [...current, slug];
+		goto(buildUrl({ agents: next.length > 0 ? next : undefined, page: 1 }));
 	}
 
-	const hasFilters = $derived(!!data.q || !!data.tool || !!data.tag || data.sort !== 'newest');
+	const hasFilters = $derived(
+		!!data.q || (data.agents?.length ?? 0) > 0 || data.sort !== 'trending'
+	);
 </script>
 
 <svelte:head>
-	<title>Explore Setups - Magpie</title>
-	<meta name="description" content="Browse AI coding workflows and setups on Magpie." />
+	<title>Explore Setups - Coati</title>
+	<meta name="description" content="Browse AI coding workflows and setups on Coati." />
 </svelte:head>
 
-<div class="mx-auto max-w-7xl px-4 py-8">
-	<div class="mb-6 flex items-baseline justify-between">
-		<h1 class="text-2xl font-bold">Explore Setups</h1>
+<OgMeta
+	title="Explore Setups - Coati"
+	description="Browse AI coding workflows and setups on Coati."
+	url="/explore"
+	type="website"
+	twitterCard="summary"
+/>
+
+<div class="mx-auto max-w-7xl px-4 py-6 lg:py-8">
+	<div class="mb-4 flex items-baseline justify-between lg:mb-6">
+		<h1 class="text-xl font-bold lg:text-2xl">Explore Setups</h1>
 		<span class="text-sm text-muted-foreground">
 			{data.total}
 			{data.total === 1 ? 'setup' : 'setups'}
@@ -94,39 +115,53 @@
 		</div>
 	</form>
 
-	<!-- Filter/sort bar -->
-	<div class="mb-6 flex flex-wrap items-center gap-3">
-		<select
-			class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-			value={data.tool ?? ''}
-			onchange={(e) => handleFilterChange('tool', e.currentTarget.value)}
-		>
-			<option value="">All Tools</option>
-			{#each data.allTools as tool (tool.id)}
-				<option value={tool.slug}>{tool.name}</option>
+	<!-- Agent filter chips -->
+	{#if data.allAgents.length > 0}
+		<div class="mb-3 flex flex-wrap items-center gap-1.5 lg:mb-4 lg:gap-2">
+			{#each data.allAgents as agent (agent.id)}
+				{@const isActive = data.agents?.includes(agent.slug)}
+				<button
+					type="button"
+					onclick={() => toggleAgent(agent.slug)}
+					class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors
+						{isActive
+						? 'border-foreground bg-foreground text-background'
+						: 'border-border bg-background text-foreground hover:border-foreground/50 hover:bg-accent'}"
+					aria-pressed={isActive}
+					data-agent-slug={agent.slug}
+				>
+					<AgentIcon slug={agent.slug} size={14} />
+					{agent.displayName}
+					{#if agent.setupsCount > 0}
+						<span
+							class="ml-0.5 tabular-nums {isActive
+								? 'text-background/70'
+								: 'text-muted-foreground'}"
+						>
+							{agent.setupsCount}
+						</span>
+					{/if}
+				</button>
 			{/each}
-		</select>
+		</div>
+	{/if}
 
-		<select
-			class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-			value={data.tag ?? ''}
-			onchange={(e) => handleFilterChange('tag', e.currentTarget.value)}
-		>
-			<option value="">All Tags</option>
-			{#each data.allTags as tag (tag.id)}
-				<option value={tag.name}>{tag.name}</option>
-			{/each}
-		</select>
-
-		<select
-			class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+	<!-- Sort bar -->
+	<div class="mb-4 flex flex-wrap items-center gap-2 lg:mb-6 lg:gap-3">
+		<Select.Root
+			type="single"
 			value={data.sort}
-			onchange={(e) => handleFilterChange('sort', e.currentTarget.value)}
+			onValueChange={(val: string) => goto(buildUrl({ sort: val || undefined, page: 1 }))}
 		>
-			{#each Object.entries(sortLabels) as [value, label] (value)}
-				<option {value}>{label}</option>
-			{/each}
-		</select>
+			<Select.Trigger class="h-9 w-[140px]">
+				{sortLabels[data.sort as ExploreSort] ?? 'Sort'}
+			</Select.Trigger>
+			<Select.Content>
+				{#each Object.entries(sortLabels) as [value, label] (value)}
+					<Select.Item {value} {label}>{label}</Select.Item>
+				{/each}
+			</Select.Content>
+		</Select.Root>
 
 		<!-- Active filter chips -->
 		{#if hasFilters}
@@ -140,30 +175,12 @@
 						<span aria-label="Remove search">&times;</span>
 					</a>
 				{/if}
-				{#if data.tool}
-					<a
-						href={buildUrl({ tool: undefined, page: 1 })}
-						class="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/80"
-					>
-						{data.allTools.find((t) => t.slug === data.tool)?.name ?? data.tool}
-						<span aria-label="Remove tool filter">&times;</span>
-					</a>
-				{/if}
-				{#if data.tag}
-					<a
-						href={buildUrl({ tag: undefined, page: 1 })}
-						class="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/80"
-					>
-						{data.tag}
-						<span aria-label="Remove tag filter">&times;</span>
-					</a>
-				{/if}
-				{#if data.sort !== 'newest'}
+				{#if data.sort !== 'trending'}
 					<a
 						href={buildUrl({ sort: undefined, page: 1 })}
 						class="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/80"
 					>
-						{sortLabels[data.sort]}
+						{sortLabels[data.sort as ExploreSort]}
 						<span aria-label="Remove sort">&times;</span>
 					</a>
 				{/if}
@@ -174,19 +191,52 @@
 		{/if}
 	</div>
 
+	<!-- User results row -->
+	{#if data.userResults && data.userResults.length > 0}
+		<div class="mb-6">
+			<h2 class="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+				People
+			</h2>
+			<div class="flex flex-wrap gap-3">
+				{#each data.userResults as user (user.id)}
+					<a
+						href="/{user.username}"
+						class="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 text-card-foreground hover:bg-accent transition-colors min-w-0"
+					>
+						<img
+							src={user.avatarUrl}
+							alt={user.username}
+							class="h-9 w-9 rounded-full flex-shrink-0"
+						/>
+						<div class="min-w-0">
+							<div class="font-medium text-sm truncate">{user.username}</div>
+							{#if user.name}
+								<div class="text-xs text-muted-foreground truncate">{user.name}</div>
+							{/if}
+							<div class="text-xs text-muted-foreground">
+								{user.setupsCount}
+								{user.setupsCount === 1 ? 'setup' : 'setups'}
+							</div>
+						</div>
+					</a>
+				{/each}
+			</div>
+		</div>
+	{/if}
+
 	<!-- Results grid -->
 	{#if data.items.length > 0}
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+		<div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 lg:gap-4">
 			{#each data.items as setup (setup.id)}
 				<SetupCard {setup} username={setup.ownerUsername} showAuthor />
 			{/each}
 		</div>
 
-		<div class="mt-8">
+		<div class="mt-6 lg:mt-8">
 			<Pagination page={data.page} totalPages={data.totalPages} buildUrl={buildPageUrl} />
 		</div>
 	{:else}
-		<div class="py-12 text-center">
+		<div class="py-8 text-center lg:py-12">
 			<p class="text-muted-foreground">No setups match your filters.</p>
 			{#if hasFilters}
 				<a href="/explore" class="mt-2 inline-block text-sm text-primary hover:underline">

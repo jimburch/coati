@@ -3,9 +3,22 @@ import {
 	apiSuccessSchema,
 	apiErrorSchema,
 	createSetupSchema,
+	createSetupFileSchema,
+	createSetupWithFilesSchema,
+	updateSetupSchema,
 	createCommentSchema,
 	usernameSchema
 } from './index';
+
+function makeFile(content: string = 'x') {
+	return { path: 'a.md', content };
+}
+
+const validSetupBase = {
+	name: 'My Setup',
+	slug: 'my-setup',
+	description: 'A setup'
+};
 import { z } from 'zod';
 
 describe('API response schemas', () => {
@@ -48,8 +61,7 @@ describe('Input validation schemas', () => {
 		const validInput = {
 			name: 'My Claude Setup',
 			slug: 'my-claude-setup',
-			description: 'A great setup for Claude Code',
-			version: '1.0.0'
+			description: 'A great setup for Claude Code'
 		};
 
 		it('accepts valid input', () => {
@@ -89,18 +101,6 @@ describe('Input validation schemas', () => {
 				description: 'a'.repeat(301)
 			});
 			expect(result.success).toBe(false);
-		});
-
-		it('rejects invalid version format', () => {
-			const result = createSetupSchema.safeParse({ ...validInput, version: 'not-a-version' });
-			expect(result.success).toBe(false);
-		});
-
-		it('accepts valid semver versions', () => {
-			for (const version of ['0.1.0', '1.0.0', '12.34.56']) {
-				const result = createSetupSchema.safeParse({ ...validInput, version });
-				expect(result.success).toBe(true);
-			}
 		});
 	});
 
@@ -178,6 +178,143 @@ describe('Input validation schemas', () => {
 		it('rejects username longer than 50 chars', () => {
 			const result = usernameSchema.safeParse('a'.repeat(51));
 			expect(result.success).toBe(false);
+		});
+	});
+});
+
+describe('File size limit schemas', () => {
+	describe('createSetupFileSchema content limit', () => {
+		it('rejects file content over 100KB (102401 chars)', () => {
+			const result = createSetupFileSchema.safeParse(makeFile('a'.repeat(102401)));
+			expect(result.success).toBe(false);
+		});
+
+		it('accepts file content at exactly 100KB (102400 chars)', () => {
+			const result = createSetupFileSchema.safeParse(makeFile('a'.repeat(102400)));
+			expect(result.success).toBe(true);
+		});
+	});
+
+	describe('createSetupWithFilesSchema file limits', () => {
+		it('rejects when files.length > 50', () => {
+			const result = createSetupWithFilesSchema.safeParse({
+				...validSetupBase,
+				files: Array.from({ length: 51 }, (_, i) => makeFile(`content-${i}`))
+			});
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				const messages = result.error.issues.map((i) => i.message);
+				expect(messages).toContain('Maximum 50 files per setup');
+			}
+		});
+
+		it('accepts exactly 50 files', () => {
+			const result = createSetupWithFilesSchema.safeParse({
+				...validSetupBase,
+				files: Array.from({ length: 50 }, (_, i) => makeFile(`content-${i}`))
+			});
+			expect(result.success).toBe(true);
+		});
+
+		it('accepts total content at exactly 1MB', () => {
+			// 1048576 bytes in a single file is over per-file limit, so split: 10 × 102400 + 1 × 48576 = 1072576... use 1 big-ish file
+			// Better: 10 files × 100KB + 1 file with remaining bytes to hit exactly 1MB total
+			// 10 × 100000 = 1000000, remainder = 48576 bytes → total = 1048576
+			const result = createSetupWithFilesSchema.safeParse({
+				...validSetupBase,
+				files: [
+					...Array.from({ length: 10 }, () => makeFile('a'.repeat(100000))),
+					makeFile('b'.repeat(48576))
+				]
+			});
+			expect(result.success).toBe(true);
+		});
+
+		it('rejects when total content size > 1MB (11 files × 100KB each)', () => {
+			// 11 × 102400 = 1126400 > 1048576; each file individually is within limit
+			const result = createSetupWithFilesSchema.safeParse({
+				...validSetupBase,
+				files: Array.from({ length: 11 }, () => makeFile('a'.repeat(102400)))
+			});
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				const messages = result.error.issues.map((i) => i.message);
+				expect(messages).toContain('Setup exceeds 1MB total limit');
+			}
+		});
+
+		it('accepts valid payload with small files', () => {
+			const result = createSetupWithFilesSchema.safeParse({
+				...validSetupBase,
+				files: [makeFile('small content'), makeFile('another file')]
+			});
+			expect(result.success).toBe(true);
+		});
+	});
+
+	describe('placement removed from schemas', () => {
+		it('createSetupWithFilesSchema strips unknown placement field', () => {
+			const result = createSetupWithFilesSchema.safeParse({
+				...validSetupBase,
+				placement: 'global'
+			});
+			// Zod strips unknown keys by default in object schemas — placement should be absent
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data).not.toHaveProperty('placement');
+			}
+		});
+
+		it('updateSetupSchema strips unknown placement field', () => {
+			const result = updateSetupSchema.safeParse({ placement: 'project' });
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data).not.toHaveProperty('placement');
+			}
+		});
+
+		it('createSetupWithFilesSchema succeeds without placement', () => {
+			const result = createSetupWithFilesSchema.safeParse(validSetupBase);
+			expect(result.success).toBe(true);
+		});
+	});
+
+	describe('updateSetupSchema file limits', () => {
+		it('rejects file content over 100KB', () => {
+			const result = updateSetupSchema.safeParse({
+				files: [makeFile('a'.repeat(102401))]
+			});
+			expect(result.success).toBe(false);
+		});
+
+		it('rejects when files.length > 50', () => {
+			const result = updateSetupSchema.safeParse({
+				files: Array.from({ length: 51 }, (_, i) => makeFile(`content-${i}`))
+			});
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				const messages = result.error.issues.map((i) => i.message);
+				expect(messages).toContain('Maximum 50 files per setup');
+			}
+		});
+
+		it('rejects when total content size > 1MB', () => {
+			const result = updateSetupSchema.safeParse({
+				files: Array.from({ length: 11 }, () => makeFile('a'.repeat(102400)))
+			});
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				const messages = result.error.issues.map((i) => i.message);
+				expect(messages).toContain('Setup exceeds 1MB total limit');
+			}
+		});
+
+		it('accepts valid payload with files', () => {
+			const result = updateSetupSchema.safeParse({
+				name: 'Updated Name',
+				files: [makeFile('hello'), makeFile('world')]
+			});
+			expect(result.success).toBe(true);
 		});
 	});
 });

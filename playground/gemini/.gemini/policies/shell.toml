@@ -1,0 +1,62 @@
+[policy]
+name = "shell"
+description = "Controls which shell commands Gemini CLI is allowed to execute"
+
+# Commands that are always allowed without confirmation
+[policy.allow]
+patterns = [
+  "npm run *",
+  "npm test",
+  "npm install",
+  "npm ci",
+  "npx vitest *",
+  "npx eslint *",
+  "npx tsc *",
+  "npx prettier *",
+  "node *",
+  "cat *",
+  "ls *",
+  "head *",
+  "tail *",
+  "wc *",
+  "diff *",
+  "git status",
+  "git diff *",
+  "git log *",
+  "git branch *",
+  "git show *",
+]
+
+# Commands that require explicit user confirmation before running
+[policy.confirm]
+patterns = [
+  "git add *",
+  "git commit *",
+  "git push *",
+  "git checkout *",
+  "git merge *",
+  "git rebase *",
+  "npm publish *",
+  "npm version *",
+  "curl *",
+  "wget *",
+]
+
+# Commands that are never allowed
+[policy.deny]
+patterns = [
+  "rm -rf *",
+  "rm -r /",
+  "sudo *",
+  "chmod 777 *",
+  "shutdown *",
+  "reboot *",
+  "mkfs *",
+  "dd if=*",
+  "> /dev/*",
+  "git push --force *",
+  "git reset --hard *",
+  "git clean -fd *",
+  "npm unpublish *",
+  "eval *",
+]

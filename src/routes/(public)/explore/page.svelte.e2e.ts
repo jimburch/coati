@@ -18,10 +18,65 @@ test('renders search input in main content', async ({ page }) => {
 	await expect(mainSearch(page)).toBeVisible();
 });
 
+test('renders agent filter chips', async ({ page }) => {
+	await page.goto(EXPLORE_URL);
+	const chips = page.locator('main button[data-agent-slug]');
+	const count = await chips.count();
+	// If agents exist in the DB, chips should be visible
+	if (count > 0) {
+		await expect(chips.first()).toBeVisible();
+	}
+});
+
+test('agent chip toggles active state on click', async ({ page }) => {
+	await page.goto(EXPLORE_URL);
+	const chips = page.locator('main button[data-agent-slug]');
+	const count = await chips.count();
+	if (count === 0) return;
+
+	const chip = chips.first();
+	const slug = await chip.getAttribute('data-agent-slug');
+	await chip.click();
+	await expect(page).toHaveURL(new RegExp(`agent=${slug}`));
+	// chip should now be pressed
+	await expect(page.locator(`main button[data-agent-slug="${slug}"]`)).toHaveAttribute(
+		'aria-pressed',
+		'true'
+	);
+});
+
+test('clicking active agent chip removes it from URL', async ({ page }) => {
+	await page.goto(EXPLORE_URL);
+	const chips = page.locator('main button[data-agent-slug]');
+	if ((await chips.count()) === 0) return;
+
+	const chip = chips.first();
+	const slug = await chip.getAttribute('data-agent-slug');
+	// Select then deselect
+	await chip.click();
+	await page.waitForURL(new RegExp(`agent=${slug}`));
+	await page.locator(`main button[data-agent-slug="${slug}"]`).click();
+	await expect(page).not.toHaveURL(new RegExp(`agent=${slug}`));
+});
+
+test('multiple agent chips can be selected', async ({ page }) => {
+	await page.goto(EXPLORE_URL);
+	const chips = page.locator('main button[data-agent-slug]');
+	if ((await chips.count()) < 2) return;
+
+	const slug1 = await chips.nth(0).getAttribute('data-agent-slug');
+	const slug2 = await chips.nth(1).getAttribute('data-agent-slug');
+	await chips.nth(0).click();
+	await page.waitForURL(new RegExp(`agent=${slug1}`));
+	await page.locator(`main button[data-agent-slug="${slug2}"]`).click();
+	await expect(page).toHaveURL(new RegExp(`agent=${slug1}`));
+	await expect(page).toHaveURL(new RegExp(`agent=${slug2}`));
+});
+
 test('renders filter dropdowns', async ({ page }) => {
 	await page.goto(EXPLORE_URL);
 	const selects = page.locator('main select');
-	await expect(selects).toHaveCount(3);
+	await expect(selects).toHaveCount(2);
 });
 
 test('sort dropdown has correct options', async ({ page }) => {
@@ -120,12 +175,31 @@ test('clicking sort chip removes sort param', async ({ page }) => {
 	await expect(page).toHaveURL(/\/explore$/);
 });
 
+test('agent chip shows aria-pressed=false when not selected', async ({ page }) => {
+	await page.goto(EXPLORE_URL);
+	const chips = page.locator('main button[data-agent-slug]');
+	if ((await chips.count()) === 0) return;
+	await expect(chips.first()).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('deep link with agent param activates chip', async ({ page }) => {
+	await page.goto(EXPLORE_URL);
+	const chips = page.locator('main button[data-agent-slug]');
+	if ((await chips.count()) === 0) return;
+	const slug = await chips.first().getAttribute('data-agent-slug');
+	await page.goto(`${EXPLORE_URL}?agent=${slug}`);
+	await expect(page.locator(`main button[data-agent-slug="${slug}"]`)).toHaveAttribute(
+		'aria-pressed',
+		'true'
+	);
+});
+
 test('mobile layout wraps filters', async ({ page, isMobile }) => {
 	test.skip(!isMobile, 'mobile-only test');
 	await page.goto(EXPLORE_URL);
 	const selects = page.locator('main select');
-	await expect(selects).toHaveCount(3);
-	for (let i = 0; i < 3; i++) {
+	await expect(selects).toHaveCount(2);
+	for (let i = 0; i < 2; i++) {
 		await expect(selects.nth(i)).toBeVisible();
 	}
 });
@@ -139,4 +213,47 @@ test('setup cards show author name', async ({ page }) => {
 		const authorSpan = cards.first().locator('span.ml-auto img, span.ml-auto span');
 		await expect(authorSpan.first()).toBeVisible();
 	}
+});
+
+test('mobile: heading is visible and page has no horizontal overflow', async ({
+	page,
+	isMobile
+}) => {
+	test.skip(!isMobile, 'mobile-only test');
+	await page.goto(EXPLORE_URL);
+	await expect(page.getByRole('heading', { name: 'Explore Setups' })).toBeVisible();
+	// Page should not overflow horizontally
+	const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
+	const viewportWidth = await page.evaluate(() => window.innerWidth);
+	expect(bodyWidth).toBeLessThanOrEqual(viewportWidth + 1);
+});
+
+test('mobile: filter selects are visible and usable', async ({ page, isMobile }) => {
+	test.skip(!isMobile, 'mobile-only test');
+	await page.goto(EXPLORE_URL);
+	const selects = page.locator('main select');
+	await expect(selects).toHaveCount(2);
+	// Both selects are visible on mobile
+	await expect(selects.nth(0)).toBeVisible();
+	await expect(selects.nth(1)).toBeVisible();
+});
+
+test('mobile: pagination is usable without overflow', async ({ page, isMobile }) => {
+	test.skip(!isMobile, 'mobile-only test');
+	await page.goto(EXPLORE_URL);
+	const nav = page.locator('nav[aria-label="Pagination"]');
+	const exists = (await nav.count()) > 0;
+	if (exists) {
+		await expect(nav).toBeVisible();
+		// Pagination should not cause overflow
+		const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
+		const viewportWidth = await page.evaluate(() => window.innerWidth);
+		expect(bodyWidth).toBeLessThanOrEqual(viewportWidth + 1);
+	}
+});
+
+test('desktop: heading renders at full size', async ({ page, isMobile }) => {
+	test.skip(isMobile, 'desktop-only test');
+	await page.goto(EXPLORE_URL);
+	await expect(page.getByRole('heading', { name: 'Explore Setups' })).toBeVisible();
 });

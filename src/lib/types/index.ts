@@ -14,8 +14,8 @@ export type {
 	NewFollow,
 	Tag,
 	NewTag,
-	Tool,
-	NewTool,
+	Agent,
+	NewAgent,
 	Activity,
 	NewActivity,
 	Session,
@@ -24,8 +24,12 @@ export type {
 	NewDeviceFlowState,
 	SetupTag,
 	NewSetupTag,
-	SetupTool,
-	NewSetupTool
+	SetupAgent,
+	NewSetupAgent,
+	FeedbackSubmission,
+	NewFeedbackSubmission,
+	SetupReport,
+	NewSetupReport
 } from '$lib/server/db/schema';
 
 export type LayoutUser = {
@@ -33,9 +37,11 @@ export type LayoutUser = {
 	username: string;
 	avatarUrl: string;
 	bio: string | null;
+	isBetaApproved: boolean;
+	isAdmin: boolean;
 };
 
-export type ExploreSort = 'trending' | 'stars' | 'clones' | 'newest';
+export type ExploreSort = 'trending' | 'stars' | 'newest';
 
 export type SetupCardProps = {
 	id: string;
@@ -45,7 +51,7 @@ export type SetupCardProps = {
 	starsCount: number;
 	clonesCount: number;
 	updatedAt: Date;
-	tools?: { id: string; name: string; slug: string }[];
+	agents?: { id: string; displayName: string; slug: string }[];
 	ownerAvatarUrl?: string;
 };
 
@@ -53,8 +59,10 @@ export type ProfileUser = {
 	id: string;
 	username: string;
 	avatarUrl: string;
+	name: string | null;
 	bio: string | null;
 	websiteUrl: string | null;
+	location: string | null;
 	githubUsername: string;
 	setupsCount: number;
 	followersCount: number;
@@ -63,7 +71,12 @@ export type ProfileUser = {
 };
 
 import { z } from 'zod';
-import { placementEnum, componentTypeEnum, categoryEnum } from '$lib/server/db/schema';
+import {
+	componentTypeSchema,
+	categorySchema,
+	postInstallSchema,
+	SLUG_NAME_REGEX
+} from '@coati/validation';
 
 export const apiSuccessSchema = <T extends z.ZodType>(dataSchema: T) =>
 	z.object({ data: dataSchema });
@@ -75,61 +88,85 @@ export const apiErrorSchema = z.object({
 
 export const createSetupSchema = z.object({
 	name: z.string().min(1).max(100),
-	slug: z
-		.string()
-		.min(1)
-		.max(100)
-		.regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
-	description: z.string().max(300),
-	version: z.string().regex(/^\d+\.\d+\.\d+$/)
+	slug: z.string().min(1).max(100).regex(SLUG_NAME_REGEX),
+	description: z.string().max(300)
 });
 
 export const createSetupFileSchema = z.object({
-	source: z.string().min(1),
-	target: z.string().min(1),
-	placement: z.enum(placementEnum.enumValues),
-	componentType: z.enum(componentTypeEnum.enumValues).default('instruction'),
+	path: z.string().min(1),
+	componentType: componentTypeSchema.default('instruction'),
 	description: z.string().optional(),
-	content: z.string().min(1)
+	agent: z.string().max(100).optional(),
+	content: z.string().min(1).max(102400, 'File exceeds 100KB limit')
 });
 
-export const createSetupWithFilesSchema = createSetupSchema.extend({
-	readmePath: z.string().optional(),
-	category: z.enum(categoryEnum.enumValues).optional(),
-	license: z.string().max(50).optional(),
-	minToolVersion: z.string().max(20).optional(),
-	postInstall: z.string().optional(),
-	prerequisites: z.array(z.string()).optional(),
-	files: z.array(createSetupFileSchema).optional(),
-	toolIds: z.array(z.string().uuid()).optional(),
-	tagIds: z.array(z.string().uuid()).optional()
-});
+// Cross-reference: cli/src/validation.ts must stay in sync with this schema
+export const createSetupWithFilesSchema = createSetupSchema
+	.extend({
+		category: categorySchema.optional(),
+		license: z.string().max(50).optional(),
+		minToolVersion: z.string().max(20).optional(),
+		postInstall: postInstallSchema.optional(),
+		prerequisites: z.array(z.string()).optional(),
+		files: z.array(createSetupFileSchema).optional(),
+		agentIds: z.array(z.string().uuid()).optional(),
+		tagIds: z.array(z.string().uuid()).optional()
+	})
+	.refine((data) => !data.files || data.files.length <= 50, {
+		message: 'Maximum 50 files per setup'
+	})
+	.refine(
+		(data) => !data.files || data.files.reduce((sum, f) => sum + f.content.length, 0) <= 1048576,
+		{ message: 'Setup exceeds 1MB total limit' }
+	);
 
-export const updateSetupSchema = z.object({
-	name: z.string().min(1).max(100).optional(),
-	slug: z
+export const updateSetupSchema = z
+	.object({
+		name: z.string().min(1).max(100).optional(),
+		slug: z.string().min(1).max(100).regex(SLUG_NAME_REGEX).optional(),
+		description: z.string().max(300).optional(),
+		readme: z.string().optional(),
+		category: categorySchema.nullable().optional(),
+		license: z.string().max(50).nullable().optional(),
+		minToolVersion: z.string().max(20).nullable().optional(),
+		postInstall: postInstallSchema.nullable().optional(),
+		prerequisites: z.array(z.string()).nullable().optional(),
+		files: z.array(createSetupFileSchema).optional()
+	})
+	.refine((data) => !data.files || data.files.length <= 50, {
+		message: 'Maximum 50 files per setup'
+	})
+	.refine(
+		(data) => !data.files || data.files.reduce((sum, f) => sum + f.content.length, 0) <= 1048576,
+		{ message: 'Setup exceeds 1MB total limit' }
+	);
+
+export const updateProfileSchema = z.object({
+	name: z.string().max(100).optional(),
+	bio: z.string().max(500).optional(),
+	websiteUrl: z
 		.string()
-		.min(1)
-		.max(100)
-		.regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)
+		.transform((v) => {
+			if (!v || v.trim() === '') return '';
+			const trimmed = v.trim();
+			if (!/^https?:\/\//i.test(trimmed)) return `https://${trimmed}`;
+			return trimmed;
+		})
+		.refine((v) => v === '' || z.string().url().safeParse(v).success, {
+			message: 'Must be a valid URL or empty string'
+		})
 		.optional(),
-	description: z.string().max(300).optional(),
-	version: z
-		.string()
-		.regex(/^\d+\.\d+\.\d+$/)
-		.optional(),
-	readmePath: z.string().nullable().optional(),
-	category: z.enum(categoryEnum.enumValues).nullable().optional(),
-	license: z.string().max(50).nullable().optional(),
-	minToolVersion: z.string().max(20).nullable().optional(),
-	postInstall: z.string().nullable().optional(),
-	prerequisites: z.array(z.string()).nullable().optional(),
-	files: z.array(createSetupFileSchema).optional()
+	location: z.string().max(100).optional()
 });
 
 export const createCommentSchema = z.object({
 	body: z.string().min(1).max(5000),
 	parentId: z.string().uuid().optional()
+});
+
+export const createReportSchema = z.object({
+	reason: z.enum(['malicious', 'spam', 'inappropriate', 'other']),
+	description: z.string().max(1000).optional()
 });
 
 export const usernameSchema = z

@@ -1,6 +1,6 @@
 name: Ralph Task
 description: A task for Ralph (autonomous AI agent) to pick up
-labels: ["ralph"]
+labels: ['ralph']
 body:
   - type: textarea
     id: description

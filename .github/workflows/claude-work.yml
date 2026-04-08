@@ -3,34 +3,34 @@ name: Claude Worker
 on:
   workflow_dispatch:
     inputs:
-      branch_name:
-        description: 'Branch name for the worker (e.g. claude/fix-auth-1234567890)'
+      tasks:
+        description: 'JSON array of ordered tasks, each with issue_number, commit_type, and prompt'
         required: true
         type: string
-      issue_numbers:
-        description: 'JSON array of issue numbers (e.g. [42])'
-        required: true
-        type: string
-      prompt:
-        description: 'Task prompt for the worker'
+      branch:
+        description: 'Semantic branch name (e.g., feat/setup-card-grid-212)'
         required: true
         type: string
 
 jobs:
   worker:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 180
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     permissions:
       contents: write
-      pull-requests: write
       issues: write
+      pull-requests: write
       id-token: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: develop
           fetch-depth: 0
+          token: ${{ secrets.PAT_WORKFLOWS }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -50,46 +50,101 @@ jobs:
 
       - name: Configure git
         run: |
-          git config user.name "Claude"
-          git config user.email "noreply@anthropic.com"
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
 
-      - name: Run worker
+      - name: Create feature branch from develop
+        run: |
+          git checkout -b "${{ inputs.branch }}"
+          git push -u origin "${{ inputs.branch }}"
+
+      - name: Process tasks sequentially
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WORKER_PROMPT: ${{ inputs.prompt }}
+          TASKS_JSON: ${{ inputs.tasks }}
+          BRANCH_NAME: ${{ inputs.branch }}
         run: |
           chmod +x scripts/worker-run.sh
-          ./scripts/worker-run.sh \
-            "${{ inputs.branch_name }}" \
-            '${{ inputs.issue_numbers }}'
+          ./scripts/worker-run.sh
 
-      - name: Push branch
+      - name: Post testing summary
+        if: always()
         run: |
-          # Force-push in case Claude already pushed during execution
-          # or the branch exists from a previous run
-          git push --force-with-lease origin "${{ inputs.branch_name }}" 2>/dev/null \
-            || git push --force origin "${{ inputs.branch_name }}"
+          if [ -f /tmp/ralph_summary.txt ]; then
+            echo "## Ralph Testing Guide" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            cat /tmp/ralph_summary.txt >> "$GITHUB_STEP_SUMMARY"
+          fi
 
-      - name: Create Pull Request
+      - name: Check for commits
+        id: check-commits
+        run: |
+          COMMIT_COUNT=$(git rev-list develop..HEAD --count 2>/dev/null || echo "0")
+          echo "count=$COMMIT_COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Create pull request
+        if: steps.check-commits.outputs.count != '0'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_WORKFLOWS }}
+          TASKS_JSON: ${{ inputs.tasks }}
         run: |
-          PR_TITLE=$(cat /tmp/pr_title.txt)
-          PR_BODY=$(cat /tmp/pr_description.txt)
+          BRANCH="${{ inputs.branch }}"
+
+          # Collect completed issue numbers (those labeled 'complete' by the worker)
+          ISSUE_NUMS=$(echo "$TASKS_JSON" | jq -r '.[].issue_number')
+          CLOSES_LINES=""
+          for num in $ISSUE_NUMS; do
+            # Only add Closes for issues the worker actually completed
+            if gh issue view "$num" --json labels -q '.labels[].name' 2>/dev/null | grep -q '^complete$'; then
+              CLOSES_LINES="${CLOSES_LINES}Closes #${num}"$'\n'
+            fi
+          done
+
+          # Check if any parent PRD issues should also close
+          # (all their child issues are either already closed or will be closed by this PR)
+          PRD_ISSUES=$(gh issue list --label "prd" --state open --json number -q '.[].number' 2>/dev/null || echo "")
+          for PRD_NUM in $PRD_ISSUES; do
+            CHILD_ISSUES=$(gh issue list --state all --limit 100 --json number,body,state,labels -q \
+              "[.[] | select(.body | test(\"Parent PRD\\\\s*\\\\n\\\\s*#${PRD_NUM}(\\\\s|$)\"))]" 2>/dev/null || echo "[]")
+
+            CHILD_COUNT=$(echo "$CHILD_ISSUES" | jq 'length')
+            [ "$CHILD_COUNT" -eq 0 ] && continue
+
+            # Check: every child is either closed OR labeled 'complete' (will close with this PR)
+            INCOMPLETE=$(echo "$CHILD_ISSUES" | jq '[.[] | select(.state == "OPEN" and ([.labels[].name] | index("complete") | not))] | length')
+            if [ "$INCOMPLETE" -eq 0 ]; then
+              CLOSES_LINES="${CLOSES_LINES}Closes #${PRD_NUM}"$'\n'
+            fi
+          done
+
+          # Get commit summaries for the PR body
+          COMMIT_LOG=$(git log develop..HEAD --format="- %s" 2>/dev/null || echo "")
+
+          # Use the first commit message as the PR title (it follows semantic convention)
+          PR_TITLE=$(git log develop..HEAD --format="%s" -1 2>/dev/null || echo "$BRANCH")
+
+          # Build PR body in a temp file to avoid YAML parsing issues with heredocs
+          PR_BODY_FILE=$(mktemp)
+          {
+            echo "## Summary"
+            echo ""
+            echo "$COMMIT_LOG"
+            echo ""
+            echo "$CLOSES_LINES"
+            echo ""
+            echo "## Test plan"
+            echo ""
+            echo "See individual issue acceptance criteria for testing details."
+            echo ""
+            echo "🤖 Generated with [Claude Code](https://claude.com/claude-code)"
+          } > "$PR_BODY_FILE"
 
           gh pr create \
+            --base develop \
+            --head "$BRANCH" \
             --title "$PR_TITLE" \
-            --body "$PR_BODY" \
-            --base main \
-            --head "${{ inputs.branch_name }}"
+            --label "ralph" \
+            --body-file "$PR_BODY_FILE"
 
-      - name: Label issues as in-review
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Create label if it doesn't exist
-          gh label create "in-review" --color "D4C5F9" --description "PR open, awaiting review" 2>/dev/null || true
-          for num in $(echo '${{ inputs.issue_numbers }}' | jq -r '.[]'); do
-            gh issue edit "$num" --add-label "in-review" --remove-label "ralph" || true
-          done
+          rm -f "$PR_BODY_FILE"

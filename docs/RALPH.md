@@ -1,10 +1,10 @@
-buu# Ralph — Autonomous AI Worker System
+# Ralph — Autonomous AI Worker System
 
 ## Overview
 
 Ralph is an autonomous dispatcher/worker system that processes GitHub Issues using Claude Code agents running in GitHub Actions. It follows Matt Pocock's dispatcher/worker architecture from his [course-video-manager](https://github.com/mattpocock/course-video-manager) project.
 
-**Flow:** You create issues (manually or via Claude Code skills during work sessions) → label them `ralph` → run `pnpm dispatch` → dispatcher (Sonnet) reads issues, builds dependency graph, selects actionable tasks → dispatches parallel GitHub Actions workflows → workers (Opus) implement features on `claude/*` branches → workers open PRs → you review and merge.
+**Flow:** You create issues (manually or via Claude Code skills during work sessions) → label them `ralph` → run `pnpm dispatch` → dispatcher (Sonnet) reads issues, builds dependency graph, orders by priority → dispatches a single GitHub Actions workflow → worker (Opus) processes tasks sequentially on a `ralph` branch → each task is committed, pushed, and the issue closed → after all tasks complete, `ralph` merges into `develop` → you review `develop` and merge into `main`.
 
 ## Architecture
 
@@ -13,71 +13,95 @@ You (local)                    GitHub Actions
 ─────────────                  ──────────────
 pnpm dispatch
   │
-  ├─ Fetches open `ralph` issues
-  ├─ Fetches open claude/* PRs
-  ├─ Fetches in-progress workflow runs
+  ├─ Fetches open `ralph` issues (author: jimburch)
+  ├─ Checks no existing ralph run is active
   │
   ├─ Calls Claude Sonnet (orchestrator)
   │   ├─ Classifies issues (AFK/HITL)
   │   ├─ Builds dependency graph (Blocked by)
-  │   ├─ Detects file conflicts
-  │   └─ Outputs task JSON
+  │   └─ Outputs ordered task queue JSON
   │
-  └─ For each task:
-      gh workflow run claude-work.yml ──────►  Worker job starts
-                                                ├─ Checks out repo
-                                                ├─ Creates claude/<slug> branch
-                                                ├─ Fetches issue context via gh
-                                                ├─ Runs Claude Opus (--dangerously-skip-permissions)
-                                                │   ├─ Explores codebase
-                                                │   ├─ Implements feature
-                                                │   ├─ Runs quality gates
-                                                │   └─ Commits with RALPH: prefix
-                                                ├─ Pushes branch
-                                                └─ Opens PR (Closes #N)
+  └─ Dispatches single workflow run ──────►  Worker job starts
+                                              ├─ Checks out develop
+                                              ├─ Creates ralph branch from develop
+                                              │
+                                              ├─ FOR EACH TASK (sequential):
+                                              │   ├─ Fetches issue context via gh
+                                              │   ├─ RETRY LOOP (max 3 attempts, 10min each):
+                                              │   │   ├─ Attempt 1: Full prompt
+                                              │   │   │   ├─ Runs Claude Opus
+                                              │   │   │   │   ├─ Explores codebase
+                                              │   │   │   │   ├─ Implements feature
+                                              │   │   │   │   ├─ Runs quality gates internally
+                                              │   │   │   │   └─ Commits with RALPH: prefix
+                                              │   │   │   ├─ Script runs gates externally
+                                              │   │   │   ├─ PASS → break loop
+                                              │   │   │   └─ FAIL → git reset, retry
+                                              │   │   ├─ Attempt 2-3: Retry prompt
+                                              │   │   │   ├─ Gate errors + git diff context
+                                              │   │   │   └─ Same verify/reset cycle
+                                              │   │   └─ All attempts fail → rollback, skip
+                                              │   ├─ On success: push, close issue
+                                              │   └─ On failure: comment, swap AFK→HITL
+                                              │
+                                              ├─ Closes parent PRD issues if all children done
+                                              ├─ Merges ralph → develop
+                                              └─ Deletes ralph branch
 ```
+
+## Git Flow
+
+```
+main (production, deploys)
+  ↑ merge (manual, after review)
+develop (long-lived integration branch, repo default)
+  ↑ merge (automatic, after all tasks complete)
+ralph (ephemeral, created fresh from develop per dispatch)
+```
+
+- **`main`** — Production branch. Deploys happen from here.
+- **`develop`** — Long-lived integration branch. All new work (Ralph and human) lands here. Set as the repo default branch.
+- **`ralph`** — Ephemeral branch created fresh from `develop` at the start of each dispatch. Deleted after merging into `develop`.
 
 ## Decisions Made
 
-| Decision                      | Resolution                                                                  |
-| ----------------------------- | --------------------------------------------------------------------------- |
-| Task source                   | GitHub Issues (posted by skills or manually)                                |
-| Queue gating                  | `ralph` label required on issues                                            |
-| Issue format                  | GitHub Issue Template with Classification, Blocked by, Acceptance criteria  |
-| Dependencies                  | "Blocked by #N" in issue body; dispatcher checks if those issues are closed |
-| Priority                      | Labels: `priority:high`, `priority:medium`, `priority:low`                  |
-| Issue classification          | `AFK` (autonomous) or `HITL` (needs human) in issue body + as labels        |
-| Architecture                  | Dispatcher/worker on GitHub Actions (not local loop)                        |
-| Dispatch trigger              | Manual only (`pnpm dispatch`) — never triggered by Claude                   |
-| Dispatch model                | Sonnet (reasoning/classification only)                                      |
-| Worker model                  | Opus (code generation)                                                      |
-| Worker permissions            | `--dangerously-skip-permissions` (ephemeral CI runner, safe)                |
-| Branch naming                 | `claude/<short-slug>-<unix-timestamp>`                                      |
-| Commit convention             | `RALPH:` prefix with description and issue reference                        |
-| PR behavior                   | Opened when work is complete; `Closes #N` for auto-close on merge           |
-| Quality gates (before commit) | `pnpm check`, `pnpm lint`, `pnpm test:unit --run`                           |
-| Auth in CI                    | `CLAUDE_CODE_OAUTH_TOKEN` via Anthropic GitHub App                          |
-| CLAUDE.md                     | Amended git rule for worker exception; added "never dispatch" rule          |
+| Decision                     | Resolution                                                                                      |
+| ---------------------------- | ----------------------------------------------------------------------------------------------- |
+| Task source                  | GitHub Issues (posted by skills or manually)                                                    |
+| Queue gating                 | `ralph` label + author `jimburch` required on issues                                            |
+| Issue format                 | GitHub Issue with Blocked by, Acceptance criteria                                               |
+| Dependencies                 | "Blocked by #N" in issue body; dispatcher checks if those issues are closed                     |
+| Priority                     | Labels: `priority:high`, `priority:medium`, `priority:low`                                      |
+| Issue classification         | `AFK` (autonomous) or `HITL` (needs human) as labels                                            |
+| Processing model             | Sequential — one task at a time, up to 3 attempts each, ordered by dep + priority               |
+| Architecture                 | Dispatcher/worker on GitHub Actions (not local loop)                                            |
+| Dispatch trigger             | Manual only (`pnpm dispatch`) — never triggered by Claude                                       |
+| Dispatch model               | Sonnet (reasoning/classification only)                                                          |
+| Worker model                 | Opus (code generation)                                                                          |
+| Worker permissions           | `--dangerously-skip-permissions` (ephemeral CI runner, safe)                                    |
+| Branch strategy              | `ralph` branch from `develop`, auto-merge after all tasks, delete branch                        |
+| Commit convention            | `RALPH:` prefix with description and issue reference                                            |
+| Acceptance criteria tracking | Worker checks off `- [ ]` → `- [x]` in issue body incrementally as it works                     |
+| Issue lifecycle              | Worker closes issue via `gh issue close` after successful commit + push                         |
+| PRD auto-close               | After all tasks, script checks open `prd`-labeled issues; closes if all child issues are closed |
+| Quality gates                | Worker runs internally + script verifies externally after each attempt                          |
+| Retry strategy               | Up to 3 attempts per task, 10min timeout each. Retry prompt includes gate errors + git diff     |
+| Failure policy               | Rollback changes, comment on issue, swap AFK→HITL label, continue to next task                  |
+| Auth in CI                   | `CLAUDE_CODE_OAUTH_TOKEN` via Anthropic GitHub App                                              |
+| CLAUDE.md                    | Amended git rule for worker exception; added "never dispatch" rule                              |
 
-## Files Created
+## Files
 
-| File                                    | Purpose                                                                                        |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `scripts/dispatch.sh`                   | Local orchestrator — fetches issues, calls Sonnet, dispatches Actions workflows                |
-| `scripts/dispatch-prompt.md`            | Prompt for the Sonnet dispatcher — classification, dependency graph, conflict detection        |
-| `scripts/worker-run.sh`                 | Worker script — creates branch, fetches issue context, runs Opus, commits, outputs PR metadata |
-| `scripts/worker-prompt.md`              | Prompt for the Opus worker — explore, implement, quality gates, commit, PR output              |
-| `.github/workflows/claude-work.yml`     | Actions workflow — triggered by dispatch, sets up env, runs worker, pushes, creates PR         |
-| `.github/ISSUE_TEMPLATE/ralph-task.yml` | Issue template — Description, Classification, Blocked by, Acceptance criteria                  |
+| File                                    | Purpose                                                                          |
+| --------------------------------------- | -------------------------------------------------------------------------------- |
+| `scripts/dispatch.sh`                   | Local orchestrator — fetches issues, calls Sonnet, dispatches workflow           |
+| `scripts/dispatch-prompt.md`            | Prompt for the Sonnet dispatcher — classification, dependency graph, ordering    |
+| `scripts/worker-run.sh`                 | Worker runner — loops through tasks sequentially, commits, pushes, closes issues |
+| `scripts/worker-prompt.md`              | Prompt for the Opus worker — explore, implement, quality gates, commit           |
+| `.github/workflows/claude-work.yml`     | Actions workflow — creates ralph branch, runs worker, merges to develop          |
+| `.github/ISSUE_TEMPLATE/ralph-task.yml` | Issue template — Description, Classification, Blocked by, Acceptance criteria    |
 
-## Files Modified
-
-| File           | Change                                                              |
-| -------------- | ------------------------------------------------------------------- |
-| `CLAUDE.md`    | Added Ralph worker git exception; added "never dispatch Ralph" rule |
-| `package.json` | Added `"dispatch": "./scripts/dispatch.sh"` script                  |
-
-## Labels Created
+## Labels
 
 - `ralph` — Issue is ready for Ralph to pick up
 - `priority:high` — High priority (red)
@@ -85,95 +109,56 @@ pnpm dispatch
 - `priority:low` — Low priority (green)
 - `AFK` — Can be implemented autonomously (blue)
 - `HITL` — Requires human-in-the-loop (yellow)
-- `in-review` — PR created, awaiting human review (purple, auto-created by workflow)
 
-## Test Runs
+## History
 
-### Run 1 — Issue #2 (first attempt)
+### v1 — Parallel branches with PRs (2026-03-22)
 
-Created issue [#2: Star button UI doesn't update until page refresh](https://github.com/jimburch/magpie/issues/2) as a test. Worker completed but PR creation failed due to repo permissions.
+Original architecture: dispatcher selected parallel tasks, each worker created a `claude/*` branch, opened a PR, user reviewed and merged.
 
-**Fixed:** Enabled "Allow GitHub Actions to create and approve pull requests" in repo Settings > Actions.
+**Test runs:**
 
-### Run 2 — Issue #2 (successful)
+- Issue #2 (star button bug): First run failed due to repo permissions. Second run succeeded — worker completed in ~6 minutes, PR #3 merged.
 
-Re-dispatched after fixes. Worker completed in ~6 minutes, pushed branch `claude/fix-star-button-optimistic-ui-1774310400`, created [PR #3](https://github.com/jimburch/magpie/pull/3), which was merged and auto-closed issue #2.
+### v2 — Sequential processing on ralph branch (2026-03-23)
 
-**Issues discovered and fixed after this run:**
-- **Prompt shell escaping**: Backticks and parentheses in the prompt were interpreted by bash when passed as `"${{ inputs.prompt }}"` in the workflow. Fixed by passing via `WORKER_PROMPT` env var instead.
-- **Worker push duplication**: Claude pushed during execution, then workflow push step failed. Fixed by adding "do not push" to worker prompt + force-push fallback in workflow.
-- **Pre-existing gate failures**: Worker spent time investigating pre-existing lint/check failures in files it didn't touch. Added guidance to worker prompt to only fix failures in changed code.
-- **Playwright screenshots**: Worker tried to take screenshots but browser binaries and DB aren't available in CI. Added rule to skip screenshots in worker prompt.
-- **Issue lifecycle**: Added `in-review` label step — workflow now swaps `ralph` → `in-review` after PR creation.
-- **Git author**: Changed from `Ralph (Claude)` / `ralph-claude@users.noreply.github.com` to `Claude` / `noreply@anthropic.com` to avoid duplicate contributors.
+Simplified to sequential processing: single `ralph` branch from `develop`, worker loops through tasks one at a time, auto-merges into `develop` when done. Removed PR creation — worker commits directly and closes issues.
+
+**Motivation:** Remove PR review overhead per ticket, allow Ralph to chain through dependency graphs in one dispatch, preserve safety via `develop` → `main` merge gate.
+
+### v3 — Retry loop with external verification (2026-03-23)
+
+Added iteration loop per task (max 3 attempts, 10min each) inspired by Matt Pocock's `afk-ralph.sh`. Script now runs quality gates externally after each Claude invocation to verify success. Failed commits are reset (`git reset HEAD~1`). Retry prompts include gate errors + git diff context. Tasks that exhaust all attempts get rolled back, commented with failure details, and relabeled AFK→HITL. Workflow timeout bumped to 60 minutes.
 
 ## Known Issues & Things to Figure Out
 
-### 1. ~~Worker push duplication~~ (Fixed)
+### 1. Worker prompt may need iteration
 
-Worker prompt now explicitly tells Claude not to push (workflow handles it). Push step falls back to `--force` if `--force-with-lease` fails (handles cases where Claude pushed anyway or branch exists from a previous run).
-
-### 2. Worker prompt may need iteration
-
-The worker prompt is a first draft. After reviewing actual PR output from real runs, we'll likely need to tune:
+The worker prompt is a living document. After reviewing actual output from real runs, we'll likely need to tune:
 
 - How much exploration vs. implementation time the worker spends
 - Whether the quality gate instructions are clear enough
-- Whether the PR metadata XML tags are reliably generated
-- How the worker handles failures (blocked by missing deps, unclear requirements, etc.)
+- Whether the retry prompt gives enough context for successful recovery
 
-### 3. Dispatch prompt tuning
-
-The dispatcher needs real-world testing with multiple issues to validate:
-
-- Dependency graph parsing works correctly with the issue template format
-- Conflict detection between issues that touch the same files
-- Priority ordering matches expectations
-- Edge cases: issues with no labels, issues with partial template fields
-
-### 4. No HITL script yet
-
-We discussed building both HITL (`ralph-once.sh`) and AFK (`ralph.sh` / dispatch) modes. Only the dispatcher/worker (AFK) mode was built. A local HITL script for watching Ralph work on a single issue interactively was not implemented. This could be useful for:
-
-- Debugging worker behavior
-- Working on architectural/risky issues locally before promoting to AFK
-- Testing prompt changes without burning CI minutes
-
-### 5. E2E tests not in quality gates
+### 2. E2E tests not in quality gates
 
 Unit tests run before commit, but Playwright E2E tests are skipped because they need a running app + database. Options to explore:
 
 - Add a `pnpm build` step to the worker quality gate (catches more issues)
 - Set up a test database in CI for E2E (adds complexity)
-- Keep E2E as a manual check during PR review (current approach)
+- Keep E2E as a manual check during `develop` → `main` review (current approach)
 
-### 6. Cost monitoring
+### 3. Cost monitoring
 
-No cost tracking or budget caps are in place. Each worker run uses Opus in CI which can be expensive. Consider:
+No cost tracking or budget caps beyond timeouts. Each attempt is capped at 10 minutes, each task at 3 attempts, and the workflow at 60 minutes total. Consider:
 
-- Adding iteration/token limits to worker runs
 - Tracking spend per issue/dispatch
-- Setting up alerts for runaway workers (the 30-min timeout helps but isn't a cost cap)
+- Setting up alerts for runaway workers
 
-### 7. Notification system
+### 4. Stale branch cleanup
 
-No notifications when workers complete or fail. Matt Pocock uses `tt notify` for completion alerts. Options:
+If a workflow fails mid-run, the `ralph` branch may be left behind. No automated cleanup exists.
 
-- GitHub Actions notifications (default, but noisy)
-- Slack/Discord webhook on workflow completion
-- Email summary of dispatch results
+### 5. Input validation for websiteUrl
 
-### 8. Stale branch cleanup
-
-If workers fail or PRs are abandoned, `claude/*` branches accumulate. No automated cleanup exists. Consider:
-
-- A scheduled workflow to delete merged/stale `claude/*` branches
-- Manual cleanup as part of triage
-
-### 9. Dispatch doesn't validate workflow exists
-
-If `claude-work.yml` is missing or misconfigured, dispatch will fail at the `gh workflow run` step with a cryptic error. Could add a pre-flight check.
-
-### 10. Issue template vs. skill-generated issues
-
-The GitHub Issue Template enforces structure for manual issue creation, but skills creating issues programmatically (via `gh issue create`) need to follow the same format. No validation exists to ensure skill-generated issues have the right sections. Consider documenting the expected format for skills or adding a shared schema.
+Separate from Ralph, but noted: the profile page crashes on invalid `websiteUrl` values. Input validation at the save layer is needed (tracked separately from the try/catch fix).

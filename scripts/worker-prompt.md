@@ -1,11 +1,11 @@
 # Worker: Implement a Task
 
-You are a worker agent. You have been assigned a specific task from a GitHub issue. Your job is to implement it, verify it passes all quality gates, commit, and output PR metadata.
+You are a worker agent. You have been assigned a specific task from a GitHub issue. Your job is to implement it, verify it passes all quality gates, and commit.
 
 ## Context
 
-- Issue context JSON is provided at the start of your prompt. Parse it to get the issue(s) you've been assigned, with their bodies and comments.
-- You've also been passed recent RALPH commits (SHA, date, full message). Review these to understand what recent work has been done.
+- Issue context JSON is provided at the start of your prompt. Parse it to get the issue you've been assigned, with its body and comments.
+- You've also been passed recent commits on this branch (SHA, date, full message). Review these to understand what recent work has been done.
 - Read the CLAUDE.md file for project conventions and coding standards.
 
 ## Workflow
@@ -14,9 +14,17 @@ You are a worker agent. You have been assigned a specific task from a GitHub iss
 
 Explore the repo and fill your context window with relevant information that will allow you to complete the task. Understand the existing code patterns, file structure, and conventions before writing anything.
 
-### 2. Implement
+### 2. Implement (using TDD)
 
-Complete the task. Follow the coding conventions in CLAUDE.md strictly:
+Use the `/tdd` skill for ALL implementation work. This means:
+
+- **Write tests first**, then implementation. Follow the red-green-refactor loop.
+- **Vertical slices**: one test → one implementation → repeat. Do NOT write all tests first.
+- **Test behavior through public interfaces**, not implementation details.
+- Tests should survive internal refactors — if you rename a function and tests break, they were testing implementation.
+- Since this is a CI environment without a database or browser, write unit tests (not integration tests that need a DB). Mock external boundaries (database, network) but test real logic.
+
+Follow the coding conventions in CLAUDE.md strictly:
 
 - TypeScript strict mode
 - Drizzle ORM (no raw SQL unless necessary)
@@ -25,7 +33,7 @@ Complete the task. Follow the coding conventions in CLAUDE.md strictly:
 - Zod for validation
 - Small, composable components
 
-Other workers may be implementing other issues in parallel on other branches. Stay focused on YOUR task. Keep changes minimal and focused — do not refactor unrelated code.
+Other tasks may have been completed earlier in this same run on the same branch. Review recent commits to understand what's already been done — you may be building on top of previous work.
 
 ### 3. Quality Gates
 
@@ -41,46 +49,79 @@ Do NOT commit if any gate fails. Fix the issues first, then re-run the gates.
 
 **Note:** Some pre-existing failures may exist in files you didn't touch (e.g., lint issues in unrelated files, missing env vars for DB-dependent checks). Only fix failures in code you changed. If a gate fails ONLY on pre-existing issues unrelated to your work, you may proceed.
 
-### 4. Commit
+### 4. Update Acceptance Criteria
 
-Make a git commit. The commit message MUST follow this format:
+As you complete each piece of work, check off the corresponding acceptance criteria in the GitHub issue. Use `gh issue edit` to update the issue body, replacing `- [ ]` with `- [x]` for each criterion you've satisfied.
+
+```bash
+# Example: check off a criterion
+BODY=$(gh issue view <issue-number> --json body -q '.body')
+UPDATED=$(echo "$BODY" | sed 's/- \[ \] Criterion text/- [x] Criterion text/')
+gh issue edit <issue-number> --body "$UPDATED"
+```
+
+Do this incrementally as you work, not all at once at the end. This gives visibility into progress.
+
+### 5. Generate Database Migrations (if needed)
+
+If you changed `src/lib/server/db/schema.ts`, you MUST generate a migration file before committing:
+
+```bash
+pnpm db:generate
+```
+
+This runs `drizzle-kit generate`, which diffs your schema changes against the existing migration snapshots and creates a new `.sql` file in `drizzle/` plus updates `drizzle/meta/_journal.json`. Include ALL generated files in your commit (the `.sql` file, the updated `_journal.json`, and any snapshot files in `drizzle/meta/`).
+
+If `drizzle-kit generate` fails (e.g. it reports "No schema changes detected"), verify your schema.ts changes actually affect database structure. Relation definitions and TypeScript-only type changes don't need migrations.
+
+If it fails for any other reason, do not commit — explain the error in your output.
+
+### 6. Commit
+
+**Only commit if all quality gates pass.** If gates fail and you cannot fix them, **do not commit**. Instead, explain what's blocking you in your output so the runner can retry with that context.
+
+When gates pass, make a git commit. The commit message MUST follow **semantic release convention**:
 
 ```
-RALPH: <short description> (#<issue-number>)
+<type>(<scope>): <short description> (#<issue-number>)
 
 - What was implemented
 - Key decisions made
 - Files changed
+
+Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
-Keep it concise but informative.
+- **type**: Use the `commit_type` provided in the "Commit Type" section above (e.g., `feat`, `fix`, `chore`, `refactor`, `docs`, `test`).
+- **scope**: A short identifier for the area of code changed (e.g., `ui`, `api`, `auth`, `cli`, `db`). Infer from the files you changed.
+- **description**: Imperative mood, lowercase, no period at end.
+- Always include the `Co-Authored-By` trailer.
 
-### 5. PR Output
+Examples:
 
-After committing, output a PR title and description wrapped in XML tags. The workflow will use these to create the PR.
+- `feat(ui): add agent chips to setup cards (#212)`
+- `fix(api): handle missing slug in setup lookup (#45)`
+- `chore(db): add index on stars table (#99)`
 
-<pr_title>RALPH: Short description of what was done (#issue)</pr_title>
-<pr_description>
-## Summary
-- Bullet points of what was implemented
+### 7. Testing Instructions
 
-## Related Issues
-- Closes #N
+After committing, output manual testing instructions wrapped in XML tags. These tell the reviewer how to verify your changes work correctly.
 
-## Key Decisions
-- Any notable architectural or implementation choices
+<test_instructions>
 
-## Quality Gates
-- [x] pnpm check
-- [x] pnpm lint
-- [x] pnpm test:unit --run
-</pr_description>
+- Step-by-step instructions to manually test the changes
+- Include specific URLs to visit, buttons to click, API calls to make (curl examples)
+- Include what the expected behavior should be
+- Note any prerequisites (e.g. "must be logged in", "need at least one setup")
+  </test_instructions>
+
+Be specific and practical — assume the tester has the app running locally on `http://localhost:5173`.
 
 ## Rules
 
 - ONLY WORK ON YOUR ASSIGNED TASK. Do not fix other issues you notice.
 - Do NOT modify CLAUDE.md or any configuration files unless the task specifically requires it.
-- If the task cannot be completed (missing dependencies, unclear requirements), commit what you have and explain the blocker in the PR description.
+- If the task cannot be completed (missing dependencies, unclear requirements), do NOT commit. Explain the blocker in your output — the runner may retry or skip the task.
 - Use `pnpm` as the package manager (never npm).
-- Do NOT push your commits. The CI workflow handles pushing the branch after you finish. Only commit locally.
-- Skip Playwright screenshots — browser binaries and a database are not available in CI. Visual verification is done during PR review.
+- Do NOT push your commits. The runner script handles pushing after you finish. Only commit locally.
+- Skip Playwright screenshots — browser binaries and a database are not available in CI. Visual verification is done during review.

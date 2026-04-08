@@ -1,0 +1,43 @@
+---
+description: Express API route patterns and conventions
+globs: ["src/routes/**/*.ts", "src/controllers/**/*.ts"]
+---
+
+# API Route Patterns
+
+## Route Handlers
+- Every route handler must be an async function wrapped with the `asyncHandler` utility
+- Keep handlers thin — extract business logic into service functions
+- Validate all input (params, query, body) at the top of each handler using Zod schemas
+- Return early on validation failure with a 400 status
+
+## Response Format
+- All successful responses must follow: `{ data: T }`
+- All error responses must follow: `{ error: string, code: string }`
+- Use helper functions `sendSuccess(res, data, status?)` and `sendError(res, message, code, status)`
+- Never return raw strings or unstructured JSON
+
+## HTTP Methods and Status Codes
+- GET: 200 for success, 404 for not found
+- POST: 201 for creation, 409 for conflict (duplicate)
+- PATCH: 200 for update, 404 if resource missing
+- DELETE: 204 with no body on success
+- Always return 401 for unauthenticated and 403 for unauthorized
+
+## Middleware
+- Use route-level middleware for auth checks, not global middleware
+- Order middleware: auth -> validation -> rate limiting -> handler
+- Middleware should call `next()` on success, `next(error)` on failure
+- Never modify `req` directly — attach parsed data to `res.locals`
+
+## Error Handling
+- Use the centralized error handler in `src/middleware/error-handler.ts`
+- Throw `AppError` subclasses from handlers and services — never send raw responses for errors
+- Log the full error server-side; send only the safe message to the client
+- Catch database constraint violations and map them to user-friendly error codes
+
+## Route Organization
+- Group routes by resource: `/api/users`, `/api/posts`, `/api/comments`
+- Use `express.Router()` per resource, mounted in `src/routes/index.ts`
+- Keep route files focused — one resource per file, max ~100 lines
+- Parameterized routes use `:id` naming, validated as UUID or number at parse time

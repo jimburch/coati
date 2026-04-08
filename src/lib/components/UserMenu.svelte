@@ -30,12 +30,14 @@
 		<a href="/{user.username}">
 			<DropdownMenuItem>My Profile</DropdownMenuItem>
 		</a>
-		<a href="/new">
-			<DropdownMenuItem>New Setup</DropdownMenuItem>
-		</a>
 		<a href="/settings">
 			<DropdownMenuItem>Settings</DropdownMenuItem>
 		</a>
+		{#if user.isAdmin}
+			<a href="/admin/beta">
+				<DropdownMenuItem>Admin</DropdownMenuItem>
+			</a>
+		{/if}
 		<DropdownMenuSeparator />
 		<DropdownMenuItem onclick={signOut}>Sign Out</DropdownMenuItem>
 	</DropdownMenuContent>

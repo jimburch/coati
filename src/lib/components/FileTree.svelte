@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { File, Folder, FolderOpen, ChevronRight, ChevronDown } from '@lucide/svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	interface Props {
-		files: Array<{ source: string; id: string }>;
+		files: Array<{ path: string; id: string }>;
 		selectedPath: string;
 		basePath: string;
 	}
@@ -16,11 +17,11 @@
 		children: TreeNode[];
 	}
 
-	function buildTree(flatFiles: Array<{ source: string; id: string }>): TreeNode[] {
+	function buildTree(flatFiles: Array<{ path: string; id: string }>): TreeNode[] {
 		const root: TreeNode[] = [];
 
 		for (const file of flatFiles) {
-			const parts = file.source.split('/');
+			const parts = file.path.split('/');
 			let current = root;
 
 			for (let i = 0; i < parts.length; i++) {
@@ -51,28 +52,25 @@
 
 	const tree = $derived(buildTree(files));
 
-	let expandedDirs = $state(new Set<string>());
+	const expandedDirs = new SvelteSet<string>();
 
 	// Initialize all directories as expanded
 	$effect(() => {
-		const dirs = new Set<string>();
+		expandedDirs.clear();
 		for (const file of files) {
-			const parts = file.source.split('/');
+			const parts = file.path.split('/');
 			for (let i = 1; i < parts.length; i++) {
-				dirs.add(parts.slice(0, i).join('/'));
+				expandedDirs.add(parts.slice(0, i).join('/'));
 			}
 		}
-		expandedDirs = dirs;
 	});
 
 	function toggleDir(path: string) {
-		const next = new Set(expandedDirs);
-		if (next.has(path)) {
-			next.delete(path);
+		if (expandedDirs.has(path)) {
+			expandedDirs.delete(path);
 		} else {
-			next.add(path);
+			expandedDirs.add(path);
 		}
-		expandedDirs = next;
 	}
 </script>
 
@@ -100,7 +98,10 @@
 	{:else}
 		<a
 			href="{basePath}?file={encodeURIComponent(node.path)}"
-			class="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-sm hover:bg-accent {node.path === selectedPath ? 'bg-accent font-medium' : ''}"
+			class="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-sm hover:bg-accent {node.path ===
+			selectedPath
+				? 'bg-accent font-medium'
+				: ''}"
 			style="padding-left: {depth * 12 + 8}px"
 		>
 			<File class="size-4 shrink-0 text-muted-foreground" />

@@ -1,0 +1,37 @@
+{
+	"name": "@coati/sh",
+	"version": "0.1.0",
+	"description": "Coati CLI — clone, publish, and manage AI coding setups",
+	"type": "module",
+	"main": "dist/index.js",
+	"bin": {
+		"coati": "bin/coati.js"
+	},
+	"files": [
+		"dist",
+		"bin"
+	],
+	"scripts": {
+		"build": "tsup src/index.ts --format esm --dts --outDir dist",
+		"dev": "tsx src/index.ts",
+		"test": "vitest run",
+		"test:unit": "vitest run"
+	},
+	"dependencies": {
+		"@clack/prompts": "^1.1.0",
+		"@coati/agents-registry": "workspace:*",
+		"@coati/validation": "workspace:*",
+		"commander": "^12.1.0",
+		"diff": "^8.0.4",
+		"open": "^11.0.0",
+		"picocolors": "^1.1.1",
+		"zod": "^3.23.8"
+	},
+	"devDependencies": {
+		"@types/diff": "^7.0.2",
+		"tsup": "^8.5.1",
+		"tsx": "^4.0.0",
+		"typescript": "^5.9.3",
+		"vitest": "^2.1.9"
+	}
+}

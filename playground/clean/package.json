@@ -1,0 +1,23 @@
+{
+	"name": "my-typescript-app",
+	"version": "1.0.0",
+	"type": "module",
+	"scripts": {
+		"build": "tsc",
+		"dev": "tsx watch src/index.ts",
+		"test": "vitest run",
+		"lint": "eslint src/",
+		"reset": "git checkout -- . && git clean -fd .",
+		"coati": "COATI_API_BASE=http://localhost:5173/api/v1 npx tsx ../../cli/src/index.ts",
+		"coati-test": "COATI_API_BASE=https://develop.coati.sh/api/v1 npx tsx ../../cli/src/index.ts"
+	},
+	"dependencies": {
+		"express": "^4.18.0"
+	},
+	"devDependencies": {
+		"typescript": "^5.5.0",
+		"tsx": "^4.0.0",
+		"vitest": "^2.0.0",
+		"eslint": "^9.0.0"
+	}
+}

@@ -2,7 +2,7 @@
 
 ## System Overview
 
-Magpie is a monolithic SvelteKit application backed by PostgreSQL, with a separate CLI package that communicates with the app's API routes.
+Coati is a monolithic SvelteKit application backed by PostgreSQL, with a separate CLI package that communicates with the app's API routes.
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -11,7 +11,7 @@ Magpie is a monolithic SvelteKit application backed by PostgreSQL, with a separa
            │                    │
            ▼                    ▼
 ┌──────────────────┐  ┌──────────────────┐
-│   Web Browser    │  │   magpie CLI     │
+│   Web Browser    │  │   coati CLI     │
 │  (SvelteKit SSR  │  │  (Node.js npm    │
 │   + client JS)   │  │   package)       │
 └────────┬─────────┘  └────────┬──────────┘
@@ -20,38 +20,40 @@ Magpie is a monolithic SvelteKit application backed by PostgreSQL, with a separa
          │                     │  Authorization: Bearer <token>
          ▼                     ▼
 ┌─────────────────────────────────────────────────┐
-│              Caddy (reverse proxy)               │
-│              Auto-HTTPS via Let's Encrypt         │
+│       Cloudflare (DNS + Access gate)             │
+│       develop.coati.sh → VPS IP (proxied)        │
 └──────────────────────┬──────────────────────────┘
                        │
                        ▼
 ┌─────────────────────────────────────────────────┐
-│          SvelteKit Node Server (PM2)             │
-│                                                   │
-│  ┌─────────────┐  ┌──────────────┐               │
-│  │ SSR Routes   │  │ API Routes   │               │
-│  │ (public)/    │  │ /api/v1/*    │               │
-│  │              │  │              │               │
-│  │ +page.server │  │ +server.ts   │               │
-│  │ +page.svelte │  │ JSON in/out  │               │
-│  └──────┬───────┘  └──────┬───────┘               │
-│         │                 │                        │
-│         ▼                 ▼                        │
-│  ┌─────────────────────────────────┐              │
-│  │     lib/server/ (shared)        │              │
-│  │  ┌───────────┐ ┌─────────────┐  │              │
-│  │  │  Lucia    │ │  Drizzle    │  │              │
-│  │  │  Auth     │ │  ORM        │  │              │
-│  │  └───────────┘ └──────┬──────┘  │              │
-│  └───────────────────────┼─────────┘              │
-└──────────────────────────┼────────────────────────┘
-                           │
-                           ▼
-                 ┌───────────────────┐
-                 │    PostgreSQL     │
-                 │  (same VPS or    │
-                 │   DO Managed)    │
-                 └───────────────────┘
+│    Coolify (self-hosted on Hostinger VPS)         │
+│    ┌───────────────────────────────────────┐     │
+│    │  Traefik (reverse proxy, auto-HTTPS)  │     │
+│    └──────────────────┬────────────────────┘     │
+│                       │                           │
+│    ┌──────────────────▼────────────────────┐     │
+│    │  Docker: SvelteKit Node Server        │     │
+│    │                                        │     │
+│    │  ┌─────────────┐  ┌──────────────┐    │     │
+│    │  │ SSR Routes   │  │ API Routes   │    │     │
+│    │  │ (public)/    │  │ /api/v1/*    │    │     │
+│    │  └──────┬───────┘  └──────┬───────┘    │     │
+│    │         │                 │             │     │
+│    │         ▼                 ▼             │     │
+│    │  ┌─────────────────────────────────┐   │     │
+│    │  │     lib/server/ (shared)        │   │     │
+│    │  │  ┌───────────┐ ┌─────────────┐  │   │     │
+│    │  │  │  Lucia    │ │  Drizzle    │  │   │     │
+│    │  │  │  Auth     │ │  ORM        │  │   │     │
+│    │  │  └───────────┘ └──────┬──────┘  │   │     │
+│    │  └───────────────────────┼─────────┘   │     │
+│    └──────────────────────────┼─────────────┘     │
+│                               │                   │
+│    ┌──────────────────────────▼─────────────┐     │
+│    │  Docker: PostgreSQL 18                  │     │
+│    │  (managed by Coolify, internal network) │     │
+│    └─────────────────────────────────────────┘     │
+└─────────────────────────────────────────────────┘
 ```
 
 ## Request Flows
@@ -59,7 +61,7 @@ Magpie is a monolithic SvelteKit application backed by PostgreSQL, with a separa
 ### Web: Viewing a Setup Page (SSR)
 
 1. Browser requests `GET /alice/my-claude-workflow`
-2. Caddy proxies to SvelteKit Node server
+2. Cloudflare proxies to VPS → Traefik routes to the SvelteKit Docker container
 3. SvelteKit matches `(public)/[username]/[slug]/+page.server.ts`
 4. `load()` function queries PostgreSQL via Drizzle for setup + files + comments
 5. SvelteKit renders `+page.svelte` to HTML on the server
@@ -76,8 +78,8 @@ Magpie is a monolithic SvelteKit application backed by PostgreSQL, with a separa
 
 ### CLI: Cloning a Setup
 
-1. User runs `magpie clone alice/my-claude-workflow`
-2. CLI reads auth token from `~/.magpie/config.json`
+1. User runs `coati clone alice/my-claude-workflow`
+2. CLI reads auth token from `~/.coati/config.json`
 3. CLI sends `GET /api/v1/setups/alice/my-claude-workflow` with Bearer token
 4. API returns setup metadata + manifest
 5. CLI sends `GET /api/v1/setups/{id}/files` to fetch all file contents
@@ -89,9 +91,9 @@ Magpie is a monolithic SvelteKit application backed by PostgreSQL, with a separa
 
 ### CLI: Publishing a Setup
 
-1. User creates a `setup.json` manifest in their project directory
-2. User runs `magpie publish`
-3. CLI reads and validates `setup.json`
+1. User creates a `coati.json` manifest in their project directory
+2. User runs `coati publish`
+3. CLI reads and validates `coati.json`
 4. CLI collects all files referenced in the manifest
 5. CLI sends `POST /api/v1/setups` with metadata + files as JSON payload
 6. Server validates, stores setup + files in PostgreSQL
@@ -111,7 +113,7 @@ Magpie is a monolithic SvelteKit application backed by PostgreSQL, with a separa
 - CLI initiates GitHub device flow via platform's `/api/v1/auth/device` endpoint
 - User authorizes on GitHub in their browser
 - CLI receives GitHub access token, exchanges it for a platform session token
-- Token stored at `~/.magpie/config.json`
+- Token stored at `~/.coati/config.json`
 - Sent as `Authorization: Bearer <token>` on all CLI API requests
 - Server validates CLI tokens against the same sessions table
 
@@ -179,9 +181,11 @@ Stars are weighted less than clones because a clone represents someone actually 
 ## Security Considerations
 
 - All auth tokens stored as HTTP-only cookies (web) or local file with restricted permissions (CLI)
-- API rate limiting via simple in-memory counter per IP (upgrade to Redis later if needed)
+- API rate limiting via `RateLimiterMemory` from `rate-limiter-flexible` (one counter per IP).
+  **Note:** In-memory state resets on container restart. For horizontal scaling, switch to the
+  drop-in `RateLimiterPostgres` or `RateLimiterRedis` variants from the same package.
 - Input validation with Zod on all API endpoints
 - Setup file contents are stored as text — no executable uploads
-- `postInstall` commands in setup.json are displayed to the user for approval before execution (CLI-side)
+- `postInstall` commands in coati.json are displayed to the user for approval before execution (CLI-side)
 - SQL injection prevented by Drizzle's parameterized queries
 - XSS prevented by SvelteKit's default HTML escaping + markdown sanitization

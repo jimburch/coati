@@ -1,0 +1,22 @@
+{
+	"model": {
+		"default": "claude-sonnet-4-20250514",
+		"large": "claude-opus-4-20250514"
+	},
+	"preferences": {
+		"verboseResponses": false,
+		"confirmDangerousActions": true
+	},
+	"permissions": {
+		"allow": [
+			"Read",
+			"Write",
+			"Edit",
+			"Bash(git *)",
+			"Bash(npm run *)",
+			"Bash(pnpm *)",
+			"Bash(npx *)"
+		],
+		"deny": ["Bash(rm -rf /)", "Bash(curl * | bash)", "Bash(git push --force *)"]
+	}
+}

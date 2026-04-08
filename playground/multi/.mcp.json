@@ -1,0 +1,16 @@
+{
+	"mcpServers": {
+		"filesystem": {
+			"command": "npx",
+			"args": ["-y", "@modelcontextprotocol/server-filesystem", "./src"]
+		},
+		"fetch": {
+			"command": "npx",
+			"args": ["-y", "@modelcontextprotocol/server-fetch"]
+		},
+		"sqlite": {
+			"command": "npx",
+			"args": ["-y", "@modelcontextprotocol/server-sqlite", "./data/app.db"]
+		}
+	}
+}

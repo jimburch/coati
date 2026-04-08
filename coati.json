@@ -1,0 +1,15 @@
+{
+	"name": "coati",
+	"version": "1.0.0",
+	"description": "Coati monorepo",
+	"category": "general",
+	"tools": ["claude-code"],
+	"tags": ["coati"],
+	"placement": "project",
+	"files": [
+		{
+			"path": "CLAUDE.md",
+			"componentType": "instruction"
+		}
+	]
+}

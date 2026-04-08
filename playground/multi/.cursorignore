@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Coverage reports
+coverage/
+
+# IDE and OS
+.DS_Store
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Credentials and keys
+*.pem
+*.key
+*.cert
+credentials.json
+service-account.json

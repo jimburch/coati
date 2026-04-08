@@ -6,8 +6,8 @@ test('renders file tree and file viewer', async ({ page }) => {
 	await page.goto(FILES_URL);
 	// File tree should show files
 	await expect(page.locator('nav')).toBeVisible();
-	// File viewer should show a file header
-	await expect(page.getByText('Installs to:')).toBeVisible();
+	// File viewer should show a file with line count
+	await expect(page.getByText(/\d+ lines?/)).toBeVisible();
 });
 
 test('first file is selected by default', async ({ page }) => {
@@ -53,11 +53,6 @@ test('shows line count in file header', async ({ page }) => {
 	await expect(page.getByText(/\d+ lines?/)).toBeVisible();
 });
 
-test('shows placement badge', async ({ page }) => {
-	await page.goto(FILES_URL);
-	await expect(page.getByText('project')).toBeVisible();
-});
-
 test('mobile shows toggle button instead of sidebar', async ({ page, isMobile }) => {
 	test.skip(!isMobile, 'mobile-only test');
 	await page.goto(FILES_URL);
@@ -80,10 +75,26 @@ test('mobile toggle reveals and hides file tree', async ({ page, isMobile }) => 
 	await expect(page.getByRole('button', { name: /show files/i })).toBeVisible();
 });
 
+test('mobile breadcrumb visible and not clipped', async ({ page, isMobile }) => {
+	test.skip(!isMobile, 'mobile-only test');
+	await page.goto(FILES_URL);
+	const breadcrumb = page.locator('nav').first();
+	await expect(breadcrumb).toBeVisible();
+	// Breadcrumb should not overflow (scrollWidth <= clientWidth)
+	const overflows = await breadcrumb.evaluate((el) => el.scrollWidth > el.clientWidth + 2);
+	expect(overflows).toBe(false);
+});
+
+test('desktop breadcrumb visible', async ({ page, isMobile }) => {
+	test.skip(!!isMobile, 'desktop-only test');
+	await page.goto(FILES_URL);
+	await expect(page.locator('nav').first()).toBeVisible();
+});
+
 test('directory expand/collapse works', async ({ page }) => {
 	await page.goto(FILES_URL);
 	// The hooks directory should be visible and expanded by default
-	const hooksDir = page.getByRole('button', { hasText: 'hooks' });
+	const hooksDir = page.getByRole('button').filter({ hasText: 'hooks' });
 	if (await hooksDir.isVisible()) {
 		// Click to collapse
 		await hooksDir.click();

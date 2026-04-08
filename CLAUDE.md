@@ -1,21 +1,23 @@
 ## Project Configuration
 
 - **Language**: TypeScript
-- **Package Manager**: npm
+- **Package Manager**: pnpm (workspaces)
 - **Add-ons**: eslint, prettier, vitest, playwright
 
 ---
 
-# CLAUDE.md — Magpie 🐦‍⬛
+# CLAUDE.md — Coati 🐦‍⬛
 
 ## Project Overview
 
-Magpie is a GitHub-like platform for developers to share, discover, and clone their AI coding workflows and setups. A "setup" is a first-class entity (like a repo on GitHub) that packages config files, scripts, hooks, skills, commands, documentation, and a manifest into a shareable, installable unit.
+Coati is a GitHub-like platform for developers to share, discover, and clone their AI coding workflows and setups. A "setup" is a first-class entity (like a repo on GitHub) that packages config files, scripts, hooks, skills, commands, documentation, and a manifest into a shareable, installable unit.
 
 The platform has two surfaces:
 
 1. **Web app** — discovery, profiles, social features, setup browsing/creation
-2. **CLI tool (`magpie`)** — clone/install setups to local machines, publish setups, search/star/follow from terminal
+2. **CLI tool (`coati`)** — clone/install setups to local machines, publish setups, search/star/follow from terminal
+
+When discussing domain concepts, use the canonical terms defined in [`docs/UBIQUITOUS_LANGUAGE.md`](docs/UBIQUITOUS_LANGUAGE.md). Avoid the listed aliases (e.g., say **Setup** not "workflow", **Agent** not "tool", **Clone** not "download").
 
 ## Tech Stack
 
@@ -27,13 +29,13 @@ The platform has two surfaces:
 - **Auth:** Lucia Auth v3 + Arctic (GitHub OAuth)
 - **Markdown rendering:** mdsvex + shiki for syntax highlighting
 - **SSR Strategy:** Hybrid — SSR for public routes, SPA for authenticated routes
-- **Deployment:** adapter-node → PM2 behind Caddy on DigitalOcean
-- **CLI framework:** commander (published to npm as `magpie`)
+- **Deployment:** Coolify (self-hosted) on Hostinger VPS — Docker builds from `Dockerfile`, Traefik reverse proxy, PostgreSQL managed by Coolify
+- **CLI framework:** commander (published to npm as `coati`)
 
 ## Project Structure
 
 ```
-magpie/
+coati/
 ├── CLAUDE.md
 ├── package.json
 ├── svelte.config.js
@@ -113,7 +115,7 @@ magpie/
 │           ├── login/github/+server.ts
 │           └── callback/github/+server.ts
 ├── cli/                           # CLI tool (separate package)
-│   ├── package.json               # Published as `magpie` on npm
+│   ├── package.json               # Published as `coati` on npm
 │   ├── tsconfig.json
 │   ├── src/
 │   │   ├── index.ts               # Entry point
@@ -126,12 +128,12 @@ magpie/
 │   │   │   ├── publish.ts
 │   │   │   ├── star.ts
 │   │   │   └── follow.ts
-│   │   ├── api.ts                 # HTTP client for Magpie API
+│   │   ├── api.ts                 # HTTP client for Coati API
 │   │   ├── auth.ts                # Token storage + device flow
 │   │   ├── files.ts               # File writing + conflict resolution
-│   │   └── config.ts              # CLI config (~/.magpie/config.json)
+│   │   └── config.ts              # CLI config (~/.coati/config.json)
 │   └── bin/
-│       └── magpie.js              # Bin entry
+│       └── coati.js              # Bin entry
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   ├── DATA-MODEL.md
@@ -168,11 +170,11 @@ magpie/
 
 ### CLI (GitHub Device Flow)
 
-1. User runs `magpie login`
+1. User runs `coati login`
 2. CLI requests device code from `/api/v1/auth/device`
 3. User visits GitHub URL, enters code
 4. CLI polls for access token
-5. Token stored locally at `~/.magpie/config.json`
+5. Token stored locally at `~/.coati/config.json`
 6. CLI sends token as `Authorization: Bearer <token>` on API requests
 
 ## SSR Strategy
@@ -186,7 +188,7 @@ magpie/
 - File contents stored in PostgreSQL text columns for MVP (config files are tiny, <10KB)
 - No file versioning in MVP — setups have a single "current" state
 - Everything is public for MVP — no private setups
-- The `setup.json` manifest is the platform's core standard — similar to package.json
+- The `coati.json` manifest is the platform's core standard — similar to package.json
 - Stars and clone counts are denormalized on the setups table for query performance
 - Username slugs and setup slugs are unique and URL-safe (lowercase, hyphens only)
 - Comments support single-level threading (parent_id) — not deeply nested
@@ -228,6 +230,15 @@ export const actions = {
 };
 ```
 
+## Security
+
+This repository is **100% public and open source**. All scripts, workflows, and configuration files are visible to everyone. Keep this in mind at all times:
+
+- Never hardcode secrets, IPs, passwords, or credentials in any file — use GitHub Actions secrets, environment variables, or `.env` files (which are gitignored)
+- CI workflows must use minimal permissions and validate inputs — assume PRs can come from untrusted forks
+- Deploy scripts must not expose internal infrastructure details (paths are fine, credentials are not)
+- Review all scripts and workflows for abuse vectors before committing
+
 ## Don't
 
 - Don't add any ORM other than Drizzle
@@ -238,7 +249,7 @@ export const actions = {
 - Don't add WebSocket support yet — polling or SvelteKit invalidation is fine for MVP
 - Don't create separate API and frontend projects — SvelteKit handles both
 - Don't implement email/password auth — GitHub OAuth only for MVP
-- Don't use git to add, commit, or push code - only the user will do that. **Exception:** Ralph worker agents running in CI (`scripts/worker-run.sh`) may commit and push to `claude/*` branches.
+- Don't use git to add, commit, or push code - only the user will do that. **Exception:** Ralph worker agents running in CI (`scripts/worker-run.sh`) may commit and push to feature branches (e.g., `feat/*`, `fix/*`).
 - Don't run `pnpm dispatch` or `./scripts/dispatch.sh` — only the user dispatches Ralph. You may create issues for Ralph to pick up, but never trigger the dispatch.
 
 ## UI Testing Workflow

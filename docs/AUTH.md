@@ -1,6 +1,6 @@
 # Auth Architecture
 
-Magpie uses **GitHub OAuth** as its sole authentication method, with the **Copenhagen Book** approach for lightweight custom session management (`node:crypto`) and **Arctic** for the OAuth flow.
+Coati uses **GitHub OAuth** as its sole authentication method, with the **Copenhagen Book** approach for lightweight custom session management (`node:crypto`) and **Arctic** for the OAuth flow.
 
 ---
 
@@ -10,7 +10,7 @@ Magpie uses **GitHub OAuth** as its sole authentication method, with the **Copen
 - **Storage:** SHA-256 hash of token stored as session ID in DB (raw token never stored)
 - **Validation:** Hash incoming token, look up hash in `sessions` table, join with `users`
 - **Lifetime:** 30 days with sliding window — if < 15 days remaining, extends to 30 days from now
-- **Cookie:** `magpie_session`, httpOnly, secure, sameSite=lax, path=/
+- **Cookie:** `coati_session`, httpOnly, secure, sameSite=lax, path=/
 
 ### Why hash tokens?
 
@@ -36,7 +36,7 @@ If the sessions table leaks, raw tokens remain safe. The attacker gets hashes, n
 
 ## CLI Auth Flow (GitHub Device Flow)
 
-The CLI never talks to GitHub directly — Magpie proxies the device flow to keep Client ID server-side.
+The CLI never talks to GitHub directly — Coati proxies the device flow to keep Client ID server-side.
 
 1. CLI calls `POST /api/v1/auth/device`
 2. Server requests device code from GitHub, generates its own `deviceCode` for polling
@@ -45,7 +45,7 @@ The CLI never talks to GitHub directly — Magpie proxies the device flow to kee
 5. CLI polls `POST /api/v1/auth/device/poll` with `{ deviceCode }`
 6. Server polls GitHub with the stored `githubDeviceCode`
 7. When GitHub returns an access token, server upserts user, creates session, returns `{ token }`
-8. CLI stores token locally at `~/.magpie/config.json`
+8. CLI stores token locally at `~/.coati/config.json`
 9. CLI sends token as `Authorization: Bearer <token>` on subsequent API requests
 
 ---
@@ -54,7 +54,7 @@ The CLI never talks to GitHub directly — Magpie proxies the device flow to kee
 
 Runs on every request:
 
-1. Reads `magpie_session` cookie (web) or `Authorization: Bearer <token>` header (CLI)
+1. Reads `coati_session` cookie (web) or `Authorization: Bearer <token>` header (CLI)
 2. Cookie takes precedence if both present
 3. Calls `validateSessionToken()` -> populates `event.locals.user` and `event.locals.session`
 4. Refreshes cookie maxAge if session was extended (sliding window)
@@ -107,7 +107,7 @@ GitHub requires a separate OAuth App per environment (callback URLs can't mix lo
 
 1. Go to [github.com/settings/developers](https://github.com/settings/developers) -> **OAuth Apps** -> **New OAuth App**
 2. Fill in:
-   - **Application name:** `Magpie Dev`
+   - **Application name:** `Coati Dev`
    - **Homepage URL:** `http://localhost:5173`
    - **Authorization callback URL:** `http://localhost:5173/auth/callback/github`
 3. Click **Register application**
@@ -116,18 +116,18 @@ GitHub requires a separate OAuth App per environment (callback URLs can't mix lo
 
 #### Testing / Staging
 
-If you run a staging environment (e.g. `staging.magpie.dev`):
+If you run a staging environment (e.g. `staging.coati.dev`):
 
-1. Create another OAuth App named `Magpie Staging`
-2. **Homepage URL:** `https://staging.magpie.dev`
-3. **Authorization callback URL:** `https://staging.magpie.dev/auth/callback/github`
+1. Create another OAuth App named `Coati Staging`
+2. **Homepage URL:** `https://staging.coati.dev`
+3. **Authorization callback URL:** `https://staging.coati.dev/auth/callback/github`
 4. Set the credentials in the staging environment's variables
 
 #### Production
 
-1. Create another OAuth App named `Magpie`
-2. **Homepage URL:** `https://magpie.dev` (or your production domain)
-3. **Authorization callback URL:** `https://magpie.dev/auth/callback/github`
+1. Create another OAuth App named `Coati`
+2. **Homepage URL:** `https://coati.dev` (or your production domain)
+3. **Authorization callback URL:** `https://coati.dev/auth/callback/github`
 4. Set the credentials in the production environment's variables
 
 > **Tip:** For the Device Flow (CLI auth), GitHub OAuth Apps support it by default. No extra configuration needed — the same Client ID works for both web and device flows.

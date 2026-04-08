@@ -7,6 +7,9 @@ node_modules
 .wrangler
 /.svelte-kit
 /build
+cli/dist/
+site/.svelte-kit/
+site/build/
 
 # OS
 .DS_Store
@@ -21,6 +24,9 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Coverage
+coverage
 # Playwright
 test-results
 screenshots
@@ -28,3 +34,10 @@ screenshots
 # Serena
 .serena/cache
 .serena/project.local.yml
+
+# Playground — gitignore CLI-generated artifacts
+playground/*/coati.json
+playground/*/.coati/
+# Multi-agent and user playgrounds ship their coati.json as demonstration manifests
+!playground/multi/coati.json
+!playground/user/coati.json

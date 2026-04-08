@@ -4,7 +4,7 @@
 
 **One-liner:** "Share, discover, and clone complete AI dev workflows — like GitHub repos for your setup." 🐦‍⬛
 
-**Elevator pitch:** Developers are building incredible AI coding workflows with Claude Code, Cursor, Codex, and MCP servers, but there's no good way to share them. Magpie lets you package your entire AI setup — configs, scripts, skills, hooks, and docs — and share it with one link. Other developers can clone it to their machine with a single CLI command. Think dotfiles, but for the AI age.
+**Elevator pitch:** Developers are building incredible AI coding workflows with Claude Code, Cursor, Codex, and MCP servers, but there's no good way to share them. Coati lets you package your entire AI setup — configs, scripts, skills, hooks, and docs — and share it with one link. Other developers can clone it to their machine with a single CLI command. Think dotfiles, but for the AI age.
 
 **What we are NOT:**
 
@@ -72,14 +72,14 @@ Each seed setup should have:
 
 **Hacker News — "Show HN"**
 
-- Title: "Show HN: Magpie – Share and clone AI dev workflows like GitHub repos"
+- Title: "Show HN: Coati – Share and clone AI dev workflows like GitHub repos"
 - Post should be concise, link directly to the platform
 - Prepare to respond to comments within minutes
 - Best posted Tuesday-Thursday, 8-10am ET
 
 **r/ClaudeCode**
 
-- Share your own setup on Magpie, write a post about it
+- Share your own setup on Coati, write a post about it
 - Frame as "I built this to solve my own problem sharing my Claude Code workflow"
 - Link to the platform naturally
 
@@ -91,13 +91,13 @@ Each seed setup should have:
 
 **DEV.to Launch Article**
 
-- "I built Magpie — a platform for sharing AI coding workflows. Here's why and how."
+- "I built Coati — a platform for sharing AI coding workflows. Here's why and how."
 - Include architecture details (devs love this)
 - Show a real clone flow with terminal screenshots
 
 **Twitter/X Thread**
 
-- Demo GIF: show a `magpie clone` in action
+- Demo GIF: show a `coati clone` in action
 - Tag relevant accounts: Anthropic devrel, Claude Code contributors
 - Thread format: problem → what I built → how it works → try it
 
@@ -125,7 +125,7 @@ Developer creates a great setup
 Writes about it (blog, Twitter, Reddit)
         │
         ▼
-Links to their Magpie profile / setup page
+Links to their Coati profile / setup page
         │
         ▼
 New developers discover the platform
@@ -134,7 +134,7 @@ New developers discover the platform
 Browse → Star → Clone setups
         │
         ▼
-Experience the magic of `magpie clone`
+Experience the magic of `coati clone`
         │
         ▼
 Create and publish their own setups
@@ -146,7 +146,7 @@ Share THEIR setups (repeat cycle)
 ### Key growth levers:
 
 1. **SEO on setup pages** — every setup page is a long-tail keyword page ("claude code mcp setup typescript", "cursor rules react project")
-2. **Embeddable badges** — "Clone my setup on Magpie 🐦‍⬛" badge for READMEs (like npm badges)
+2. **Embeddable badges** — "Clone my setup on Coati 🐦‍⬛" badge for READMEs (like npm badges)
 3. **CLI virality** — when someone clones a setup, the success message links back to the platform
 4. **Content creator incentive** — setup pages replace scattered blog code blocks with a single canonical link
 

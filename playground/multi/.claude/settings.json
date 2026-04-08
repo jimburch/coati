@@ -1,0 +1,19 @@
+{
+	"permissions": {
+		"allow": [
+			"Bash(npm run *)",
+			"Bash(npx vitest *)",
+			"Bash(npx eslint *)",
+			"Bash(npm install *)",
+			"Bash(npm test)",
+			"Bash(node *)",
+			"Read",
+			"Write",
+			"Edit"
+		],
+		"deny": ["Bash(rm -rf /)", "Bash(curl * | bash)", "Bash(git push --force *)"]
+	},
+	"model": {
+		"default": "claude-sonnet-4-20250514"
+	}
+}

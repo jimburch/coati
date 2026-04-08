@@ -2,44 +2,63 @@
 	import type { SetupCardProps } from '$lib/types';
 	import { Avatar, AvatarImage, AvatarFallback } from '$lib/components/ui/avatar';
 	import { timeAgo } from '$lib/utils';
+	import AgentIcon from '$lib/components/AgentIcon.svelte';
 
 	type Props = {
 		setup: SetupCardProps;
 		username: string;
 		showAuthor?: boolean;
+		variant?: 'default' | 'featured';
 	};
 
-	const { setup, username, showAuthor = false }: Props = $props();
+	const { setup, username, showAuthor = false, variant = 'default' }: Props = $props();
 
-	const MAX_TOOLS = 3;
-	const visibleTools = $derived(setup.tools?.slice(0, MAX_TOOLS) ?? []);
-	const overflowCount = $derived(Math.max(0, (setup.tools?.length ?? 0) - MAX_TOOLS));
+	const featured = $derived(variant === 'featured');
+
+	const MAX_AGENTS = 3;
+	const visibleAgents = $derived(setup.agents?.slice(0, MAX_AGENTS) ?? []);
+	const overflowCount = $derived(Math.max(0, (setup.agents?.length ?? 0) - MAX_AGENTS));
 </script>
 
 <a
 	href="/{username}/{setup.slug}"
-	class="block rounded-lg border border-border bg-card p-4 transition-colors hover:border-foreground/20 hover:bg-accent/50"
+	class={featured
+		? 'flex h-full flex-col rounded-lg border border-primary/50 bg-card p-5 transition-colors hover:border-foreground/20 hover:bg-accent/50 lg:p-6'
+		: 'flex h-full flex-col rounded-lg border border-border bg-card p-3 transition-colors hover:border-foreground/20 hover:bg-accent/50 lg:p-4'}
 >
-	<h3 class="truncate text-base font-semibold text-foreground">{setup.name}</h3>
+	<h3
+		class={featured
+			? 'truncate text-base font-semibold text-foreground lg:text-lg'
+			: 'truncate text-sm font-semibold text-foreground lg:text-base'}
+	>
+		{setup.name}
+	</h3>
 
 	{#if setup.description}
-		<p class="mt-1 line-clamp-2 text-sm text-muted-foreground">{setup.description}</p>
+		<p
+			class={featured
+				? 'mt-1 text-sm text-muted-foreground'
+				: 'mt-1 line-clamp-2 text-sm text-muted-foreground'}
+		>
+			{setup.description}
+		</p>
 	{/if}
 
-	{#if visibleTools.length > 0}
-		<div class="mt-2 flex flex-wrap items-center gap-1.5">
-			{#each visibleTools as tool (tool.id)}
-				<span class="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
-					{tool.name}
-				</span>
-			{/each}
-			{#if overflowCount > 0}
-				<span class="text-xs text-muted-foreground">+{overflowCount}</span>
-			{/if}
-		</div>
-	{/if}
+	<div class="mt-2 flex h-6 flex-nowrap items-center gap-1.5 overflow-hidden">
+		{#each visibleAgents as agent (agent.id)}
+			<span
+				class="inline-flex shrink-0 items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground"
+			>
+				<AgentIcon slug={agent.slug} size={16} />
+				{agent.displayName}
+			</span>
+		{/each}
+		{#if overflowCount > 0}
+			<span class="shrink-0 text-xs text-muted-foreground">+{overflowCount}</span>
+		{/if}
+	</div>
 
-	<div class="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
+	<div class="mt-auto flex items-center gap-3 pt-3 text-xs text-muted-foreground">
 		<span class="inline-flex items-center gap-1">
 			<svg class="size-3.5" viewBox="0 0 16 16" fill="currentColor">
 				<path
@@ -49,17 +68,16 @@
 			{setup.starsCount}
 		</span>
 
-		<span class="inline-flex items-center gap-1">
-			<svg class="size-3.5" viewBox="0 0 16 16" fill="currentColor">
-				<path
-					d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"
-				/>
-				<path
-					d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"
-				/>
-			</svg>
-			{setup.clonesCount}
-		</span>
+		{#if featured}
+			<span class="inline-flex items-center gap-1">
+				<svg class="size-3.5" viewBox="0 0 16 16" fill="currentColor">
+					<path
+						d="M5 3.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zm0 2.122a2.25 2.25 0 1 0-1.5 0v.878A2.25 2.25 0 0 0 5.75 8.5h4.5a.75.75 0 0 1 0 1.5h-4.5A2.25 2.25 0 0 0 3.5 12.25v.878a2.25 2.25 0 1 0 1.5 0v-.878a.75.75 0 0 1 .75-.75h4.5a2.25 2.25 0 0 0 2.25-2.25V5.372a2.25 2.25 0 1 0-1.5 0V8.5a.75.75 0 0 1-.75.75h-4.5A2.25 2.25 0 0 0 5 6.128V5.372zm6.75-1.122a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zm0 9.5a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0z"
+					/>
+				</svg>
+				{setup.clonesCount}
+			</span>
+		{/if}
 
 		{#if showAuthor}
 			<span class="ml-auto inline-flex items-center gap-1.5">

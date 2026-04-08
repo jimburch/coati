@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import crypto from 'node:crypto';
 
-// Mock $env/static/private
-vi.mock('$env/static/private', () => ({
-	GITHUB_CLIENT_ID: 'test-client-id',
-	GITHUB_CLIENT_SECRET: 'test-client-secret'
+// Mock $env/dynamic/private
+vi.mock('$env/dynamic/private', () => ({
+	env: {
+		GITHUB_CLIENT_ID: 'test-client-id',
+		GITHUB_CLIENT_SECRET: 'test-client-secret'
+	}
 }));
 
 // Mock the database
@@ -222,25 +224,25 @@ describe('auth module', () => {
 		it('setSessionCookie sets cookie with correct name and options', () => {
 			const cookies = makeCookies();
 			setSessionCookie(cookies as never, 'my-token');
-			expect(cookies.lastSetCall.name).toBe('magpie_session');
+			expect(cookies.lastSetCall.name).toBe('coati_session');
 			expect(cookies.lastSetCall.value).toBe('my-token');
 			expect(cookies.lastSetCall.opts?.httpOnly).toBe(true);
 			expect(cookies.lastSetCall.opts?.sameSite).toBe('lax');
 			expect(cookies.lastSetCall.opts?.path).toBe('/');
-			expect((cookies.lastSetCall.opts?.maxAge as number)).toBeGreaterThan(0);
+			expect(cookies.lastSetCall.opts?.maxAge as number).toBeGreaterThan(0);
 		});
 
 		it('deleteSessionCookie sets maxAge to 0', () => {
 			const cookies = makeCookies();
 			deleteSessionCookie(cookies as never);
-			expect(cookies.lastSetCall.name).toBe('magpie_session');
+			expect(cookies.lastSetCall.name).toBe('coati_session');
 			expect(cookies.lastSetCall.value).toBe('');
 			expect(cookies.lastSetCall.opts?.maxAge).toBe(0);
 		});
 
 		it('getSessionToken returns token from cookie', () => {
 			const cookies = makeCookies();
-			cookies.store.set('magpie_session', 'stored-token');
+			cookies.store.set('coati_session', 'stored-token');
 			expect(getSessionToken(cookies as never)).toBe('stored-token');
 		});
 
@@ -251,7 +253,14 @@ describe('auth module', () => {
 	});
 
 	describe('upsertGithubUser', () => {
-		const ghUser = {
+		const ghUser: {
+			id: number;
+			login: string;
+			email: string | null;
+			avatar_url: string;
+			bio: string;
+			blog: string;
+		} = {
 			id: 12345,
 			login: 'octocat',
 			email: 'octocat@github.com',
