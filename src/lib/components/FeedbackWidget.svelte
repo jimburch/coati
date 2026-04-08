@@ -247,9 +247,7 @@
 							Add screenshots or additional context directly to the GitHub issue
 						</p>
 					{/if}
-					<Button variant="outline" onclick={() => (open = false)} class="mt-1">
-						Close
-					</Button>
+					<Button variant="outline" onclick={() => (open = false)} class="mt-1">Close</Button>
 				</div>
 			{/if}
 		</DialogContent>
