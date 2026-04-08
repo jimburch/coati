@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/jimburch/coati/compare/v1.0.2...v1.0.3) (2026-04-08)
+
+
+### Bug Fixes
+
+* update cli workflow to fix release ([#238](https://github.com/jimburch/coati/issues/238)) ([938f43e](https://github.com/jimburch/coati/commit/938f43e386c2686796e1718a965f79fa4b6e5687))
+
 ## [1.0.2](https://github.com/jimburch/coati/compare/v1.0.1...v1.0.2) (2026-04-08)
 
 
