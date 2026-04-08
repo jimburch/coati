@@ -70,6 +70,8 @@ jobs:
       - name: Publish to npm
         working-directory: cli
         run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Tag release
         run: |
