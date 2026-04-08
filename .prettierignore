@@ -5,6 +5,9 @@ yarn.lock
 bun.lock
 bun.lockb
 
+# Auto-generated files
+CHANGELOG.md
+
 # Miscellaneous
 /static/
 

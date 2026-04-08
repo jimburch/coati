@@ -77,7 +77,5 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add cli/package.json
-          git commit -m "chore(cli): release v${VERSION}"
           git tag "cli-v${VERSION}"
-          git push origin main --tags
+          git push origin "cli-v${VERSION}"
