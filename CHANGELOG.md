@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/jimburch/coati/compare/v1.0.1...v1.0.2) (2026-04-08)
+
+
+### Bug Fixes
+
+* CLI prod downloads, code theme improvements, and feedback widget enhancements ([#237](https://github.com/jimburch/coati/issues/237)) ([a790168](https://github.com/jimburch/coati/commit/a790168ab942c52cbd99517729dd3c7a470ef03b))
+
 ## [1.0.1](https://github.com/jimburch/coati/compare/v1.0.0...v1.0.1) (2026-04-08)
 
 
