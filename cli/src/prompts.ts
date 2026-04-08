@@ -129,7 +129,10 @@ export async function resolveConflicts(
 			{ label: 'Confirm & proceed', value: 'confirm' }
 		];
 
-		const choice = await select<MenuChoice>('Review conflicts (select a file to change action)', allChoices);
+		const choice = await select<MenuChoice>(
+			'Review conflicts (select a file to change action)',
+			allChoices
+		);
 
 		if (choice === 'confirm') break;
 

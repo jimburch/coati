@@ -7,11 +7,12 @@ import { resolveTargetPath, writeSetupFiles, type FileToWrite } from './files.js
 // ── hoisted mocks ─────────────────────────────────────────────────────────────
 
 const { mockResolveConflicts } = vi.hoisted(() => ({
-	mockResolveConflicts: vi.fn<
-		(
-			files: { relativePath: string; absolutePath: string; incomingContent: string }[]
-		) => Promise<Map<string, 'overwrite' | 'skip' | 'backup'>>
-	>()
+	mockResolveConflicts:
+		vi.fn<
+			(
+				files: { relativePath: string; absolutePath: string; incomingContent: string }[]
+			) => Promise<Map<string, 'overwrite' | 'skip' | 'backup'>>
+		>()
 }));
 
 vi.mock('./prompts.js', () => ({

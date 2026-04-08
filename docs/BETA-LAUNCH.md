@@ -4,29 +4,29 @@ Production deploy of coati.sh in beta mode with CLI published to npm.
 
 ## Decisions
 
-| Decision | Outcome |
-|----------|---------|
-| Environments | `develop.coati.sh` (staging, deploys from `develop`) + `coati.sh` (production, deploys from `main`) |
-| Production database | Separate PostgreSQL instance in Coolify, no seed data |
-| DNS | Swap `coati.sh` from Cloudflare Pages to VPS, keep Cloudflare proxying (orange cloud) |
-| CI/CD | Coolify watches `main` for auto-deploy; GitHub Actions runs checks only |
-| CLI package name | `@coati/sh` on npm, binary name `coati` |
-| CLI versioning | Independent from web app, auto-publish on push to `main` when `cli/` changes, conventional commits determine bump |
-| npm auth | Granular access token scoped to `@coati` org, stored as `NPM_TOKEN` GitHub Actions secret |
-| Beta access | Manual approval via admin panel; existing feedback widget + waitlist page are ready |
-| Landing page | Existing SvelteKit landing page replaces `/site` marketing page |
-| Monitoring | Coolify health checks only for now; add Sentry/uptime monitoring later |
-| Merge strategy | All changes go through `develop` first, then merge to `main` |
+| Decision            | Outcome                                                                                                           |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Environments        | `develop.coati.sh` (staging, deploys from `develop`) + `coati.sh` (production, deploys from `main`)               |
+| Production database | Separate PostgreSQL instance in Coolify, no seed data                                                             |
+| DNS                 | Swap `coati.sh` from Cloudflare Pages to VPS, keep Cloudflare proxying (orange cloud)                             |
+| CI/CD               | Coolify watches `main` for auto-deploy; GitHub Actions runs checks only                                           |
+| CLI package name    | `@coati/sh` on npm, binary name `coati`                                                                           |
+| CLI versioning      | Independent from web app, auto-publish on push to `main` when `cli/` changes, conventional commits determine bump |
+| npm auth            | Granular access token scoped to `@coati` org, stored as `NPM_TOKEN` GitHub Actions secret                         |
+| Beta access         | Manual approval via admin panel; existing feedback widget + waitlist page are ready                               |
+| Landing page        | Existing SvelteKit landing page replaces `/site` marketing page                                                   |
+| Monitoring          | Coolify health checks only for now; add Sentry/uptime monitoring later                                            |
+| Merge strategy      | All changes go through `develop` first, then merge to `main`                                                      |
 
 ## Production Environment Variables
 
-| Variable | Value |
-|----------|-------|
-| `DATABASE_URL` | Production PostgreSQL connection string |
-| `GITHUB_CLIENT_ID` | Production OAuth app (already created) |
-| `GITHUB_CLIENT_SECRET` | Production OAuth app (already created) |
-| `PUBLIC_SITE_URL` | `https://coati.sh` |
-| `PUBLIC_BETA_MODE` | `true` |
+| Variable                | Value                                                                |
+| ----------------------- | -------------------------------------------------------------------- |
+| `DATABASE_URL`          | Production PostgreSQL connection string                              |
+| `GITHUB_CLIENT_ID`      | Production OAuth app (already created)                               |
+| `GITHUB_CLIENT_SECRET`  | Production OAuth app (already created)                               |
+| `PUBLIC_SITE_URL`       | `https://coati.sh`                                                   |
+| `PUBLIC_BETA_MODE`      | `true`                                                               |
 | `GITHUB_FEEDBACK_TOKEN` | Existing PAT (expires 2026-06-25, scoped to `jimburch/coati` issues) |
 
 ---
@@ -70,19 +70,19 @@ Production deploy of coati.sh in beta mode with CLI published to npm.
 
 ## Phase 3: Production Infrastructure
 
-- [ ] Create production PostgreSQL instance in Coolify
-- [ ] Create production Coolify resource
-  - [ ] Set source branch to `main`
-  - [ ] Set build pack to Dockerfile
-  - [ ] Configure all environment variables (see table above)
-  - [ ] Configure health check endpoint (`/api/v1/health`)
-- [ ] Set up Coolify GitHub App webhook to watch `main` for auto-deploy
+- [x] Create production PostgreSQL instance in Coolify
+- [x] Create production Coolify resource
+  - [x] Set source branch to `main`
+  - [x] Set build pack to Dockerfile
+  - [x] Configure all environment variables (see table above)
+  - [x] Configure health check endpoint (`/api/v1/health`)
+- [x] Set up Coolify GitHub App webhook to watch `main` for auto-deploy
 
 ## Phase 4: DNS Cutover
 
-- [ ] In Cloudflare, update `coati.sh` DNS from Cloudflare Pages to VPS IP (A record, proxied)
-- [ ] Remove or disable the Cloudflare Pages project for `coati.sh`
-- [ ] Verify SSL is working via Cloudflare proxy
+- [x] In Cloudflare, update `coati.sh` DNS from Cloudflare Pages to VPS IP (A record, proxied)
+- [x] Remove or disable the Cloudflare Pages project for `coati.sh`
+- [x] Verify SSL is working via Cloudflare proxy
 
 ## Phase 5: Go Live
 

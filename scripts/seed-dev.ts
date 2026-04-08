@@ -440,14 +440,16 @@ export async function fetchGitHubProfiles(
 // ─── Content Generators ───────────────────────────────────────────────────────
 
 function buildCmd(p: StackParams): string {
-	if (p.language === 'python') return `${p.packageManager === 'uv' ? 'uv run' : 'python -m'} ${p.testRunner}`;
+	if (p.language === 'python')
+		return `${p.packageManager === 'uv' ? 'uv run' : 'python -m'} ${p.testRunner}`;
 	if (p.language === 'rust') return 'cargo test';
 	if (p.language === 'go') return 'go test ./...';
 	return `${p.packageManager} ${p.packageManager === 'pnpm' || p.packageManager === 'npm' ? 'run ' : ''}test`;
 }
 
 function devCmd(p: StackParams): string {
-	if (p.language === 'python') return `${p.packageManager === 'uv' ? 'uv run' : 'python'} manage.py runserver`;
+	if (p.language === 'python')
+		return `${p.packageManager === 'uv' ? 'uv run' : 'python'} manage.py runserver`;
 	if (p.framework === 'next') return `${p.packageManager} run dev`;
 	if (p.framework === 'sveltekit') return `${p.packageManager} run dev`;
 	if (p.framework === 'express') return `${p.packageManager} run dev`;
@@ -468,7 +470,9 @@ function generateClaudeMd(p: StackParams): string {
 
 	if (p.language === 'typescript') {
 		lines.push('## Tech Stack', '');
-		lines.push(`- **Framework:** ${p.framework === 'next' ? 'Next.js (App Router)' : p.framework === 'sveltekit' ? 'SvelteKit' : p.framework === 'express' ? 'Express' : p.framework === 'react' ? 'React + Vite' : p.framework === 'react-native' ? 'React Native + Expo' : p.framework}`);
+		lines.push(
+			`- **Framework:** ${p.framework === 'next' ? 'Next.js (App Router)' : p.framework === 'sveltekit' ? 'SvelteKit' : p.framework === 'express' ? 'Express' : p.framework === 'react' ? 'React + Vite' : p.framework === 'react-native' ? 'React Native + Expo' : p.framework}`
+		);
 		lines.push('- **Language:** TypeScript (strict mode)');
 		lines.push(`- **Package Manager:** ${p.packageManager}`);
 		lines.push(`- **Testing:** ${p.testRunner}`);
@@ -501,7 +505,9 @@ function generateClaudeMd(p: StackParams): string {
 		}
 	} else if (p.language === 'python') {
 		lines.push('## Tech Stack', '');
-		lines.push(`- **Framework:** ${p.framework === 'django' ? 'Django' : p.framework === 'fastapi' ? 'FastAPI' : 'Flask'}`);
+		lines.push(
+			`- **Framework:** ${p.framework === 'django' ? 'Django' : p.framework === 'fastapi' ? 'FastAPI' : 'Flask'}`
+		);
 		lines.push('- **Language:** Python 3.12+');
 		lines.push(`- **Package Manager:** ${p.packageManager}`);
 		lines.push(`- **Testing:** ${p.testRunner}`);
@@ -509,12 +515,18 @@ function generateClaudeMd(p: StackParams): string {
 		lines.push('');
 		lines.push('## Commands', '');
 		if (p.framework === 'django') {
-			lines.push(`- \`${p.packageManager === 'uv' ? 'uv run' : 'python'} manage.py runserver\` — start dev server`);
+			lines.push(
+				`- \`${p.packageManager === 'uv' ? 'uv run' : 'python'} manage.py runserver\` — start dev server`
+			);
 			lines.push(`- \`${p.packageManager === 'uv' ? 'uv run' : 'python -m'} pytest\` — run tests`);
 			lines.push(`- \`${lintCmd(p)}\` — lint`);
-			lines.push(`- \`${p.packageManager === 'uv' ? 'uv run' : 'python'} manage.py migrate\` — apply migrations`);
+			lines.push(
+				`- \`${p.packageManager === 'uv' ? 'uv run' : 'python'} manage.py migrate\` — apply migrations`
+			);
 		} else {
-			lines.push(`- \`${p.packageManager === 'uv' ? 'uv run' : 'python -m'} ${p.framework === 'fastapi' ? 'uvicorn app.main:app --reload' : 'flask run --debug'}\` — start dev server`);
+			lines.push(
+				`- \`${p.packageManager === 'uv' ? 'uv run' : 'python -m'} ${p.framework === 'fastapi' ? 'uvicorn app.main:app --reload' : 'flask run --debug'}\` — start dev server`
+			);
 			lines.push(`- \`${buildCmd(p)}\` — run tests`);
 			lines.push(`- \`${lintCmd(p)}\` — lint`);
 		}
@@ -578,7 +590,9 @@ function generateCursorrules(p: StackParams): string {
 	const lines: string[] = [];
 
 	if (p.language === 'typescript') {
-		lines.push(`You are working on ${p.projectName}, a ${p.projectType} built with ${p.framework === 'next' ? 'Next.js' : p.framework === 'react' ? 'React + Vite' : p.framework}.`);
+		lines.push(
+			`You are working on ${p.projectName}, a ${p.projectType} built with ${p.framework === 'next' ? 'Next.js' : p.framework === 'react' ? 'React + Vite' : p.framework}.`
+		);
 		lines.push('');
 		lines.push('## Code Style');
 		lines.push('- TypeScript strict mode is enabled');
@@ -605,7 +619,9 @@ function generateCursorrules(p: StackParams): string {
 			lines.push('- `src/utils/` — Pure utility functions');
 		}
 	} else if (p.language === 'python') {
-		lines.push(`You are working on ${p.projectName}, a ${p.framework === 'django' ? 'Django' : p.framework === 'fastapi' ? 'FastAPI' : 'Flask'} ${p.projectType}.`);
+		lines.push(
+			`You are working on ${p.projectName}, a ${p.framework === 'django' ? 'Django' : p.framework === 'fastapi' ? 'FastAPI' : 'Flask'} ${p.projectType}.`
+		);
 		lines.push('');
 		lines.push('## Code Style');
 		lines.push('- Python 3.12+ with type hints on all signatures');
@@ -700,54 +716,57 @@ function generateCursorRule(p: StackParams, ruleName: string): string {
 				''
 			].join('\n');
 		},
-		style: () => [
-			'---',
-			'description: Code style and formatting',
-			`globs: ["**/*.ts", "**/*.tsx"]`,
-			'---',
-			'',
-			'# Style Rules',
-			'',
-			'- Use `const` by default; `let` only when reassignment is needed',
-			'- Prefer named exports over default exports',
-			'- Destructure props in function parameters',
-			'- Use template literals over string concatenation',
-			'- Keep lines under 100 characters',
-			'- Group imports: external, internal, types',
-			''
-		].join('\n'),
-		models: () => [
-			'---',
-			'description: Django model conventions',
-			'globs: ["**/models.py", "**/models/**/*.py"]',
-			'---',
-			'',
-			'# Model Rules',
-			'',
-			'- All models inherit from `TimeStampedModel` base class',
-			'- Use explicit `related_name` on all ForeignKey fields',
-			'- Add `__str__` method to every model',
-			'- Keep business logic in model methods, not views',
-			'- Always add database indexes for filtered/ordered fields',
-			'- Use `choices` with TextChoices/IntegerChoices for enum fields',
-			''
-		].join('\n'),
-		views: () => [
-			'---',
-			'description: Django view patterns',
-			'globs: ["**/views.py", "**/views/**/*.py", "**/api/**/*.py"]',
-			'---',
-			'',
-			'# View Rules',
-			'',
-			'- Use DRF serializers for API views',
-			'- Class-based views for standard CRUD',
-			'- Function views for complex one-off endpoints',
-			'- Always set `permission_classes` on API views',
-			'- Use `select_related` and `prefetch_related` to avoid N+1 queries',
-			'- Return 404 for missing resources, never empty 200',
-			''
-		].join('\n'),
+		style: () =>
+			[
+				'---',
+				'description: Code style and formatting',
+				`globs: ["**/*.ts", "**/*.tsx"]`,
+				'---',
+				'',
+				'# Style Rules',
+				'',
+				'- Use `const` by default; `let` only when reassignment is needed',
+				'- Prefer named exports over default exports',
+				'- Destructure props in function parameters',
+				'- Use template literals over string concatenation',
+				'- Keep lines under 100 characters',
+				'- Group imports: external, internal, types',
+				''
+			].join('\n'),
+		models: () =>
+			[
+				'---',
+				'description: Django model conventions',
+				'globs: ["**/models.py", "**/models/**/*.py"]',
+				'---',
+				'',
+				'# Model Rules',
+				'',
+				'- All models inherit from `TimeStampedModel` base class',
+				'- Use explicit `related_name` on all ForeignKey fields',
+				'- Add `__str__` method to every model',
+				'- Keep business logic in model methods, not views',
+				'- Always add database indexes for filtered/ordered fields',
+				'- Use `choices` with TextChoices/IntegerChoices for enum fields',
+				''
+			].join('\n'),
+		views: () =>
+			[
+				'---',
+				'description: Django view patterns',
+				'globs: ["**/views.py", "**/views/**/*.py", "**/api/**/*.py"]',
+				'---',
+				'',
+				'# View Rules',
+				'',
+				'- Use DRF serializers for API views',
+				'- Class-based views for standard CRUD',
+				'- Function views for complex one-off endpoints',
+				'- Always set `permission_classes` on API views',
+				'- Use `select_related` and `prefetch_related` to avoid N+1 queries',
+				'- Return 404 for missing resources, never empty 200',
+				''
+			].join('\n'),
 		conventions: () => {
 			if (p.language === 'python') {
 				return [
@@ -893,7 +912,11 @@ function generateAgentsMd(p: StackParams): string {
 		'## Architecture',
 		'',
 		...(p.framework === 'express' || p.framework === 'fastapi' || p.framework === 'django'
-			? ['- `src/` — application source', '- `tests/` — test files', '- `scripts/` — operational scripts']
+			? [
+					'- `src/` — application source',
+					'- `tests/` — test files',
+					'- `scripts/` — operational scripts'
+				]
 			: p.language === 'rust'
 				? ['- `src/` — library and binary crates', '- `tests/` — integration tests']
 				: ['- `src/` — application source', '- `tests/` — test suite']),
@@ -974,7 +997,10 @@ function generateMcpJson(p: StackParams): string {
 		args: ['-y', '@modelcontextprotocol/server-filesystem', '.']
 	};
 
-	if (p.language === 'typescript' && (p.framework === 'next' || p.framework === 'sveltekit' || p.framework === 'express')) {
+	if (
+		p.language === 'typescript' &&
+		(p.framework === 'next' || p.framework === 'sveltekit' || p.framework === 'express')
+	) {
 		servers['postgres'] = {
 			command: 'npx',
 			args: ['-y', '@modelcontextprotocol/server-postgres'],
@@ -995,52 +1021,55 @@ function generateMcpJson(p: StackParams): string {
 
 function generateCommandMd(p: StackParams, commandName: string): string {
 	const commands: Record<string, () => string> = {
-		dev: () => [
-			`# Start Development Server`,
-			'',
-			`Run the development server for ${p.projectName}.`,
-			'',
-			'```bash',
-			devCmd(p),
-			'```',
-			''
-		].join('\n'),
-		test: () => [
-			'# Run Tests',
-			'',
-			`Run the full test suite for ${p.projectName}.`,
-			'',
-			'```bash',
-			buildCmd(p),
-			'```',
-			'',
-			'For a specific test file:',
-			'```bash',
-			p.language === 'python'
-				? `${buildCmd(p)} tests/test_<module>.py -v`
-				: p.language === 'rust'
-					? 'cargo test <test_name>'
-					: p.language === 'go'
-						? 'go test ./internal/<package>/... -v'
-						: `${p.packageManager} run test -- <file>`,
-			'```',
-			''
-		].join('\n'),
-		'review-pr': () => [
-			'# Review Pull Request',
-			'',
-			'Review the current PR against project standards.',
-			'',
-			'## Checklist',
-			'',
-			'1. Read the PR description and linked issue',
-			'2. Check all tests pass',
-			'3. Verify no `any` types or `TODO` comments',
-			'4. Ensure consistent error handling',
-			'5. Check for security issues (SQL injection, XSS, secrets)',
-			'6. Verify naming conventions match project style',
-			''
-		].join('\n'),
+		dev: () =>
+			[
+				`# Start Development Server`,
+				'',
+				`Run the development server for ${p.projectName}.`,
+				'',
+				'```bash',
+				devCmd(p),
+				'```',
+				''
+			].join('\n'),
+		test: () =>
+			[
+				'# Run Tests',
+				'',
+				`Run the full test suite for ${p.projectName}.`,
+				'',
+				'```bash',
+				buildCmd(p),
+				'```',
+				'',
+				'For a specific test file:',
+				'```bash',
+				p.language === 'python'
+					? `${buildCmd(p)} tests/test_<module>.py -v`
+					: p.language === 'rust'
+						? 'cargo test <test_name>'
+						: p.language === 'go'
+							? 'go test ./internal/<package>/... -v'
+							: `${p.packageManager} run test -- <file>`,
+				'```',
+				''
+			].join('\n'),
+		'review-pr': () =>
+			[
+				'# Review Pull Request',
+				'',
+				'Review the current PR against project standards.',
+				'',
+				'## Checklist',
+				'',
+				'1. Read the PR description and linked issue',
+				'2. Check all tests pass',
+				'3. Verify no `any` types or `TODO` comments',
+				'4. Ensure consistent error handling',
+				'5. Check for security issues (SQL injection, XSS, secrets)',
+				'6. Verify naming conventions match project style',
+				''
+			].join('\n'),
 		'db-migrate': () => {
 			if (p.framework === 'django') {
 				return [
@@ -1067,46 +1096,56 @@ function generateCommandMd(p: StackParams, commandName: string): string {
 				''
 			].join('\n');
 		},
-		venv: () => [
-			'# Setup Virtual Environment',
-			'',
-			'Create and activate a Python virtual environment.',
-			'',
-			'```bash',
-			p.packageManager === 'uv' ? 'uv venv && source .venv/bin/activate && uv pip install -r requirements.txt' : 'python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt',
-			'```',
-			''
-		].join('\n'),
-		build: () => [
-			'# Build',
-			'',
-			`Build ${p.projectName} for production.`,
-			'',
-			'```bash',
-			p.language === 'rust' ? 'cargo build --release' : p.language === 'go' ? 'go build -o bin/server ./cmd/server' : `${p.packageManager} run build`,
-			'```',
-			''
-		].join('\n'),
-		typecheck: () => [
-			'# Type Check',
-			'',
-			'Run the TypeScript compiler to check types without emitting.',
-			'',
-			'```bash',
-			`${p.packageManager} run tsc --noEmit`,
-			'```',
-			''
-		].join('\n'),
-		lint: () => [
-			'# Lint',
-			'',
-			`Run linting for ${p.projectName}.`,
-			'',
-			'```bash',
-			lintCmd(p),
-			'```',
-			''
-		].join('\n')
+		venv: () =>
+			[
+				'# Setup Virtual Environment',
+				'',
+				'Create and activate a Python virtual environment.',
+				'',
+				'```bash',
+				p.packageManager === 'uv'
+					? 'uv venv && source .venv/bin/activate && uv pip install -r requirements.txt'
+					: 'python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt',
+				'```',
+				''
+			].join('\n'),
+		build: () =>
+			[
+				'# Build',
+				'',
+				`Build ${p.projectName} for production.`,
+				'',
+				'```bash',
+				p.language === 'rust'
+					? 'cargo build --release'
+					: p.language === 'go'
+						? 'go build -o bin/server ./cmd/server'
+						: `${p.packageManager} run build`,
+				'```',
+				''
+			].join('\n'),
+		typecheck: () =>
+			[
+				'# Type Check',
+				'',
+				'Run the TypeScript compiler to check types without emitting.',
+				'',
+				'```bash',
+				`${p.packageManager} run tsc --noEmit`,
+				'```',
+				''
+			].join('\n'),
+		lint: () =>
+			[
+				'# Lint',
+				'',
+				`Run linting for ${p.projectName}.`,
+				'',
+				'```bash',
+				lintCmd(p),
+				'```',
+				''
+			].join('\n')
 	};
 
 	const fn = commands[commandName];
@@ -1115,25 +1154,26 @@ function generateCommandMd(p: StackParams, commandName: string): string {
 
 function generateSkillMd(p: StackParams, skillName: string): string {
 	const skills: Record<string, () => string> = {
-		tdd: () => [
-			'# TDD Workflow',
-			'',
-			'Follow the red-green-refactor loop:',
-			'',
-			'## Steps',
-			'',
-			'1. **Red** — Write a failing test that defines the expected behavior',
-			`2. **Green** — Write the minimum code to make the test pass (\`${buildCmd(p)}\`)`,
-			'3. **Refactor** — Clean up the code while keeping tests green',
-			'',
-			'## Rules',
-			'',
-			'- Never write production code without a failing test first',
-			'- One assertion per test (or one logical concept)',
-			'- Run the full suite after each refactor step',
-			`- Use \`${buildCmd(p)}\` to verify`,
-			''
-		].join('\n'),
+		tdd: () =>
+			[
+				'# TDD Workflow',
+				'',
+				'Follow the red-green-refactor loop:',
+				'',
+				'## Steps',
+				'',
+				'1. **Red** — Write a failing test that defines the expected behavior',
+				`2. **Green** — Write the minimum code to make the test pass (\`${buildCmd(p)}\`)`,
+				'3. **Refactor** — Clean up the code while keeping tests green',
+				'',
+				'## Rules',
+				'',
+				'- Never write production code without a failing test first',
+				'- One assertion per test (or one logical concept)',
+				'- Run the full suite after each refactor step',
+				`- Use \`${buildCmd(p)}\` to verify`,
+				''
+			].join('\n'),
 		testing: () => {
 			if (p.language === 'python') {
 				return [
@@ -1190,124 +1230,129 @@ function generateSkillMd(p: StackParams, skillName: string): string {
 				''
 			].join('\n');
 		},
-		review: () => [
-			'# Code Review Skill',
-			'',
-			'When reviewing code, check these areas:',
-			'',
-			'## Correctness',
-			'- Does the code do what the PR says it does?',
-			'- Are edge cases handled?',
-			'- Are error states handled gracefully?',
-			'',
-			'## Security',
-			'- No hardcoded secrets or credentials',
-			'- Input validation at boundaries',
-			'- SQL injection / XSS prevention',
-			'',
-			'## Quality',
-			'- Tests cover the new behavior',
-			'- No unnecessary complexity',
-			'- Naming is clear and consistent',
-			'- No debug/console statements left behind',
-			''
-		].join('\n'),
-		'api-design': () => [
-			'# API Design Patterns',
-			'',
-			`Patterns for building APIs in ${p.projectName}.`,
-			'',
-			'## Request Handling',
-			'',
-			...(p.language === 'typescript'
-				? [
-						'- Validate inputs with zod at the route boundary',
-						'- Return `{ data }` on success, `{ error, code }` on failure',
-						'- Use proper HTTP status codes (201 for create, 204 for delete)',
-						'- Paginate list endpoints with `?page=1&limit=20`'
-					]
-				: [
-						'- Validate inputs with pydantic models',
-						'- Use consistent response shapes',
-						'- Proper HTTP status codes',
-						'- Paginate with `?offset=0&limit=20`'
-					]),
-			'',
-			'## Error Handling',
-			'',
-			'- Catch errors at the handler level',
-			'- Map domain errors to HTTP status codes',
-			'- Log errors with request context',
-			'- Never expose internal details in error responses',
-			''
-		].join('\n'),
-		cargo: () => [
-			'# Cargo Workflow',
-			'',
-			'Standard Rust development workflow.',
-			'',
-			'## Build & Test',
-			'',
-			'```bash',
-			'cargo build         # debug build',
-			'cargo build --release  # release build',
-			'cargo test          # run all tests',
-			'cargo test -- --nocapture  # with stdout',
-			'```',
-			'',
-			'## Quality',
-			'',
-			'```bash',
-			'cargo clippy --all-targets -- -D warnings',
-			'cargo fmt --check',
-			'cargo doc --no-deps',
-			'```',
-			''
-		].join('\n'),
-		deploy: () => [
-			'# Deploy Skill',
-			'',
-			`Deployment steps for ${p.projectName}.`,
-			'',
-			'## Pre-deploy Checklist',
-			'',
-			`1. Run \`${buildCmd(p)}\` — all tests pass`,
-			`2. Run \`${lintCmd(p)}\` — no lint errors`,
-			'3. Check for uncommitted changes',
-			'4. Verify environment variables are set',
-			'',
-			'## Deploy',
-			'',
-			'```bash',
-			'git push origin main',
-			'```',
-			'',
-			'CI/CD pipeline handles the rest.',
-			''
-		].join('\n'),
-		'data-prep': () => [
-			'# Data Preparation',
-			'',
-			'Patterns for cleaning and preparing data.',
-			'',
-			'## Loading Data',
-			'',
-			'```python',
-			'import pandas as pd',
-			'',
-			'df = pd.read_csv("data/raw/input.csv")',
-			'df = df.dropna(subset=["required_column"])',
-			'df["date"] = pd.to_datetime(df["date"])',
-			'```',
-			'',
-			'## Validation',
-			'',
-			'- Check for null values in required columns',
-			'- Verify data types match expected schema',
-			'- Log row counts before and after transforms',
-			'- Save processed data to `data/processed/`',
-			''
-		].join('\n')
+		review: () =>
+			[
+				'# Code Review Skill',
+				'',
+				'When reviewing code, check these areas:',
+				'',
+				'## Correctness',
+				'- Does the code do what the PR says it does?',
+				'- Are edge cases handled?',
+				'- Are error states handled gracefully?',
+				'',
+				'## Security',
+				'- No hardcoded secrets or credentials',
+				'- Input validation at boundaries',
+				'- SQL injection / XSS prevention',
+				'',
+				'## Quality',
+				'- Tests cover the new behavior',
+				'- No unnecessary complexity',
+				'- Naming is clear and consistent',
+				'- No debug/console statements left behind',
+				''
+			].join('\n'),
+		'api-design': () =>
+			[
+				'# API Design Patterns',
+				'',
+				`Patterns for building APIs in ${p.projectName}.`,
+				'',
+				'## Request Handling',
+				'',
+				...(p.language === 'typescript'
+					? [
+							'- Validate inputs with zod at the route boundary',
+							'- Return `{ data }` on success, `{ error, code }` on failure',
+							'- Use proper HTTP status codes (201 for create, 204 for delete)',
+							'- Paginate list endpoints with `?page=1&limit=20`'
+						]
+					: [
+							'- Validate inputs with pydantic models',
+							'- Use consistent response shapes',
+							'- Proper HTTP status codes',
+							'- Paginate with `?offset=0&limit=20`'
+						]),
+				'',
+				'## Error Handling',
+				'',
+				'- Catch errors at the handler level',
+				'- Map domain errors to HTTP status codes',
+				'- Log errors with request context',
+				'- Never expose internal details in error responses',
+				''
+			].join('\n'),
+		cargo: () =>
+			[
+				'# Cargo Workflow',
+				'',
+				'Standard Rust development workflow.',
+				'',
+				'## Build & Test',
+				'',
+				'```bash',
+				'cargo build         # debug build',
+				'cargo build --release  # release build',
+				'cargo test          # run all tests',
+				'cargo test -- --nocapture  # with stdout',
+				'```',
+				'',
+				'## Quality',
+				'',
+				'```bash',
+				'cargo clippy --all-targets -- -D warnings',
+				'cargo fmt --check',
+				'cargo doc --no-deps',
+				'```',
+				''
+			].join('\n'),
+		deploy: () =>
+			[
+				'# Deploy Skill',
+				'',
+				`Deployment steps for ${p.projectName}.`,
+				'',
+				'## Pre-deploy Checklist',
+				'',
+				`1. Run \`${buildCmd(p)}\` — all tests pass`,
+				`2. Run \`${lintCmd(p)}\` — no lint errors`,
+				'3. Check for uncommitted changes',
+				'4. Verify environment variables are set',
+				'',
+				'## Deploy',
+				'',
+				'```bash',
+				'git push origin main',
+				'```',
+				'',
+				'CI/CD pipeline handles the rest.',
+				''
+			].join('\n'),
+		'data-prep': () =>
+			[
+				'# Data Preparation',
+				'',
+				'Patterns for cleaning and preparing data.',
+				'',
+				'## Loading Data',
+				'',
+				'```python',
+				'import pandas as pd',
+				'',
+				'df = pd.read_csv("data/raw/input.csv")',
+				'df = df.dropna(subset=["required_column"])',
+				'df["date"] = pd.to_datetime(df["date"])',
+				'```',
+				'',
+				'## Validation',
+				'',
+				'- Check for null values in required columns',
+				'- Verify data types match expected schema',
+				'- Log row counts before and after transforms',
+				'- Save processed data to `data/processed/`',
+				''
+			].join('\n')
 	};
 
 	const fn = skills[skillName];
@@ -1376,40 +1421,43 @@ function generateHookSh(p: StackParams, hookType: string): string {
 				''
 			].join('\n');
 		},
-		lint: () => [
-			'#!/bin/bash',
-			'set -e',
-			'',
-			`echo "Running ${p.linter}..."`,
-			lintCmd(p),
-			'',
-			'echo "Lint passed."',
-			''
-		].join('\n'),
-		'pre-push': () => [
-			'#!/bin/bash',
-			'set -e',
-			'',
-			'echo "Running full test suite..."',
-			buildCmd(p),
-			'',
-			'echo "Running lint..."',
-			lintCmd(p),
-			'',
-			'echo "Pre-push checks passed."',
-			''
-		].join('\n'),
-		check: () => [
-			'#!/bin/bash',
-			'set -e',
-			'',
-			`echo "Running checks for ${p.projectName}..."`,
-			lintCmd(p),
-			buildCmd(p),
-			'',
-			'echo "All checks passed."',
-			''
-		].join('\n')
+		lint: () =>
+			[
+				'#!/bin/bash',
+				'set -e',
+				'',
+				`echo "Running ${p.linter}..."`,
+				lintCmd(p),
+				'',
+				'echo "Lint passed."',
+				''
+			].join('\n'),
+		'pre-push': () =>
+			[
+				'#!/bin/bash',
+				'set -e',
+				'',
+				'echo "Running full test suite..."',
+				buildCmd(p),
+				'',
+				'echo "Running lint..."',
+				lintCmd(p),
+				'',
+				'echo "Pre-push checks passed."',
+				''
+			].join('\n'),
+		check: () =>
+			[
+				'#!/bin/bash',
+				'set -e',
+				'',
+				`echo "Running checks for ${p.projectName}..."`,
+				lintCmd(p),
+				buildCmd(p),
+				'',
+				'echo "All checks passed."',
+				''
+			].join('\n')
 	};
 
 	const fn = hooks[hookType];
@@ -1438,7 +1486,11 @@ function generateSettingsJson(p: StackParams, agent: string): string {
 	}
 	if (agent === 'cursor') {
 		return JSON.stringify(
-			{ 'editor.formatOnSave': true, 'editor.defaultFormatter': 'esbenp.prettier-vscode', 'typescript.preferences.importModuleSpecifier': 'non-relative' },
+			{
+				'editor.formatOnSave': true,
+				'editor.defaultFormatter': 'esbenp.prettier-vscode',
+				'typescript.preferences.importModuleSpecifier': 'non-relative'
+			},
 			null,
 			'\t'
 		);
@@ -1479,8 +1531,20 @@ function generateCodexConfig(p: StackParams): string {
 
 function generateGeminiCommand(_p: StackParams, commandName: string): string {
 	const commands: Record<string, string> = {
-		dev: ['[command]', 'name = "dev"', 'description = "Start the development server"', ''].join('\n'),
-		train: ['[command]', 'name = "train"', 'description = "Run the training pipeline"', '', '[steps]', 'pre = "echo Validating data..."', 'run = "python -m src.train"', 'post = "echo Training complete"', ''].join('\n'),
+		dev: ['[command]', 'name = "dev"', 'description = "Start the development server"', ''].join(
+			'\n'
+		),
+		train: [
+			'[command]',
+			'name = "train"',
+			'description = "Run the training pipeline"',
+			'',
+			'[steps]',
+			'pre = "echo Validating data..."',
+			'run = "python -m src.train"',
+			'post = "echo Training complete"',
+			''
+		].join('\n'),
 		test: ['[command]', 'name = "test"', 'description = "Run the test suite"', ''].join('\n')
 	};
 	return commands[commandName] ?? `[command]\nname = "${commandName}"\n`;
@@ -1650,7 +1714,9 @@ function generateReadmeContent(
 
 	if (depth >= 1) {
 		lines.push("## What's Included", '');
-		lines.push(`This setup configures your AI coding agent for working on ${p.framework} ${p.projectType} projects with ${p.language}. It includes:`);
+		lines.push(
+			`This setup configures your AI coding agent for working on ${p.framework} ${p.projectType} projects with ${p.language}. It includes:`
+		);
 		lines.push('');
 		lines.push('- Agent instructions tailored to the framework and language');
 		lines.push('- Custom commands for common development tasks');
@@ -1672,12 +1738,16 @@ function generateReadmeContent(
 		lines.push('## Configuration', '');
 		lines.push('After cloning, you may want to customize:');
 		lines.push('');
-		lines.push('- **Instructions** — Update the project-specific details in the main instruction file');
+		lines.push(
+			'- **Instructions** — Update the project-specific details in the main instruction file'
+		);
 		lines.push('- **Commands** — Add or modify commands to match your workflow');
 		lines.push('- **MCP Servers** — Configure database or API connections for your environment');
 		lines.push('');
 		lines.push('## Contributing', '');
-		lines.push('Found an issue or have an improvement? Star this setup and leave a comment with your suggestion.');
+		lines.push(
+			'Found an issue or have an improvement? Star this setup and leave a comment with your suggestion.'
+		);
 		lines.push('');
 	}
 
@@ -1709,71 +1779,228 @@ function getTemplates(): AgentTemplate[] {
 		{
 			name: 'Claude Code Web Dev',
 			baseSlug: 'claude-code-web-dev',
-			description: 'Full Claude Code setup for web development with commands, skills, hooks, and MCP servers.',
+			description:
+				'Full Claude Code setup for web development with commands, skills, hooks, and MCP servers.',
 			category: 'web-dev',
 			agentSlugs: ['claude-code'],
 			baseTags: ['claude-code', 'web-dev'],
 			compatibleStackIndices: WEB_TS_INDICES,
 			generateFiles: (p) => [
-				{ path: 'CLAUDE.md', componentType: 'instruction', content: generateClaudeMd(p), description: 'Project instructions and conventions', agent: 'claude-code' },
-				{ path: '.claude/settings.json', componentType: 'config', content: generateSettingsJson(p, 'claude-code'), description: 'Claude Code permission settings', agent: 'claude-code' },
-				{ path: '.mcp.json', componentType: 'mcp_server', content: generateMcpJson(p), description: 'MCP server configuration', agent: 'claude-code' },
-				{ path: '.claude/commands/dev.md', componentType: 'command', content: generateCommandMd(p, 'dev'), description: 'Start the dev server', agent: 'claude-code' },
-				{ path: '.claude/commands/test.md', componentType: 'command', content: generateCommandMd(p, 'test'), description: 'Run the test suite', agent: 'claude-code' },
-				{ path: '.claude/skills/tdd/SKILL.md', componentType: 'skill', content: generateSkillMd(p, 'tdd'), description: 'TDD red-green-refactor workflow', agent: 'claude-code' },
-				{ path: '.claude/hooks/pre-commit.sh', componentType: 'hook', content: generateHookSh(p, 'pre-commit'), description: 'Pre-commit lint and type check', agent: 'claude-code' }
+				{
+					path: 'CLAUDE.md',
+					componentType: 'instruction',
+					content: generateClaudeMd(p),
+					description: 'Project instructions and conventions',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/settings.json',
+					componentType: 'config',
+					content: generateSettingsJson(p, 'claude-code'),
+					description: 'Claude Code permission settings',
+					agent: 'claude-code'
+				},
+				{
+					path: '.mcp.json',
+					componentType: 'mcp_server',
+					content: generateMcpJson(p),
+					description: 'MCP server configuration',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/commands/dev.md',
+					componentType: 'command',
+					content: generateCommandMd(p, 'dev'),
+					description: 'Start the dev server',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/commands/test.md',
+					componentType: 'command',
+					content: generateCommandMd(p, 'test'),
+					description: 'Run the test suite',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/skills/tdd/SKILL.md',
+					componentType: 'skill',
+					content: generateSkillMd(p, 'tdd'),
+					description: 'TDD red-green-refactor workflow',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/hooks/pre-commit.sh',
+					componentType: 'hook',
+					content: generateHookSh(p, 'pre-commit'),
+					description: 'Pre-commit lint and type check',
+					agent: 'claude-code'
+				}
 			]
 		},
 		{
 			name: 'Claude Code Python',
 			baseSlug: 'claude-code-python',
-			description: 'Claude Code setup for Python projects with testing, linting, and virtual environment management.',
+			description:
+				'Claude Code setup for Python projects with testing, linting, and virtual environment management.',
 			category: 'data-science',
 			agentSlugs: ['claude-code'],
 			baseTags: ['claude-code', 'python'],
 			compatibleStackIndices: PYTHON_INDICES,
 			generateFiles: (p) => [
-				{ path: 'CLAUDE.md', componentType: 'instruction', content: generateClaudeMd(p), description: 'Python project instructions', agent: 'claude-code' },
-				{ path: '.mcp.json', componentType: 'mcp_server', content: generateMcpJson(p), description: 'MCP server configuration', agent: 'claude-code' },
-				{ path: '.claude/commands/venv.md', componentType: 'command', content: generateCommandMd(p, 'venv'), description: 'Setup virtual environment', agent: 'claude-code' },
-				{ path: '.claude/commands/test.md', componentType: 'command', content: generateCommandMd(p, 'test'), description: 'Run pytest', agent: 'claude-code' },
-				{ path: '.claude/skills/testing/SKILL.md', componentType: 'skill', content: generateSkillMd(p, 'testing'), description: 'Python testing patterns', agent: 'claude-code' },
-				{ path: '.claude/hooks/lint.sh', componentType: 'hook', content: generateHookSh(p, 'lint'), agent: 'claude-code' }
+				{
+					path: 'CLAUDE.md',
+					componentType: 'instruction',
+					content: generateClaudeMd(p),
+					description: 'Python project instructions',
+					agent: 'claude-code'
+				},
+				{
+					path: '.mcp.json',
+					componentType: 'mcp_server',
+					content: generateMcpJson(p),
+					description: 'MCP server configuration',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/commands/venv.md',
+					componentType: 'command',
+					content: generateCommandMd(p, 'venv'),
+					description: 'Setup virtual environment',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/commands/test.md',
+					componentType: 'command',
+					content: generateCommandMd(p, 'test'),
+					description: 'Run pytest',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/skills/testing/SKILL.md',
+					componentType: 'skill',
+					content: generateSkillMd(p, 'testing'),
+					description: 'Python testing patterns',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/hooks/lint.sh',
+					componentType: 'hook',
+					content: generateHookSh(p, 'lint'),
+					agent: 'claude-code'
+				}
 			]
 		},
 		{
 			name: 'Claude Code Review',
 			baseSlug: 'claude-code-review',
-			description: 'Code review focused Claude Code setup with review skills, policies, and a custom reviewer agent.',
+			description:
+				'Code review focused Claude Code setup with review skills, policies, and a custom reviewer agent.',
 			category: 'general',
 			agentSlugs: ['claude-code'],
 			baseTags: ['claude-code', 'code-review'],
 			compatibleStackIndices: ALL_WEB_INDICES,
 			generateFiles: (p) => [
-				{ path: 'CLAUDE.md', componentType: 'instruction', content: generateClaudeMd(p), description: 'Project instructions', agent: 'claude-code' },
-				{ path: '.claude/skills/review/SKILL.md', componentType: 'skill', content: generateSkillMd(p, 'review'), description: 'Code review checklist and approach', agent: 'claude-code' },
-				{ path: '.claude/commands/review-pr.md', componentType: 'command', content: generateCommandMd(p, 'review-pr'), description: 'Review a pull request', agent: 'claude-code' },
-				{ path: '.claude/hooks/pre-push.sh', componentType: 'hook', content: generateHookSh(p, 'pre-push'), description: 'Pre-push test and lint', agent: 'claude-code' },
-				{ path: '.claude/policies/review-standards.md', componentType: 'policy', content: generatePolicyMd(p, 'review-standards'), description: 'Code review standards policy', agent: 'claude-code' },
-				{ path: '.claude/agents/reviewer.md', componentType: 'agent_def', content: generateAgentDef(p, 'reviewer'), description: 'Specialized code reviewer agent', agent: 'claude-code' }
+				{
+					path: 'CLAUDE.md',
+					componentType: 'instruction',
+					content: generateClaudeMd(p),
+					description: 'Project instructions',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/skills/review/SKILL.md',
+					componentType: 'skill',
+					content: generateSkillMd(p, 'review'),
+					description: 'Code review checklist and approach',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/commands/review-pr.md',
+					componentType: 'command',
+					content: generateCommandMd(p, 'review-pr'),
+					description: 'Review a pull request',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/hooks/pre-push.sh',
+					componentType: 'hook',
+					content: generateHookSh(p, 'pre-push'),
+					description: 'Pre-push test and lint',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/policies/review-standards.md',
+					componentType: 'policy',
+					content: generatePolicyMd(p, 'review-standards'),
+					description: 'Code review standards policy',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/agents/reviewer.md',
+					componentType: 'agent_def',
+					content: generateAgentDef(p, 'reviewer'),
+					description: 'Specialized code reviewer agent',
+					agent: 'claude-code'
+				}
 			]
 		},
 		{
 			name: 'Claude Code API',
 			baseSlug: 'claude-code-api',
-			description: 'Claude Code setup for API development with database migrations, API design skills, and quality hooks.',
+			description:
+				'Claude Code setup for API development with database migrations, API design skills, and quality hooks.',
 			category: 'web-dev',
 			agentSlugs: ['claude-code'],
 			baseTags: ['claude-code', 'api'],
 			compatibleStackIndices: ALL_WEB_INDICES,
 			generateFiles: (p) => [
-				{ path: 'CLAUDE.md', componentType: 'instruction', content: generateClaudeMd(p), description: 'API project instructions', agent: 'claude-code' },
-				{ path: '.claude/settings.json', componentType: 'config', content: generateSettingsJson(p, 'claude-code'), description: 'Permission settings', agent: 'claude-code' },
-				{ path: '.mcp.json', componentType: 'mcp_server', content: generateMcpJson(p), description: 'MCP servers for API development', agent: 'claude-code' },
-				{ path: '.claude/commands/db-migrate.md', componentType: 'command', content: generateCommandMd(p, 'db-migrate'), description: 'Database migration command', agent: 'claude-code' },
-				{ path: '.claude/commands/test.md', componentType: 'command', content: generateCommandMd(p, 'test'), agent: 'claude-code' },
-				{ path: '.claude/skills/api-design/SKILL.md', componentType: 'skill', content: generateSkillMd(p, 'api-design'), description: 'API design patterns and conventions', agent: 'claude-code' },
-				{ path: '.claude/hooks/check.sh', componentType: 'hook', content: generateHookSh(p, 'check'), agent: 'claude-code' }
+				{
+					path: 'CLAUDE.md',
+					componentType: 'instruction',
+					content: generateClaudeMd(p),
+					description: 'API project instructions',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/settings.json',
+					componentType: 'config',
+					content: generateSettingsJson(p, 'claude-code'),
+					description: 'Permission settings',
+					agent: 'claude-code'
+				},
+				{
+					path: '.mcp.json',
+					componentType: 'mcp_server',
+					content: generateMcpJson(p),
+					description: 'MCP servers for API development',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/commands/db-migrate.md',
+					componentType: 'command',
+					content: generateCommandMd(p, 'db-migrate'),
+					description: 'Database migration command',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/commands/test.md',
+					componentType: 'command',
+					content: generateCommandMd(p, 'test'),
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/skills/api-design/SKILL.md',
+					componentType: 'skill',
+					content: generateSkillMd(p, 'api-design'),
+					description: 'API design patterns and conventions',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/hooks/check.sh',
+					componentType: 'hook',
+					content: generateHookSh(p, 'check'),
+					agent: 'claude-code'
+				}
 			]
 		},
 
@@ -1787,11 +2014,41 @@ function getTemplates(): AgentTemplate[] {
 			baseTags: ['cursor', 'react', 'web-dev'],
 			compatibleStackIndices: [0, 3, 8, 12, 13, 21],
 			generateFiles: (p) => [
-				{ path: '.cursorrules', componentType: 'instruction', content: generateCursorrules(p), description: 'Cursor global rules', agent: 'cursor' },
-				{ path: '.cursor/rules/components.mdc', componentType: 'instruction', content: generateCursorRule(p, 'components'), description: 'Component conventions', agent: 'cursor' },
-				{ path: '.cursor/rules/testing.mdc', componentType: 'instruction', content: generateCursorRule(p, 'testing'), description: 'Testing conventions', agent: 'cursor' },
-				{ path: '.cursor/mcp.json', componentType: 'mcp_server', content: generateMcpJson(p), description: 'Cursor MCP configuration', agent: 'cursor' },
-				{ path: '.cursor/commands/build.md', componentType: 'command', content: generateCommandMd(p, 'build'), description: 'Build for production', agent: 'cursor' }
+				{
+					path: '.cursorrules',
+					componentType: 'instruction',
+					content: generateCursorrules(p),
+					description: 'Cursor global rules',
+					agent: 'cursor'
+				},
+				{
+					path: '.cursor/rules/components.mdc',
+					componentType: 'instruction',
+					content: generateCursorRule(p, 'components'),
+					description: 'Component conventions',
+					agent: 'cursor'
+				},
+				{
+					path: '.cursor/rules/testing.mdc',
+					componentType: 'instruction',
+					content: generateCursorRule(p, 'testing'),
+					description: 'Testing conventions',
+					agent: 'cursor'
+				},
+				{
+					path: '.cursor/mcp.json',
+					componentType: 'mcp_server',
+					content: generateMcpJson(p),
+					description: 'Cursor MCP configuration',
+					agent: 'cursor'
+				},
+				{
+					path: '.cursor/commands/build.md',
+					componentType: 'command',
+					content: generateCommandMd(p, 'build'),
+					description: 'Build for production',
+					agent: 'cursor'
+				}
 			]
 		},
 		{
@@ -1803,26 +2060,81 @@ function getTemplates(): AgentTemplate[] {
 			baseTags: ['cursor', 'python', 'django'],
 			compatibleStackIndices: [4, 7, 20],
 			generateFiles: (p) => [
-				{ path: '.cursorrules', componentType: 'instruction', content: generateCursorrules(p), description: 'Cursor rules for Django', agent: 'cursor' },
-				{ path: '.cursor/rules/models.mdc', componentType: 'instruction', content: generateCursorRule(p, 'models'), description: 'Django model conventions', agent: 'cursor' },
-				{ path: '.cursor/rules/views.mdc', componentType: 'instruction', content: generateCursorRule(p, 'views'), description: 'Django view patterns', agent: 'cursor' },
-				{ path: '.cursor/mcp.json', componentType: 'mcp_server', content: generateMcpJson(p), description: 'Cursor MCP configuration', agent: 'cursor' }
+				{
+					path: '.cursorrules',
+					componentType: 'instruction',
+					content: generateCursorrules(p),
+					description: 'Cursor rules for Django',
+					agent: 'cursor'
+				},
+				{
+					path: '.cursor/rules/models.mdc',
+					componentType: 'instruction',
+					content: generateCursorRule(p, 'models'),
+					description: 'Django model conventions',
+					agent: 'cursor'
+				},
+				{
+					path: '.cursor/rules/views.mdc',
+					componentType: 'instruction',
+					content: generateCursorRule(p, 'views'),
+					description: 'Django view patterns',
+					agent: 'cursor'
+				},
+				{
+					path: '.cursor/mcp.json',
+					componentType: 'mcp_server',
+					content: generateMcpJson(p),
+					description: 'Cursor MCP configuration',
+					agent: 'cursor'
+				}
 			]
 		},
 		{
 			name: 'Cursor TypeScript',
 			baseSlug: 'cursor-typescript',
-			description: 'Cursor setup for TypeScript projects with style rules, testing conventions, and type checking.',
+			description:
+				'Cursor setup for TypeScript projects with style rules, testing conventions, and type checking.',
 			category: 'web-dev',
 			agentSlugs: ['cursor'],
 			baseTags: ['cursor', 'typescript'],
 			compatibleStackIndices: WEB_TS_INDICES,
 			generateFiles: (p) => [
-				{ path: '.cursorrules', componentType: 'instruction', content: generateCursorrules(p), description: 'Cursor rules', agent: 'cursor' },
-				{ path: '.cursorignore', componentType: 'ignore', content: 'node_modules/\ndist/\nbuild/\n.next/\ncoverage/\n*.log\n', description: 'Files excluded from Cursor indexing', agent: 'cursor' },
-				{ path: '.cursor/rules/style.mdc', componentType: 'instruction', content: generateCursorRule(p, 'style'), description: 'Code style rules', agent: 'cursor' },
-				{ path: '.cursor/rules/testing.mdc', componentType: 'instruction', content: generateCursorRule(p, 'testing'), description: 'Testing rules', agent: 'cursor' },
-				{ path: '.cursor/commands/typecheck.md', componentType: 'command', content: generateCommandMd(p, 'typecheck'), description: 'Run type checking', agent: 'cursor' }
+				{
+					path: '.cursorrules',
+					componentType: 'instruction',
+					content: generateCursorrules(p),
+					description: 'Cursor rules',
+					agent: 'cursor'
+				},
+				{
+					path: '.cursorignore',
+					componentType: 'ignore',
+					content: 'node_modules/\ndist/\nbuild/\n.next/\ncoverage/\n*.log\n',
+					description: 'Files excluded from Cursor indexing',
+					agent: 'cursor'
+				},
+				{
+					path: '.cursor/rules/style.mdc',
+					componentType: 'instruction',
+					content: generateCursorRule(p, 'style'),
+					description: 'Code style rules',
+					agent: 'cursor'
+				},
+				{
+					path: '.cursor/rules/testing.mdc',
+					componentType: 'instruction',
+					content: generateCursorRule(p, 'testing'),
+					description: 'Testing rules',
+					agent: 'cursor'
+				},
+				{
+					path: '.cursor/commands/typecheck.md',
+					componentType: 'command',
+					content: generateCommandMd(p, 'typecheck'),
+					description: 'Run type checking',
+					agent: 'cursor'
+				}
 			]
 		},
 
@@ -1836,23 +2148,58 @@ function getTemplates(): AgentTemplate[] {
 			baseTags: ['copilot', 'code-review'],
 			compatibleStackIndices: ALL_WEB_INDICES,
 			generateFiles: (p) => [
-				{ path: '.github/copilot-instructions.md', componentType: 'instruction', content: generateCopilotInstructions(p, 'team'), description: 'Team coding standards for Copilot', agent: 'copilot' },
-				{ path: '.github/copilot/mcp.json', componentType: 'mcp_server', content: generateMcpJson(p), agent: 'copilot' },
-				{ path: '.vscode/settings.json', componentType: 'config', content: generateVscodeSettings(p), description: 'VS Code settings' }
+				{
+					path: '.github/copilot-instructions.md',
+					componentType: 'instruction',
+					content: generateCopilotInstructions(p, 'team'),
+					description: 'Team coding standards for Copilot',
+					agent: 'copilot'
+				},
+				{
+					path: '.github/copilot/mcp.json',
+					componentType: 'mcp_server',
+					content: generateMcpJson(p),
+					agent: 'copilot'
+				},
+				{
+					path: '.vscode/settings.json',
+					componentType: 'config',
+					content: generateVscodeSettings(p),
+					description: 'VS Code settings'
+				}
 			]
 		},
 		{
 			name: 'Copilot OSS Contributor',
 			baseSlug: 'copilot-oss-contributor',
-			description: 'Copilot setup for open source projects with contributor guidelines and review prompts.',
+			description:
+				'Copilot setup for open source projects with contributor guidelines and review prompts.',
 			category: 'general',
 			agentSlugs: ['copilot'],
 			baseTags: ['copilot'],
 			compatibleStackIndices: ALL_WEB_INDICES,
 			generateFiles: (p) => [
-				{ path: '.github/copilot-instructions.md', componentType: 'instruction', content: generateCopilotInstructions(p, 'oss'), description: 'OSS contribution guidelines', agent: 'copilot' },
-				{ path: '.github/copilot/prompts/review.md', componentType: 'command', content: generateCopilotPromptMd(p, 'review'), description: 'Code review prompt', agent: 'copilot' },
-				{ path: '.github/copilot/setup.sh', componentType: 'hook', content: generateCopilotSetupSh(p), description: 'Copilot environment setup script', agent: 'copilot' }
+				{
+					path: '.github/copilot-instructions.md',
+					componentType: 'instruction',
+					content: generateCopilotInstructions(p, 'oss'),
+					description: 'OSS contribution guidelines',
+					agent: 'copilot'
+				},
+				{
+					path: '.github/copilot/prompts/review.md',
+					componentType: 'command',
+					content: generateCopilotPromptMd(p, 'review'),
+					description: 'Code review prompt',
+					agent: 'copilot'
+				},
+				{
+					path: '.github/copilot/setup.sh',
+					componentType: 'hook',
+					content: generateCopilotSetupSh(p),
+					description: 'Copilot environment setup script',
+					agent: 'copilot'
+				}
 			]
 		},
 
@@ -1860,16 +2207,41 @@ function getTemplates(): AgentTemplate[] {
 		{
 			name: 'Codex Node',
 			baseSlug: 'codex-node',
-			description: 'Codex agent configuration for Node.js TypeScript projects with testing and deploy skills.',
+			description:
+				'Codex agent configuration for Node.js TypeScript projects with testing and deploy skills.',
 			category: 'web-dev',
 			agentSlugs: ['codex'],
 			baseTags: ['codex', 'typescript'],
 			compatibleStackIndices: WEB_TS_INDICES,
 			generateFiles: (p) => [
-				{ path: 'AGENTS.md', componentType: 'instruction', content: generateAgentsMd(p), description: 'Codex agent instructions', agent: 'codex' },
-				{ path: '.codex/config.toml', componentType: 'config', content: generateCodexConfig(p), description: 'Codex sandbox configuration', agent: 'codex' },
-				{ path: '.agents/skills/testing.md', componentType: 'skill', content: generateSkillMd(p, 'testing'), description: 'Testing patterns', agent: 'codex' },
-				{ path: '.agents/skills/deploy.md', componentType: 'skill', content: generateSkillMd(p, 'deploy'), description: 'Deployment steps', agent: 'codex' }
+				{
+					path: 'AGENTS.md',
+					componentType: 'instruction',
+					content: generateAgentsMd(p),
+					description: 'Codex agent instructions',
+					agent: 'codex'
+				},
+				{
+					path: '.codex/config.toml',
+					componentType: 'config',
+					content: generateCodexConfig(p),
+					description: 'Codex sandbox configuration',
+					agent: 'codex'
+				},
+				{
+					path: '.agents/skills/testing.md',
+					componentType: 'skill',
+					content: generateSkillMd(p, 'testing'),
+					description: 'Testing patterns',
+					agent: 'codex'
+				},
+				{
+					path: '.agents/skills/deploy.md',
+					componentType: 'skill',
+					content: generateSkillMd(p, 'deploy'),
+					description: 'Deployment steps',
+					agent: 'codex'
+				}
 			]
 		},
 		{
@@ -1881,9 +2253,27 @@ function getTemplates(): AgentTemplate[] {
 			baseTags: ['codex', 'rust'],
 			compatibleStackIndices: RUST_INDICES,
 			generateFiles: (p) => [
-				{ path: 'AGENTS.md', componentType: 'instruction', content: generateAgentsMd(p), description: 'Rust project agent instructions', agent: 'codex' },
-				{ path: '.codex/config.toml', componentType: 'config', content: generateCodexConfig(p), description: 'Codex sandbox config', agent: 'codex' },
-				{ path: '.agents/skills/cargo.md', componentType: 'skill', content: generateSkillMd(p, 'cargo'), description: 'Cargo build and test workflow', agent: 'codex' }
+				{
+					path: 'AGENTS.md',
+					componentType: 'instruction',
+					content: generateAgentsMd(p),
+					description: 'Rust project agent instructions',
+					agent: 'codex'
+				},
+				{
+					path: '.codex/config.toml',
+					componentType: 'config',
+					content: generateCodexConfig(p),
+					description: 'Codex sandbox config',
+					agent: 'codex'
+				},
+				{
+					path: '.agents/skills/cargo.md',
+					componentType: 'skill',
+					content: generateSkillMd(p, 'cargo'),
+					description: 'Cargo build and test workflow',
+					agent: 'codex'
+				}
 			]
 		},
 
@@ -1897,25 +2287,74 @@ function getTemplates(): AgentTemplate[] {
 			baseTags: ['gemini-cli', 'web-dev'],
 			compatibleStackIndices: WEB_TS_INDICES,
 			generateFiles: (p) => [
-				{ path: 'GEMINI.md', componentType: 'instruction', content: generateGeminiMd(p), description: 'Gemini project instructions', agent: 'gemini' },
-				{ path: '.gemini/settings.json', componentType: 'config', content: generateSettingsJson(p, 'gemini'), description: 'Gemini settings', agent: 'gemini' },
-				{ path: '.gemini/commands/dev.toml', componentType: 'command', content: generateGeminiCommand(p, 'dev'), description: 'Start dev server', agent: 'gemini' },
-				{ path: '.gemini/skills/testing.md', componentType: 'skill', content: generateSkillMd(p, 'testing'), description: 'Testing patterns', agent: 'gemini' }
+				{
+					path: 'GEMINI.md',
+					componentType: 'instruction',
+					content: generateGeminiMd(p),
+					description: 'Gemini project instructions',
+					agent: 'gemini'
+				},
+				{
+					path: '.gemini/settings.json',
+					componentType: 'config',
+					content: generateSettingsJson(p, 'gemini'),
+					description: 'Gemini settings',
+					agent: 'gemini'
+				},
+				{
+					path: '.gemini/commands/dev.toml',
+					componentType: 'command',
+					content: generateGeminiCommand(p, 'dev'),
+					description: 'Start dev server',
+					agent: 'gemini'
+				},
+				{
+					path: '.gemini/skills/testing.md',
+					componentType: 'skill',
+					content: generateSkillMd(p, 'testing'),
+					description: 'Testing patterns',
+					agent: 'gemini'
+				}
 			]
 		},
 		{
 			name: 'Gemini Python ML',
 			baseSlug: 'gemini-python-ml',
-			description: 'Gemini CLI setup for Python ML projects with training commands and data preparation skills.',
+			description:
+				'Gemini CLI setup for Python ML projects with training commands and data preparation skills.',
 			category: 'data-science',
 			agentSlugs: ['gemini'],
 			baseTags: ['gemini-cli', 'python', 'data-science'],
 			compatibleStackIndices: PYTHON_INDICES,
 			generateFiles: (p) => [
-				{ path: 'GEMINI.md', componentType: 'instruction', content: generateGeminiMd(p), description: 'ML project instructions', agent: 'gemini' },
-				{ path: '.gemini/settings.json', componentType: 'config', content: generateSettingsJson(p, 'gemini'), description: 'Gemini settings', agent: 'gemini' },
-				{ path: '.gemini/commands/train.toml', componentType: 'command', content: generateGeminiCommand(p, 'train'), description: 'Run training pipeline', agent: 'gemini' },
-				{ path: '.gemini/skills/data-prep.md', componentType: 'skill', content: generateSkillMd(p, 'data-prep'), description: 'Data preparation patterns', agent: 'gemini' }
+				{
+					path: 'GEMINI.md',
+					componentType: 'instruction',
+					content: generateGeminiMd(p),
+					description: 'ML project instructions',
+					agent: 'gemini'
+				},
+				{
+					path: '.gemini/settings.json',
+					componentType: 'config',
+					content: generateSettingsJson(p, 'gemini'),
+					description: 'Gemini settings',
+					agent: 'gemini'
+				},
+				{
+					path: '.gemini/commands/train.toml',
+					componentType: 'command',
+					content: generateGeminiCommand(p, 'train'),
+					description: 'Run training pipeline',
+					agent: 'gemini'
+				},
+				{
+					path: '.gemini/skills/data-prep.md',
+					componentType: 'skill',
+					content: generateSkillMd(p, 'data-prep'),
+					description: 'Data preparation patterns',
+					agent: 'gemini'
+				}
 			]
 		},
 
@@ -1929,10 +2368,34 @@ function getTemplates(): AgentTemplate[] {
 			baseTags: ['opencode', 'go'],
 			compatibleStackIndices: GO_INDICES,
 			generateFiles: (p) => [
-				{ path: 'opencode.md', componentType: 'instruction', content: generateOpencodeMd(p), description: 'Go project instructions', agent: 'opencode' },
-				{ path: '.opencode.json', componentType: 'config', content: generateOpencodeJson(p), description: 'OpenCode configuration', agent: 'opencode' },
-				{ path: '.opencode/commands/build.md', componentType: 'command', content: generateCommandMd(p, 'build'), description: 'Build the server', agent: 'opencode' },
-				{ path: '.opencode/commands/test.md', componentType: 'command', content: generateCommandMd(p, 'test'), description: 'Run tests', agent: 'opencode' }
+				{
+					path: 'opencode.md',
+					componentType: 'instruction',
+					content: generateOpencodeMd(p),
+					description: 'Go project instructions',
+					agent: 'opencode'
+				},
+				{
+					path: '.opencode.json',
+					componentType: 'config',
+					content: generateOpencodeJson(p),
+					description: 'OpenCode configuration',
+					agent: 'opencode'
+				},
+				{
+					path: '.opencode/commands/build.md',
+					componentType: 'command',
+					content: generateCommandMd(p, 'build'),
+					description: 'Build the server',
+					agent: 'opencode'
+				},
+				{
+					path: '.opencode/commands/test.md',
+					componentType: 'command',
+					content: generateCommandMd(p, 'test'),
+					description: 'Run tests',
+					agent: 'opencode'
+				}
 			]
 		},
 
@@ -1946,41 +2409,152 @@ function getTemplates(): AgentTemplate[] {
 			baseTags: ['claude-code', 'cursor', 'multi-agent', 'web-dev'],
 			compatibleStackIndices: WEB_TS_INDICES,
 			generateFiles: (p) => [
-				{ path: 'CLAUDE.md', componentType: 'instruction', content: generateClaudeMd(p), description: 'Claude Code instructions', agent: 'claude-code' },
-				{ path: '.mcp.json', componentType: 'mcp_server', content: generateMcpJson(p), description: 'MCP server config for Claude', agent: 'claude-code' },
-				{ path: '.claude/commands/dev.md', componentType: 'command', content: generateCommandMd(p, 'dev'), agent: 'claude-code' },
-				{ path: '.cursorrules', componentType: 'instruction', content: generateCursorrules(p), description: 'Cursor rules', agent: 'cursor' },
-				{ path: '.cursor/mcp.json', componentType: 'mcp_server', content: generateMcpJson(p), description: 'MCP config for Cursor', agent: 'cursor' },
-				{ path: '.cursor/rules/conventions.mdc', componentType: 'instruction', content: generateCursorRule(p, 'conventions'), description: 'Shared conventions', agent: 'cursor' },
-				{ path: 'scripts/setup.sh', componentType: 'setup_script', content: generateSetupScript(p), description: 'Project setup script' }
+				{
+					path: 'CLAUDE.md',
+					componentType: 'instruction',
+					content: generateClaudeMd(p),
+					description: 'Claude Code instructions',
+					agent: 'claude-code'
+				},
+				{
+					path: '.mcp.json',
+					componentType: 'mcp_server',
+					content: generateMcpJson(p),
+					description: 'MCP server config for Claude',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/commands/dev.md',
+					componentType: 'command',
+					content: generateCommandMd(p, 'dev'),
+					agent: 'claude-code'
+				},
+				{
+					path: '.cursorrules',
+					componentType: 'instruction',
+					content: generateCursorrules(p),
+					description: 'Cursor rules',
+					agent: 'cursor'
+				},
+				{
+					path: '.cursor/mcp.json',
+					componentType: 'mcp_server',
+					content: generateMcpJson(p),
+					description: 'MCP config for Cursor',
+					agent: 'cursor'
+				},
+				{
+					path: '.cursor/rules/conventions.mdc',
+					componentType: 'instruction',
+					content: generateCursorRule(p, 'conventions'),
+					description: 'Shared conventions',
+					agent: 'cursor'
+				},
+				{
+					path: 'scripts/setup.sh',
+					componentType: 'setup_script',
+					content: generateSetupScript(p),
+					description: 'Project setup script'
+				}
 			]
 		},
 		{
 			name: 'Multi-Agent Full Stack',
 			baseSlug: 'multi-full-stack',
-			description: 'Comprehensive multi-agent setup with Claude Code, Copilot, and Cursor configured for the same project.',
+			description:
+				'Comprehensive multi-agent setup with Claude Code, Copilot, and Cursor configured for the same project.',
 			category: 'web-dev',
 			agentSlugs: ['claude-code', 'copilot', 'cursor'],
 			baseTags: ['claude-code', 'copilot', 'cursor', 'multi-agent', 'web-dev'],
 			compatibleStackIndices: WEB_TS_INDICES,
 			generateFiles: (p) => [
 				// Claude Code files
-				{ path: 'CLAUDE.md', componentType: 'instruction', content: generateClaudeMd(p), description: 'Claude Code project instructions', agent: 'claude-code' },
-				{ path: '.claude/settings.json', componentType: 'config', content: generateSettingsJson(p, 'claude-code'), description: 'Claude permissions', agent: 'claude-code' },
-				{ path: '.mcp.json', componentType: 'mcp_server', content: generateMcpJson(p), description: 'MCP servers', agent: 'claude-code' },
-				{ path: '.claude/commands/test.md', componentType: 'command', content: generateCommandMd(p, 'test'), agent: 'claude-code' },
-				{ path: '.claude/skills/tdd/SKILL.md', componentType: 'skill', content: generateSkillMd(p, 'tdd'), agent: 'claude-code' },
-				{ path: '.claude/hooks/pre-commit.sh', componentType: 'hook', content: generateHookSh(p, 'pre-commit'), agent: 'claude-code' },
+				{
+					path: 'CLAUDE.md',
+					componentType: 'instruction',
+					content: generateClaudeMd(p),
+					description: 'Claude Code project instructions',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/settings.json',
+					componentType: 'config',
+					content: generateSettingsJson(p, 'claude-code'),
+					description: 'Claude permissions',
+					agent: 'claude-code'
+				},
+				{
+					path: '.mcp.json',
+					componentType: 'mcp_server',
+					content: generateMcpJson(p),
+					description: 'MCP servers',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/commands/test.md',
+					componentType: 'command',
+					content: generateCommandMd(p, 'test'),
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/skills/tdd/SKILL.md',
+					componentType: 'skill',
+					content: generateSkillMd(p, 'tdd'),
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/hooks/pre-commit.sh',
+					componentType: 'hook',
+					content: generateHookSh(p, 'pre-commit'),
+					agent: 'claude-code'
+				},
 				// Copilot files
-				{ path: '.github/copilot-instructions.md', componentType: 'instruction', content: generateCopilotInstructions(p, 'team'), description: 'Copilot team instructions', agent: 'copilot' },
+				{
+					path: '.github/copilot-instructions.md',
+					componentType: 'instruction',
+					content: generateCopilotInstructions(p, 'team'),
+					description: 'Copilot team instructions',
+					agent: 'copilot'
+				},
 				// Cursor files
-				{ path: '.cursorrules', componentType: 'instruction', content: generateCursorrules(p), description: 'Cursor rules', agent: 'cursor' },
-				{ path: '.cursor/mcp.json', componentType: 'mcp_server', content: generateMcpJson(p), agent: 'cursor' },
-				{ path: '.cursor/rules/style.mdc', componentType: 'instruction', content: generateCursorRule(p, 'style'), agent: 'cursor' },
-				{ path: '.cursor/rules/testing.mdc', componentType: 'instruction', content: generateCursorRule(p, 'testing'), agent: 'cursor' },
+				{
+					path: '.cursorrules',
+					componentType: 'instruction',
+					content: generateCursorrules(p),
+					description: 'Cursor rules',
+					agent: 'cursor'
+				},
+				{
+					path: '.cursor/mcp.json',
+					componentType: 'mcp_server',
+					content: generateMcpJson(p),
+					agent: 'cursor'
+				},
+				{
+					path: '.cursor/rules/style.mdc',
+					componentType: 'instruction',
+					content: generateCursorRule(p, 'style'),
+					agent: 'cursor'
+				},
+				{
+					path: '.cursor/rules/testing.mdc',
+					componentType: 'instruction',
+					content: generateCursorRule(p, 'testing'),
+					agent: 'cursor'
+				},
 				// Shared
-				{ path: '.vscode/settings.json', componentType: 'config', content: generateVscodeSettings(p), description: 'VS Code settings' },
-				{ path: 'scripts/setup.sh', componentType: 'setup_script', content: generateSetupScript(p), description: 'Project setup script' }
+				{
+					path: '.vscode/settings.json',
+					componentType: 'config',
+					content: generateVscodeSettings(p),
+					description: 'VS Code settings'
+				},
+				{
+					path: 'scripts/setup.sh',
+					componentType: 'setup_script',
+					content: generateSetupScript(p),
+					description: 'Project setup script'
+				}
 			]
 		}
 	];
@@ -2044,7 +2618,12 @@ function buildSetup(
 	const params = STACK_VARIATIONS[stackIdx];
 
 	// Build name and slug with stack variation
-	const frameworkLabel = params.framework === 'next' ? 'nextjs' : params.framework === 'react-native' ? 'react-native' : params.framework;
+	const frameworkLabel =
+		params.framework === 'next'
+			? 'nextjs'
+			: params.framework === 'react-native'
+				? 'react-native'
+				: params.framework;
 	const name = `${template.name} — ${frameworkLabel} ${params.language}`;
 	const slug = `${template.baseSlug}-${frameworkLabel}-${idx}`;
 
@@ -2057,7 +2636,11 @@ function buildSetup(
 	// Tags: template base tags + framework/language tags + extras
 	const tagSet = new Set(template.baseTags);
 	tagSet.add(params.language);
-	if (['nextjs', 'sveltekit', 'react', 'django', 'fastapi', 'express', 'flask'].includes(frameworkLabel)) {
+	if (
+		['nextjs', 'sveltekit', 'react', 'django', 'fastapi', 'express', 'flask'].includes(
+			frameworkLabel
+		)
+	) {
 		tagSet.add(frameworkLabel);
 	}
 	// Add 0-2 extra tags based on idx
@@ -2072,13 +2655,18 @@ function buildSetup(
 
 	// Edge case: one setup with maximum tags
 	const isMaxTags = idx === 3;
-	const finalTagNames = isMaxTags ? seedTags.slice(0, Math.min(seedTags.length, 10)).map((t) => t.name) : tagNames;
+	const finalTagNames = isMaxTags
+		? seedTags.slice(0, Math.min(seedTags.length, 10)).map((t) => t.name)
+		: tagNames;
 
 	// Edge case: very long description (near 300 char max)
 	const longDesc = idx === 2;
 	const description = longDesc
 		? 'A comprehensive AI coding workflow setup that includes detailed instructions for TypeScript development, test-driven development practices, code review guidelines, and automated quality gates for modern web applications using the latest tools and frameworks.'
-		: `${template.description} Configured for ${params.framework} ${params.language} ${params.projectType} projects.`.slice(0, 300);
+		: `${template.description} Configured for ${params.framework} ${params.language} ${params.projectType} projects.`.slice(
+				0,
+				300
+			);
 
 	// Generate files
 	const files = template.generateFiles(params);
@@ -2114,7 +2702,7 @@ export const COMMENT_BODIES_SHORT = [
 
 export const COMMENT_BODIES_MEDIUM = [
 	'The TDD skill is really well structured. Adopted this for our team project.',
-	'Your cursor rules handle edge cases I hadn\'t considered. Cloned and using it now.',
+	"Your cursor rules handle edge cases I hadn't considered. Cloned and using it now.",
 	'The MCP server config with filesystem + postgres combo is exactly what I needed.',
 	'Great hook configuration. The pre-commit lint check caught issues on first use.',
 	'This multi-agent setup works surprisingly well. Claude and Cursor complement each other.'

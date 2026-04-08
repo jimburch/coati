@@ -147,7 +147,9 @@ export async function createSetup(userId: string, data: CreateSetupInput) {
 		}
 
 		// Resolve agent slugs from files and populate setupAgents junction table
-		const fileSlugs = [...new Set((data.files ?? []).map((f) => f.agent).filter(Boolean))] as string[];
+		const fileSlugs = [
+			...new Set((data.files ?? []).map((f) => f.agent).filter(Boolean))
+		] as string[];
 		if (data.agentIds && data.agentIds.length > 0) {
 			await tx
 				.insert(setupAgents)
@@ -221,9 +223,7 @@ export async function updateSetup(id: string, data: UpdateSetupInput) {
 					.from(agents)
 					.where(inArray(agents.slug, fileSlugs));
 				if (matched.length > 0) {
-					await tx
-						.insert(setupAgents)
-						.values(matched.map((a) => ({ setupId: id, agentId: a.id })));
+					await tx.insert(setupAgents).values(matched.map((a) => ({ setupId: id, agentId: a.id })));
 				}
 			}
 		}
@@ -659,9 +659,7 @@ export async function updateSetupByIdWithSlugRedirects(
 					.from(agents)
 					.where(inArray(agents.slug, fileSlugs));
 				if (matched.length > 0) {
-					await tx
-						.insert(setupAgents)
-						.values(matched.map((a) => ({ setupId: id, agentId: a.id })));
+					await tx.insert(setupAgents).values(matched.map((a) => ({ setupId: id, agentId: a.id })));
 				}
 			}
 		}

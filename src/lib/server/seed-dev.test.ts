@@ -45,9 +45,7 @@ function makeTags(names = TAG_NAMES) {
 	return names.map((name, i) => ({ id: `tag-${i}`, name }));
 }
 
-function makeAgents(
-	slugs = ['claude-code', 'cursor', 'copilot', 'codex', 'gemini', 'opencode']
-) {
+function makeAgents(slugs = ['claude-code', 'cursor', 'copilot', 'codex', 'gemini', 'opencode']) {
 	return slugs.map((slug, i) => ({ id: `agent-${i}`, slug }));
 }
 
@@ -270,14 +268,7 @@ describe('generateSetups', () => {
 
 	it('agent slugs reference valid agent slugs', () => {
 		const setups = generateSetups(users, tags, agents);
-		const validSlugs = new Set([
-			'claude-code',
-			'cursor',
-			'copilot',
-			'codex',
-			'gemini',
-			'opencode'
-		]);
+		const validSlugs = new Set(['claude-code', 'cursor', 'copilot', 'codex', 'gemini', 'opencode']);
 		for (const setup of setups) {
 			for (const slug of setup.agentSlugs) {
 				expect(validSlugs.has(slug)).toBe(true);

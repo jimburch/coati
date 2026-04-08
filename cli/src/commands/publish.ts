@@ -111,7 +111,6 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 			if (opts.json) ctx.io.setOutputMode('json');
 
 			const cwd = process.cwd();
-			const config = ctx.fs.readConfig();
 
 			// Require authentication — offer to log in interactively
 			if (!ctx.auth.isLoggedIn()) {
