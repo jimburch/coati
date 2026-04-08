@@ -7,7 +7,7 @@ let highlighterPromise: Promise<Highlighter> | null = null;
 function getHighlighter() {
 	if (!highlighterPromise) {
 		highlighterPromise = createHighlighter({
-			themes: ['github-dark', 'github-light'],
+			themes: ['github-dark'],
 			langs: ['javascript', 'typescript', 'json', 'yaml', 'toml', 'bash', 'markdown', 'python']
 		});
 	}
@@ -25,7 +25,7 @@ export async function renderMarkdown(content: string): Promise<string> {
 				try {
 					return highlighter.codeToHtml(text, {
 						lang: language,
-						themes: { light: 'github-light', dark: 'github-dark' }
+						theme: 'github-dark'
 					});
 				} catch {
 					return `<pre><code>${escapeHtml(text)}</code></pre>`;
@@ -71,7 +71,7 @@ export async function highlightCode(content: string, filename: string): Promise<
 		const highlighter = await getHighlighter();
 		return highlighter.codeToHtml(content, {
 			lang,
-			themes: { light: 'github-light', dark: 'github-dark' }
+			theme: 'github-dark'
 		});
 	} catch {
 		return `<pre><code>${escapeHtml(content)}</code></pre>`;

@@ -12,7 +12,9 @@
 	let copied = $state(false);
 	let showReportForm = $state(false);
 	let reportSubmitting = $state(false);
-	const cloneCommand = $derived(`coati clone ${data.setup.ownerUsername}/${data.setup.slug}`);
+	const cloneCommand = $derived(
+		`npx @coati/sh clone ${data.setup.ownerUsername}/${data.setup.slug}`
+	);
 
 	// README editing state
 	const isOwner = $derived(!!data.user && data.user.username === data.setup.ownerUsername);

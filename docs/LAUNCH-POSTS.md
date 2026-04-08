@@ -6,7 +6,7 @@ Drafts for three moments: **Waitlist Teasers** (landing page, March 31), **Waitl
 
 Before posting anything, these assets need to exist:
 
-- [ ] **Demo GIF** — terminal recording of `coati clone jimburch/fullstack-claude` completing in ~10 seconds, showing files landing in place. This is the single highest-impact asset — prioritize above all else.
+- [ ] **Demo GIF** — terminal recording of `npx @coati/sh clone jimburch/fullstack-claude` completing in ~10 seconds, showing files landing in place. This is the single highest-impact asset — prioritize above all else.
 - [ ] **Demo screenshot** — the setup detail page on coati.sh with file tree, README preview, and clone command visible
 - [ ] **Short-form video (30-60s)** — screen recording of the full flow: browse explore page, click a setup, copy the clone command, run it in terminal, see files appear. Post natively to Twitter/X, LinkedIn, and YouTube Shorts.
 - [ ] **"Clone on Coati" badge** — SVG/PNG badge for GitHub READMEs (like npm version badges). Links to setup page. Seed setups and influencer setups should include this in their README from day one.
@@ -87,7 +87,7 @@ Before posting anything, these assets need to exist:
 > Anyone can clone it with one command:
 >
 > ```
-> coati clone jimburch/fullstack-claude
+> npx @coati/sh clone jimburch/fullstack-claude
 > ```
 >
 > Everything lands in the right place. No manual setup, no copying snippets from a blog post.
@@ -114,7 +114,7 @@ Send 2-3 emails between waitlist signup and platform launch to build anticipatio
 >
 > **What Coati does:** Package your complete setup — configs, scripts, MCP servers, skills, docs — and let anyone clone it with one CLI command.
 >
-> I'm building this because I got tired of writing "here's how to recreate my workflow" messages. Now it's just `coati clone jimburch/fullstack-claude`.
+> I'm building this because I got tired of writing "here's how to recreate my workflow" messages. Now it's just `npx @coati/sh clone jimburch/fullstack-claude`.
 >
 > I'll email you once more before launch with a preview of what's on the platform. Reply to this email if there's a specific setup you'd want to find on day one — it'll shape what I build.
 >
@@ -156,7 +156,7 @@ Send 2-3 emails between waitlist signup and platform launch to build anticipatio
 >
 > Clone a setup:
 >
->     coati clone jimburch/fullstack-claude
+>     npx @coati/sh clone jimburch/fullstack-claude
 >
 > That pulls down my entire Claude Code workflow — CLAUDE.md, MCP server configs, custom skills, hooks, and scripts — and places everything where it belongs. Conflict resolution built in.
 >
@@ -184,7 +184,7 @@ Send 2-3 emails between waitlist signup and platform launch to build anticipatio
 
 > I've been tweaking my Claude Code workflow for months — custom CLAUDE.md, MCP servers, hooks, skills, the works. Every time someone asks me to share it, I end up writing a wall of text explaining how to set everything up.
 >
-> So I built Coati. You package your full setup and publish it. Anyone can run `coati clone jimburch/fullstack-claude` and get everything installed on their machine.
+> So I built Coati. You package your full setup and publish it. Anyone can run `npx @coati/sh clone jimburch/fullstack-claude` and get everything installed on their machine.
 >
 > It handles:
 >
@@ -198,7 +198,7 @@ Send 2-3 emails between waitlist signup and platform launch to build anticipatio
 >
 > Publishing is just as easy. Run `coati init` in your project directory and it auto-detects your CLAUDE.md, MCP configs, skills, and hooks. Then `coati publish` and your setup is live.
 >
-> I've published my own fullstack setup — try `coati clone jimburch/fullstack-claude` and see how it feels. Would love for people to publish their own too.
+> I've published my own fullstack setup — try `npx @coati/sh clone jimburch/fullstack-claude` and see how it feels. Would love for people to publish their own too.
 >
 > [link]
 
@@ -215,7 +215,7 @@ Send 2-3 emails between waitlist signup and platform launch to build anticipatio
 > It works with any AI coding tool: Cursor, Claude Code, Copilot. The point is capturing the whole workflow, not just one config file.
 >
 > ```
-> coati clone username/cursor-react-setup
+> npx @coati/sh clone username/cursor-react-setup
 > ```
 >
 > Check it out: [link]
@@ -245,7 +245,7 @@ Send 2-3 emails between waitlist signup and platform launch to build anticipatio
 > Share your complete AI coding workflow. Clone anyone else's with one command.
 >
 > `npm install -g @coati/sh`
-> `coati clone jimburch/fullstack-claude`
+> `npx @coati/sh clone jimburch/fullstack-claude`
 >
 > [link]
 
@@ -279,7 +279,7 @@ Send 2-3 emails between waitlist signup and platform launch to build anticipatio
 >
 > Now it's one command:
 >
-> `coati clone username/setup-name`
+> `npx @coati/sh clone username/setup-name`
 >
 > Configs, scripts, tool integrations, custom skills, documentation — everything lands where it belongs.
 >
@@ -311,7 +311,7 @@ Send 2-3 emails between waitlist signup and platform launch to build anticipatio
 > Coati is a platform where developers package their complete AI setup and share it with a link. Anyone can clone it with one command:
 >
 > ```bash
-> coati clone jimburch/fullstack-claude
+> npx @coati/sh clone jimburch/fullstack-claude
 > ```
 >
 > [demo GIF of the clone flow]
@@ -354,7 +354,7 @@ Send 2-3 emails between waitlist signup and platform launch to build anticipatio
 
 **Description:**
 
-> Coati is where developers share their complete AI coding setups. Package your CLAUDE.md, MCP servers, custom skills, configs, and scripts into a shareable setup. Anyone can clone it with `coati clone username/setup`.
+> Coati is where developers share their complete AI coding setups. Package your CLAUDE.md, MCP servers, custom skills, configs, and scripts into a shareable setup. Anyone can clone it with `npx @coati/sh clone username/setup`.
 >
 > Browse trending setups, discover new workflows, and level up your AI coding environment.
 
@@ -483,6 +483,6 @@ Proactively add value in threads where people are sharing or asking about AI cod
 
 **Template response (adapt to context):**
 
-> Nice setup. If you want to make it one-click for people to clone, you could publish it on Coati — `coati init` auto-detects your config files and `coati publish` makes it shareable. Then people just run `coati clone your-username/setup-name`.
+> Nice setup. If you want to make it one-click for people to clone, you could publish it on Coati — `coati init` auto-detects your config files and `coati publish` makes it shareable. Then people just run `npx @coati/sh clone your-username/setup-name`.
 
 The goal is to be genuinely helpful, not promotional. Only comment when it's actually relevant.
