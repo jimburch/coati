@@ -97,7 +97,7 @@ Each seed setup should have:
 
 **Twitter/X Thread**
 
-- Demo GIF: show a `coati clone` in action
+- Demo GIF: show a `npx @coati/sh clone` in action
 - Tag relevant accounts: Anthropic devrel, Claude Code contributors
 - Thread format: problem → what I built → how it works → try it
 
@@ -134,7 +134,7 @@ New developers discover the platform
 Browse → Star → Clone setups
         │
         ▼
-Experience the magic of `coati clone`
+Experience the magic of `npx @coati/sh clone`
         │
         ▼
 Create and publish their own setups

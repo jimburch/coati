@@ -12,15 +12,13 @@
 		"bin"
 	],
 	"scripts": {
-		"build": "tsup src/index.ts --format esm --dts --outDir dist",
+		"build": "tsup",
 		"dev": "tsx src/index.ts",
 		"test": "vitest run",
 		"test:unit": "vitest run"
 	},
 	"dependencies": {
 		"@clack/prompts": "^1.1.0",
-		"@coati/agents-registry": "workspace:*",
-		"@coati/validation": "workspace:*",
 		"commander": "^12.1.0",
 		"diff": "^8.0.4",
 		"open": "^11.0.0",
@@ -28,6 +26,8 @@
 		"zod": "^3.23.8"
 	},
 	"devDependencies": {
+		"@coati/agents-registry": "workspace:*",
+		"@coati/validation": "workspace:*",
 		"@types/diff": "^7.0.2",
 		"tsup": "^8.5.1",
 		"tsx": "^4.0.0",
