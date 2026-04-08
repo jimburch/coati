@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/jimburch/coati/compare/v1.0.0...v1.0.1) (2026-04-08)
+
+
+### Bug Fixes
+
+* ci/cd improvements for coolify ([#234](https://github.com/jimburch/coati/issues/234)) ([dc7d381](https://github.com/jimburch/coati/commit/dc7d381de5c87d2bb485e260301eef23ecef9f04))
+
 # 1.0.0 (2026-04-08)
 
 
