@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { MessageSquarePlus, Check, Bug, Lightbulb, Sparkles } from '@lucide/svelte';
+	import { MessageSquarePlus, Check, Bug, Lightbulb, Sparkles, ExternalLink } from '@lucide/svelte';
 	import { Dialog as DialogPrimitive } from 'bits-ui';
 	import DialogContent from './ui/dialog/dialog-content.svelte';
 	import DialogTitle from './ui/dialog/dialog-title.svelte';
@@ -26,6 +26,7 @@
 	let pageUrl = $state('');
 	let submitting = $state(false);
 	let errorMsg = $state('');
+	let issueUrl = $state('');
 
 	function getDeviceType(): 'mobile' | 'desktop' {
 		return window.innerWidth < 768 ? 'mobile' : 'desktop';
@@ -74,6 +75,7 @@
 		title = '';
 		description = '';
 		errorMsg = '';
+		issueUrl = '';
 		open = true;
 	}
 
@@ -113,10 +115,9 @@
 				return;
 			}
 
+			const body = (await res.json()) as { data: { issueUrl: string } };
+			issueUrl = body.data.issueUrl ?? '';
 			step = 'success';
-			setTimeout(() => {
-				open = false;
-			}, 2000);
 		} catch {
 			errorMsg = 'Network error. Please try again.';
 		} finally {
@@ -134,6 +135,7 @@
 				title = '';
 				description = '';
 				errorMsg = '';
+				issueUrl = '';
 			}, 200);
 		}
 	}
@@ -194,7 +196,7 @@
 						<Textarea
 							id="feedback-description"
 							bind:value={description}
-							placeholder="Describe in more detail…"
+							placeholder="Describe in more detail..."
 							rows={4}
 							maxlength={2000}
 							data-testid="feedback-description"
@@ -214,7 +216,7 @@
 							class="flex-1"
 							data-testid="feedback-submit"
 						>
-							{submitting ? 'Submitting…' : 'Submit'}
+							{submitting ? 'Submitting...' : 'Submit'}
 						</Button>
 					</div>
 				</div>
@@ -230,6 +232,24 @@
 					</div>
 					<DialogTitle>Feedback submitted!</DialogTitle>
 					<p class="text-sm text-muted-foreground">Thanks for helping us improve Coati.</p>
+					{#if issueUrl}
+						<a
+							href={issueUrl}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+							data-testid="feedback-issue-link"
+						>
+							<ExternalLink class="size-4" />
+							Post screenshots and more info
+						</a>
+						<p class="text-xs text-muted-foreground">
+							Add screenshots or additional context directly to the GitHub issue
+						</p>
+					{/if}
+					<Button variant="outline" onclick={() => (open = false)} class="mt-1">
+						Close
+					</Button>
 				</div>
 			{/if}
 		</DialogContent>
