@@ -1,14 +1,19 @@
 name: Back Merge
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Release"]
+    types:
+      - completed
     branches:
       - main
+  workflow_dispatch: # manual trigger for hotfix backmerges
 
 jobs:
   back-merge:
     name: Merge main into develop
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
