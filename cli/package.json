@@ -1,6 +1,6 @@
 {
 	"name": "@coati/sh",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Coati CLI — clone, publish, and manage AI coding setups",
 	"type": "module",
 	"main": "dist/index.js",
@@ -30,6 +30,7 @@
 		"picocolors": "^1.1.1",
 		"zod": "^3.23.8"
 	},
+	"license": "MIT",
 	"devDependencies": {
 		"@coati/agents-registry": "workspace:*",
 		"@coati/validation": "workspace:*",

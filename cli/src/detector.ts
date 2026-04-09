@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { AGENTS, matchesGlob } from '@coati/agents-registry';
+import { AGENTS, matchesGlob, type AgentDefinition } from '@coati/agents-registry';
 import type { ManifestComponentType } from './manifest.js';
 
 export interface DetectedFile {
@@ -11,7 +11,7 @@ export interface DetectedFile {
 	description: string;
 }
 
-/** Directories to skip during recursive scanning. */
+/** Directories to skip during scanning (safety net). */
 const SKIP_DIRS = new Set([
 	'node_modules',
 	'.git',
@@ -25,24 +25,82 @@ const SKIP_DIRS = new Set([
 	'venv'
 ]);
 
-function walkDir(dir: string, baseDir: string): string[] {
-	const results: string[] = [];
-	let entries: fs.Dirent[];
-	try {
-		entries = fs.readdirSync(dir, { withFileTypes: true });
-	} catch {
-		return results;
-	}
-	for (const entry of entries) {
-		if (SKIP_DIRS.has(entry.name)) continue;
-		const fullPath = path.join(dir, entry.name);
-		if (entry.isDirectory()) {
-			results.push(...walkDir(fullPath, baseDir));
-		} else if (entry.isFile()) {
-			// Normalize to forward slashes for cross-platform pattern matching
-			results.push(path.relative(baseDir, fullPath).split(path.sep).join('/'));
+/**
+ * Extract scan targets from the AGENTS registry.
+ *
+ * Returns:
+ * - `rootFileGlobs`: globs with no directory component (e.g. "CLAUDE.md", ".mcp.json")
+ *   — these are checked via direct `fs.existsSync` rather than directory walking.
+ * - `dirPrefixes`: the first path segment of every directory-based glob
+ *   (e.g. ".claude", ".cursor", ".config") — only these dirs are entered at the top level.
+ */
+function extractScanTargets(agents: AgentDefinition[]): {
+	rootFileGlobs: string[];
+	dirPrefixes: Set<string>;
+} {
+	const rootFileGlobs: string[] = [];
+	const dirPrefixes = new Set<string>();
+
+	for (const agent of agents) {
+		for (const list of [agent.projectGlobs, agent.globalGlobs]) {
+			for (const { glob } of list) {
+				const slashIdx = glob.indexOf('/');
+				if (slashIdx === -1) {
+					// No directory component → root-level file pattern
+					if (!rootFileGlobs.includes(glob)) {
+						rootFileGlobs.push(glob);
+					}
+				} else {
+					// Has directory component → extract first path segment
+					dirPrefixes.add(glob.slice(0, slashIdx));
+				}
+			}
 		}
 	}
+
+	return { rootFileGlobs, dirPrefixes };
+}
+
+/**
+ * Iterative BFS directory walker.
+ *
+ * At the top level (`baseDir`), only enters directories whose name is in `dirPrefixes`.
+ * Once inside a target directory, walks all subdirectories normally.
+ * Skips symlinks, retains SKIP_DIRS as a safety net, and handles EACCES/EPERM gracefully.
+ */
+function collectDirFiles(baseDir: string, dirPrefixes: Set<string>): string[] {
+	const results: string[] = [];
+	// Queue entries: [absoluteDirPath, isTopLevel]
+	const queue: Array<[string, boolean]> = [[baseDir, true]];
+
+	while (queue.length > 0) {
+		const [currentDir, isTopLevel] = queue.shift()!;
+
+		let entries: fs.Dirent[];
+		try {
+			entries = fs.readdirSync(currentDir, { withFileTypes: true });
+		} catch {
+			// Gracefully skip unreadable directories (EACCES, EPERM, etc.)
+			continue;
+		}
+
+		for (const entry of entries) {
+			if (entry.isSymbolicLink()) continue;
+			if (SKIP_DIRS.has(entry.name)) continue;
+
+			const fullPath = path.join(currentDir, entry.name);
+
+			if (entry.isDirectory()) {
+				// At the top level, only enter directories matching known prefixes
+				if (isTopLevel && !dirPrefixes.has(entry.name)) continue;
+				queue.push([fullPath, false]);
+			} else if (entry.isFile()) {
+				// Normalize to forward slashes for cross-platform pattern matching
+				results.push(path.relative(baseDir, fullPath).split(path.sep).join('/'));
+			}
+		}
+	}
+
 	return results;
 }
 
@@ -79,7 +137,19 @@ function makeDescription(
  * the same agent's project globs (one entry per (file, agent) pair).
  */
 export function detectFiles(dir: string): DetectedFile[] {
-	const allFiles = walkDir(dir, dir);
+	const { rootFileGlobs, dirPrefixes } = extractScanTargets(AGENTS);
+
+	// ── 1. Root-level files: direct existence checks (no walking needed) ─────
+	const allFiles: string[] = [];
+	for (const glob of rootFileGlobs) {
+		if (fs.existsSync(path.join(dir, glob))) {
+			allFiles.push(glob);
+		}
+	}
+
+	// ── 2. Directory-based files: targeted iterative BFS walker ──────────────
+	allFiles.push(...collectDirFiles(dir, dirPrefixes));
+
 	const detected: DetectedFile[] = [];
 
 	for (const relativePath of allFiles) {
