@@ -214,6 +214,19 @@ Fix these issues. Re-run the quality gates (pnpm check && pnpm lint && pnpm test
         fi
       fi
 
+      # --- Auto-fix formatting before quality gates ---
+
+      echo "Running prettier auto-fix..."
+      pnpm prettier --write . 2>/dev/null || true
+
+      # If prettier changed files, amend the commit
+      if ! git diff --quiet; then
+        echo "Prettier fixed formatting issues. Amending commit..."
+        git add -A
+        git commit --amend --no-edit
+        CURRENT_COMMIT=$(git rev-parse HEAD)
+      fi
+
       echo "Running external quality gates..."
 
       # --- Run quality gates externally ---

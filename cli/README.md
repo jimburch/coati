@@ -11,14 +11,14 @@ Browse setups at [coati.sh](https://coati.sh) or use the CLI to clone them direc
 
 ## Supported Agents
 
-| Agent | Slug | Scopes |
-| --- | --- | --- |
-| [Claude Code](https://www.anthropic.com/claude-code) | `claude-code` | project, global |
-| [Codex](https://openai.com/codex) | `codex` | project, global |
-| [Cursor](https://cursor.com) | `cursor` | project, global |
-| [Gemini CLI](https://ai.google.dev) | `gemini` | project, global |
-| [GitHub Copilot](https://github.com/features/copilot) | `copilot` | project |
-| [OpenCode](https://opencode.ai) | `opencode` | project, global |
+| Agent                                                 | Slug          | Scopes          |
+| ----------------------------------------------------- | ------------- | --------------- |
+| [Claude Code](https://www.anthropic.com/claude-code)  | `claude-code` | project, global |
+| [Codex](https://openai.com/codex)                     | `codex`       | project, global |
+| [Cursor](https://cursor.com)                          | `cursor`      | project, global |
+| [Gemini CLI](https://ai.google.dev)                   | `gemini`      | project, global |
+| [GitHub Copilot](https://github.com/features/copilot) | `copilot`     | project         |
+| [OpenCode](https://opencode.ai)                       | `opencode`    | project, global |
 
 Setups can target one agent, multiple agents, or all of them. Files can be tagged to a specific agent so only the relevant files are installed when you clone.
 
@@ -47,13 +47,13 @@ That's it. The CLI detects which agents you have installed, downloads the matchi
 
 ## Commands
 
-| Command | Description |
-| --- | --- |
-| `coati login` | Authenticate via GitHub |
-| `coati logout` | Remove stored credentials |
-| `coati clone <owner/slug>` | Clone a setup to your machine |
-| `coati init` | Scaffold a `coati.json` manifest |
-| `coati publish` | Publish or update a setup |
+| Command                    | Description                      |
+| -------------------------- | -------------------------------- |
+| `coati login`              | Authenticate via GitHub          |
+| `coati logout`             | Remove stored credentials        |
+| `coati clone <owner/slug>` | Clone a setup to your machine    |
+| `coati init`               | Scaffold a `coati.json` manifest |
+| `coati publish`            | Publish or update a setup        |
 
 All commands support `--json` for machine-readable output. Run `coati <command> --help` for full options.
 
@@ -121,36 +121,40 @@ The manifest describes your setup and its files. Here's an annotated example:
 
 ```json
 {
-  "name": "my-ai-workflow",
-  "version": "1.0.0",
-  "description": "Claude Code + Cursor setup for SvelteKit projects",
-  "agents": ["claude-code", "cursor"],
-  "category": "web-dev",
-  "tags": ["svelte", "typescript"],
-  "postInstall": ["pnpm install"],
-  "files": [
-    { "path": "CLAUDE.md", "componentType": "instruction", "agent": "claude-code" },
-    { "path": ".cursorrules", "componentType": "instruction", "agent": "cursor" },
-    { "path": ".claude/commands/deploy.md", "componentType": "command", "agent": "claude-code" },
-    { "path": "AGENTS.md", "componentType": "instruction", "description": "Shared across all agents" }
-  ]
+	"name": "my-ai-workflow",
+	"version": "1.0.0",
+	"description": "Claude Code + Cursor setup for SvelteKit projects",
+	"agents": ["claude-code", "cursor"],
+	"category": "web-dev",
+	"tags": ["svelte", "typescript"],
+	"postInstall": ["pnpm install"],
+	"files": [
+		{ "path": "CLAUDE.md", "componentType": "instruction", "agent": "claude-code" },
+		{ "path": ".cursorrules", "componentType": "instruction", "agent": "cursor" },
+		{ "path": ".claude/commands/deploy.md", "componentType": "command", "agent": "claude-code" },
+		{
+			"path": "AGENTS.md",
+			"componentType": "instruction",
+			"description": "Shared across all agents"
+		}
+	]
 }
 ```
 
 ### Fields
 
-| Field | Required | Description |
-| --- | --- | --- |
-| `name` | Yes | URL-safe slug (lowercase, hyphens, 3-100 chars) |
-| `version` | Yes | Semver string (e.g. `1.0.0`) |
-| `description` | Yes | Short summary (max 300 chars) |
-| `files` | Yes | Array of file entries (at least one) |
-| `agents` | No | Agent slugs this setup targets |
-| `category` | No | One of: `web-dev`, `mobile`, `data-science`, `devops`, `systems`, `general` |
-| `tags` | No | Freeform labels for discovery |
-| `license` | No | License identifier (e.g. `MIT`) |
-| `postInstall` | No | Shell commands to run after cloning |
-| `prerequisites` | No | Setup steps to display before install |
+| Field           | Required | Description                                                                 |
+| --------------- | -------- | --------------------------------------------------------------------------- |
+| `name`          | Yes      | URL-safe slug (lowercase, hyphens, 3-100 chars)                             |
+| `version`       | Yes      | Semver string (e.g. `1.0.0`)                                                |
+| `description`   | Yes      | Short summary (max 300 chars)                                               |
+| `files`         | Yes      | Array of file entries (at least one)                                        |
+| `agents`        | No       | Agent slugs this setup targets                                              |
+| `category`      | No       | One of: `web-dev`, `mobile`, `data-science`, `devops`, `systems`, `general` |
+| `tags`          | No       | Freeform labels for discovery                                               |
+| `license`       | No       | License identifier (e.g. `MIT`)                                             |
+| `postInstall`   | No       | Shell commands to run after cloning                                         |
+| `prerequisites` | No       | Setup steps to display before install                                       |
 
 Fields like `id`, `source`, `sourceId`, `clonedAt`, and `revision` are auto-managed by the CLI — you don't need to set them.
 
@@ -158,18 +162,18 @@ Fields like `id`, `source`, `sourceId`, `clonedAt`, and `revision` are auto-mana
 
 Each file entry can declare a `componentType` to describe what it does:
 
-| Type | Description |
-| --- | --- |
-| `instruction` | Agent instructions and rules (e.g. `CLAUDE.md`, `.cursorrules`) |
-| `command` | Slash commands or prompt templates |
-| `skill` | Reusable agent skills |
-| `mcp_server` | MCP server configuration |
-| `hook` | Lifecycle hooks (pre/post actions) |
-| `config` | General configuration files |
-| `policy` | Governance or policy rules |
-| `agent_def` | Agent definition files |
-| `ignore` | Ignore patterns (e.g. `.claudeignore`) |
-| `setup_script` | Scripts that run during setup |
+| Type           | Description                                                     |
+| -------------- | --------------------------------------------------------------- |
+| `instruction`  | Agent instructions and rules (e.g. `CLAUDE.md`, `.cursorrules`) |
+| `command`      | Slash commands or prompt templates                              |
+| `skill`        | Reusable agent skills                                           |
+| `mcp_server`   | MCP server configuration                                        |
+| `hook`         | Lifecycle hooks (pre/post actions)                              |
+| `config`       | General configuration files                                     |
+| `policy`       | Governance or policy rules                                      |
+| `agent_def`    | Agent definition files                                          |
+| `ignore`       | Ignore patterns (e.g. `.claudeignore`)                          |
+| `setup_script` | Scripts that run during setup                                   |
 
 ## Global vs Project Scope
 
