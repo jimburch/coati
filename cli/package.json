@@ -30,6 +30,7 @@
 		"picocolors": "^1.1.1",
 		"zod": "^3.23.8"
 	},
+	"license": "MIT",
 	"devDependencies": {
 		"@coati/agents-registry": "workspace:*",
 		"@coati/validation": "workspace:*",
