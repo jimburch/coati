@@ -551,6 +551,89 @@ describe('detectFiles — multi-agent projects', () => {
 	});
 });
 
+// ─── Edge cases ───────────────────────────────────────────────────────────────
+
+describe('detectFiles — large directory with deep irrelevant trees', () => {
+	it('detects all agent configs alongside 50+ level deep irrelevant trees', () => {
+		// Agent config files in known locations
+		mkfile('CLAUDE.md', '# claude instructions');
+		mkfile('.claude/commands/review.md', '# review');
+		mkfile('AGENTS.md', '# agents');
+		mkfile('.cursor/rules/style.mdc', '# cursor rules');
+
+		// Build a 52-level deep irrelevant directory path
+		const levels = 52;
+		const deepSegments = Array.from({ length: levels }, (_, i) => `d${i}`);
+		const deepPath = `fake-deep/${deepSegments.join('/')}`;
+
+		// Place decoy files deep inside — they should NOT be detected
+		mkfile(`${deepPath}/CLAUDE.md`, '# decoy - should not be detected');
+		mkfile(`${deepPath}/AGENTS.md`, '# decoy - should not be detected');
+
+		// Another irrelevant tree
+		mkfile('Library/Application Support/deep/path/CLAUDE.md', '# decoy');
+
+		const files = detectFiles(tmpDir);
+
+		// All real agent configs are detected
+		expect(find(files, 'CLAUDE.md')).toBeDefined();
+		expect(find(files, '.claude/commands/review.md')).toBeDefined();
+		expect(find(files, 'AGENTS.md')).toBeDefined();
+
+		// Decoy files in irrelevant trees are NOT detected
+		const paths = files.map((f) => f.path);
+		expect(paths.some((p) => p.startsWith('fake-deep/'))).toBe(false);
+		expect(paths.some((p) => p.startsWith('Library/'))).toBe(false);
+	});
+});
+
+describe('detectFiles — symlink loop', () => {
+	it('completes without hanging when a symlink loop exists inside a scan target', () => {
+		mkfile('.claude/commands/review.md', '# review');
+
+		// Create a symlink loop: .claude/loop -> .claude (circular reference)
+		const claudeDir = path.join(tmpDir, '.claude');
+		fs.symlinkSync(claudeDir, path.join(claudeDir, 'loop'));
+
+		// Should complete without hanging or throwing
+		let files: DetectedFile[] = [];
+		expect(() => {
+			files = detectFiles(tmpDir);
+		}).not.toThrow();
+
+		// Real file should still be detected
+		expect(find(files, '.claude/commands/review.md')).toBeDefined();
+	});
+});
+
+describe('detectFiles — permission error', () => {
+	it.skipIf(process.getuid?.() === 0)(
+		'skips unreadable directories and still returns results from accessible ones',
+		() => {
+			mkfile('CLAUDE.md', '# claude');
+			mkfile('.cursor/rules/style.mdc', '# cursor rules');
+
+			// Create a known scan-target directory with no read permissions
+			const restrictedDir = path.join(tmpDir, '.gemini');
+			fs.mkdirSync(restrictedDir, { recursive: true });
+			fs.chmodSync(restrictedDir, 0o000);
+
+			try {
+				// Scanner must not throw
+				expect(() => detectFiles(tmpDir)).not.toThrow();
+
+				// Files from accessible locations are still returned
+				const files = detectFiles(tmpDir);
+				expect(find(files, 'CLAUDE.md')).toBeDefined();
+				expect(findAll(files, '.cursor/rules/style.mdc').length).toBeGreaterThanOrEqual(1);
+			} finally {
+				// Restore permissions so afterEach cleanup can delete the directory
+				fs.chmodSync(restrictedDir, 0o755);
+			}
+		}
+	);
+});
+
 // ─── Description field ────────────────────────────────────────────────────────
 
 describe('detectFiles — description field', () => {
