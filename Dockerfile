@@ -16,7 +16,8 @@ COPY drizzle.config.ts ./
 COPY drizzle/ ./drizzle/
 
 # Copy SvelteKit source and config
-COPY svelte.config.js vite.config.ts tsconfig.json CHANGELOG.md ./
+COPY svelte.config.js vite.config.ts tsconfig.json ./
+COPY CHANGELOG.md* ./
 COPY src/ ./src/
 COPY static/ ./static/
 
