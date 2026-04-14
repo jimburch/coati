@@ -23,20 +23,17 @@ export function betaGate(event: GateEvent, betaModeEnabled: boolean): Response |
 
 	if (pathname.startsWith('/api/')) return null;
 
-	const isAllowedWithoutAuth =
-		pathname === '/' || pathname.startsWith('/auth/') || pathname === '/waitlist';
-
 	if (!event.locals.user) {
-		if (!isAllowedWithoutAuth) {
-			return new Response(null, {
-				status: 302,
-				headers: { Location: '/auth/login/github' }
-			});
-		}
 		return null;
 	}
 
-	if (!event.locals.user.isBetaApproved && !event.locals.user.isAdmin && pathname !== '/waitlist') {
+	const isGatedRoute =
+		pathname.startsWith('/new') ||
+		pathname.startsWith('/settings') ||
+		pathname.startsWith('/feed') ||
+		pathname.startsWith('/admin');
+
+	if (!event.locals.user.isBetaApproved && !event.locals.user.isAdmin && isGatedRoute) {
 		return new Response(null, {
 			status: 302,
 			headers: { Location: '/waitlist' }

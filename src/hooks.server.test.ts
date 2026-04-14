@@ -247,19 +247,17 @@ describe('hooks.server handle', () => {
 	});
 
 	describe('handle uses betaGate', () => {
-		it('returns 302 for unauthenticated user on protected route when beta mode enabled', async () => {
+		it('allows unauthenticated user on public route when beta mode enabled', async () => {
 			mockPublicBetaMode = 'true';
 			const { event } = makeEvent();
 			const resolve = makeResolve();
 			mockGetSessionToken.mockReturnValue(undefined);
-			// Provide a URL with a protected pathname
 			(event as Record<string, unknown>).url = { pathname: '/explore' };
 
 			const response = await handle({ event, resolve } as never);
 
-			expect(response.status).toBe(302);
-			expect(response.headers.get('Location')).toBe('/auth/login/github');
-			expect(resolve).not.toHaveBeenCalled();
+			expect(resolve).toHaveBeenCalledWith(event);
+			expect(response.status).toBe(200);
 		});
 	});
 });
@@ -275,49 +273,36 @@ describe('betaGate', () => {
 		expect(betaGate(event, true)).toBeNull();
 	});
 
-	it('betaGate redirects unauthenticated user on protected route to login', () => {
-		const event = makeGateEvent('/explore', null);
-		const response = betaGate(event, true);
-		expect(response).not.toBeNull();
-		expect(response?.status).toBe(302);
-		expect(response?.headers.get('Location')).toBe('/auth/login/github');
+	it('betaGate allows unauthenticated user on any non-API route', () => {
+		expect(betaGate(makeGateEvent('/explore', null), true)).toBeNull();
+		expect(betaGate(makeGateEvent('/', null), true)).toBeNull();
+		expect(betaGate(makeGateEvent('/auth/login/github', null), true)).toBeNull();
+		expect(betaGate(makeGateEvent('/waitlist', null), true)).toBeNull();
+		expect(betaGate(makeGateEvent('/someuser/some-setup', null), true)).toBeNull();
 	});
 
-	it('betaGate allows unauthenticated user on landing page', () => {
-		const event = makeGateEvent('/', null);
-		expect(betaGate(event, true)).toBeNull();
+	it('betaGate redirects non-approved user on gated (app) routes to waitlist', () => {
+		for (const path of ['/new', '/settings', '/feed', '/admin', '/admin/beta']) {
+			const response = betaGate(makeGateEvent(path, { isBetaApproved: false, isAdmin: false }), true);
+			expect(response).not.toBeNull();
+			expect(response?.status).toBe(302);
+			expect(response?.headers.get('Location')).toBe('/waitlist');
+		}
 	});
 
-	it('betaGate allows unauthenticated user on auth routes', () => {
-		const event = makeGateEvent('/auth/login/github', null);
-		expect(betaGate(event, true)).toBeNull();
+	it('betaGate allows non-approved user on public routes', () => {
+		for (const path of ['/explore', '/', '/waitlist', '/someuser', '/someuser/some-setup']) {
+			expect(betaGate(makeGateEvent(path, { isBetaApproved: false, isAdmin: false }), true)).toBeNull();
+		}
 	});
 
-	it('betaGate allows unauthenticated user on waitlist page', () => {
-		const event = makeGateEvent('/waitlist', null);
-		expect(betaGate(event, true)).toBeNull();
-	});
-
-	it('betaGate redirects non-approved authenticated user to waitlist', () => {
-		const event = makeGateEvent('/explore', { isBetaApproved: false, isAdmin: false });
-		const response = betaGate(event, true);
-		expect(response).not.toBeNull();
-		expect(response?.status).toBe(302);
-		expect(response?.headers.get('Location')).toBe('/waitlist');
-	});
-
-	it('betaGate allows approved authenticated user through', () => {
-		const event = makeGateEvent('/explore', { isBetaApproved: true, isAdmin: false });
-		expect(betaGate(event, true)).toBeNull();
+	it('betaGate allows approved authenticated user on gated routes', () => {
+		expect(betaGate(makeGateEvent('/new', { isBetaApproved: true, isAdmin: false }), true)).toBeNull();
+		expect(betaGate(makeGateEvent('/settings', { isBetaApproved: true, isAdmin: false }), true)).toBeNull();
 	});
 
 	it('betaGate allows admin user through regardless of isBetaApproved', () => {
-		const event = makeGateEvent('/explore', { isBetaApproved: false, isAdmin: true });
-		expect(betaGate(event, true)).toBeNull();
-	});
-
-	it('betaGate does not redirect non-approved user already on waitlist page', () => {
-		const event = makeGateEvent('/waitlist', { isBetaApproved: false, isAdmin: false });
-		expect(betaGate(event, true)).toBeNull();
+		expect(betaGate(makeGateEvent('/new', { isBetaApproved: false, isAdmin: true }), true)).toBeNull();
+		expect(betaGate(makeGateEvent('/admin', { isBetaApproved: false, isAdmin: true }), true)).toBeNull();
 	});
 });
