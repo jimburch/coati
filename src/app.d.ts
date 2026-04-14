@@ -1,9 +1,9 @@
 import type { User, Session } from '$lib/types';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-declare const __APP_VERSION__: string;
-
 declare global {
+	// eslint-disable-next-line no-var
+	var __APP_VERSION__: string;
+
 	namespace App {
 		interface Locals {
 			user: User | null;
