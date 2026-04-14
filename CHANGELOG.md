@@ -1,3 +1,21 @@
+# [1.2.0](https://github.com/jimburch/coati/compare/v1.1.0...v1.2.0) (2026-04-14)
+
+
+### Bug Fixes
+
+* **beta:** new users awaiting approval can access public routes ([c533767](https://github.com/jimburch/coati/commit/c533767396669bcd159358b85606ebc7eb35603f))
+* **build:** adds changelog at build time ([8143a18](https://github.com/jimburch/coati/commit/8143a189be0a1ab073a9f27ab17c158dc4e671bb))
+* **build:** version falls back to 0 on dev if it cant access the right number ([6ecd16b](https://github.com/jimburch/coati/commit/6ecd16bc9e60551539a4faa487351852083fffe1))
+* **cli:** pulls latest version with correct version refs ([f521bca](https://github.com/jimburch/coati/commit/f521bca67dd3915bf59345c6c0f0b6e372ccc5f6))
+* **ui:** setup delete leads back to profile page ([0e7a3d2](https://github.com/jimburch/coati/commit/0e7a3d259111c74cf61c66cd30999984cecd801a))
+* **urls:** profile url now leads to external site ([c0a6519](https://github.com/jimburch/coati/commit/c0a651975b95605187f2d9565dd6b52d28ab85a4))
+
+
+### Features
+
+* **ui:** add delete setup confirmation UI with owner dropdown ([#255](https://github.com/jimburch/coati/issues/255)) ([#256](https://github.com/jimburch/coati/issues/256)) ([7de213c](https://github.com/jimburch/coati/commit/7de213cb403cb80de09a30a076d1df1cfbabd1d1))
+* **version:** add changelog version and link to footer ([49e52aa](https://github.com/jimburch/coati/commit/49e52aa9ec1bae881152260b79657f0c74628b6f))
+
 # [1.1.0](https://github.com/jimburch/coati/compare/v1.0.3...v1.1.0) (2026-04-09)
 
 
