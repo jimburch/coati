@@ -260,11 +260,25 @@
 						code={`{
   "name": "my-setup",
   "description": "My AI coding workflow for TypeScript projects",
+  "category": "web-dev",
   "agents": ["claude-code"],
+  "tags": ["typescript", "claude-code"],
   "files": [
-    "CLAUDE.md",
-    ".claude/commands/commit.md",
-    ".claude/hooks/pre-tool.sh"
+    {
+      "path": "CLAUDE.md",
+      "componentType": "instruction",
+      "agent": "claude-code"
+    },
+    {
+      "path": ".claude/commands/commit.md",
+      "componentType": "command",
+      "agent": "claude-code"
+    },
+    {
+      "path": ".claude/hooks/pre-tool.sh",
+      "componentType": "hook",
+      "agent": "claude-code"
+    }
   ]
 }`}
 						language="json"
