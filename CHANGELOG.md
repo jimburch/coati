@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/jimburch/coati/compare/v1.3.0...v1.4.0) (2026-04-14)
+
+
+### Features
+
+* **ui:** adds light mode with toggle ([f5f79c3](https://github.com/jimburch/coati/commit/f5f79c36399badeebf6c3eb80a98fdef10ff6fda))
+
 # [1.3.0](https://github.com/jimburch/coati/compare/v1.2.2...v1.3.0) (2026-04-14)
 
 
