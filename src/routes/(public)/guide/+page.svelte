@@ -1,15 +1,56 @@
 <script lang="ts">
+	import AgentIcon from '$lib/components/AgentIcon.svelte';
 	import CodeBlock from '$lib/components/CodeBlock.svelte';
 	import OgMeta from '$lib/components/OgMeta.svelte';
 
 	const sections = [
 		{ id: 'what-is-coati', title: 'What is Coati?' },
+		{ id: 'supported-agents', title: 'Supported Agents' },
 		{ id: 'discover-setups', title: 'Discover Setups' },
 		{ id: 'install-the-cli', title: 'Install the CLI' },
 		{ id: 'clone-a-setup', title: 'Clone a Setup' },
 		{ id: 'create-your-own-setup', title: 'Create Your Own Setup' },
 		{ id: 'publish-to-coati', title: 'Publish to Coati' },
 		{ id: 'social-features', title: 'Social Features' }
+	];
+
+	const supportedAgents = [
+		{
+			slug: 'claude-code',
+			name: 'Claude Code',
+			href: '/agents/claude-code',
+			description: "Anthropic's CLI agent for coding in the terminal"
+		},
+		{
+			slug: 'cursor',
+			name: 'Cursor',
+			href: '/agents/cursor',
+			description: 'AI-powered code editor with rules, commands, and MCP'
+		},
+		{
+			slug: 'codex',
+			name: 'Codex',
+			href: '/agents/codex',
+			description: "OpenAI's CLI coding agent"
+		},
+		{
+			slug: 'copilot',
+			name: 'GitHub Copilot',
+			href: '/agents/copilot',
+			description: 'AI pair programmer built into VS Code and GitHub'
+		},
+		{
+			slug: 'gemini',
+			name: 'Gemini CLI',
+			href: '/agents/gemini',
+			description: "Google's CLI agent for coding with Gemini models"
+		},
+		{
+			slug: 'opencode',
+			name: 'OpenCode',
+			href: '/agents/opencode',
+			description: 'Open-source terminal coding agent'
+		}
 	];
 </script>
 
@@ -66,7 +107,7 @@
 						Coati is a platform for developers to share, discover, and clone AI coding setups —
 						think GitHub, but for your AI workflow. A <strong class="text-foreground">setup</strong>
 						is a packaged collection of config files, scripts, hooks, skills, commands, and documentation
-						that defines how you work with AI coding tools like Claude Code, Cursor, or Windsurf.
+						that defines how you work with AI coding tools like Claude Code, Cursor, or Codex.
 					</p>
 					<p>
 						Whether you've spent hours tuning a perfect <code
@@ -77,7 +118,32 @@
 				</div>
 			</section>
 
-			<!-- Section 2: Discover Setups -->
+			<!-- Section 2: Supported Agents -->
+			<section id="supported-agents" class="scroll-mt-20">
+				<h2 class="mb-4 text-2xl font-bold tracking-tight">Supported Agents</h2>
+				<div class="space-y-4 text-muted-foreground">
+					<p>
+						Coati supports setups for the following AI coding agents. Each agent has its own config
+						file patterns, commands, and conventions — Coati understands them all.
+					</p>
+				</div>
+				<div class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+					{#each supportedAgents as agent (agent.slug)}
+						<a
+							href={agent.href}
+							class="flex items-center gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/50 hover:bg-accent"
+						>
+							<AgentIcon slug={agent.slug} size={28} />
+							<div class="min-w-0">
+								<p class="text-sm font-medium text-foreground">{agent.name}</p>
+								<p class="text-xs text-muted-foreground">{agent.description}</p>
+							</div>
+						</a>
+					{/each}
+				</div>
+			</section>
+
+			<!-- Section 3: Discover Setups -->
 			<section id="discover-setups" class="scroll-mt-20">
 				<h2 class="mb-4 text-2xl font-bold tracking-tight">Discover Setups</h2>
 				<div class="space-y-4 text-muted-foreground">
@@ -109,19 +175,29 @@
 						The <code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
 							>coati</code
 						> CLI lets you clone setups directly into your project, publish your own, and interact with
-						Coati from the terminal. Install it globally with npm:
+						Coati from the terminal. The quickest way to use it is via npx — no install needed:
 					</p>
 				</div>
 				<div class="mt-4 space-y-4">
-					<CodeBlock code="npm install -g coati" language="bash" label="Install coati globally" />
-					<p class="text-muted-foreground">
-						Once installed, authenticate with your Coati account using GitHub OAuth:
-					</p>
+					<CodeBlock
+						code="npx @coati/sh@latest login"
+						language="bash"
+						label="Run via npx (preferred)"
+					/>
+					<p class="text-muted-foreground">Or install it globally from npm:</p>
+					<CodeBlock
+						code="npm install -g @coati/sh@latest"
+						language="bash"
+						label="Install globally from npm"
+					/>
 					<CodeBlock code="coati login" language="bash" label="Authenticate" />
 					<p class="text-muted-foreground">
-						This starts a device flow: you'll be shown a URL and a short code to enter on GitHub.
-						After authenticating, your token is stored at <code
-							class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
+						The <code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
+							>login</code
+						>
+						command starts a device flow: you'll be shown a URL and a short code to enter on GitHub. After
+						authenticating, your token is stored at
+						<code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
 							>~/.coati/config.json</code
 						> and used automatically for future commands.
 					</p>
@@ -135,7 +211,16 @@
 					<p>Found a setup you want to use? Clone it into your current project directory:</p>
 				</div>
 				<div class="mt-4 space-y-4">
-					<CodeBlock code="coati clone username/setup-name" language="bash" label="Clone a setup" />
+					<CodeBlock
+						code="npx @coati/sh@latest clone username/setup-name"
+						language="bash"
+						label="Clone via npx"
+					/>
+					<CodeBlock
+						code="coati clone username/setup-name"
+						language="bash"
+						label="Clone via global install"
+					/>
 					<p class="text-muted-foreground">
 						The CLI downloads all files listed in the setup's manifest and writes them to your
 						working directory. If any file already exists, you'll be prompted to confirm before
@@ -143,7 +228,7 @@
 					</p>
 					<p class="text-muted-foreground">You can also pass a target directory:</p>
 					<CodeBlock
-						code="coati clone username/setup-name ./my-project"
+						code="npx @coati/sh@latest clone username/setup-name ./my-project"
 						language="bash"
 						label="Clone into a specific directory"
 					/>
@@ -166,7 +251,8 @@
 					</p>
 				</div>
 				<div class="mt-4 space-y-4">
-					<CodeBlock code="coati init" language="bash" label="Scaffold a new setup" />
+					<CodeBlock code="npx @coati/sh@latest init" language="bash" label="Scaffold via npx" />
+					<CodeBlock code="coati init" language="bash" label="Scaffold via global install" />
 					<p class="text-muted-foreground">
 						The generated manifest describes your setup and lists the files to include:
 					</p>
@@ -205,7 +291,8 @@
 					</p>
 				</div>
 				<div class="mt-4 space-y-4">
-					<CodeBlock code="coati publish" language="bash" label="Publish your setup" />
+					<CodeBlock code="npx @coati/sh@latest publish" language="bash" label="Publish via npx" />
+					<CodeBlock code="coati publish" language="bash" label="Publish via global install" />
 					<p class="text-muted-foreground">
 						The CLI reads your manifest, uploads all listed files, and creates (or updates) your
 						setup on Coati. Your setup will be immediately visible on your profile and in the
@@ -244,11 +331,6 @@
 							in.
 						</li>
 					</ul>
-					<p>You can also star and follow directly from the CLI:</p>
-				</div>
-				<div class="mt-4 space-y-4">
-					<CodeBlock code="coati star username/setup-name" language="bash" label="Star a setup" />
-					<CodeBlock code="coati follow username" language="bash" label="Follow a developer" />
 				</div>
 			</section>
 		</div>
