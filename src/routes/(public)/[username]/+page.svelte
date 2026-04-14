@@ -2,6 +2,8 @@
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
+	import { page } from '$app/stores';
+	import { replaceState } from '$app/navigation';
 	import { Avatar, AvatarImage, AvatarFallback } from '$lib/components/ui/avatar';
 	import { Separator } from '$lib/components/ui/separator';
 	import { Button } from '$lib/components/ui/button';
@@ -47,6 +49,16 @@
 	function tabHref(tab: string) {
 		return `/${data.profile.username}?tab=${tab}`;
 	}
+
+	$effect(() => {
+		const deletedName = $page.url.searchParams.get('deleted');
+		if (deletedName) {
+			toast.success(`Setup "${deletedName}" deleted`);
+			const url = new URL($page.url);
+			url.searchParams.delete('deleted');
+			replaceState(url, $page.state);
+		}
+	});
 </script>
 
 <svelte:head>

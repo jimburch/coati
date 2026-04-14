@@ -4,13 +4,8 @@
 	"version": "1.0.0",
 	"description": "Second attempt after I forgot to save the old one",
 	"category": "web-dev",
-	"agents": [
-		"claude-code"
-	],
-	"tags": [
-		"coati",
-		"claude-code"
-	],
+	"agents": ["claude-code"],
+	"tags": ["coati", "claude-code"],
 	"files": [
 		{
 			"path": ".claude/skills/tdd/SKILL.md",
