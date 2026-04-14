@@ -1,15 +1,46 @@
 {
-	"name": "coati",
+	"id": "9303078e-851a-49c6-a39b-11129e2460d6",
+	"name": "new-coati-claude-code-setup",
 	"version": "1.0.0",
-	"description": "Coati monorepo",
-	"category": "general",
-	"tools": ["claude-code"],
-	"tags": ["coati"],
-	"placement": "project",
+	"description": "Second attempt after I forgot to save the old one",
+	"category": "web-dev",
+	"agents": ["claude-code"],
+	"tags": ["coati", "claude-code"],
 	"files": [
 		{
+			"path": ".claude/skills/tdd/SKILL.md",
+			"componentType": "skill",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".claude/skills/tdd/deep-modules.md",
+			"componentType": "skill",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".claude/skills/tdd/interface-design.md",
+			"componentType": "skill",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".claude/skills/tdd/mocking.md",
+			"componentType": "skill",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".claude/skills/tdd/refactoring.md",
+			"componentType": "skill",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".claude/skills/tdd/tests.md",
+			"componentType": "skill",
+			"agent": "claude-code"
+		},
+		{
 			"path": "CLAUDE.md",
-			"componentType": "instruction"
+			"componentType": "instruction",
+			"agent": "claude-code"
 		}
 	]
 }

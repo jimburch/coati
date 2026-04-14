@@ -4,6 +4,7 @@
 	import StarButton from '$lib/components/StarButton.svelte';
 	import AgentIcon from '$lib/components/AgentIcon.svelte';
 	import OgMeta from '$lib/components/OgMeta.svelte';
+	import DeleteSetupDialog from '$lib/components/DeleteSetupDialog.svelte';
 	import { enhance } from '$app/forms';
 	import { timeAgo } from '$lib/utils';
 
@@ -13,7 +14,7 @@
 	let showReportForm = $state(false);
 	let reportSubmitting = $state(false);
 	const cloneCommand = $derived(
-		`npx @coati/sh clone ${data.setup.ownerUsername}/${data.setup.slug}`
+		`npx @coati/sh@latest clone ${data.setup.ownerUsername}/${data.setup.slug}`
 	);
 
 	// README editing state
@@ -71,6 +72,8 @@
 			return { agentGroups, sharedCount };
 		})()
 	);
+
+	let deleteDialogOpen = $state(false);
 
 	function copyCloneCommand() {
 		navigator.clipboard.writeText(cloneCommand);
@@ -251,6 +254,20 @@
 					/>
 				</div>
 
+				<!-- Owner: delete setup -->
+				{#if isOwner}
+					<div>
+						<Button
+							variant="outline"
+							class="w-full text-destructive/70"
+							onclick={() => (deleteDialogOpen = true)}
+							data-testid="delete-setup-btn"
+						>
+							Delete setup
+						</Button>
+					</div>
+				{/if}
+
 				<!-- Admin: featured toggle -->
 				{#if data.user?.isAdmin}
 					<div>
@@ -269,7 +286,6 @@
 							<Button
 								type="submit"
 								variant={isFeatured ? 'default' : 'outline'}
-								size="sm"
 								class="w-full"
 								data-testid="feature-toggle-btn"
 							>
@@ -508,6 +524,16 @@
 			</div>
 		</div>
 	</div>
+
+	<!-- Delete setup confirmation dialog -->
+	{#if isOwner}
+		<DeleteSetupDialog
+			open={deleteDialogOpen}
+			slug={data.setup.slug}
+			setupName={data.setup.name}
+			onOpenChange={(v) => (deleteDialogOpen = v)}
+		/>
+	{/if}
 
 	<!-- BETA: comments hidden, re-enable post-launch -->
 	<!-- <Separator class="my-6 lg:my-8" /> -->

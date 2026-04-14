@@ -5,7 +5,8 @@ import {
 	setStar,
 	getSetupByOwnerSlug,
 	isSetupStarredByUser,
-	setFeatured
+	setFeatured,
+	deleteSetup
 } from '$lib/server/queries/setups';
 import {
 	createComment,
@@ -141,6 +142,26 @@ export const actions: Actions = {
 		const nowFeatured = !setup.featuredAt;
 		await setFeatured(setup.id, nowFeatured);
 		return { featured: nowFeatured };
+	},
+
+	delete: async ({ locals, params, request }) => {
+		if (!locals.user) throw redirect(302, '/auth/login/github');
+
+		const setup = await getSetupByOwnerSlug(params.username, params.slug);
+		if (!setup) throw error(404, 'Setup not found');
+
+		if (setup.userId !== locals.user.id) {
+			return fail(403, { error: 'You do not own this setup', code: 'FORBIDDEN' });
+		}
+
+		const formData = await request.formData();
+		const slugConfirmation = String(formData.get('slug') ?? '');
+		if (slugConfirmation !== setup.slug) {
+			return fail(400, { error: 'Slug confirmation does not match', code: 'SLUG_MISMATCH' });
+		}
+
+		await deleteSetup(setup.id, locals.user.id);
+		throw redirect(303, `/${params.username}?deleted=${encodeURIComponent(setup.name)}`);
 	},
 
 	report: async ({ locals, params, request }) => {
