@@ -2,6 +2,7 @@
 	import Navbar from '$lib/components/Navbar.svelte';
 	import Footer from '$lib/components/Footer.svelte';
 	import FeedbackWidget from '$lib/components/FeedbackWidget.svelte';
+	import GuideNudge from '$lib/components/GuideNudge.svelte';
 	import NavigationProgress from '$lib/components/NavigationProgress.svelte';
 	import { Toaster } from 'svelte-sonner';
 	import '../app.css';
@@ -15,6 +16,7 @@
 		{@render children()}
 	</main>
 	<Footer />
+	<GuideNudge user={data.user} />
 	<FeedbackWidget user={data.user} />
 	<NavigationProgress />
 	<Toaster richColors />
