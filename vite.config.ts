@@ -2,9 +2,10 @@ import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
+import { versionPlugin } from './src/lib/utils/vite-version-plugin';
 
 export default defineConfig({
-	plugins: [tailwindcss(), sveltekit()],
+	plugins: [tailwindcss(), versionPlugin(), sveltekit()],
 	test: {
 		expect: { requireAssertions: true },
 		coverage: {
