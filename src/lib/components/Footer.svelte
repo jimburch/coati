@@ -13,6 +13,8 @@
 		</p>
 		<nav class="text-muted-foreground flex gap-3 text-xs lg:gap-4 lg:text-sm">
 			<a href="/guide" class="hover:text-foreground transition-colors">How to use Coati</a>
+			<a href="/privacy" class="hover:text-foreground transition-colors">Privacy</a>
+			<a href="/terms" class="hover:text-foreground transition-colors">Terms</a>
 			<a
 				href="https://github.com/jimburch/coati"
 				target="_blank"
