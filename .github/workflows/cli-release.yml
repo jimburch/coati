@@ -90,4 +90,5 @@ jobs:
           git add cli/package.json
           git commit -m "chore(cli): bump version to ${VERSION} [skip ci]" || true
           git tag "cli-v${VERSION}"
+          git pull --rebase origin main
           git push origin HEAD:main --follow-tags
