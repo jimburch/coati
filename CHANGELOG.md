@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/jimburch/coati/compare/v1.2.0...v1.2.1) (2026-04-14)
+
+
+### Bug Fixes
+
+* **cli:** fix cli versioning ([1864552](https://github.com/jimburch/coati/commit/18645522d419f11ee6e25808f6812e8e74242fc0))
+
 # [1.2.0](https://github.com/jimburch/coati/compare/v1.1.0...v1.2.0) (2026-04-14)
 
 
