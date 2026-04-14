@@ -27,10 +27,7 @@ describe('formatUpdateNotice', () => {
 describe('checkForUpdate', () => {
 	it('returns null when current version matches latest', async () => {
 		const cacheFile = path.join(tmpDir, 'update-check.json');
-		fs.writeFileSync(
-			cacheFile,
-			JSON.stringify({ lastCheck: Date.now(), latestVersion: '0.3.0' })
-		);
+		fs.writeFileSync(cacheFile, JSON.stringify({ lastCheck: Date.now(), latestVersion: '0.3.0' }));
 
 		const result = await checkForUpdate('0.3.0', { cacheDir: tmpDir });
 		expect(result).toBeNull();
@@ -74,10 +71,7 @@ describe('checkForUpdate', () => {
 
 	it('uses cached result when cache is fresh (does not fetch)', async () => {
 		const cacheFile = path.join(tmpDir, 'update-check.json');
-		fs.writeFileSync(
-			cacheFile,
-			JSON.stringify({ lastCheck: Date.now(), latestVersion: '0.5.0' })
-		);
+		fs.writeFileSync(cacheFile, JSON.stringify({ lastCheck: Date.now(), latestVersion: '0.5.0' }));
 
 		const fetchFn = vi.fn();
 		const result = await checkForUpdate('0.3.0', { cacheDir: tmpDir, fetchLatestVersion: fetchFn });
@@ -87,10 +81,7 @@ describe('checkForUpdate', () => {
 
 	it('returns update info when a newer version is available', async () => {
 		const cacheFile = path.join(tmpDir, 'update-check.json');
-		fs.writeFileSync(
-			cacheFile,
-			JSON.stringify({ lastCheck: Date.now(), latestVersion: '0.4.0' })
-		);
+		fs.writeFileSync(cacheFile, JSON.stringify({ lastCheck: Date.now(), latestVersion: '0.4.0' }));
 
 		const result = await checkForUpdate('0.3.0', { cacheDir: tmpDir });
 		expect(result).toEqual({ currentVersion: '0.3.0', latestVersion: '0.4.0' });

@@ -3,7 +3,8 @@ import { parseLatestVersion } from './version';
 
 describe('parseLatestVersion', () => {
 	it('extracts the version from a standard changelog first line', () => {
-		const changelog = '# [1.1.0](https://github.com/jimburch/coati/compare/v1.0.3...v1.1.0) (2026-04-09)\n\n### Bug Fixes\n';
+		const changelog =
+			'# [1.1.0](https://github.com/jimburch/coati/compare/v1.0.3...v1.1.0) (2026-04-09)\n\n### Bug Fixes\n';
 		expect(parseLatestVersion(changelog)).toBe('1.1.0');
 	});
 

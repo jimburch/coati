@@ -283,7 +283,10 @@ describe('betaGate', () => {
 
 	it('betaGate redirects non-approved user on gated (app) routes to waitlist', () => {
 		for (const path of ['/new', '/settings', '/feed', '/admin', '/admin/beta']) {
-			const response = betaGate(makeGateEvent(path, { isBetaApproved: false, isAdmin: false }), true);
+			const response = betaGate(
+				makeGateEvent(path, { isBetaApproved: false, isAdmin: false }),
+				true
+			);
 			expect(response).not.toBeNull();
 			expect(response?.status).toBe(302);
 			expect(response?.headers.get('Location')).toBe('/waitlist');
@@ -292,17 +295,27 @@ describe('betaGate', () => {
 
 	it('betaGate allows non-approved user on public routes', () => {
 		for (const path of ['/explore', '/', '/waitlist', '/someuser', '/someuser/some-setup']) {
-			expect(betaGate(makeGateEvent(path, { isBetaApproved: false, isAdmin: false }), true)).toBeNull();
+			expect(
+				betaGate(makeGateEvent(path, { isBetaApproved: false, isAdmin: false }), true)
+			).toBeNull();
 		}
 	});
 
 	it('betaGate allows approved authenticated user on gated routes', () => {
-		expect(betaGate(makeGateEvent('/new', { isBetaApproved: true, isAdmin: false }), true)).toBeNull();
-		expect(betaGate(makeGateEvent('/settings', { isBetaApproved: true, isAdmin: false }), true)).toBeNull();
+		expect(
+			betaGate(makeGateEvent('/new', { isBetaApproved: true, isAdmin: false }), true)
+		).toBeNull();
+		expect(
+			betaGate(makeGateEvent('/settings', { isBetaApproved: true, isAdmin: false }), true)
+		).toBeNull();
 	});
 
 	it('betaGate allows admin user through regardless of isBetaApproved', () => {
-		expect(betaGate(makeGateEvent('/new', { isBetaApproved: false, isAdmin: true }), true)).toBeNull();
-		expect(betaGate(makeGateEvent('/admin', { isBetaApproved: false, isAdmin: true }), true)).toBeNull();
+		expect(
+			betaGate(makeGateEvent('/new', { isBetaApproved: false, isAdmin: true }), true)
+		).toBeNull();
+		expect(
+			betaGate(makeGateEvent('/admin', { isBetaApproved: false, isAdmin: true }), true)
+		).toBeNull();
 	});
 });

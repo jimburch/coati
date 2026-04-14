@@ -1,7 +1,6 @@
 import type { User, Session } from '$lib/types';
 
 declare global {
-	// eslint-disable-next-line no-var
 	var __APP_VERSION__: string;
 
 	namespace App {

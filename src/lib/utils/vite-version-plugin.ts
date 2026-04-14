@@ -7,9 +7,7 @@ export function versionPlugin() {
 		name: 'coati-version',
 		config() {
 			const changelogPath = resolve(process.cwd(), 'CHANGELOG.md');
-			const changelog = existsSync(changelogPath)
-				? readFileSync(changelogPath, 'utf-8')
-				: '';
+			const changelog = existsSync(changelogPath) ? readFileSync(changelogPath, 'utf-8') : '';
 			const version = parseLatestVersion(changelog) ?? '0.0.0';
 			return {
 				define: {

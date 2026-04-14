@@ -8,8 +8,7 @@
 				href="https://github.com/jimburch/coati/blob/main/CHANGELOG.md"
 				target="_blank"
 				rel="noopener noreferrer"
-				class="hover:text-foreground transition-colors hover:underline"
-				>v{__APP_VERSION__}</a
+				class="hover:text-foreground transition-colors hover:underline">v{__APP_VERSION__}</a
 			>
 		</p>
 		<nav class="text-muted-foreground flex gap-3 text-xs lg:gap-4 lg:text-sm">
