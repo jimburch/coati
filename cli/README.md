@@ -33,7 +33,7 @@ npm install -g @coati/sh
 Or run commands without installing:
 
 ```bash
-npx @coati/sh <command>
+npx @coati/sh@latest <command>
 ```
 
 ### Clone a setup

@@ -12,6 +12,8 @@ import { registerView } from './commands/view.js';
 import { isNonProductionApi, getEffectiveApiBase } from './api.js';
 import { createContext } from './context.js';
 import { printBanner } from './banner.js';
+import { checkForUpdate, formatUpdateNotice } from './update-check.js';
+import { configDir } from './config.js';
 
 const DEV_API_BASE = 'http://localhost:5173/api/v1';
 const STAGING_API_BASE = 'https://develop.coati.sh/api/v1';
@@ -33,7 +35,9 @@ program
 	.option('--staging', `Use test environment (${STAGING_API_BASE})`)
 	.option('--api-base <url>', 'Override API base URL');
 
-program.hook('preAction', () => {
+const BANNER_COMMANDS = new Set(['init', 'clone']);
+
+program.hook('preAction', (_thisCommand, actionCommand) => {
 	const opts = program.opts<{ dev?: boolean; staging?: boolean; apiBase?: string }>();
 
 	if (opts.apiBase) {
@@ -46,6 +50,20 @@ program.hook('preAction', () => {
 
 	if (isNonProductionApi()) {
 		process.stderr.write(`⚠ dev mode → ${getEffectiveApiBase()}\n`);
+	}
+
+	// Show ASCII logo on init and clone
+	const commandName = actionCommand.name();
+	if (BANNER_COMMANDS.has(commandName)) {
+		printBanner(pkg.version);
+	}
+});
+
+program.hook('postAction', async () => {
+	const update = await checkForUpdate(pkg.version, { cacheDir: configDir });
+	if (update) {
+		console.log();
+		console.log(formatUpdateNotice(update.currentVersion, update.latestVersion));
 	}
 });
 

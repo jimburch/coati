@@ -13,7 +13,7 @@
 	let showReportForm = $state(false);
 	let reportSubmitting = $state(false);
 	const cloneCommand = $derived(
-		`npx @coati/sh clone ${data.setup.ownerUsername}/${data.setup.slug}`
+		`npx @coati/sh@latest clone ${data.setup.ownerUsername}/${data.setup.slug}`
 	);
 
 	// README editing state
