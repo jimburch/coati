@@ -133,8 +133,11 @@
 
 			<div class="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
 				{#if data.profile.websiteUrl}
+					{@const websiteHref = /^https?:\/\//i.test(data.profile.websiteUrl)
+						? data.profile.websiteUrl
+						: `https://${data.profile.websiteUrl}`}
 					<a
-						href={data.profile.websiteUrl}
+						href={websiteHref}
 						target="_blank"
 						rel="noopener noreferrer"
 						class="inline-flex items-center gap-1 hover:text-foreground"
@@ -146,7 +149,7 @@
 						</svg>
 						{(() => {
 							try {
-								return new URL(data.profile.websiteUrl).hostname;
+								return new URL(websiteHref).hostname;
 							} catch {
 								return data.profile.websiteUrl;
 							}
