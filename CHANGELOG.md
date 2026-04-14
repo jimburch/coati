@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/jimburch/coati/compare/v1.2.2...v1.3.0) (2026-04-14)
+
+
+### Features
+
+* **ui:** add GuideNudge popover for first-time users ([#266](https://github.com/jimburch/coati/issues/266)) ([#268](https://github.com/jimburch/coati/issues/268)) ([c64c930](https://github.com/jimburch/coati/commit/c64c930599ae0e46ca5d42d58ef9e49698b08eb7))
+
 ## [1.2.2](https://github.com/jimburch/coati/compare/v1.2.1...v1.2.2) (2026-04-14)
 
 
