@@ -31,12 +31,12 @@ vi.mock('$lib/server/rate-limit', () => ({
 	checkRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args)
 }));
 
-import { handle, betaGate } from './hooks.server';
+import { handle, betaGate, getThemeFromCookie } from './hooks.server';
 
 function makeEvent(opts: { cookie?: string; bearerToken?: string } = {}) {
 	const locals: Record<string, unknown> = {};
 	const cookies = {
-		get: vi.fn(),
+		get: vi.fn().mockReturnValue(undefined),
 		set: vi.fn()
 	};
 	const headers = new Headers();
@@ -85,7 +85,10 @@ describe('hooks.server handle', () => {
 		expect(event.locals.user).toBeNull();
 		expect(event.locals.session).toBeNull();
 		expect(mockValidateSessionToken).not.toHaveBeenCalled();
-		expect(resolve).toHaveBeenCalledWith(event);
+		expect(resolve).toHaveBeenCalledWith(
+			event,
+			expect.objectContaining({ transformPageChunk: expect.any(Function) })
+		);
 	});
 
 	it('authenticates via cookie token', async () => {
@@ -213,7 +216,10 @@ describe('hooks.server handle', () => {
 
 			const response = await handle({ event, resolve } as never);
 
-			expect(resolve).toHaveBeenCalledWith(event);
+			expect(resolve).toHaveBeenCalledWith(
+				event,
+				expect.objectContaining({ transformPageChunk: expect.any(Function) })
+			);
 			expect(response.status).toBe(200);
 		});
 
@@ -256,9 +262,39 @@ describe('hooks.server handle', () => {
 
 			const response = await handle({ event, resolve } as never);
 
-			expect(resolve).toHaveBeenCalledWith(event);
+			expect(resolve).toHaveBeenCalledWith(
+				event,
+				expect.objectContaining({ transformPageChunk: expect.any(Function) })
+			);
 			expect(response.status).toBe(200);
 		});
+	});
+});
+
+describe('getThemeFromCookie', () => {
+	it('returns "dark" when no theme cookie is set', () => {
+		const cookies = { get: vi.fn().mockReturnValue(undefined) };
+		expect(getThemeFromCookie(cookies as never)).toBe('dark');
+	});
+
+	it('returns "dark" when theme cookie is "dark"', () => {
+		const cookies = { get: vi.fn().mockReturnValue('dark') };
+		expect(getThemeFromCookie(cookies as never)).toBe('dark');
+	});
+
+	it('returns "light" when theme cookie is "light"', () => {
+		const cookies = { get: vi.fn().mockReturnValue('light') };
+		expect(getThemeFromCookie(cookies as never)).toBe('light');
+	});
+
+	it('returns "system" when theme cookie is "system"', () => {
+		const cookies = { get: vi.fn().mockReturnValue('system') };
+		expect(getThemeFromCookie(cookies as never)).toBe('system');
+	});
+
+	it('returns "dark" for invalid cookie values', () => {
+		const cookies = { get: vi.fn().mockReturnValue('invalid') };
+		expect(getThemeFromCookie(cookies as never)).toBe('dark');
 	});
 });
 

@@ -22,6 +22,12 @@ describe('renderMarkdown', () => {
 		expect(html).toContain('const');
 	});
 
+	it('renders code blocks with both light and dark theme styles', async () => {
+		const html = await renderMarkdown('```typescript\nconst x = 1;\n```');
+		expect(html).toContain('github-dark');
+		expect(html).toContain('github-light');
+	});
+
 	it('falls back gracefully for unknown languages', async () => {
 		const html = await renderMarkdown('```unknownlang\nsome code\n```');
 		expect(html).toContain('some code');
@@ -63,6 +69,12 @@ describe('highlightCode', () => {
 		const html = await highlightCode('const x: number = 1;', 'main.ts');
 		expect(html).toContain('shiki');
 		expect(html).toContain('const');
+	});
+
+	it('renders highlighted code with both light and dark theme styles', async () => {
+		const html = await highlightCode('const x = 1;', 'main.ts');
+		expect(html).toContain('github-dark');
+		expect(html).toContain('github-light');
 	});
 
 	it('highlights JavaScript files', async () => {

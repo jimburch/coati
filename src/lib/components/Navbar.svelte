@@ -5,6 +5,7 @@
 	import { fade, slide } from 'svelte/transition';
 	import { buttonVariants } from '$lib/components/ui/button/button.svelte';
 	import SearchDropdown from './SearchDropdown.svelte';
+	import ThemeToggle from './ThemeToggle.svelte';
 	import UserMenu from './UserMenu.svelte';
 	import type { LayoutUser } from '$lib/types';
 
@@ -134,7 +135,10 @@
 					<a href="/" class="text-lg font-bold">Coati</a>
 				</div>
 				<SearchDropdown bind:this={desktopDropdown} />
-				<div class="flex">
+				<div class="flex items-center gap-1">
+					{#if browser}
+						<ThemeToggle />
+					{/if}
 					{#if user}
 						{#if browser}
 							<UserMenu {user} />
@@ -169,7 +173,10 @@
 				<SearchDropdown bind:this={desktopDropdown} />
 			</div>
 
-			<div class="hidden lg:flex">
+			<div class="hidden items-center gap-1 lg:flex">
+				{#if browser}
+					<ThemeToggle />
+				{/if}
 				{#if user}
 					{#if browser}
 						<UserMenu {user} />
@@ -191,7 +198,7 @@
 				{/if}
 			</div>
 
-			<!-- Mobile right side: search icon + hamburger -->
+			<!-- Mobile right side: search icon + theme toggle + hamburger -->
 			<div class="flex items-center gap-1 lg:hidden">
 				<button
 					class="flex h-9 w-9 items-center justify-center rounded-md hover:bg-muted"
@@ -210,6 +217,10 @@
 						<path d="m21 21-4.3-4.3" />
 					</svg>
 				</button>
+
+				{#if browser}
+					<ThemeToggle />
+				{/if}
 
 				<button
 					class="flex h-9 w-9 items-center justify-center rounded-md hover:bg-muted"

@@ -37,24 +37,65 @@
 	--radius-xl: calc(var(--radius) + 4px);
 }
 
+/* Light theme (default in :root) */
 :root {
 	/* Neutrals: hue 220 (cool blue-grey) */
+	--background: oklch(0.985 0.002 220);
+	--foreground: oklch(0.11 0.015 220);
+	--card: oklch(1 0 0);
+	--card-foreground: oklch(0.11 0.015 220);
+	--popover: oklch(1 0 0);
+	--popover-foreground: oklch(0.11 0.015 220);
+	/* Primary: hue 160 (mint/green) */
+	--primary: oklch(0.55 0.18 160);
+	--primary-foreground: oklch(0.98 0.01 160);
+	/* Neutrals continued */
+	--secondary: oklch(0.94 0.006 220);
+	--secondary-foreground: oklch(0.15 0.015 220);
+	--muted: oklch(0.94 0.006 220);
+	--muted-foreground: oklch(0.4 0.015 220);
+	--accent: oklch(0.94 0.006 220);
+	--accent-foreground: oklch(0.15 0.015 220);
+	/* Destructive: red */
+	--destructive: oklch(0.577 0.245 27.325);
+	--destructive-foreground: oklch(0.98 0 0);
+	--border: oklch(0.88 0.006 220);
+	--input: oklch(0.88 0.006 220);
+	/* Ring: primary-derived (hue 160) */
+	--ring: oklch(0.55 0.18 160);
+	--radius: 0.625rem;
+	/* Sidebar: hue 220 neutrals */
+	--sidebar: oklch(0.97 0.002 220);
+	--sidebar-foreground: oklch(0.35 0.015 220);
+	/* Sidebar primary: hue 160 mint/green */
+	--sidebar-primary: oklch(0.55 0.18 160);
+	--sidebar-primary-foreground: oklch(0.98 0.01 160);
+	/* Sidebar accent/border/ring: hue 220 neutrals */
+	--sidebar-accent: oklch(0.94 0.006 220);
+	--sidebar-accent-foreground: oklch(0.35 0.015 220);
+	--sidebar-border: oklch(0.88 0.006 220);
+	--sidebar-ring: oklch(0.55 0.18 160);
+}
+
+/* Dark theme */
+.dark {
+	/* Neutrals: hue 220 (cool blue-grey) */
 	--background: oklch(0.145 0.012 220);
-	--foreground: oklch(0.96 0.008 220);
+	--foreground: oklch(0.985 0.005 220);
 	--card: oklch(0.17 0.012 220);
-	--card-foreground: oklch(0.96 0.008 220);
+	--card-foreground: oklch(0.985 0.005 220);
 	--popover: oklch(0.19 0.012 220);
-	--popover-foreground: oklch(0.96 0.008 220);
+	--popover-foreground: oklch(0.985 0.005 220);
 	/* Primary: hue 160 (mint/green) */
 	--primary: oklch(0.75 0.18 160);
 	--primary-foreground: oklch(0.15 0.04 160);
 	/* Neutrals continued */
 	--secondary: oklch(0.25 0.012 220);
-	--secondary-foreground: oklch(0.96 0.008 220);
+	--secondary-foreground: oklch(0.985 0.005 220);
 	--muted: oklch(0.25 0.012 220);
-	--muted-foreground: oklch(0.62 0.015 220);
+	--muted-foreground: oklch(0.7 0.012 220);
 	--accent: oklch(0.25 0.012 220);
-	--accent-foreground: oklch(0.96 0.008 220);
+	--accent-foreground: oklch(0.985 0.005 220);
 	/* Destructive: red */
 	--destructive: oklch(0.577 0.245 27.325);
 	--destructive-foreground: oklch(0.98 0 0);
@@ -62,18 +103,29 @@
 	--input: oklch(0.27 0.012 220);
 	/* Ring: primary-derived (hue 160) */
 	--ring: oklch(0.75 0.18 160);
-	--radius: 0.625rem;
 	/* Sidebar: hue 220 neutrals */
 	--sidebar: oklch(0.18 0.012 220);
-	--sidebar-foreground: oklch(0.62 0.015 220);
+	--sidebar-foreground: oklch(0.7 0.012 220);
 	/* Sidebar primary: hue 160 mint/green */
 	--sidebar-primary: oklch(0.75 0.18 160);
 	--sidebar-primary-foreground: oklch(0.15 0.04 160);
 	/* Sidebar accent/border/ring: hue 220 neutrals */
 	--sidebar-accent: oklch(0.25 0.012 220);
-	--sidebar-accent-foreground: oklch(0.62 0.015 220);
+	--sidebar-accent-foreground: oklch(0.7 0.012 220);
 	--sidebar-border: oklch(0.27 0.012 220);
 	--sidebar-ring: oklch(0.75 0.18 160);
+}
+
+/* Shiki dual-theme: light mode uses --shiki-light, dark mode uses --shiki-dark */
+.shiki,
+.shiki span {
+	color: var(--shiki-light);
+	background-color: var(--shiki-light-bg);
+}
+.dark .shiki,
+.dark .shiki span {
+	color: var(--shiki-dark);
+	background-color: var(--shiki-dark-bg);
 }
 
 @layer base {
@@ -91,10 +143,10 @@
 	/* Scrollbar styling */
 	* {
 		scrollbar-width: thin;
-		scrollbar-color: oklch(0.35 0.012 220) transparent;
+		scrollbar-color: var(--border) transparent;
 	}
 	*:hover {
-		scrollbar-color: oklch(0.45 0.012 220) transparent;
+		scrollbar-color: var(--muted-foreground) transparent;
 	}
 
 	/* Webkit scrollbar styling */
@@ -106,11 +158,11 @@
 		background: transparent;
 	}
 	::-webkit-scrollbar-thumb {
-		background: oklch(0.35 0.012 220);
+		background: var(--border);
 		border-radius: 4px;
 	}
 	::-webkit-scrollbar-thumb:hover {
-		background: oklch(0.45 0.012 220);
+		background: var(--muted-foreground);
 	}
 	::-webkit-scrollbar-corner {
 		background: transparent;

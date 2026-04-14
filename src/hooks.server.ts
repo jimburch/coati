@@ -1,4 +1,5 @@
-import type { Handle } from '@sveltejs/kit';
+import type { Cookies, Handle } from '@sveltejs/kit';
+import type { ThemePreference } from '$lib/utils/theme';
 import {
 	validateSessionToken,
 	getSessionToken,
@@ -10,6 +11,16 @@ import { env } from '$env/dynamic/public';
 import { startScheduler } from '$lib/server/scheduler';
 
 startScheduler();
+
+const VALID_THEMES: ThemePreference[] = ['light', 'dark', 'system'];
+
+export function getThemeFromCookie(cookies: Cookies): ThemePreference {
+	const value = cookies.get('theme');
+	if (value && VALID_THEMES.includes(value as ThemePreference)) {
+		return value as ThemePreference;
+	}
+	return 'dark';
+}
 
 type GateEvent = {
 	locals: { user: { isBetaApproved: boolean; isAdmin: boolean } | null };
@@ -89,5 +100,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 		});
 	}
 
-	return resolve(event);
+	const theme = getThemeFromCookie(event.cookies);
+	// For 'system', default to dark on server (client JS will correct based on prefers-color-scheme)
+	const themeClass = theme === 'light' ? '' : 'dark';
+
+	return resolve(event, {
+		transformPageChunk: ({ html }) => html.replace('%coati.theme%', themeClass)
+	});
 };
