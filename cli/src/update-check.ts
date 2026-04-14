@@ -21,6 +21,19 @@ interface CacheData {
 const CACHE_FILENAME = 'update-check.json';
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * Returns true if version `a` is less than version `b` (semver x.y.z only).
+ */
+export function semverLessThan(a: string, b: string): boolean {
+	const pa = a.split('.').map(Number);
+	const pb = b.split('.').map(Number);
+	for (let i = 0; i < 3; i++) {
+		if ((pa[i] ?? 0) < (pb[i] ?? 0)) return true;
+		if ((pa[i] ?? 0) > (pb[i] ?? 0)) return false;
+	}
+	return false;
+}
+
 function readCache(cacheDir: string): CacheData | null {
 	try {
 		const raw = fs.readFileSync(path.join(cacheDir, CACHE_FILENAME), 'utf-8');
@@ -62,7 +75,7 @@ export async function checkForUpdate(
 		writeCache(options.cacheDir, { lastCheck: Date.now(), latestVersion });
 	}
 
-	if (latestVersion === currentVersion) {
+	if (!semverLessThan(currentVersion, latestVersion)) {
 		return null;
 	}
 

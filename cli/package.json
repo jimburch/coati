@@ -1,6 +1,6 @@
 {
 	"name": "@coati/sh",
-	"version": "0.2.0",
+	"version": "0.3.1",
 	"description": "Coati CLI — clone, publish, and manage AI coding setups",
 	"type": "module",
 	"main": "dist/index.js",
