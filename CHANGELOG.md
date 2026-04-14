@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/jimburch/coati/compare/v1.2.1...v1.2.2) (2026-04-14)
+
+
+### Bug Fixes
+
+* **ci:** fix order with npm merge and semantic updates ([71e8c8d](https://github.com/jimburch/coati/commit/71e8c8d0132da157f41514416a784b6076c79022))
+
 ## [1.2.1](https://github.com/jimburch/coati/compare/v1.2.0...v1.2.1) (2026-04-14)
 
 
