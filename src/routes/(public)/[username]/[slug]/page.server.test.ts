@@ -13,12 +13,14 @@ vi.mock('$lib/server/queries/setupRepository', () => ({
 
 const mockSetFeatured = vi.fn();
 const mockGetSetupByOwnerSlug = vi.fn();
+const mockDeleteSetup = vi.fn();
 
 vi.mock('$lib/server/queries/setups', () => ({
 	setStar: vi.fn(),
 	getSetupByOwnerSlug: (...args: unknown[]) => mockGetSetupByOwnerSlug(...args),
 	isSetupStarredByUser: vi.fn(),
-	setFeatured: (...args: unknown[]) => mockSetFeatured(...args)
+	setFeatured: (...args: unknown[]) => mockSetFeatured(...args),
+	deleteSetup: (...args: unknown[]) => mockDeleteSetup(...args)
 }));
 
 vi.mock('$lib/server/queries/comments', () => ({
@@ -216,6 +218,70 @@ describe('feature action', () => {
 		const result = await actions.feature(event);
 		expect(mockSetFeatured).toHaveBeenCalledWith('setup-id', false);
 		expect(result).toMatchObject({ featured: false });
+	});
+});
+
+describe('delete action', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.resetModules();
+	});
+
+	it('redirects to login when not authenticated', async () => {
+		const { actions } = await import('./+page.server');
+		const event = makeActionEvent({}, { username: 'alice', slug: 'test-setup' }, null);
+		await expect(actions.delete(event)).rejects.toMatchObject({ status: 302 });
+	});
+
+	it('returns 404 when setup not found', async () => {
+		mockGetSetupByOwnerSlug.mockResolvedValue(null);
+		const { actions } = await import('./+page.server');
+		const event = makeActionEvent(
+			{ slug: 'test-setup' },
+			{ username: 'alice', slug: 'test-setup' },
+			{ id: 'owner-id', username: 'alice' }
+		);
+		await expect(actions.delete(event)).rejects.toMatchObject({ status: 404 });
+	});
+
+	it('returns 403 when user does not own the setup', async () => {
+		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
+		const { actions } = await import('./+page.server');
+		const event = makeActionEvent(
+			{ slug: 'test-setup' },
+			{ username: 'alice', slug: 'test-setup' },
+			{ id: 'other-user-id', username: 'bob' }
+		);
+		const result = await actions.delete(event);
+		expect(result).toMatchObject({ status: 403 });
+	});
+
+	it('returns 400 when slug confirmation does not match', async () => {
+		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
+		const { actions } = await import('./+page.server');
+		const event = makeActionEvent(
+			{ slug: 'wrong-slug' },
+			{ username: 'alice', slug: 'test-setup' },
+			{ id: 'owner-id', username: 'alice' }
+		);
+		const result = await actions.delete(event);
+		expect(result).toMatchObject({ status: 400 });
+	});
+
+	it('deletes setup and redirects to profile with deleted query param', async () => {
+		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
+		mockDeleteSetup.mockResolvedValue(1);
+		const { actions } = await import('./+page.server');
+		const event = makeActionEvent(
+			{ slug: 'test-setup' },
+			{ username: 'alice', slug: 'test-setup' },
+			{ id: 'owner-id', username: 'alice' }
+		);
+		await expect(actions.delete(event)).rejects.toMatchObject({
+			status: 303,
+			location: '/alice?deleted=Test%20Setup'
+		});
+		expect(mockDeleteSetup).toHaveBeenCalledWith('setup-id', 'owner-id');
 	});
 });
 
