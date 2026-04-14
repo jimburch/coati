@@ -33,8 +33,12 @@ export default defineConfig({
 				test: {
 					name: 'server',
 					environment: 'node',
+					setupFiles: ['dotenv/config'],
 					include: ['src/**/*.{test,spec}.{js,ts}'],
-					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
+					exclude: [
+						'src/**/*.svelte.{test,spec}.{js,ts}',
+						...(process.env.CI ? ['src/**/*.integration.test.{js,ts}'] : [])
+					]
 				}
 			}
 		]

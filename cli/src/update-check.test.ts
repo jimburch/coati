@@ -2,7 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { checkForUpdate, formatUpdateNotice } from './update-check.js';
+import { checkForUpdate, formatUpdateNotice, semverLessThan } from './update-check.js';
 
 let tmpDir: string;
 
@@ -13,6 +13,20 @@ beforeEach(() => {
 afterEach(() => {
 	fs.rmSync(tmpDir, { recursive: true, force: true });
 	vi.restoreAllMocks();
+});
+
+describe('semverLessThan', () => {
+	it('returns true when a < b', () => {
+		expect(semverLessThan('0.2.0', '0.3.0')).toBe(true);
+		expect(semverLessThan('0.3.0', '0.3.1')).toBe(true);
+		expect(semverLessThan('0.9.9', '1.0.0')).toBe(true);
+	});
+
+	it('returns false when a >= b', () => {
+		expect(semverLessThan('0.3.0', '0.3.0')).toBe(false);
+		expect(semverLessThan('0.3.0', '0.2.1')).toBe(false);
+		expect(semverLessThan('1.0.0', '0.9.9')).toBe(false);
+	});
 });
 
 describe('formatUpdateNotice', () => {
@@ -85,5 +99,13 @@ describe('checkForUpdate', () => {
 
 		const result = await checkForUpdate('0.3.0', { cacheDir: tmpDir });
 		expect(result).toEqual({ currentVersion: '0.3.0', latestVersion: '0.4.0' });
+	});
+
+	it('returns null when npm latest is older than current version (version regression)', async () => {
+		const cacheFile = path.join(tmpDir, 'update-check.json');
+		fs.writeFileSync(cacheFile, JSON.stringify({ lastCheck: Date.now(), latestVersion: '0.2.1' }));
+
+		const result = await checkForUpdate('0.3.0', { cacheDir: tmpDir });
+		expect(result).toBeNull();
 	});
 });
