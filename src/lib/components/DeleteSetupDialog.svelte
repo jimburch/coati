@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 	import {
 		AlertDialog,
 		AlertDialogContent,
@@ -53,7 +54,9 @@
 				deleting = true;
 				return async ({ result, update }) => {
 					deleting = false;
-					if (result.type !== 'redirect') {
+					if (result.type === 'redirect') {
+						await goto(result.location);
+					} else {
 						await update();
 					}
 				};
@@ -61,7 +64,7 @@
 		>
 			<input type="hidden" name="slug" value={slug} />
 
-			<div class="mb-4 space-y-1.5">
+			<div class="mb-4 space-y-1.5 gap-2 flex flex-col">
 				<Label for="delete-slug-input">
 					Type <strong>{slug}</strong> to confirm
 				</Label>

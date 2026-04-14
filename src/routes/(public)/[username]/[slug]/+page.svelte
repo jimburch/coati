@@ -1,12 +1,6 @@
 <script lang="ts">
 	import { Avatar, AvatarImage, AvatarFallback } from '$lib/components/ui/avatar';
 	import { Button } from '$lib/components/ui/button';
-	import {
-		DropdownMenu,
-		DropdownMenuContent,
-		DropdownMenuItem,
-		DropdownMenuTrigger
-	} from '$lib/components/ui/dropdown-menu';
 	import StarButton from '$lib/components/StarButton.svelte';
 	import AgentIcon from '$lib/components/AgentIcon.svelte';
 	import OgMeta from '$lib/components/OgMeta.svelte';
@@ -260,43 +254,17 @@
 					/>
 				</div>
 
-				<!-- Owner actions dropdown -->
+				<!-- Owner: delete setup -->
 				{#if isOwner}
 					<div>
-						<DropdownMenu>
-							<DropdownMenuTrigger>
-								{#snippet child({ props })}
-									<Button
-										variant="outline"
-										size="sm"
-										class="w-full"
-										{...props}
-										data-testid="owner-actions-btn"
-									>
-										Actions
-										<svg
-											class="ml-auto size-4"
-											viewBox="0 0 16 16"
-											fill="currentColor"
-											aria-hidden="true"
-										>
-											<path
-												d="M4.427 7.427l3.396 3.396a.25.25 0 0 0 .354 0l3.396-3.396A.25.25 0 0 0 11.396 7H4.604a.25.25 0 0 0-.177.427Z"
-											/>
-										</svg>
-									</Button>
-								{/snippet}
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="end" class="w-48">
-								<DropdownMenuItem
-									variant="destructive"
-									onclick={() => (deleteDialogOpen = true)}
-									data-testid="delete-setup-menu-item"
-								>
-									Delete setup
-								</DropdownMenuItem>
-							</DropdownMenuContent>
-						</DropdownMenu>
+						<Button
+							variant="outline"
+							class="w-full text-destructive/70"
+							onclick={() => (deleteDialogOpen = true)}
+							data-testid="delete-setup-btn"
+						>
+							Delete setup
+						</Button>
 					</div>
 				{/if}
 
@@ -318,7 +286,6 @@
 							<Button
 								type="submit"
 								variant={isFeatured ? 'default' : 'outline'}
-								size="sm"
 								class="w-full"
 								data-testid="feature-toggle-btn"
 							>
