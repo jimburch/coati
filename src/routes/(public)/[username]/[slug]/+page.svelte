@@ -83,12 +83,12 @@
 </script>
 
 <svelte:head>
-	<title>{data.setup.name} by {data.setup.ownerUsername} - Coati</title>
+	<title>{data.setup.display ?? data.setup.name} by {data.setup.ownerUsername} - Coati</title>
 	<meta name="description" content={data.setup.description} />
 </svelte:head>
 
 <OgMeta
-	title="{data.setup.name} by {data.setup.ownerUsername} - Coati"
+	title="{data.setup.display ?? data.setup.name} by {data.setup.ownerUsername} - Coati"
 	description={data.setup.description}
 	url="/{data.setup.ownerUsername}/{data.setup.slug}"
 	type="article"
@@ -230,7 +230,7 @@
 				<!-- About -->
 				<div>
 					<h3 class="mb-2 text-sm font-semibold text-muted-foreground">About</h3>
-					<h2 class="text-lg font-semibold">{data.setup.name}</h2>
+					<h2 class="text-lg font-semibold">{data.setup.display ?? data.setup.name}</h2>
 					<p class="mt-1 text-sm text-muted-foreground">{data.setup.description}</p>
 				</div>
 

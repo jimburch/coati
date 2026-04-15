@@ -223,3 +223,28 @@ test('desktop: avatar is full size at 1280x720', async ({ page, isMobile }) => {
 		expect(box.width).toBeGreaterThanOrEqual(96);
 	}
 });
+
+test('setup cards in setups tab show non-empty title headings', async ({ page }) => {
+	await page.goto(PROFILE_URL);
+	const panel = page.getByTestId('tab-panel-setups');
+	const cards = panel.locator('a');
+	if (await cards.first().isVisible()) {
+		// Each card should have an h3 with the setup title (display ?? name)
+		const firstHeading = cards.first().locator('h3');
+		await expect(firstHeading).toBeVisible();
+		const text = await firstHeading.textContent();
+		expect(text?.trim().length).toBeGreaterThan(0);
+	}
+});
+
+test('setup cards in starred tab show non-empty title headings', async ({ page }) => {
+	await page.goto(`${PROFILE_URL}?tab=starred`);
+	const panel = page.getByTestId('tab-panel-starred');
+	const cards = panel.locator('a');
+	if (await cards.first().isVisible()) {
+		const firstHeading = cards.first().locator('h3');
+		await expect(firstHeading).toBeVisible();
+		const text = await firstHeading.textContent();
+		expect(text?.trim().length).toBeGreaterThan(0);
+	}
+});

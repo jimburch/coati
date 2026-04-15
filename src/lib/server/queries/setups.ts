@@ -39,6 +39,7 @@ export async function getSetupsByUserId(userId: string) {
 			name: setups.name,
 			slug: setups.slug,
 			description: setups.description,
+			display: setups.display,
 			starsCount: setups.starsCount,
 			clonesCount: setups.clonesCount,
 			updatedAt: setups.updatedAt
@@ -532,6 +533,7 @@ export async function searchSetups(filters: {
 			name: string;
 			slug: string;
 			description: string;
+			display: string | null;
 			stars_count: number;
 			clones_count: number;
 			updated_at: Date;
@@ -539,6 +541,7 @@ export async function searchSetups(filters: {
 			owner_avatar_url: string;
 		}>(
 			sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
+				${setups.display},
 				${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
 				${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
 				FROM ${setups}
@@ -566,6 +569,7 @@ export async function searchSetups(filters: {
 			name: row.name,
 			slug: row.slug,
 			description: row.description,
+			display: row.display ?? null,
 			starsCount: row.stars_count,
 			clonesCount: row.clones_count,
 			updatedAt: new Date(row.updated_at),
@@ -707,6 +711,7 @@ export async function getStarredSetupsByUserId(userId: string) {
 			name: setups.name,
 			slug: setups.slug,
 			description: setups.description,
+			display: setups.display,
 			starsCount: setups.starsCount,
 			clonesCount: setups.clonesCount,
 			updatedAt: setups.updatedAt,

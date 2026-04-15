@@ -48,6 +48,7 @@ export type SetupCardProps = {
 	name: string;
 	slug: string;
 	description: string;
+	display?: string | null;
 	starsCount: number;
 	clonesCount: number;
 	updatedAt: Date;

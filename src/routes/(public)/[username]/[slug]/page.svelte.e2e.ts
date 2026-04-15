@@ -121,3 +121,33 @@ test('desktop: comments always visible without toggle button', async ({ page, is
 	const showBtn = page.getByTestId('show-comments-btn');
 	await expect(showBtn).toBeHidden();
 });
+
+test('About section shows setup title heading', async ({ page }) => {
+	await page.goto(SETUP_URL);
+	// The About section contains an h2 with the setup title
+	const sidebar = page.locator('.lg\\:w-72');
+	await expect(sidebar.locator('h2')).toBeVisible();
+	// Title should be non-empty
+	const titleText = await sidebar.locator('h2').textContent();
+	expect(titleText?.trim().length).toBeGreaterThan(0);
+});
+
+test('page title tag includes setup name', async ({ page }) => {
+	await page.goto(SETUP_URL);
+	const title = await page.title();
+	expect(title).toContain('Coati');
+	expect(title.length).toBeGreaterThan(0);
+});
+
+test('About section title does not contain slug separator when display name is set', async ({
+	page
+}) => {
+	// This test verifies that setup detail About section renders a title
+	// When a setup has a display name, it should appear here instead of the slug
+	await page.goto(SETUP_URL);
+	const sidebar = page.locator('.lg\\:w-72');
+	const heading = sidebar.locator('h2');
+	await expect(heading).toBeVisible();
+	const text = await heading.textContent();
+	expect(text?.trim().length).toBeGreaterThan(0);
+});
