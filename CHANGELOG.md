@@ -1,3 +1,11 @@
+## [1.4.1](https://github.com/jimburch/coati/compare/v1.4.0...v1.4.1) (2026-04-15)
+
+
+### Bug Fixes
+
+* **docs:** correct example of coati json ([4e92bb2](https://github.com/jimburch/coati/commit/4e92bb2683a6afaa2f730fd4b98f319cf0d5003a))
+* **ui:** prevent nav bar from popping out of view when menu opens ([c4a8132](https://github.com/jimburch/coati/commit/c4a8132eb07eee8492d082171babbe66f5c59f1b))
+
 # [1.4.0](https://github.com/jimburch/coati/compare/v1.3.0...v1.4.0) (2026-04-14)
 
 
