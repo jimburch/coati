@@ -104,16 +104,17 @@
 				<h2 class="mb-4 text-2xl font-bold tracking-tight">What is Coati?</h2>
 				<div class="space-y-4 text-muted-foreground">
 					<p>
-						Coati is a platform for developers to share, discover, and clone AI coding setups —
-						think GitHub, but for your AI workflow. A <strong class="text-foreground">setup</strong>
+						Coati is where developers share and discover AI coding setups. A <strong
+							class="text-foreground">setup</strong
+						>
 						is a packaged collection of config files, scripts, hooks, skills, commands, and documentation
-						that defines how you work with AI coding tools like Claude Code, Cursor, or Codex.
+						for tools like Claude Code, Cursor, or Codex.
 					</p>
 					<p>
-						Whether you've spent hours tuning a perfect <code
-							class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground">CLAUDE.md</code
-						>, built custom slash commands, or wired up a set of hooks — Coati lets you share that
-						work with the community and pick up setups from other developers in seconds.
+						Got a <code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
+							>CLAUDE.md</code
+						> you're proud of? Built custom slash commands or hooks? Coati lets you share that work and
+						pick up setups from other developers in seconds.
 					</p>
 				</div>
 			</section>
@@ -123,8 +124,8 @@
 				<h2 class="mb-4 text-2xl font-bold tracking-tight">Supported Agents</h2>
 				<div class="space-y-4 text-muted-foreground">
 					<p>
-						Coati supports setups for the following AI coding agents. Each agent has its own config
-						file patterns, commands, and conventions — Coati understands them all.
+						Coati supports setups for these AI coding agents. Each one has its own config file
+						patterns, commands, and conventions.
 					</p>
 				</div>
 				<div class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -155,14 +156,12 @@
 						Code, Cursor, Windsurf, and more), and sort by trending, most-starred, or newest.
 					</p>
 					<p>
-						Each setup page shows you exactly what's included — the manifest, all config files, and
-						a description from the author. You can star setups you like to save them to your profile
-						and help surface them to others.
+						Each setup page shows the manifest, all config files, and a description from the author.
+						Star the ones you like to save them to your profile.
 					</p>
 					<p>
-						The <strong class="text-foreground">trending</strong> feed highlights setups gaining the
-						most traction this week. New setups worth watching are easy to find under
-						<strong class="text-foreground">newest</strong>.
+						The <strong class="text-foreground">trending</strong> feed shows what's popular this
+						week. Check <strong class="text-foreground">newest</strong> for fresh uploads.
 					</p>
 				</div>
 			</section>
@@ -174,8 +173,8 @@
 					<p>
 						The <code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
 							>coati</code
-						> CLI lets you clone setups directly into your project, publish your own, and interact with
-						Coati from the terminal. The quickest way to use it is via npx — no install needed:
+						> CLI lets you clone setups into your project, publish your own, and interact with Coati from
+						the terminal. The quickest way is npx:
 					</p>
 				</div>
 				<div class="mt-4 space-y-4">
@@ -247,7 +246,7 @@
 						command scaffolds a
 						<code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
 							>coati.json</code
-						> manifest — the core of every setup:
+						> manifest, which is the core of every setup:
 					</p>
 				</div>
 				<div class="mt-4 space-y-4">
@@ -260,18 +259,32 @@
 						code={`{
   "name": "my-setup",
   "description": "My AI coding workflow for TypeScript projects",
+  "category": "web-dev",
   "agents": ["claude-code"],
+  "tags": ["typescript", "claude-code"],
   "files": [
-    "CLAUDE.md",
-    ".claude/commands/commit.md",
-    ".claude/hooks/pre-tool.sh"
+    {
+      "path": "CLAUDE.md",
+      "componentType": "instruction",
+      "agent": "claude-code"
+    },
+    {
+      "path": ".claude/commands/commit.md",
+      "componentType": "command",
+      "agent": "claude-code"
+    },
+    {
+      "path": ".claude/hooks/pre-tool.sh",
+      "componentType": "hook",
+      "agent": "claude-code"
+    }
   ]
 }`}
 						language="json"
 						label="coati.json"
 					/>
 					<p class="text-muted-foreground">
-						Add any files you want to bundle — config files, slash commands, hooks, scripts, or
+						Add any files you want to bundle: config files, slash commands, hooks, scripts, or
 						documentation. Then reference them in the <code
 							class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground">files</code
 						> array.
@@ -302,7 +315,7 @@
 						To update a published setup, edit your files locally and run <code
 							class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
 							>coati publish</code
-						> again — it will overwrite the current version.
+						> again. It will overwrite the current version.
 					</p>
 				</div>
 			</section>
@@ -311,24 +324,18 @@
 			<section id="social-features" class="scroll-mt-20">
 				<h2 class="mb-4 text-2xl font-bold tracking-tight">Social Features</h2>
 				<div class="space-y-4 text-muted-foreground">
-					<p>
-						Coati has lightweight social features to help you find great setups and stay connected
-						with the developers behind them.
-					</p>
 					<ul class="ml-4 list-disc space-y-2">
 						<li>
-							<strong class="text-foreground">Stars</strong> — Star setups to save them to your profile
-							and signal quality to the community. Starred setups appear on your profile for others to
-							find.
+							<strong class="text-foreground">Stars:</strong> Save setups to your profile and help others
+							find the good ones.
 						</li>
 						<li>
-							<strong class="text-foreground">Follows</strong> — Follow developers whose setups you like.
-							Their new setups will appear in your activity feed.
+							<strong class="text-foreground">Follows:</strong> Follow developers you like. Their new
+							setups show up in your feed.
 						</li>
 						<li>
-							<strong class="text-foreground">Activity feed</strong> — See recent activity from people
-							you follow: new setups, stars, and more. Access your feed from the dashboard after signing
-							in.
+							<strong class="text-foreground">Activity feed:</strong> See what the people you follow are
+							up to. Available from your dashboard after signing in.
 						</li>
 					</ul>
 				</div>

@@ -161,27 +161,31 @@
   <span class="text-blue-500 dark:text-blue-400">"name"</span>: <span
 							class="text-green-600 dark:text-green-400">"my-claude-setup"</span
 						>,
-  <span class="text-blue-500 dark:text-blue-400">"version"</span>: <span
-							class="text-green-600 dark:text-green-400">"1.0.0"</span
-						>,
   <span class="text-blue-500 dark:text-blue-400">"description"</span>: <span
 							class="text-green-600 dark:text-green-400">"Full-stack TypeScript workflow"</span
 						>,
-  <span class="text-blue-500 dark:text-blue-400">"tools"</span>: [<span
-							class="text-green-600 dark:text-green-400">"claude-code"</span
-						>, <span class="text-green-600 dark:text-green-400">"eslint"</span>, <span
-							class="text-green-600 dark:text-green-400">"prettier"</span
-						>],
-  <span class="text-blue-500 dark:text-blue-400">"files"</span>: <span class="text-muted-foreground"
-							>{LBRACE}</span
-						>
-    <span class="text-blue-500 dark:text-blue-400">"CLAUDE.md"</span>: <span
-							class="text-green-600 dark:text-green-400">"configs/CLAUDE.md"</span
+  <span class="text-blue-500 dark:text-blue-400">"category"</span>: <span
+							class="text-green-600 dark:text-green-400">"web-dev"</span
 						>,
-    <span class="text-blue-500 dark:text-blue-400">".cursorrules"</span>: <span
-							class="text-green-600 dark:text-green-400">"configs/.cursorrules"</span
+  <span class="text-blue-500 dark:text-blue-400">"agents"</span>: [<span
+							class="text-green-600 dark:text-green-400">"claude-code"</span
+						>],
+  <span class="text-blue-500 dark:text-blue-400">"tags"</span>: [<span
+							class="text-green-600 dark:text-green-400">"typescript"</span
+						>, <span class="text-green-600 dark:text-green-400">"fullstack"</span>],
+  <span class="text-blue-500 dark:text-blue-400">"files"</span>: [
+    <span class="text-muted-foreground">{LBRACE}</span>
+      <span class="text-blue-500 dark:text-blue-400">"path"</span>: <span
+							class="text-green-600 dark:text-green-400">"CLAUDE.md"</span
+						>,
+      <span class="text-blue-500 dark:text-blue-400">"componentType"</span>: <span
+							class="text-green-600 dark:text-green-400">"instruction"</span
+						>,
+      <span class="text-blue-500 dark:text-blue-400">"agent"</span>: <span
+							class="text-green-600 dark:text-green-400">"claude-code"</span
 						>
-  <span class="text-muted-foreground">{RBRACE}</span>
+    <span class="text-muted-foreground">{RBRACE}</span>
+  ]
 <span class="text-muted-foreground">{RBRACE}</span></pre>
 				</div>
 				<!-- Subtle decorative element behind the card -->

@@ -9,24 +9,24 @@
 	<!-- Content -->
 	<div class="overflow-x-auto p-5 font-mono text-[13px] leading-loose">
 		<pre><span class="text-muted-foreground">{'{'}</span>
-  <span class="text-primary">"name"</span>: <span class="text-accent">"typescript-fullstack"</span>,
-  <span class="text-primary">"version"</span>: <span class="text-accent">"1.0.0"</span>,
+  <span class="text-primary">"name"</span>: <span class="text-accent">"my-claude-setup"</span>,
   <span class="text-primary">"description"</span>: <span class="text-accent"
 				>"Full-stack TypeScript workflow"</span
 			>,
-  <span class="text-primary">"tools"</span>: [<span class="text-accent">"claude-code"</span>, <span
-				class="text-accent">"eslint"</span
-			>, <span class="text-accent">"prettier"</span>],
-  <span class="text-primary">"mcp_servers"</span>: [<span class="text-accent">"filesystem"</span
-			>, <span class="text-accent">"postgres"</span>, <span class="text-accent">"github"</span>],
-  <span class="text-primary">"files"</span>: <span class="text-muted-foreground">{'{'}</span>
-    <span class="text-primary">"CLAUDE.md"</span>: <span class="text-accent"
-				>"configs/CLAUDE.md"</span
+  <span class="text-primary">"category"</span>: <span class="text-accent">"web-dev"</span>,
+  <span class="text-primary">"agents"</span>: [<span class="text-accent">"claude-code"</span>],
+  <span class="text-primary">"tags"</span>: [<span class="text-accent">"typescript"</span>, <span
+				class="text-accent">"fullstack"</span
+			>],
+  <span class="text-primary">"files"</span>: [
+    <span class="text-muted-foreground">{'{'}</span>
+      <span class="text-primary">"path"</span>: <span class="text-accent">"CLAUDE.md"</span>,
+      <span class="text-primary">"componentType"</span>: <span class="text-accent"
+				>"instruction"</span
 			>,
-    <span class="text-primary">".cursorrules"</span>: <span class="text-accent"
-				>"configs/.cursorrules"</span
-			>
-  <span class="text-muted-foreground">}</span>
+      <span class="text-primary">"agent"</span>: <span class="text-accent">"claude-code"</span>
+    <span class="text-muted-foreground">}</span>
+  ]
 <span class="text-muted-foreground">}</span></pre>
 	</div>
 </div>
