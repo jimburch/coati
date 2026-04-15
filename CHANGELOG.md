@@ -1,3 +1,18 @@
+# [1.5.0](https://github.com/jimburch/coati/compare/v1.4.1...v1.5.0) (2026-04-15)
+
+
+### Bug Fixes
+
+* **db:** resolve bad timestamps in migration ([cae0e7e](https://github.com/jimburch/coati/commit/cae0e7e07efead0e12a730da48bc1724846418f7))
+* **ui:** file viewer content wraps instead of overflows ([20d5e44](https://github.com/jimburch/coati/commit/20d5e4423bc9351f5e3ec88e178f846d82ff7fb3))
+* **ui:** prevent guide popup from flashing on refresh ([c5dc892](https://github.com/jimburch/coati/commit/c5dc8929b929f5a1fb2b00a05b806540745f1fbb))
+* **ui:** readme editor preview shows content ([d59e21e](https://github.com/jimburch/coati/commit/d59e21efb89a51cf37059524de4de45d888159c9))
+
+
+### Features
+
+* **ui:** users can edit setup about details with dedicated display name ([#282](https://github.com/jimburch/coati/issues/282)) ([b2c5b1f](https://github.com/jimburch/coati/commit/b2c5b1f85efa3a3e6d2978d40fe2b769946e36be))
+
 ## [1.4.1](https://github.com/jimburch/coati/compare/v1.4.0...v1.4.1) (2026-04-15)
 
 
