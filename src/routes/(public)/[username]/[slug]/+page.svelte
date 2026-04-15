@@ -5,7 +5,7 @@
 	import AgentIcon from '$lib/components/AgentIcon.svelte';
 	import OgMeta from '$lib/components/OgMeta.svelte';
 	import DeleteSetupDialog from '$lib/components/DeleteSetupDialog.svelte';
-	import { enhance } from '$app/forms';
+	import { enhance, deserialize } from '$app/forms';
 	import { timeAgo } from '$lib/utils';
 
 	const { data } = $props();
@@ -148,8 +148,11 @@
 									const fd = new FormData();
 									fd.append('readme', editContent);
 									const res = await fetch('?/previewReadme', { method: 'POST', body: fd });
-									const json = await res.json();
-									previewHtml = json?.data?.previewHtml ?? null;
+									const result = deserialize(await res.text());
+									previewHtml =
+										result.type === 'success'
+											? ((result.data?.previewHtml as string | null) ?? null)
+											: null;
 								} finally {
 									previewing = false;
 								}
