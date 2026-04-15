@@ -35,6 +35,8 @@ export interface Manifest {
 	id?: string;
 	/** UUID of the upstream setup this was cloned from. Written by `coati clone`. */
 	sourceId?: string;
+	/** Human-friendly display name (e.g. "My Awesome Setup"). Written by `coati init`. */
+	display?: string;
 	name: string;
 	version: string;
 	description: string;

@@ -612,6 +612,46 @@ describe('publish — placement field in coati.json', () => {
 	});
 });
 
+// ── display field ─────────────────────────────────────────────────────────────
+
+describe('publish — display field in coati.json', () => {
+	it('includes display in POST payload when present in manifest', async () => {
+		mockReadManifest.mockReturnValue({ ...MOCK_MANIFEST, display: 'My Awesome Setup' });
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		const postCall = vi.mocked(ctx.api.post).mock.calls[0][1] as Record<string, unknown>;
+		expect(postCall).toHaveProperty('display', 'My Awesome Setup');
+	});
+
+	it('omits display from POST payload when absent in manifest (backward compat)', async () => {
+		mockReadManifest.mockReturnValue(MOCK_MANIFEST);
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		const postCall = vi.mocked(ctx.api.post).mock.calls[0][1] as Record<string, unknown>;
+		expect(postCall).not.toHaveProperty('display');
+	});
+
+	it('includes display in PATCH payload when present in manifest', async () => {
+		mockReadManifest.mockReturnValue({ ...MOCK_MANIFEST_WITH_ID, display: 'My Awesome Setup' });
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		const patchCall = vi.mocked(ctx.api.patch).mock.calls[0][1] as Record<string, unknown>;
+		expect(patchCall).toHaveProperty('display', 'My Awesome Setup');
+	});
+
+	it('omits display from PATCH payload when absent in manifest', async () => {
+		mockReadManifest.mockReturnValue(MOCK_MANIFEST_WITH_ID);
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		const patchCall = vi.mocked(ctx.api.patch).mock.calls[0][1] as Record<string, unknown>;
+		expect(patchCall).not.toHaveProperty('display');
+	});
+});
+
 // ── clone-tracking fields ─────────────────────────────────────────────────────
 
 describe('publish — clone-tracking fields', () => {

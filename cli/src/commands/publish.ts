@@ -208,6 +208,7 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 				name: manifest.name,
 				slug: manifest.name,
 				description: manifest.description,
+				...(manifest.display ? { display: manifest.display } : {}),
 				...(manifest.category ? { category: manifest.category } : {}),
 				...(manifest.license ? { license: manifest.license } : {}),
 				...(manifest.minToolVersion ? { minToolVersion: manifest.minToolVersion } : {}),
