@@ -61,6 +61,42 @@ export const actions: Actions = {
 		return { readmeHtml, updatedAt: updated.updatedAt };
 	},
 
+	saveAbout: async ({ locals, params, request }) => {
+		if (!locals.user) throw redirect(302, '/auth/login/github');
+
+		const detail = await setupRepo.getDetail(params.username, params.slug, locals.user.id);
+		if (!detail) throw error(404, 'Setup not found');
+		if (detail.userId !== locals.user.id) {
+			return fail(403, { error: 'You do not own this setup', code: 'FORBIDDEN' });
+		}
+
+		const formData = await request.formData();
+		const displayRaw = formData.get('display');
+		const descriptionRaw = formData.get('description');
+
+		const display = typeof displayRaw === 'string' ? displayRaw.trim() : '';
+		const description = typeof descriptionRaw === 'string' ? descriptionRaw.trim() : '';
+
+		if (!display) {
+			return fail(400, { error: 'Display name is required', code: 'INVALID_DISPLAY' });
+		}
+		if (display.length > 150) {
+			return fail(400, {
+				error: 'Display name must be 150 characters or fewer',
+				code: 'INVALID_DISPLAY'
+			});
+		}
+		if (description.length > 300) {
+			return fail(400, {
+				error: 'Description must be 300 characters or fewer',
+				code: 'INVALID_DESCRIPTION'
+			});
+		}
+
+		const updated = await setupRepo.update(detail.id, { display, description });
+		return { display: updated.display, description: updated.description };
+	},
+
 	previewReadme: async ({ request }) => {
 		const formData = await request.formData();
 		const readme = String(formData.get('readme') ?? '');

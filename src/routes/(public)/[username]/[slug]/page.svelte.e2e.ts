@@ -151,3 +151,90 @@ test('About section title does not contain slug separator when display name is s
 	const text = await heading.textContent();
 	expect(text?.trim().length).toBeGreaterThan(0);
 });
+
+// About section edit tests
+// Note: these tests require the app to be running with an authenticated owner session.
+// The edit button is only visible to setup owners.
+
+test('About section: edit button not visible to non-owners', async ({ page }) => {
+	// When not logged in, the edit button should not appear
+	await page.goto(SETUP_URL);
+	const editAboutBtn = page.getByTestId('edit-about-btn');
+	await expect(editAboutBtn).not.toBeVisible();
+});
+
+test('About section: pencil icon toggles edit mode for owner', async ({ page }) => {
+	// Requires owner authentication — skip if edit button not visible
+	await page.goto(SETUP_URL);
+	const editAboutBtn = page.getByTestId('edit-about-btn');
+	const isVisible = await editAboutBtn.isVisible();
+	if (!isVisible) {
+		test.skip();
+		return;
+	}
+	await editAboutBtn.click();
+	await expect(page.getByTestId('about-editor')).toBeVisible();
+	await expect(page.getByTestId('about-display-input')).toBeVisible();
+	await expect(page.getByTestId('about-description-textarea')).toBeVisible();
+});
+
+test('About section: cancel button exits edit mode without saving', async ({ page }) => {
+	await page.goto(SETUP_URL);
+	const editAboutBtn = page.getByTestId('edit-about-btn');
+	const isVisible = await editAboutBtn.isVisible();
+	if (!isVisible) {
+		test.skip();
+		return;
+	}
+	await editAboutBtn.click();
+	await expect(page.getByTestId('about-editor')).toBeVisible();
+
+	await page.getByTestId('cancel-about-btn').click();
+	await expect(page.getByTestId('about-editor')).not.toBeVisible();
+	await expect(page.getByTestId('edit-about-btn')).toBeVisible();
+});
+
+test('About section: save updates display name and description', async ({ page }) => {
+	await page.goto(SETUP_URL);
+	const editAboutBtn = page.getByTestId('edit-about-btn');
+	const isVisible = await editAboutBtn.isVisible();
+	if (!isVisible) {
+		test.skip();
+		return;
+	}
+	await editAboutBtn.click();
+
+	const displayInput = page.getByTestId('about-display-input');
+	const descriptionTextarea = page.getByTestId('about-description-textarea');
+
+	await displayInput.fill('Updated Display Name');
+	await descriptionTextarea.fill('Updated description text');
+
+	await page.getByTestId('save-about-btn').click();
+
+	// After save, edit mode should close and updated values should appear
+	await expect(page.getByTestId('about-editor')).not.toBeVisible();
+	const sidebar = page.locator('.lg\\:w-72');
+	await expect(sidebar.locator('h2')).toContainText('Updated Display Name');
+});
+
+test('About section: empty display name is rejected by browser required validation', async ({
+	page
+}) => {
+	await page.goto(SETUP_URL);
+	const editAboutBtn = page.getByTestId('edit-about-btn');
+	const isVisible = await editAboutBtn.isVisible();
+	if (!isVisible) {
+		test.skip();
+		return;
+	}
+	await editAboutBtn.click();
+
+	const displayInput = page.getByTestId('about-display-input');
+	await displayInput.fill('');
+
+	// The input has `required` attribute — browser prevents form submission
+	// The editor should remain visible
+	await page.getByTestId('save-about-btn').click();
+	await expect(page.getByTestId('about-editor')).toBeVisible();
+});
