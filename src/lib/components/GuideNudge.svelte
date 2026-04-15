@@ -14,14 +14,9 @@
 
 	const { user }: Props = $props();
 
-	let dismissed = $state(false);
-
-	// Read the localStorage flag on mount (browser only).
-	$effect(() => {
-		if (browser && localStorage.getItem(GUIDE_DISMISSED_KEY)) {
-			dismissed = true;
-		}
-	});
+	let dismissed = $state(
+		browser && (!!localStorage.getItem(GUIDE_DISMISSED_KEY) || isGuidePath(page.url.pathname))
+	);
 
 	// Also handle the case where the page is already /guide on initial load.
 	$effect(() => {
@@ -37,7 +32,7 @@
 		}
 	});
 
-	const visible = $derived(shouldShowNudge(user, dismissed));
+	const visible = $derived(browser && shouldShowNudge(user, dismissed));
 
 	function dismiss() {
 		if (browser) {
