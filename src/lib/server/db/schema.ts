@@ -115,6 +115,7 @@ export const setups = pgTable(
 		name: varchar('name', { length: 100 }).notNull(),
 		slug: varchar('slug', { length: 100 }).notNull(),
 		description: varchar('description', { length: 300 }).notNull(),
+		display: varchar('display', { length: 150 }),
 		readme: text('readme'),
 		category: categoryEnum('category'),
 		license: varchar('license', { length: 50 }),
@@ -128,7 +129,7 @@ export const setups = pgTable(
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 		searchVector: tsvector('search_vector').generatedAlwaysAs(
-			sql`setweight(to_tsvector('english', coalesce(name, '')), 'A') || setweight(to_tsvector('english', coalesce(description, '')), 'B')`
+			sql`setweight(to_tsvector('english', coalesce(name, '')), 'A') || setweight(to_tsvector('english', coalesce(description, '')), 'B') || setweight(to_tsvector('english', coalesce(display, '')), 'C')`
 		)
 	},
 	(table) => [

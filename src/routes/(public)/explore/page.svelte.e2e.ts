@@ -257,3 +257,16 @@ test('desktop: heading renders at full size', async ({ page, isMobile }) => {
 	await page.goto(EXPLORE_URL);
 	await expect(page.getByRole('heading', { name: 'Explore Setups' })).toBeVisible();
 });
+
+test('setup cards show non-empty title headings', async ({ page }) => {
+	await page.goto(EXPLORE_URL);
+	const cards = page.locator('main .grid a');
+	const count = await cards.count();
+	if (count > 0) {
+		// Each card should have an h3 with the setup title (display ?? name)
+		const firstCardHeading = cards.first().locator('h3');
+		await expect(firstCardHeading).toBeVisible();
+		const text = await firstCardHeading.textContent();
+		expect(text?.trim().length).toBeGreaterThan(0);
+	}
+});

@@ -31,6 +31,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		name: string;
 		slug: string;
 		description: string;
+		display: string | null;
 		starsCount: number;
 		clonesCount: number;
 		updatedAt: Date;
@@ -43,6 +44,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		name: string;
 		slug: string;
 		description: string;
+		display: string | null;
 		starsCount: number;
 		clonesCount: number;
 		updatedAt: Date;

@@ -32,6 +32,7 @@ export const manifestSchema = z.object({
 	$schema: z.string().optional(),
 	id: z.string().uuid().optional(),
 	sourceId: z.string().uuid().optional(),
+	display: z.string().trim().max(150, 'Must be 150 characters or fewer').optional(),
 	name: z
 		.string()
 		.min(1, 'Required, must be a non-empty string')

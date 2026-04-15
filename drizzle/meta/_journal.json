@@ -127,6 +127,13 @@
 			"when": 1744070400000,
 			"tag": "0016_drop_placement",
 			"breakpoints": true
+		},
+		{
+			"idx": 18,
+			"version": "7",
+			"when": 1744934400000,
+			"tag": "0017_add_display_column",
+			"breakpoints": true
 		}
 	]
 }

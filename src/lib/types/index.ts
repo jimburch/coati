@@ -48,6 +48,7 @@ export type SetupCardProps = {
 	name: string;
 	slug: string;
 	description: string;
+	display?: string | null;
 	starsCount: number;
 	clonesCount: number;
 	updatedAt: Date;
@@ -89,7 +90,8 @@ export const apiErrorSchema = z.object({
 export const createSetupSchema = z.object({
 	name: z.string().min(1).max(100),
 	slug: z.string().min(1).max(100).regex(SLUG_NAME_REGEX),
-	description: z.string().max(300)
+	description: z.string().max(300),
+	display: z.string().trim().max(150).optional()
 });
 
 export const createSetupFileSchema = z.object({
@@ -126,6 +128,7 @@ export const updateSetupSchema = z
 		slug: z.string().min(1).max(100).regex(SLUG_NAME_REGEX).optional(),
 		description: z.string().max(300).optional(),
 		readme: z.string().optional(),
+		display: z.string().trim().max(150).nullable().optional(),
 		category: categorySchema.nullable().optional(),
 		license: z.string().max(50).nullable().optional(),
 		minToolVersion: z.string().max(20).nullable().optional(),
