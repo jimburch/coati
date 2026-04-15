@@ -31,7 +31,7 @@
 			? 'truncate text-base font-semibold text-foreground lg:text-lg'
 			: 'truncate text-sm font-semibold text-foreground lg:text-base'}
 	>
-		{setup.name}
+		{setup.display ?? setup.name}
 	</h3>
 
 	{#if setup.description}

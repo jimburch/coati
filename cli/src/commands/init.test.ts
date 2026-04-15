@@ -24,7 +24,7 @@ vi.mock('../format.js', () => ({
 }));
 
 // Import after mocks are registered
-const { runInitFlow, computeDetectedAgents } = await import('./init.js');
+const { runInitFlow, computeDetectedAgents, toSlug } = await import('./init.js');
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -482,5 +482,115 @@ describe('runInitFlow — confirmation flow', () => {
 		await runInitFlow(ctx, CWD);
 
 		expect(mockFormatFileList).toHaveBeenCalledWith(MULTI_AGENT_FILES);
+	});
+});
+
+// ── toSlug unit tests ─────────────────────────────────────────────────────────
+
+describe('toSlug', () => {
+	it('lowercases a plain name', () => {
+		expect(toSlug('MySetup')).toBe('mysetup');
+	});
+
+	it('replaces spaces with hyphens', () => {
+		expect(toSlug('my setup')).toBe('my-setup');
+	});
+
+	it('collapses multiple spaces into a single hyphen', () => {
+		expect(toSlug('my  awesome   setup')).toBe('my-awesome-setup');
+	});
+
+	it('removes apostrophes', () => {
+		expect(toSlug("Jim's Setup")).toBe('jims-setup');
+	});
+
+	it('removes special characters', () => {
+		expect(toSlug('My Awesome Setup!')).toBe('my-awesome-setup');
+	});
+
+	it('handles mixed punctuation and spaces', () => {
+		expect(toSlug('C++ / Python Setup')).toBe('c-python-setup');
+	});
+
+	it('strips leading and trailing hyphens', () => {
+		expect(toSlug('---my setup---')).toBe('my-setup');
+	});
+
+	it('returns empty string for all-special-char input', () => {
+		expect(toSlug('!!!')).toBe('');
+	});
+
+	it('handles unicode letters by stripping them', () => {
+		expect(toSlug('café setup')).toBe('caf-setup');
+	});
+
+	it('preserves digits', () => {
+		expect(toSlug('Setup 42')).toBe('setup-42');
+	});
+
+	it('handles already-valid slug unchanged', () => {
+		expect(toSlug('my-setup')).toBe('my-setup');
+	});
+
+	it('handles leading/trailing whitespace', () => {
+		expect(toSlug('  my setup  ')).toBe('my-setup');
+	});
+});
+
+// ── display field written by init ─────────────────────────────────────────────
+
+describe('runInitFlow — display field', () => {
+	it('writes raw user input as display field', async () => {
+		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({
+			...DEFAULT_METADATA,
+			name: 'My Setup'
+		});
+
+		await runInitFlow(ctx, CWD);
+
+		expect(mockWriteManifest).toHaveBeenCalledWith(
+			CWD,
+			expect.objectContaining({ display: 'My Setup' })
+		);
+	});
+
+	it('writes slugified name as the name field when display differs', async () => {
+		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({
+			...DEFAULT_METADATA,
+			name: 'My Awesome Setup!'
+		});
+
+		await runInitFlow(ctx, CWD);
+
+		const written = mockWriteManifest.mock.calls[0]![1];
+		expect(written.display).toBe('My Awesome Setup!');
+		expect(written.name).toBe('my-awesome-setup');
+	});
+
+	it('trims whitespace from display before writing', async () => {
+		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({
+			...DEFAULT_METADATA,
+			name: '  My Setup  '
+		});
+
+		await runInitFlow(ctx, CWD);
+
+		const written = mockWriteManifest.mock.calls[0]![1];
+		expect(written.display).toBe('My Setup');
+		expect(written.name).toBe('my-setup');
+	});
+
+	it('omits display field when name is already a valid slug', async () => {
+		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({
+			...DEFAULT_METADATA,
+			name: 'my-setup'
+		});
+
+		await runInitFlow(ctx, CWD);
+
+		// display is still written (it's the raw input, trimmed)
+		const written = mockWriteManifest.mock.calls[0]![1];
+		expect(written.display).toBe('my-setup');
+		expect(written.name).toBe('my-setup');
 	});
 });

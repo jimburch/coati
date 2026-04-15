@@ -5,7 +5,7 @@
 	import AgentIcon from '$lib/components/AgentIcon.svelte';
 	import OgMeta from '$lib/components/OgMeta.svelte';
 	import DeleteSetupDialog from '$lib/components/DeleteSetupDialog.svelte';
-	import { enhance } from '$app/forms';
+	import { enhance, deserialize } from '$app/forms';
 	import { timeAgo } from '$lib/utils';
 
 	const { data } = $props();
@@ -43,6 +43,31 @@
 
 	function cancelEdit() {
 		editMode = false;
+	}
+
+	// About editing state
+	let aboutEditMode = $state(false);
+	let aboutDisplayInput = $state('');
+	let aboutDescriptionInput = $state('');
+	let aboutSaving = $state(false);
+	let localAboutDisplay = $state<string | null>(null);
+	let localAboutDescription = $state<string | null>(null);
+
+	const displayedAboutDisplay = $derived(
+		localAboutDisplay !== null ? localAboutDisplay : (data.setup.display ?? data.setup.name)
+	);
+	const displayedAboutDescription = $derived(
+		localAboutDescription !== null ? localAboutDescription : (data.setup.description ?? '')
+	);
+
+	function startAboutEdit() {
+		aboutDisplayInput = displayedAboutDisplay;
+		aboutDescriptionInput = displayedAboutDescription;
+		aboutEditMode = true;
+	}
+
+	function cancelAboutEdit() {
+		aboutEditMode = false;
 	}
 
 	// Optimistic featured state for admin toggle
@@ -83,12 +108,12 @@
 </script>
 
 <svelte:head>
-	<title>{data.setup.name} by {data.setup.ownerUsername} - Coati</title>
+	<title>{data.setup.display ?? data.setup.name} by {data.setup.ownerUsername} - Coati</title>
 	<meta name="description" content={data.setup.description} />
 </svelte:head>
 
 <OgMeta
-	title="{data.setup.name} by {data.setup.ownerUsername} - Coati"
+	title="{data.setup.display ?? data.setup.name} by {data.setup.ownerUsername} - Coati"
 	description={data.setup.description}
 	url="/{data.setup.ownerUsername}/{data.setup.slug}"
 	type="article"
@@ -148,8 +173,11 @@
 									const fd = new FormData();
 									fd.append('readme', editContent);
 									const res = await fetch('?/previewReadme', { method: 'POST', body: fd });
-									const json = await res.json();
-									previewHtml = json?.data?.previewHtml ?? null;
+									const result = deserialize(await res.text());
+									previewHtml =
+										result.type === 'success'
+											? ((result.data?.previewHtml as string | null) ?? null)
+											: null;
 								} finally {
 									previewing = false;
 								}
@@ -226,9 +254,97 @@
 			<div class="space-y-6">
 				<!-- About -->
 				<div>
-					<h3 class="mb-2 text-sm font-semibold text-muted-foreground">About</h3>
-					<h2 class="text-lg font-semibold">{data.setup.name}</h2>
-					<p class="mt-1 text-sm text-muted-foreground">{data.setup.description}</p>
+					{#if !aboutEditMode}
+						<div class="mb-2 flex items-center justify-between">
+							<h3 class="text-sm font-semibold text-muted-foreground">About</h3>
+							{#if isOwner}
+								<button
+									onclick={startAboutEdit}
+									class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+									aria-label="Edit about section"
+									data-testid="edit-about-btn"
+								>
+									<svg class="size-3.5" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+										<path
+											d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61Zm1.414 1.06a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354l-1.086-1.086ZM11.189 6.25 9.75 4.81l-6.286 6.287a.25.25 0 0 0-.064.108l-.558 1.953 1.953-.558a.25.25 0 0 0 .108-.064l6.286-6.286Z"
+										/>
+									</svg>
+								</button>
+							{/if}
+						</div>
+						<h2 class="text-lg font-semibold">{displayedAboutDisplay}</h2>
+						<p class="mt-1 text-sm text-muted-foreground">{displayedAboutDescription}</p>
+					{:else}
+						<h3 class="mb-2 text-sm font-semibold text-muted-foreground">About</h3>
+						<form
+							method="POST"
+							action="?/saveAbout"
+							data-testid="about-editor"
+							use:enhance={() => {
+								aboutSaving = true;
+								return async ({ result, update }) => {
+									aboutSaving = false;
+									if (result.type === 'success' && result.data) {
+										localAboutDisplay = (result.data.display as string | null) ?? null;
+										localAboutDescription = (result.data.description as string | null) ?? null;
+										aboutEditMode = false;
+									}
+									await update({ reset: false });
+								};
+							}}
+						>
+							<div class="space-y-2">
+								<div>
+									<label for="about-display" class="mb-1 block text-xs font-medium"
+										>Display name</label
+									>
+									<input
+										id="about-display"
+										name="display"
+										type="text"
+										maxlength="150"
+										required
+										bind:value={aboutDisplayInput}
+										class="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+										data-testid="about-display-input"
+									/>
+								</div>
+								<div>
+									<label for="about-description" class="mb-1 block text-xs font-medium"
+										>Description</label
+									>
+									<textarea
+										id="about-description"
+										name="description"
+										maxlength="300"
+										rows={3}
+										bind:value={aboutDescriptionInput}
+										class="w-full resize-none rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+										data-testid="about-description-textarea"
+									></textarea>
+								</div>
+								<div class="flex gap-2">
+									<Button
+										type="submit"
+										size="sm"
+										disabled={aboutSaving}
+										data-testid="save-about-btn"
+									>
+										{aboutSaving ? 'Saving…' : 'Save'}
+									</Button>
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										onclick={cancelAboutEdit}
+										data-testid="cancel-about-btn"
+									>
+										Cancel
+									</Button>
+								</div>
+							</div>
+						</form>
+					{/if}
 				</div>
 
 				<!-- Author -->

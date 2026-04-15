@@ -252,6 +252,94 @@ describe('File size limit schemas', () => {
 		});
 	});
 
+	describe('display field', () => {
+		it('createSetupSchema accepts optional display', () => {
+			const result = createSetupSchema.safeParse({
+				...{ name: 'My Setup', slug: 'my-setup', description: 'A setup' },
+				display: 'My Display Name'
+			});
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.display).toBe('My Display Name');
+			}
+		});
+
+		it('createSetupSchema accepts missing display (optional)', () => {
+			const result = createSetupSchema.safeParse({
+				name: 'My Setup',
+				slug: 'my-setup',
+				description: 'A setup'
+			});
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.display).toBeUndefined();
+			}
+		});
+
+		it('createSetupSchema rejects display over 150 chars', () => {
+			const result = createSetupSchema.safeParse({
+				name: 'My Setup',
+				slug: 'my-setup',
+				description: 'A setup',
+				display: 'a'.repeat(151)
+			});
+			expect(result.success).toBe(false);
+		});
+
+		it('createSetupSchema trims display whitespace', () => {
+			const result = createSetupSchema.safeParse({
+				name: 'My Setup',
+				slug: 'my-setup',
+				description: 'A setup',
+				display: '  trimmed  '
+			});
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.display).toBe('trimmed');
+			}
+		});
+
+		it('createSetupWithFilesSchema accepts display', () => {
+			const result = createSetupWithFilesSchema.safeParse({
+				...validSetupBase,
+				display: 'Display Name'
+			});
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.display).toBe('Display Name');
+			}
+		});
+
+		it('updateSetupSchema accepts optional display', () => {
+			const result = updateSetupSchema.safeParse({ display: 'Updated Display' });
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.display).toBe('Updated Display');
+			}
+		});
+
+		it('updateSetupSchema accepts null display', () => {
+			const result = updateSetupSchema.safeParse({ display: null });
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.display).toBeNull();
+			}
+		});
+
+		it('updateSetupSchema rejects display over 150 chars', () => {
+			const result = updateSetupSchema.safeParse({ display: 'a'.repeat(151) });
+			expect(result.success).toBe(false);
+		});
+
+		it('updateSetupSchema trims display whitespace', () => {
+			const result = updateSetupSchema.safeParse({ display: '  trimmed  ' });
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.display).toBe('trimmed');
+			}
+		});
+	});
+
 	describe('placement removed from schemas', () => {
 		it('createSetupWithFilesSchema strips unknown placement field', () => {
 			const result = createSetupWithFilesSchema.safeParse({

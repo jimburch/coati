@@ -58,6 +58,16 @@ while [ "$INDEX" -lt "$TASK_COUNT" ]; do
     continue
   fi
 
+  # --- Skip HITL issues (require human-in-the-loop) ---
+
+  ISSUE_LABELS=$(gh issue view "$ISSUE_NUM" --json labels -q '.labels[].name')
+  if echo "$ISSUE_LABELS" | grep -qx 'HITL'; then
+    echo "Issue #$ISSUE_NUM is labeled HITL. Skipping (requires human-in-the-loop)."
+    echo ""
+    INDEX=$((INDEX + 1))
+    continue
+  fi
+
   # --- Check blockers are resolved ---
 
   ISSUE_BODY=$(gh issue view "$ISSUE_NUM" --json body -q '.body')

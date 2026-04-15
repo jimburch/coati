@@ -186,6 +186,35 @@ describe('manifestSchema', () => {
 		expect(manifestSchema.safeParse(full).success).toBe(true);
 	});
 
+	it('accepts manifest without display field (backward compat)', () => {
+		expect(manifestSchema.safeParse(VALID_MANIFEST).success).toBe(true);
+	});
+
+	it('accepts manifest with a valid display field', () => {
+		const result = manifestSchema.safeParse({ ...VALID_MANIFEST, display: 'My Awesome Setup' });
+		expect(result.success).toBe(true);
+	});
+
+	it('accepts display at exactly 150 chars', () => {
+		const result = manifestSchema.safeParse({ ...VALID_MANIFEST, display: 'a'.repeat(150) });
+		expect(result.success).toBe(true);
+	});
+
+	it('rejects display exceeding 150 chars', () => {
+		const result = manifestSchema.safeParse({ ...VALID_MANIFEST, display: 'a'.repeat(151) });
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues.some((i) => i.path[0] === 'display')).toBe(true);
+		}
+	});
+
+	it('trims display before applying max length check', () => {
+		// 150 "a"s surrounded by spaces — trimmed result is 150 chars, so it passes
+		const padded = '  ' + 'a'.repeat(150) + '  ';
+		const result = manifestSchema.safeParse({ ...VALID_MANIFEST, display: padded });
+		expect(result.success).toBe(true);
+	});
+
 	it('accepts file entries with agent field', () => {
 		const result = manifestSchema.safeParse({
 			...VALID_MANIFEST,

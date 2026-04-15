@@ -37,7 +37,7 @@
 
 	<!-- Code block -->
 	<div
-		class="overflow-x-auto [&_code]:text-sm [&_pre]:!m-0 [&_pre]:!rounded-none [&_pre]:!border-0 [&_pre]:bg-secondary [&_pre]:p-4"
+		class="overflow-x-hidden [&_code]:text-sm [&_pre]:!m-0 [&_pre]:!rounded-none [&_pre]:!border-0 [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_pre]:bg-secondary [&_pre]:p-4"
 	>
 		{#if isEmpty}
 			<div class="p-4 text-sm italic text-muted-foreground">This file is empty</div>
@@ -45,7 +45,7 @@
 			{@html highlightedHtml}
 		{:else}
 			<pre
-				class="!m-0 !rounded-none !border-0 bg-secondary p-4 text-sm text-secondary-foreground">{file.content}</pre>
+				class="!m-0 !rounded-none !border-0 whitespace-pre-wrap break-words bg-secondary p-4 text-sm text-secondary-foreground">{file.content}</pre>
 		{/if}
 	</div>
 </div>

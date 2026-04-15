@@ -39,6 +39,7 @@ export async function getSetupsByUserId(userId: string) {
 			name: setups.name,
 			slug: setups.slug,
 			description: setups.description,
+			display: setups.display,
 			starsCount: setups.starsCount,
 			clonesCount: setups.clonesCount,
 			updatedAt: setups.updatedAt
@@ -56,6 +57,7 @@ export async function getSetupByOwnerSlug(ownerUsername: string, slug: string) {
 			name: setups.name,
 			slug: setups.slug,
 			description: setups.description,
+			display: setups.display,
 			readme: setups.readme,
 			category: setups.category,
 			license: setups.license,
@@ -101,6 +103,7 @@ export async function getSetupById(id: string) {
 			name: setups.name,
 			slug: setups.slug,
 			description: setups.description,
+			display: setups.display,
 			readme: setups.readme,
 			category: setups.category,
 			license: setups.license,
@@ -132,6 +135,7 @@ export async function createSetup(userId: string, data: CreateSetupInput) {
 				name: data.name,
 				slug: data.slug,
 				description: data.description,
+				display: data.display,
 				readme,
 				category: data.category,
 				license: data.license,
@@ -185,6 +189,7 @@ export async function updateSetup(id: string, data: UpdateSetupInput) {
 			...(data.slug !== undefined && { slug: data.slug }),
 			...(data.description !== undefined && { description: data.description }),
 			...(data.readme !== undefined && { readme: data.readme }),
+			...(data.display !== undefined && { display: data.display }),
 			...(data.category !== undefined && { category: data.category }),
 			...(data.license !== undefined && { license: data.license }),
 			...(data.minToolVersion !== undefined && { minToolVersion: data.minToolVersion }),
@@ -528,6 +533,7 @@ export async function searchSetups(filters: {
 			name: string;
 			slug: string;
 			description: string;
+			display: string | null;
 			stars_count: number;
 			clones_count: number;
 			updated_at: Date;
@@ -535,6 +541,7 @@ export async function searchSetups(filters: {
 			owner_avatar_url: string;
 		}>(
 			sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
+				${setups.display},
 				${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
 				${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
 				FROM ${setups}
@@ -562,6 +569,7 @@ export async function searchSetups(filters: {
 			name: row.name,
 			slug: row.slug,
 			description: row.description,
+			display: row.display ?? null,
 			starsCount: row.stars_count,
 			clonesCount: row.clones_count,
 			updatedAt: new Date(row.updated_at),
@@ -591,6 +599,7 @@ export async function getSetupByIdWithOwner(id: string) {
 			name: setups.name,
 			slug: setups.slug,
 			description: setups.description,
+			display: setups.display,
 			readme: setups.readme,
 			category: setups.category,
 			license: setups.license,
@@ -626,6 +635,7 @@ export async function updateSetupByIdWithSlugRedirects(
 			...(slugChanged && { slug: newSlug }),
 			...(data.description !== undefined && { description: data.description }),
 			...(data.readme !== undefined && { readme: data.readme }),
+			...(data.display !== undefined && { display: data.display }),
 			...(data.category !== undefined && { category: data.category }),
 			...(data.license !== undefined && { license: data.license }),
 			...(data.minToolVersion !== undefined && { minToolVersion: data.minToolVersion }),
@@ -701,6 +711,7 @@ export async function getStarredSetupsByUserId(userId: string) {
 			name: setups.name,
 			slug: setups.slug,
 			description: setups.description,
+			display: setups.display,
 			starsCount: setups.starsCount,
 			clonesCount: setups.clonesCount,
 			updatedAt: setups.updatedAt,

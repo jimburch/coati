@@ -20,7 +20,7 @@ const VALID_CATEGORIES: ManifestCategory[] = [
 	'general'
 ];
 
-function toSlug(name: string): string {
+export function toSlug(name: string): string {
 	return name
 		.toLowerCase()
 		.replace(/[^a-z0-9]+/g, '-')
@@ -119,11 +119,12 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 	const metadata = await ctx.io.promptMetadata(autoDetectedAgents, agentChoices, categoryChoices);
 
 	// Derive and validate the slug from the name
-	const slug = toSlug(metadata.name);
+	const display = metadata.name.trim();
+	const slug = toSlug(display);
 	if (!slug) {
 		throw new Error('Setup name is required.');
 	}
-	if (slug !== metadata.name) {
+	if (slug !== display) {
 		ctx.io.print(`Using slug: ${slug}`);
 	}
 
@@ -138,6 +139,7 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 
 	// Build the manifest — auto-tag each file with its agent field
 	const manifest: Manifest = {
+		...(display && { display }),
 		name: slug,
 		version: '1.0.0',
 		description: metadata.description,
