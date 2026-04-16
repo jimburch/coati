@@ -18,6 +18,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		name: s.name,
 		slug: s.slug,
 		description: s.description,
+		display: s.display,
 		starsCount: s.starsCount,
 		clonesCount: s.clonesCount,
 		updatedAt: new Date(s.updatedAt),

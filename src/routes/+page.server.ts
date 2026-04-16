@@ -12,6 +12,7 @@ type DashboardSetup = {
 	name: string;
 	slug: string;
 	description: string;
+	display?: string | null;
 	starsCount: number;
 	clonesCount: number;
 	updatedAt: Date;
@@ -41,6 +42,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			name: string;
 			slug: string;
 			description: string;
+			display?: string | null;
 			starsCount: number;
 			clonesCount: number;
 			updatedAt: Date;
@@ -51,6 +53,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			name: s.name,
 			slug: s.slug,
 			description: s.description,
+			display: s.display,
 			starsCount: s.starsCount,
 			clonesCount: s.clonesCount,
 			updatedAt: s.updatedAt,
@@ -80,6 +83,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 				name: s.name,
 				slug: s.slug,
 				description: s.description,
+				display: s.display,
 				starsCount: s.starsCount,
 				clonesCount: s.clonesCount,
 				updatedAt: s.updatedAt,
