@@ -1,4 +1,4 @@
-import type { Cookies, Handle } from '@sveltejs/kit';
+import type { Cookies, Handle, HandleServerError } from '@sveltejs/kit';
 import type { ThemePreference } from '$lib/utils/theme';
 import {
 	validateSessionToken,
@@ -9,8 +9,12 @@ import {
 import { checkRateLimit } from '$lib/server/rate-limit';
 import { env } from '$env/dynamic/public';
 import { startScheduler } from '$lib/server/scheduler';
+import { detectSurface } from '$lib/server/observability/surface';
+import { initSentry, setSentryUser } from '$lib/server/observability/sentry';
+import * as Sentry from '@sentry/sveltekit';
 
 startScheduler();
+initSentry();
 
 const VALID_THEMES: ThemePreference[] = ['light', 'dark', 'system'];
 
@@ -55,6 +59,11 @@ export function betaGate(event: GateEvent, betaModeEnabled: boolean): Response |
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
+	// Surface detection — identify web vs CLI requests
+	const { surface, cliVersion } = detectSurface(event.request.headers.get('user-agent'));
+	event.locals.surface = surface;
+	event.locals.cliVersion = cliVersion;
+
 	// Auth resolution — must happen before rate limit so event.locals.user is populated
 	const cookieToken = getSessionToken(event.cookies);
 	const bearerToken = event.request.headers.get('Authorization')?.replace('Bearer ', '');
@@ -84,6 +93,17 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
+	// Sentry user context — set after auth resolution
+	if (event.locals.user) {
+		setSentryUser({ id: event.locals.user.id, username: event.locals.user.username });
+	}
+
+	// Tag every request with surface and cli_version for Sentry context
+	Sentry.setContext('request_meta', {
+		surface: event.locals.surface,
+		cli_version: event.locals.cliVersion
+	});
+
 	// Beta gate check (runs after auth so event.locals.user is populated, before rate limit)
 	const gateResponse = betaGate(event, env.PUBLIC_BETA_MODE === 'true');
 	if (gateResponse) return gateResponse;
@@ -107,4 +127,26 @@ export const handle: Handle = async ({ event, resolve }) => {
 	return resolve(event, {
 		transformPageChunk: ({ html }) => html.replace('%coati.theme%', themeClass)
 	});
+};
+
+export const handleError: HandleServerError = ({ error, event }) => {
+	// Build sanitized headers — strip Authorization and Cookie to avoid leaking credentials
+	const sanitizedHeaders: Record<string, string> = {};
+	event.request.headers.forEach((value, key) => {
+		const lower = key.toLowerCase();
+		if (lower !== 'authorization' && lower !== 'cookie') {
+			sanitizedHeaders[key] = value;
+		}
+	});
+
+	Sentry.captureException(error, {
+		extra: {
+			url: event.url.href,
+			method: event.request.method,
+			routeParams: event.params,
+			headers: sanitizedHeaders
+		}
+	});
+
+	return { message: 'An unexpected error occurred' };
 };

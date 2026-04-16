@@ -8,6 +8,7 @@ export interface Config {
 	username?: string;
 	cfAccessClientId?: string;
 	cfAccessClientSecret?: string;
+	telemetry?: boolean;
 }
 
 const DEFAULT_CONFIG: Config = {

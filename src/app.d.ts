@@ -7,6 +7,8 @@ declare global {
 		interface Locals {
 			user: User | null;
 			session: Session | null;
+			surface: 'web' | 'cli';
+			cliVersion: string | null;
 		}
 	}
 }
