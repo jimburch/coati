@@ -111,6 +111,10 @@ export const actions: Actions = {
 		const setup = await getSetupByOwnerSlug(params.username, params.slug);
 		if (!setup) throw error(404, 'Setup not found');
 
+		if (setup.visibility === 'private') {
+			return fail(403, { error: 'Cannot star a private setup', code: 'FORBIDDEN' });
+		}
+
 		const currentIsStarred = await isSetupStarredByUser(setup.id, locals.user.id);
 		const result = await setStar(locals.user.id, setup.id, !currentIsStarred);
 		return { isStarred: result.starred, starsCount: result.starsCount };

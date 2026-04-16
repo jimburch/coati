@@ -31,7 +31,9 @@
 <div class="mx-auto max-w-6xl px-4 py-6 lg:py-8">
 	<!-- Header band (full-width) -->
 	<SetupHeader setup={data.setup} agents={data.agents} {isOwner} updatedAt={displayedUpdatedAt}>
-		<StarButton isStarred={data.isStarred} starsCount={data.setup.starsCount} />
+		{#if data.setup.visibility !== 'private'}
+			<StarButton isStarred={data.isStarred} starsCount={data.setup.starsCount} />
+		{/if}
 	</SetupHeader>
 
 	<!-- Three-zone body: main column + slim sidebar -->

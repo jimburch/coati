@@ -4,8 +4,8 @@ import { success, error, isUniqueViolation, parseRequestBody } from '$lib/server
 import { updateSetupSchema } from '$lib/types';
 import { setupRepo } from '$lib/server/queries/setupRepository';
 
-export const GET: RequestHandler = async ({ params }) => {
-	const setup = await setupRepo.getByOwnerSlug(params.owner, params.slug);
+export const GET: RequestHandler = async ({ params, locals }) => {
+	const setup = await setupRepo.getByOwnerSlug(params.owner, params.slug, locals.user?.id);
 	if (!setup) {
 		const currentSlug = await setupRepo.getSlugRedirect(params.owner, params.slug);
 		if (currentSlug) {
@@ -24,7 +24,7 @@ export const PATCH: RequestHandler = async (event) => {
 	if (authResult instanceof Response) return authResult;
 	const user = authResult;
 
-	const setup = await setupRepo.getByOwnerSlug(event.params.owner, event.params.slug);
+	const setup = await setupRepo.getByOwnerSlug(event.params.owner, event.params.slug, user.id);
 	if (!setup) {
 		return error('Setup not found', 'NOT_FOUND', 404);
 	}
@@ -51,7 +51,7 @@ export const DELETE: RequestHandler = async (event) => {
 	if (authResult instanceof Response) return authResult;
 	const user = authResult;
 
-	const setup = await setupRepo.getByOwnerSlug(event.params.owner, event.params.slug);
+	const setup = await setupRepo.getByOwnerSlug(event.params.owner, event.params.slug, user.id);
 	if (!setup) {
 		return error('Setup not found', 'NOT_FOUND', 404);
 	}

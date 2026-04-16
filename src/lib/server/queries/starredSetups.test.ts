@@ -4,6 +4,7 @@ const state = vi.hoisted(() => ({ rows: [] as Record<string, unknown>[] }));
 
 vi.mock('drizzle-orm', () => ({
 	eq: vi.fn((a: unknown, b: unknown) => ({ _type: 'eq', a, b })),
+	and: vi.fn((...args: unknown[]) => ({ _type: 'and', args })),
 	desc: vi.fn((col: unknown) => ({ _type: 'desc', col }))
 }));
 
@@ -20,6 +21,7 @@ vi.mock('$lib/server/db/schema', () => ({
 		slug: 'setups.slug',
 		description: 'setups.description',
 		display: 'setups.display',
+		visibility: 'setups.visibility',
 		starsCount: 'setups.starsCount',
 		clonesCount: 'setups.clonesCount',
 		updatedAt: 'setups.updatedAt'

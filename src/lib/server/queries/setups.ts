@@ -32,7 +32,7 @@ function toSetupFileRows(setupId: string, files: NonNullable<FileInput>) {
 	}));
 }
 
-export async function getSetupsByUserId(userId: string) {
+export async function getSetupsByUserId(userId: string, viewerIsOwner = false) {
 	return db
 		.select({
 			id: setups.id,
@@ -40,12 +40,17 @@ export async function getSetupsByUserId(userId: string) {
 			slug: setups.slug,
 			description: setups.description,
 			display: setups.display,
+			visibility: setups.visibility,
 			starsCount: setups.starsCount,
 			clonesCount: setups.clonesCount,
 			updatedAt: setups.updatedAt
 		})
 		.from(setups)
-		.where(eq(setups.userId, userId))
+		.where(
+			viewerIsOwner
+				? eq(setups.userId, userId)
+				: and(eq(setups.userId, userId), eq(setups.visibility, 'public'))
+		)
 		.orderBy(desc(setups.createdAt));
 }
 
@@ -64,6 +69,8 @@ export async function getSetupByOwnerSlug(ownerUsername: string, slug: string) {
 			minToolVersion: setups.minToolVersion,
 			postInstall: setups.postInstall,
 			prerequisites: setups.prerequisites,
+			visibility: setups.visibility,
+			teamId: setups.teamId,
 			starsCount: setups.starsCount,
 			clonesCount: setups.clonesCount,
 			commentsCount: setups.commentsCount,
@@ -110,6 +117,8 @@ export async function getSetupById(id: string) {
 			minToolVersion: setups.minToolVersion,
 			postInstall: setups.postInstall,
 			prerequisites: setups.prerequisites,
+			visibility: setups.visibility,
+			teamId: setups.teamId,
 			starsCount: setups.starsCount,
 			clonesCount: setups.clonesCount,
 			commentsCount: setups.commentsCount,
@@ -195,6 +204,7 @@ export async function updateSetup(id: string, data: UpdateSetupInput) {
 			...(data.minToolVersion !== undefined && { minToolVersion: data.minToolVersion }),
 			...(data.postInstall !== undefined && { postInstall: data.postInstall }),
 			...(data.prerequisites !== undefined && { prerequisites: data.prerequisites }),
+			...(data.visibility !== undefined && { visibility: data.visibility }),
 			updatedAt: new Date()
 		};
 
@@ -346,6 +356,7 @@ export async function getTrendingSetups(limit: number) {
 			FROM ${setups}
 			INNER JOIN ${users} ON ${setups.userId} = ${users.id}
 			INNER JOIN trending_setups_mv ON trending_setups_mv.setup_id = ${setups.id}
+			WHERE ${setups.visibility} = 'public'
 			ORDER BY trending_setups_mv.recent_stars_count DESC
 			LIMIT ${limit}`
 	);
@@ -361,6 +372,7 @@ export async function getTrendingSetups(limit: number) {
 				FROM ${setups}
 				INNER JOIN ${users} ON ${setups.userId} = ${users.id}
 				WHERE ${setups.id} NOT IN (SELECT setup_id FROM trending_setups_mv)
+				AND ${setups.visibility} = 'public'
 				ORDER BY ${setups.starsCount} DESC
 				LIMIT ${backfillLimit}`
 		);
@@ -401,6 +413,7 @@ export async function getRecentSetups(limit = 12) {
 		})
 		.from(setups)
 		.innerJoin(users, eq(setups.userId, users.id))
+		.where(eq(setups.visibility, 'public'))
 		.orderBy(desc(setups.createdAt))
 		.limit(limit);
 }
@@ -447,7 +460,7 @@ export async function getAgentBySlugWithSetups(slug: string) {
 		.from(setupAgents)
 		.innerJoin(setups, eq(setupAgents.setupId, setups.id))
 		.innerJoin(users, eq(setups.userId, users.id))
-		.where(eq(setupAgents.agentId, agent.id))
+		.where(and(eq(setupAgents.agentId, agent.id), eq(setups.visibility, 'public')))
 		.orderBy(desc(setups.createdAt));
 
 	const setupIds = setupRows.map((s) => s.id);
@@ -515,8 +528,10 @@ export async function searchSetups(filters: {
 		);
 	}
 
-	const whereClause =
-		conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
+	// Always filter to public setups only in search results
+	conditions.push(sql`${setups.visibility} = 'public'`);
+
+	const whereClause = sql`WHERE ${sql.join(conditions, sql` AND `)}`;
 
 	let joinClause: ReturnType<typeof sql> = sql``;
 	let orderClause: ReturnType<typeof sql>;
@@ -610,6 +625,8 @@ export async function getSetupByIdWithOwner(id: string) {
 			minToolVersion: setups.minToolVersion,
 			postInstall: setups.postInstall,
 			prerequisites: setups.prerequisites,
+			visibility: setups.visibility,
+			teamId: setups.teamId,
 			starsCount: setups.starsCount,
 			clonesCount: setups.clonesCount,
 			commentsCount: setups.commentsCount,
@@ -645,6 +662,7 @@ export async function updateSetupByIdWithSlugRedirects(
 			...(data.minToolVersion !== undefined && { minToolVersion: data.minToolVersion }),
 			...(data.postInstall !== undefined && { postInstall: data.postInstall }),
 			...(data.prerequisites !== undefined && { prerequisites: data.prerequisites }),
+			...(data.visibility !== undefined && { visibility: data.visibility }),
 			updatedAt: new Date()
 		};
 
@@ -725,7 +743,7 @@ export async function getStarredSetupsByUserId(userId: string) {
 		.from(stars)
 		.innerJoin(setups, eq(stars.setupId, setups.id))
 		.innerJoin(users, eq(setups.userId, users.id))
-		.where(eq(stars.userId, userId))
+		.where(and(eq(stars.userId, userId), eq(setups.visibility, 'public')))
 		.orderBy(desc(stars.createdAt));
 }
 
@@ -749,7 +767,7 @@ export async function getFeaturedSetups(limit: number) {
 		})
 		.from(setups)
 		.innerJoin(users, eq(setups.userId, users.id))
-		.where(isNotNull(setups.featuredAt))
+		.where(and(isNotNull(setups.featuredAt), eq(setups.visibility, 'public')))
 		.orderBy(desc(setups.featuredAt))
 		.limit(limit);
 

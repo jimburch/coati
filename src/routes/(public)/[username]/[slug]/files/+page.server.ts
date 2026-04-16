@@ -3,8 +3,8 @@ import type { PageServerLoad } from './$types';
 import { setupRepo } from '$lib/server/queries/setupRepository';
 import { highlightCode } from '$lib/server/markdown';
 
-export const load: PageServerLoad = async ({ params, url }) => {
-	const detail = await setupRepo.getDetail(params.username, params.slug);
+export const load: PageServerLoad = async ({ params, url, locals }) => {
+	const detail = await setupRepo.getDetail(params.username, params.slug, locals.user?.id);
 	if (!detail) throw error(404, 'Setup not found');
 
 	const { files } = detail;

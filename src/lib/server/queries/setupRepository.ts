@@ -17,6 +17,7 @@ import {
 	getAgentBySlugWithSetups,
 	getSlugRedirect
 } from '$lib/server/queries/setups';
+import { canViewSetup } from '$lib/server/queries/access';
 
 export type SetupListItem = NonNullable<Awaited<ReturnType<typeof getSetupByOwnerSlug>>>;
 
@@ -36,6 +37,8 @@ export const setupRepo = {
 		const setup = await getSetupByOwnerSlug(ownerUsername, slug);
 		if (!setup) return null;
 
+		if (!(await canViewSetup(setup, viewerId))) return null;
+
 		const [files, tags, agents, isStarred] = await Promise.all([
 			getSetupFiles(setup.id),
 			getSetupTags(setup.id),
@@ -46,12 +49,22 @@ export const setupRepo = {
 		return { ...setup, files, tags, agents, isStarred };
 	},
 
-	async getByOwnerSlug(ownerUsername: string, slug: string) {
-		return getSetupByOwnerSlug(ownerUsername, slug);
+	async getByOwnerSlug(
+		ownerUsername: string,
+		slug: string,
+		viewerId?: string | null
+	): Promise<SetupListItem | null> {
+		const setup = await getSetupByOwnerSlug(ownerUsername, slug);
+		if (!setup) return null;
+		if (!(await canViewSetup(setup, viewerId))) return null;
+		return setup;
 	},
 
-	async getById(id: string) {
-		return getSetupById(id);
+	async getById(id: string, viewerId?: string | null) {
+		const setup = await getSetupById(id);
+		if (!setup) return null;
+		if (!(await canViewSetup(setup, viewerId))) return null;
+		return setup;
 	},
 
 	async getFiles(setupId: string) {

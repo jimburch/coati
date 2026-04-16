@@ -135,6 +135,7 @@ export const updateSetupSchema = z
 		minToolVersion: z.string().max(20).nullable().optional(),
 		postInstall: postInstallSchema.nullable().optional(),
 		prerequisites: z.array(z.string()).nullable().optional(),
+		visibility: z.enum(['public', 'private']).optional(),
 		files: z.array(createSetupFileSchema).optional()
 	})
 	.refine((data) => !data.files || data.files.length <= 50, {

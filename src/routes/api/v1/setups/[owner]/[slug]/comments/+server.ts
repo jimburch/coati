@@ -6,7 +6,11 @@ import { getSetupComments, createComment, InvalidParentError } from '$lib/server
 import { createCommentSchema } from '$lib/types';
 
 export const GET: RequestHandler = async (event) => {
-	const setup = await setupRepo.getByOwnerSlug(event.params.owner, event.params.slug);
+	const setup = await setupRepo.getByOwnerSlug(
+		event.params.owner,
+		event.params.slug,
+		event.locals.user?.id
+	);
 	if (!setup) {
 		return error('Setup not found', 'NOT_FOUND', 404);
 	}
@@ -20,7 +24,7 @@ export const POST: RequestHandler = async (event) => {
 	if (authResult instanceof Response) return authResult;
 	const user = authResult;
 
-	const setup = await setupRepo.getByOwnerSlug(event.params.owner, event.params.slug);
+	const setup = await setupRepo.getByOwnerSlug(event.params.owner, event.params.slug, user.id);
 	if (!setup) {
 		return error('Setup not found', 'NOT_FOUND', 404);
 	}
@@ -38,6 +42,6 @@ export const POST: RequestHandler = async (event) => {
 		throw err;
 	}
 
-	const updated = await setupRepo.getByOwnerSlug(event.params.owner, event.params.slug);
+	const updated = await setupRepo.getByOwnerSlug(event.params.owner, event.params.slug, user.id);
 	return success({ comment, commentsCount: updated!.commentsCount }, 201);
 };

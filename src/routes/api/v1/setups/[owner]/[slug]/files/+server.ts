@@ -2,8 +2,8 @@ import type { RequestHandler } from './$types';
 import { success, error } from '$lib/server/responses';
 import { setupRepo } from '$lib/server/queries/setupRepository';
 
-export const GET: RequestHandler = async ({ params }) => {
-	const setup = await setupRepo.getByOwnerSlug(params.owner, params.slug);
+export const GET: RequestHandler = async ({ params, locals }) => {
+	const setup = await setupRepo.getByOwnerSlug(params.owner, params.slug, locals.user?.id);
 	if (!setup) {
 		return error('Setup not found', 'NOT_FOUND', 404);
 	}

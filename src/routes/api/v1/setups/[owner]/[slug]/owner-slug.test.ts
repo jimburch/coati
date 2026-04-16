@@ -43,6 +43,7 @@ const MOCK_SETUP = {
 function makeGetEvent(owner: string, slug: string) {
 	return {
 		params: { owner, slug },
+		locals: { user: null },
 		request: new Request(`http://localhost/api/v1/setups/${owner}/${slug}`)
 	} as Parameters<(typeof import('./+server'))['GET']>[0];
 }
