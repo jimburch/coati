@@ -41,3 +41,5 @@ playground/*/.coati/
 # Multi-agent and user playgrounds ship their coati.json as demonstration manifests
 !playground/multi/coati.json
 !playground/user/coati.json
+
+.superpowers
