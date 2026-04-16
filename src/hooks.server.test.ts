@@ -31,7 +31,22 @@ vi.mock('$lib/server/rate-limit', () => ({
 	checkRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args)
 }));
 
-import { handle, betaGate, getThemeFromCookie } from './hooks.server';
+// Mock observability/sentry — use vi.fn() directly in factory to avoid TDZ issues
+// with the module-level initSentry() call in hooks.server.ts
+vi.mock('$lib/server/observability/sentry', () => ({
+	initSentry: vi.fn(),
+	setSentryUser: vi.fn()
+}));
+
+// Mock @sentry/sveltekit for setContext and captureException
+vi.mock('@sentry/sveltekit', () => ({
+	setContext: vi.fn(),
+	captureException: vi.fn()
+}));
+
+import { handle, handleError, betaGate, getThemeFromCookie } from './hooks.server';
+import { setSentryUser } from '$lib/server/observability/sentry';
+import * as SentrySdk from '@sentry/sveltekit';
 
 function makeEvent(opts: { cookie?: string; bearerToken?: string; userAgent?: string } = {}) {
 	const locals: Record<string, unknown> = {};
@@ -398,5 +413,147 @@ describe('betaGate', () => {
 		expect(
 			betaGate(makeGateEvent('/admin', { isBetaApproved: false, isAdmin: true }), true)
 		).toBeNull();
+	});
+});
+
+describe('handle Sentry integration', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockPublicBetaMode = '';
+		mockCheckRateLimit.mockResolvedValue({ limited: false, retryAfter: 0 });
+		mockGetSessionToken.mockReturnValue(undefined);
+	});
+
+	it('calls setSentryUser with id and username when user is authenticated', async () => {
+		const { event } = makeEvent();
+		const resolve = makeResolve();
+		const user = { id: 'u1', username: 'alice' };
+		const session = { id: 'sess-1', expiresAt: new Date() };
+
+		mockGetSessionToken.mockReturnValue('cookie-token');
+		mockValidateSessionToken.mockResolvedValue({ user, session });
+
+		await handle({ event, resolve } as never);
+
+		expect(vi.mocked(setSentryUser)).toHaveBeenCalledWith({ id: 'u1', username: 'alice' });
+	});
+
+	it('does not call setSentryUser when user is not authenticated', async () => {
+		const { event } = makeEvent();
+		const resolve = makeResolve();
+
+		mockGetSessionToken.mockReturnValue(undefined);
+
+		await handle({ event, resolve } as never);
+
+		expect(vi.mocked(setSentryUser)).not.toHaveBeenCalled();
+	});
+
+	it('tags Sentry context with surface and cli_version on every request', async () => {
+		const { event } = makeEvent({ userAgent: '@coati/cli/1.2.3' });
+		const resolve = makeResolve();
+
+		mockGetSessionToken.mockReturnValue(undefined);
+
+		await handle({ event, resolve } as never);
+
+		expect(vi.mocked(SentrySdk.setContext)).toHaveBeenCalledWith('request_meta', {
+			surface: 'cli',
+			cli_version: '1.2.3'
+		});
+	});
+});
+
+describe('handleError', () => {
+	function makeErrorEvent(
+		opts: {
+			href?: string;
+			method?: string;
+			params?: Record<string, string>;
+			headers?: Record<string, string>;
+		} = {}
+	) {
+		const headers = new Headers(opts.headers ?? {});
+		return {
+			url: { href: opts.href ?? 'http://localhost/some/path' },
+			request: {
+				method: opts.method ?? 'GET',
+				headers
+			},
+			params: opts.params ?? {}
+		};
+	}
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it('calls Sentry.captureException with the error', () => {
+		const error = new Error('boom');
+		const event = makeErrorEvent();
+		handleError({ error, event, status: 500, message: 'boom' } as never);
+		expect(vi.mocked(SentrySdk.captureException)).toHaveBeenCalledWith(error, expect.any(Object));
+	});
+
+	it('attaches URL, method, and route params to extra context', () => {
+		const error = new Error('oops');
+		const event = makeErrorEvent({
+			href: 'http://localhost/api/v1/setups/123',
+			method: 'POST',
+			params: { id: '123' }
+		});
+		handleError({ error, event, status: 500, message: 'oops' } as never);
+		expect(vi.mocked(SentrySdk.captureException)).toHaveBeenCalledWith(
+			error,
+			expect.objectContaining({
+				extra: expect.objectContaining({
+					url: 'http://localhost/api/v1/setups/123',
+					method: 'POST',
+					routeParams: { id: '123' }
+				})
+			})
+		);
+	});
+
+	it('strips Authorization header from extra context', () => {
+		const error = new Error('unauthorized');
+		const event = makeErrorEvent({
+			headers: {
+				Authorization: 'Bearer secret-token',
+				'content-type': 'application/json'
+			}
+		});
+		handleError({ error, event, status: 500, message: 'unauthorized' } as never);
+		const call = vi.mocked(SentrySdk.captureException).mock.calls[0];
+		const extra = (call[1] as { extra: Record<string, unknown> }).extra;
+		expect(extra.headers).not.toHaveProperty('authorization');
+		expect(extra.headers).not.toHaveProperty('Authorization');
+		expect((extra.headers as Record<string, string>)['content-type']).toBe('application/json');
+	});
+
+	it('strips Cookie header from extra context', () => {
+		const error = new Error('err');
+		const event = makeErrorEvent({
+			headers: {
+				Cookie: 'session=abc123',
+				accept: 'text/html'
+			}
+		});
+		handleError({ error, event, status: 500, message: 'err' } as never);
+		const call = vi.mocked(SentrySdk.captureException).mock.calls[0];
+		const extra = (call[1] as { extra: Record<string, unknown> }).extra;
+		expect(extra.headers).not.toHaveProperty('cookie');
+		expect(extra.headers).not.toHaveProperty('Cookie');
+		expect((extra.headers as Record<string, string>)['accept']).toBe('text/html');
+	});
+
+	it('returns a safe message object', () => {
+		const result = handleError({
+			error: new Error('x'),
+			event: makeErrorEvent(),
+			status: 500,
+			message: 'x'
+		} as never);
+		expect(result).toEqual({ message: 'An unexpected error occurred' });
 	});
 });
