@@ -1,3 +1,15 @@
+# [1.6.0](https://github.com/jimburch/coati/compare/v1.5.1...v1.6.0) (2026-04-16)
+
+
+### Bug Fixes
+
+* **ui:** setup card shows display name when available ([5716592](https://github.com/jimburch/coati/commit/57165924b706a87950782f960e444c4c9eb028cf))
+
+
+### Features
+
+* **logging:** add mixpanel and sentry event and error logging ([#295](https://github.com/jimburch/coati/issues/295)) ([87880e4](https://github.com/jimburch/coati/commit/87880e486b43ff38bfd54518d8e2d124e9998965))
+
 ## [1.5.1](https://github.com/jimburch/coati/compare/v1.5.0...v1.5.1) (2026-04-16)
 
 
