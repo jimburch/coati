@@ -196,6 +196,10 @@ export const changeTeamMemberRoleSchema = z.object({
 	role: z.enum(['admin', 'member'])
 });
 
+export const createShareSchema = z.object({
+	username: z.string().min(1).max(50)
+});
+
 export const mcpServerConfigSchema = z.object({
 	command: z.string().min(1),
 	args: z.array(z.string()).optional(),
