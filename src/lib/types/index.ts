@@ -192,6 +192,10 @@ export const updateTeamSchema = z.object({
 	avatarUrl: z.string().url().nullable().optional()
 });
 
+export const changeTeamMemberRoleSchema = z.object({
+	role: z.enum(['admin', 'member'])
+});
+
 export const mcpServerConfigSchema = z.object({
 	command: z.string().min(1),
 	args: z.array(z.string()).optional(),

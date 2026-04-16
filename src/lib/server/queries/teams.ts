@@ -1,4 +1,4 @@
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { teams, teamMembers, setups, users, activities } from '$lib/server/db/schema';
 import type { z } from 'zod';
@@ -142,4 +142,61 @@ export async function getUserTeams(userId: string) {
 		.innerJoin(teams, eq(teamMembers.teamId, teams.id))
 		.where(eq(teamMembers.userId, userId))
 		.orderBy(desc(teamMembers.joinedAt));
+}
+
+export async function getTeamMembers(teamId: string) {
+	return db
+		.select({
+			userId: teamMembers.userId,
+			role: teamMembers.role,
+			joinedAt: teamMembers.joinedAt,
+			username: users.username,
+			avatarUrl: users.avatarUrl,
+			name: users.name
+		})
+		.from(teamMembers)
+		.innerJoin(users, eq(teamMembers.userId, users.id))
+		.where(eq(teamMembers.teamId, teamId))
+		.orderBy(teamMembers.joinedAt);
+}
+
+export async function removeTeamMember(teamId: string, userId: string, ownerId: string) {
+	await db.transaction(async (tx) => {
+		await tx
+			.update(setups)
+			.set({ userId: ownerId })
+			.where(and(eq(setups.teamId, teamId), eq(setups.userId, userId)));
+
+		await tx
+			.delete(teamMembers)
+			.where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId)));
+
+		await tx
+			.update(teams)
+			.set({ membersCount: sql`${teams.membersCount} - 1` })
+			.where(eq(teams.id, teamId));
+
+		await tx.insert(activities).values({
+			userId,
+			teamId,
+			actionType: 'left_team'
+		});
+	});
+}
+
+export async function changeTeamMemberRole(
+	teamId: string,
+	userId: string,
+	role: 'admin' | 'member'
+) {
+	const [updated] = await db
+		.update(teamMembers)
+		.set({ role })
+		.where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId)))
+		.returning();
+	return updated ?? null;
+}
+
+export async function leaveTeam(teamId: string, userId: string, ownerId: string) {
+	return removeTeamMember(teamId, userId, ownerId);
 }

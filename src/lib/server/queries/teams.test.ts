@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createTeamSchema, updateTeamSchema } from '$lib/types';
+import { createTeamSchema, updateTeamSchema, changeTeamMemberRoleSchema } from '$lib/types';
 
 // ── Schema tests (no DB needed) ───────────────────────────────────────────────
 
@@ -89,7 +89,8 @@ const state = vi.hoisted(() => ({
 vi.mock('drizzle-orm', () => ({
 	eq: vi.fn((a: unknown, b: unknown) => ({ _type: 'eq', a, b })),
 	and: vi.fn((...args: unknown[]) => ({ _type: 'and', args })),
-	desc: vi.fn((col: unknown) => ({ _type: 'desc', col }))
+	desc: vi.fn((col: unknown) => ({ _type: 'desc', col })),
+	sql: vi.fn(() => ({ _type: 'sql' }))
 }));
 
 vi.mock('$lib/server/db/schema', () => ({
@@ -128,7 +129,8 @@ vi.mock('$lib/server/db/schema', () => ({
 	users: {
 		id: 'users.id',
 		username: 'users.username',
-		avatarUrl: 'users.avatarUrl'
+		avatarUrl: 'users.avatarUrl',
+		name: 'users.name'
 	},
 	activities: {
 		userId: 'activities.userId',
@@ -220,7 +222,11 @@ import {
 	getTeamMemberRole,
 	updateTeam,
 	deleteTeam,
-	getUserTeams
+	getUserTeams,
+	getTeamMembers,
+	removeTeamMember,
+	changeTeamMemberRole,
+	leaveTeam
 } from './teams';
 
 describe('createTeam', () => {
@@ -409,5 +415,125 @@ describe('getUserTeams', () => {
 		const result = await getUserTeams('user-1');
 		expect(result).toHaveLength(1);
 		expect(result[0].role).toBe('admin');
+	});
+});
+
+describe('getTeamMembers', () => {
+	beforeEach(() => {
+		state.rows = [];
+		vi.clearAllMocks();
+	});
+
+	it('returns empty array when team has no members', async () => {
+		state.rows = [];
+		const result = await getTeamMembers('team-1');
+		expect(result).toEqual([]);
+	});
+
+	it('returns members with user info', async () => {
+		state.rows = [
+			{
+				userId: 'user-1',
+				role: 'admin',
+				joinedAt: new Date(),
+				username: 'alice',
+				avatarUrl: 'https://example.com/avatar.png',
+				name: 'Alice'
+			}
+		];
+		const result = await getTeamMembers('team-1');
+		expect(result).toHaveLength(1);
+		expect(result[0].username).toBe('alice');
+		expect(result[0].role).toBe('admin');
+	});
+});
+
+describe('removeTeamMember', () => {
+	beforeEach(() => {
+		state.rows = [];
+		state.txInsertCalls = [];
+		vi.clearAllMocks();
+	});
+
+	it('calls update on setups to reassign to owner', async () => {
+		await removeTeamMember('team-1', 'user-2', 'user-1');
+		expect(mockUpdateSet).toHaveBeenCalledWith(expect.objectContaining({ userId: 'user-1' }));
+	});
+
+	it('calls delete on teamMembers', async () => {
+		await removeTeamMember('team-1', 'user-2', 'user-1');
+		expect(mockDeleteWhere).toHaveBeenCalled();
+	});
+
+	it('decrements membersCount via second update call', async () => {
+		await removeTeamMember('team-1', 'user-2', 'user-1');
+		expect(mockUpdateSet).toHaveBeenCalledTimes(2);
+	});
+
+	it('logs left_team activity', async () => {
+		await removeTeamMember('team-1', 'user-2', 'user-1');
+		expect(mockInsertValues).toHaveBeenCalledWith(
+			expect.objectContaining({ userId: 'user-2', actionType: 'left_team' })
+		);
+	});
+});
+
+describe('changeTeamMemberRole', () => {
+	beforeEach(() => {
+		state.rows = [];
+		vi.clearAllMocks();
+	});
+
+	it('returns null when member not found', async () => {
+		state.rows = [];
+		const result = await changeTeamMemberRole('team-1', 'user-1', 'admin');
+		expect(result).toBeNull();
+	});
+
+	it('returns updated member when found', async () => {
+		state.rows = [{ teamId: 'team-1', userId: 'user-1', role: 'admin', joinedAt: new Date() }];
+		const result = await changeTeamMemberRole('team-1', 'user-1', 'admin');
+		expect(result).not.toBeNull();
+		expect(result?.role).toBe('admin');
+	});
+
+	it('passes role to update set', async () => {
+		state.rows = [{ teamId: 'team-1', userId: 'user-1', role: 'member', joinedAt: new Date() }];
+		await changeTeamMemberRole('team-1', 'user-1', 'member');
+		expect(mockUpdateSet).toHaveBeenCalledWith(expect.objectContaining({ role: 'member' }));
+	});
+});
+
+describe('leaveTeam', () => {
+	beforeEach(() => {
+		state.rows = [];
+		state.txInsertCalls = [];
+		vi.clearAllMocks();
+	});
+
+	it('delegates to removeTeamMember (calls delete and logs activity)', async () => {
+		await leaveTeam('team-1', 'user-2', 'user-1');
+		expect(mockDeleteWhere).toHaveBeenCalled();
+		expect(mockInsertValues).toHaveBeenCalledWith(
+			expect.objectContaining({ userId: 'user-2', actionType: 'left_team' })
+		);
+	});
+});
+
+describe('changeTeamMemberRoleSchema', () => {
+	it('accepts admin role', () => {
+		expect(changeTeamMemberRoleSchema.safeParse({ role: 'admin' }).success).toBe(true);
+	});
+
+	it('accepts member role', () => {
+		expect(changeTeamMemberRoleSchema.safeParse({ role: 'member' }).success).toBe(true);
+	});
+
+	it('rejects invalid role', () => {
+		expect(changeTeamMemberRoleSchema.safeParse({ role: 'superadmin' }).success).toBe(false);
+	});
+
+	it('rejects missing role', () => {
+		expect(changeTeamMemberRoleSchema.safeParse({}).success).toBe(false);
 	});
 });
