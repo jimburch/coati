@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
 import { dev } from '$app/environment';
 import type { Cookies } from '@sveltejs/kit';
+import { sanitizeUsername } from '$lib/utils/username';
 
 // ─── Arctic GitHub Provider ────────────────────────────────────────────────
 
@@ -146,7 +147,7 @@ export async function upsertGithubUser(accessToken: string): Promise<string> {
 		.insert(users)
 		.values({
 			githubId: ghUser.id,
-			username: ghUser.login.toLowerCase(),
+			username: sanitizeUsername(ghUser.login, ghUser.id),
 			email,
 			avatarUrl: ghUser.avatar_url,
 			githubUsername: ghUser.login,

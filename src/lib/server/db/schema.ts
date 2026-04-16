@@ -32,8 +32,23 @@ export const actionTypeEnum = pgEnum('action_type', [
 	'starred_setup',
 	'commented',
 	'followed_user',
-	'cloned_setup'
+	'cloned_setup',
+	'created_team',
+	'joined_team',
+	'left_team',
+	'invited_to_team'
 ]);
+
+export const teamMemberRoleEnum = pgEnum('team_member_role', ['admin', 'member']);
+
+export const teamInviteStatusEnum = pgEnum('team_invite_status', [
+	'pending',
+	'accepted',
+	'declined',
+	'expired'
+]);
+
+export const setupVisibilityEnum = pgEnum('setup_visibility', ['public', 'private']);
 
 export const feedbackCategoryEnum = pgEnum('feedback_category', [
 	'bug',
@@ -73,6 +88,7 @@ export const users = pgTable('users', {
 	followingCount: integer('following_count').default(0).notNull(),
 	isAdmin: boolean('is_admin').default(false).notNull(),
 	isBetaApproved: boolean('is_beta_approved').default(false).notNull(),
+	hasBetaFeatures: boolean('has_beta_features').default(false).notNull(),
 	lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 	updatedAt: timestamp('updated_at', { withTimezone: true })
@@ -94,6 +110,30 @@ export const agents = pgTable('agents', {
 	website: text('website'),
 	official: boolean('official').default(false).notNull()
 });
+
+export const teams = pgTable(
+	'teams',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		name: varchar('name', { length: 100 }).notNull(),
+		slug: varchar('slug', { length: 100 }).unique().notNull(),
+		description: varchar('description', { length: 300 }),
+		avatarUrl: text('avatar_url'),
+		ownerId: uuid('owner_id')
+			.references(() => users.id, { onDelete: 'cascade' })
+			.notNull(),
+		membersCount: integer('members_count').default(1).notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true })
+			.defaultNow()
+			.$onUpdate(() => new Date())
+			.notNull()
+	},
+	(table) => [
+		uniqueIndex('teams_slug_idx').on(table.slug),
+		index('teams_owner_id_idx').on(table.ownerId)
+	]
+);
 
 // ─── Tier 2: Depends on users ───────────────────────────────────────────────
 
@@ -122,6 +162,8 @@ export const setups = pgTable(
 		minToolVersion: varchar('min_tool_version', { length: 20 }),
 		postInstall: text('post_install').array(),
 		prerequisites: text('prerequisites').array(),
+		visibility: setupVisibilityEnum('visibility').default('public').notNull(),
+		teamId: uuid('team_id').references(() => teams.id, { onDelete: 'set null' }),
 		starsCount: integer('stars_count').default(0).notNull(),
 		clonesCount: integer('clones_count').default(0).notNull(),
 		commentsCount: integer('comments_count').default(0).notNull(),
@@ -277,10 +319,77 @@ export const activities = pgTable(
 		setupId: uuid('setup_id').references(() => setups.id, { onDelete: 'set null' }),
 		targetUserId: uuid('target_user_id').references(() => users.id, { onDelete: 'set null' }),
 		commentId: uuid('comment_id').references(() => comments.id, { onDelete: 'set null' }),
+		teamId: uuid('team_id').references(() => teams.id, { onDelete: 'set null' }),
 		actionType: actionTypeEnum('action_type').notNull(),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 	},
 	(table) => [index('activities_user_id_created_at_idx').on(table.userId, table.createdAt)]
+);
+
+// ─── Teams ───────────────────────────────────────────────────────────────────
+
+export const teamMembers = pgTable(
+	'team_members',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		teamId: uuid('team_id')
+			.references(() => teams.id, { onDelete: 'cascade' })
+			.notNull(),
+		userId: uuid('user_id')
+			.references(() => users.id, { onDelete: 'cascade' })
+			.notNull(),
+		role: teamMemberRoleEnum('role').default('member').notNull(),
+		joinedAt: timestamp('joined_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(table) => [
+		uniqueIndex('team_members_team_id_user_id_idx').on(table.teamId, table.userId),
+		index('team_members_user_id_idx').on(table.userId)
+	]
+);
+
+export const teamInvites = pgTable(
+	'team_invites',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		teamId: uuid('team_id')
+			.references(() => teams.id, { onDelete: 'cascade' })
+			.notNull(),
+		invitedByUserId: uuid('invited_by_user_id').references(() => users.id, {
+			onDelete: 'set null'
+		}),
+		invitedUserId: uuid('invited_user_id').references(() => users.id, { onDelete: 'set null' }),
+		email: text('email'),
+		token: text('token').unique().notNull(),
+		status: teamInviteStatusEnum('status').default('pending').notNull(),
+		expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(table) => [
+		index('team_invites_team_id_idx').on(table.teamId),
+		index('team_invites_token_idx').on(table.token)
+	]
+);
+
+export const setupShares = pgTable(
+	'setup_shares',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		setupId: uuid('setup_id')
+			.references(() => setups.id, { onDelete: 'cascade' })
+			.notNull(),
+		sharedWithUserId: uuid('shared_with_user_id')
+			.references(() => users.id, { onDelete: 'cascade' })
+			.notNull(),
+		sharedByUserId: uuid('shared_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(table) => [
+		uniqueIndex('setup_shares_setup_id_shared_with_user_id_idx').on(
+			table.setupId,
+			table.sharedWithUserId
+		),
+		index('setup_shares_shared_with_user_id_idx').on(table.sharedWithUserId)
+	]
 );
 
 // ─── Feedback ────────────────────────────────────────────────────────────────
@@ -355,7 +464,50 @@ export const usersRelations = relations(users, ({ many }) => ({
 	activities: many(activities),
 	followers: many(follows, { relationName: 'following' }),
 	following: many(follows, { relationName: 'follower' }),
-	reports: many(setupReports, { relationName: 'reporter' })
+	reports: many(setupReports, { relationName: 'reporter' }),
+	ownedTeams: many(teams, { relationName: 'owner' }),
+	teamMemberships: many(teamMembers),
+	setupShares: many(setupShares, { relationName: 'sharedWith' })
+}));
+
+export const teamsRelations = relations(teams, ({ one, many }) => ({
+	owner: one(users, { fields: [teams.ownerId], references: [users.id], relationName: 'owner' }),
+	members: many(teamMembers),
+	invites: many(teamInvites),
+	setups: many(setups)
+}));
+
+export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
+	team: one(teams, { fields: [teamMembers.teamId], references: [teams.id] }),
+	user: one(users, { fields: [teamMembers.userId], references: [users.id] })
+}));
+
+export const teamInvitesRelations = relations(teamInvites, ({ one }) => ({
+	team: one(teams, { fields: [teamInvites.teamId], references: [teams.id] }),
+	invitedBy: one(users, {
+		fields: [teamInvites.invitedByUserId],
+		references: [users.id],
+		relationName: 'invitedBy'
+	}),
+	invitedUser: one(users, {
+		fields: [teamInvites.invitedUserId],
+		references: [users.id],
+		relationName: 'invitedUser'
+	})
+}));
+
+export const setupSharesRelations = relations(setupShares, ({ one }) => ({
+	setup: one(setups, { fields: [setupShares.setupId], references: [setups.id] }),
+	sharedWith: one(users, {
+		fields: [setupShares.sharedWithUserId],
+		references: [users.id],
+		relationName: 'sharedWith'
+	}),
+	sharedBy: one(users, {
+		fields: [setupShares.sharedByUserId],
+		references: [users.id],
+		relationName: 'sharedBy'
+	})
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -364,13 +516,15 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
 
 export const setupsRelations = relations(setups, ({ one, many }) => ({
 	user: one(users, { fields: [setups.userId], references: [users.id] }),
+	team: one(teams, { fields: [setups.teamId], references: [teams.id] }),
 	files: many(setupFiles),
 	setupTags: many(setupTags),
 	setupAgents: many(setupAgents),
 	stars: many(stars),
 	comments: many(comments),
 	activities: many(activities),
-	reports: many(setupReports)
+	reports: many(setupReports),
+	shares: many(setupShares)
 }));
 
 export const followsRelations = relations(follows, ({ one }) => ({
@@ -433,7 +587,8 @@ export const activitiesRelations = relations(activities, ({ one }) => ({
 	user: one(users, { fields: [activities.userId], references: [users.id] }),
 	setup: one(setups, { fields: [activities.setupId], references: [setups.id] }),
 	targetUser: one(users, { fields: [activities.targetUserId], references: [users.id] }),
-	comment: one(comments, { fields: [activities.commentId], references: [comments.id] })
+	comment: one(comments, { fields: [activities.commentId], references: [comments.id] }),
+	team: one(teams, { fields: [activities.teamId], references: [teams.id] })
 }));
 
 export const setupReportsRelations = relations(setupReports, ({ one }) => ({
@@ -495,3 +650,15 @@ export type NewSetupReport = typeof setupReports.$inferInsert;
 
 export type SetupSlugRedirect = typeof setupSlugRedirects.$inferSelect;
 export type NewSetupSlugRedirect = typeof setupSlugRedirects.$inferInsert;
+
+export type Team = typeof teams.$inferSelect;
+export type NewTeam = typeof teams.$inferInsert;
+
+export type TeamMember = typeof teamMembers.$inferSelect;
+export type NewTeamMember = typeof teamMembers.$inferInsert;
+
+export type TeamInvite = typeof teamInvites.$inferSelect;
+export type NewTeamInvite = typeof teamInvites.$inferInsert;
+
+export type SetupShare = typeof setupShares.$inferSelect;
+export type NewSetupShare = typeof setupShares.$inferInsert;
