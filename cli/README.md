@@ -194,6 +194,38 @@ For example, cloning a setup with both Claude Code and Cursor files while only h
 
 Credentials and settings are stored at `~/.coati/config.json` (permissions `0600`). This file is managed by the CLI — you generally don't need to edit it.
 
+## Telemetry
+
+When an unhandled error occurs, the CLI sends a crash report to [Sentry](https://sentry.io). This helps us diagnose and fix bugs. The crash report includes the error message, stack trace, the subcommand that was running, and an anonymous device ID. After you run `coati login`, your Coati user ID is also attached to crash reports.
+
+**The CLI does not track analytics events.** It only sends data when something crashes.
+
+For full details on what is and isn't collected, see the [Coati Privacy Policy](https://coati.sh/privacy).
+
+### Opting out
+
+Crash reporting is opt-out. Use any of the following methods:
+
+**Per-session (standard `DO_NOT_TRACK`):**
+
+```bash
+DO_NOT_TRACK=1 coati clone owner/setup
+```
+
+**Per-session (Coati-specific):**
+
+```bash
+COATI_TELEMETRY=false coati publish
+```
+
+**Persistent (saved to `~/.coati/config.json`):**
+
+```bash
+coati config set telemetry false
+```
+
+When crash reporting is disabled, errors are still shown in your terminal — they are just not sent to Sentry.
+
 ## Links
 
 - [Website](https://coati.sh)
