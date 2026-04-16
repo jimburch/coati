@@ -174,14 +174,14 @@
 						The <code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
 							>coati</code
 						> CLI lets you clone setups into your project, publish your own, and interact with Coati from
-						the terminal. The quickest way is npx:
+						the terminal. You can run it directly with npx — no install required:
 					</p>
 				</div>
 				<div class="mt-4 space-y-4">
 					<CodeBlock
-						code="npx @coati/sh@latest login"
+						code="npx @coati/sh@latest clone username/setup-name"
 						language="bash"
-						label="Run via npx (preferred)"
+						label="Run via npx (no login needed)"
 					/>
 					<p class="text-muted-foreground">Or install it globally from npm:</p>
 					<CodeBlock
@@ -189,7 +189,15 @@
 						language="bash"
 						label="Install globally from npm"
 					/>
-					<CodeBlock code="coati login" language="bash" label="Authenticate" />
+					<p class="text-muted-foreground">
+						You can clone any setup without logging in. If you want to <strong
+							class="text-foreground">publish</strong
+						>
+						setups, <strong class="text-foreground">star</strong> setups, or
+						<strong class="text-foreground">follow</strong> developers, you'll need to authenticate:
+					</p>
+					<CodeBlock code="npx @coati/sh@latest login" language="bash" label="Login via npx" />
+					<CodeBlock code="coati login" language="bash" label="Login via global install" />
 					<p class="text-muted-foreground">
 						The <code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
 							>login</code
@@ -207,7 +215,7 @@
 			<section id="clone-a-setup" class="scroll-mt-20">
 				<h2 class="mb-4 text-2xl font-bold tracking-tight">Clone a Setup</h2>
 				<div class="space-y-4 text-muted-foreground">
-					<p>Found a setup you want to use? Clone it into your current project directory:</p>
+					<p>Found a setup you want to use? Clone it straight from the terminal:</p>
 				</div>
 				<div class="mt-4 space-y-4">
 					<CodeBlock
@@ -220,17 +228,23 @@
 						language="bash"
 						label="Clone via global install"
 					/>
+					<p class="text-muted-foreground">The CLI will ask where you want to place the files:</p>
+					<ul class="ml-4 list-disc space-y-2 text-muted-foreground">
+						<li>
+							<strong class="text-foreground">Project (current directory)</strong> — writes files into
+							your working directory, ideal for project-specific setups.
+						</li>
+						<li>
+							<strong class="text-foreground">Global (home folder)</strong> — writes files into your
+							home directory (<code
+								class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground">~</code
+							>), useful for setups you want available across all your projects.
+						</li>
+					</ul>
 					<p class="text-muted-foreground">
-						The CLI downloads all files listed in the setup's manifest and writes them to your
-						working directory. If any file already exists, you'll be prompted to confirm before
-						overwriting.
+						If any file already exists at the target location, you'll be prompted to confirm before
+						overwriting. No login is required to clone — just run the command and go.
 					</p>
-					<p class="text-muted-foreground">You can also pass a target directory:</p>
-					<CodeBlock
-						code="npx @coati/sh@latest clone username/setup-name ./my-project"
-						language="bash"
-						label="Clone into a specific directory"
-					/>
 				</div>
 			</section>
 
@@ -258,6 +272,7 @@
 					<CodeBlock
 						code={`{
   "name": "my-setup",
+  "display": "My Setup",
   "description": "My AI coding workflow for TypeScript projects",
   "category": "web-dev",
   "agents": ["claude-code"],
@@ -287,7 +302,9 @@
 						Add any files you want to bundle: config files, slash commands, hooks, scripts, or
 						documentation. Then reference them in the <code
 							class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground">files</code
-						> array.
+						>
+						array. Files included in the array must have the correct path and be present in your directory
+						and match where they are on disk.
 					</p>
 				</div>
 			</section>
@@ -312,10 +329,30 @@
 						Explore page.
 					</p>
 					<p class="text-muted-foreground">
-						To update a published setup, edit your files locally and run <code
+						To update a published setup's files, edit them locally and run <code
 							class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
 							>coati publish</code
 						> again. It will overwrite the current version.
+					</p>
+					<h3 class="mt-6 text-lg font-semibold text-foreground">Editing your setup on the web</h3>
+					<p class="text-muted-foreground">
+						You can also edit details about your setup directly on the platform. From your setup's
+						page, you'll find two editable sections:
+					</p>
+					<ul class="ml-4 list-disc space-y-2 text-muted-foreground">
+						<li>
+							<strong class="text-foreground">README</strong> — a Markdown document displayed prominently
+							on your setup page. Use it to explain what your setup does, how to customize it, and any
+							tips for getting the most out of it.
+						</li>
+						<li>
+							<strong class="text-foreground">About</strong> — a short description and metadata shown
+							in the sidebar. This is what people see when browsing the Explore page or your profile.
+						</li>
+					</ul>
+					<p class="text-muted-foreground">
+						These sections are edited on the web — no CLI publish needed. Great for updating docs
+						without touching your config files.
 					</p>
 				</div>
 			</section>

@@ -2,7 +2,9 @@ name: Back Merge
 
 on:
   workflow_run:
-    workflows: ["Release"]
+    # Trigger on both the web app release and the CLI release so that
+    # version-bump commits (cli/package.json) propagate to develop promptly.
+    workflows: ["Release", "CLI Release"]
     types:
       - completed
     branches:

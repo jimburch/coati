@@ -66,6 +66,7 @@
 	"dependencies": {
 		"@coati/agents-registry": "workspace:*",
 		"@coati/validation": "workspace:*",
+		"@sentry/sveltekit": "^10.48.0",
 		"@tailwindcss/typography": "^0.5.19",
 		"arctic": "^3.7.0",
 		"bits-ui": "^2.16.3",
@@ -73,6 +74,8 @@
 		"drizzle-orm": "^0.45.1",
 		"isomorphic-dompurify": "^3.3.0",
 		"marked": "^17.0.4",
+		"mixpanel": "^0.18.0",
+		"mixpanel-browser": "^2.78.0",
 		"postgres": "^3.4.8",
 		"rate-limiter-flexible": "^10.0.1",
 		"shiki": "^4.0.2",
