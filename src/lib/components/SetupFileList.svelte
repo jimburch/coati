@@ -48,20 +48,24 @@
 		}
 		return `folder:${node.folder}`;
 	}
+
+	function getExtension(path: string): string {
+		const name = path.split('/').pop() ?? '';
+		const dot = name.lastIndexOf('.');
+		return dot > 0 ? name.slice(dot).toLowerCase() : '';
+	}
 </script>
 
 {#if files.length > 0}
 	<div class="mb-6" data-testid="setup-file-list">
-		<!-- Section label -->
-		<div class="mb-2 flex items-center justify-between">
-			<span class="text-sm font-semibold text-muted-foreground">Files</span>
+		<div class="mb-2 flex items-center justify-end">
 			<a href="/{username}/{slug}/files" class="text-xs text-muted-foreground hover:underline">
 				Browse all {files.length}
 				{files.length === 1 ? 'file' : 'files'} →
 			</a>
 		</div>
 
-		<div class="space-y-0.5">
+		<div class="space-y-1 rounded-md border border-border p-3">
 			{#if agentless}
 				<!-- No group header when every file is agent-less -->
 				{#each groups[0].nodes as node (nodeKey(node))}
@@ -75,7 +79,7 @@
 					<div>
 						<!-- Agent group header -->
 						<button
-							class="flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-sm hover:bg-accent"
+							class="flex w-full items-center gap-1.5 rounded bg-muted/50 px-2 py-1 text-sm hover:bg-accent"
 							onclick={() => toggle(groupKey)}
 							aria-expanded={expanded}
 							data-testid="agent-group-header"
@@ -126,7 +130,7 @@
 								: '0fr'}; transition: grid-template-rows 200ms ease;"
 						>
 							<div class="overflow-hidden">
-								<div class="space-y-0.5 pl-4 pt-0.5">
+								<div class="space-y-1 pl-[22px] pt-0.5">
 									{#each group.nodes as node (nodeKey(node))}
 										{@render fileNode(node, groupKey)}
 									{/each}
@@ -144,10 +148,10 @@
 	{#if node.kind === 'root-file'}
 		<a
 			href={fileHref(node.file.path)}
-			class="flex items-center gap-1.5 rounded px-1 py-0.5 text-sm hover:bg-accent"
+			class="flex items-center gap-1.5 rounded px-1 py-1 text-sm hover:bg-accent"
 			data-testid="file-row"
 		>
-			{@render fileIcon()}
+			{@render fileIcon(node.file.path)}
 			<span class="min-w-0 truncate">{node.file.path}</span>
 			{#if node.file.description}
 				<span class="ml-auto shrink-0 text-xs text-muted-foreground">{node.file.description}</span>
@@ -156,10 +160,10 @@
 	{:else if node.kind === 'single-file-folder'}
 		<a
 			href={fileHref(node.file.path)}
-			class="flex items-center gap-1.5 rounded px-1 py-0.5 text-sm hover:bg-accent"
+			class="flex items-center gap-1.5 rounded px-1 py-1 text-sm hover:bg-accent"
 			data-testid="file-row"
 		>
-			{@render fileIcon()}
+			{@render fileIcon(node.file.path)}
 			<span class="min-w-0 truncate">
 				<span class="text-muted-foreground">{node.folder}</span>{node.filename}
 			</span>
@@ -218,14 +222,14 @@
 					: '0fr'}; transition: grid-template-rows 200ms ease;"
 			>
 				<div class="overflow-hidden">
-					<div class="space-y-0.5 pl-4 pt-0.5">
+					<div class="space-y-1 pl-[22px] pt-0.5">
 						{#each node.files as file (file.id)}
 							<a
 								href={fileHref(file.path)}
-								class="flex items-center gap-1.5 rounded px-1 py-0.5 text-sm hover:bg-accent"
+								class="flex items-center gap-1.5 rounded px-1 py-1 text-sm hover:bg-accent"
 								data-testid="file-row"
 							>
-								{@render fileIcon()}
+								{@render fileIcon(file.path)}
 								<span class="min-w-0 truncate">{getFilename(file.path)}</span>
 								{#if file.description}
 									<span class="ml-auto shrink-0 text-xs text-muted-foreground"
@@ -241,15 +245,103 @@
 	{/if}
 {/snippet}
 
-{#snippet fileIcon()}
-	<svg
-		class="size-3.5 shrink-0 text-muted-foreground"
-		viewBox="0 0 16 16"
-		fill="currentColor"
-		aria-hidden="true"
-	>
-		<path
-			d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011Z"
-		/>
-	</svg>
+{#snippet fileIcon(path: string)}
+	{@const ext = getExtension(path)}
+	{#if ext === '.md' || ext === '.mdx'}
+		<!-- Markdown icon -->
+		<svg
+			class="size-3.5 shrink-0 text-blue-500"
+			viewBox="0 0 16 16"
+			fill="currentColor"
+			aria-hidden="true"
+		>
+			<path
+				d="M14.85 3c.63 0 1.15.52 1.15 1.15v7.7c0 .63-.52 1.15-1.15 1.15H1.15C.52 13 0 12.48 0 11.85v-7.7C0 3.52.52 3 1.15 3ZM9 11V5H7l-1.5 2L4 5H2v6h2V8l1.5 1.92L7 8v3Zm2.99.5L14.5 8H13V5h-2v3H9.5Z"
+			/>
+		</svg>
+	{:else if ext === '.json' || ext === '.jsonc'}
+		<!-- JSON icon (braces) -->
+		<svg
+			class="size-3.5 shrink-0 text-yellow-600 dark:text-yellow-400"
+			viewBox="0 0 16 16"
+			fill="currentColor"
+			aria-hidden="true"
+		>
+			<path
+				d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011Z"
+			/>
+		</svg>
+	{:else if ext === '.sh' || ext === '.bash' || ext === '.zsh'}
+		<!-- Shell script icon (terminal) -->
+		<svg
+			class="size-3.5 shrink-0 text-green-600 dark:text-green-400"
+			viewBox="0 0 16 16"
+			fill="currentColor"
+			aria-hidden="true"
+		>
+			<path
+				d="M0 2.75C0 1.784.784 1 1.75 1h12.5c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 14.25 15H1.75A1.75 1.75 0 0 1 0 13.25Zm1.75-.25a.25.25 0 0 0-.25.25v10.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V2.75a.25.25 0 0 0-.25-.25ZM7 11a.75.75 0 0 1 0 1.5H4A.75.75 0 0 1 4 11Zm1.28-5.22a.75.75 0 0 0-1.06-1.06l-3 3a.75.75 0 0 0 0 1.06l3 3a.75.75 0 0 0 1.06-1.06L5.56 8Z"
+			/>
+		</svg>
+	{:else if ext === '.ts' || ext === '.tsx' || ext === '.mts'}
+		<!-- TypeScript icon -->
+		<svg
+			class="size-3.5 shrink-0 text-blue-600 dark:text-blue-400"
+			viewBox="0 0 16 16"
+			fill="currentColor"
+			aria-hidden="true"
+		>
+			<path
+				d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011Z"
+			/>
+		</svg>
+	{:else if ext === '.js' || ext === '.jsx' || ext === '.mjs'}
+		<!-- JavaScript icon -->
+		<svg
+			class="size-3.5 shrink-0 text-yellow-500"
+			viewBox="0 0 16 16"
+			fill="currentColor"
+			aria-hidden="true"
+		>
+			<path
+				d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011Z"
+			/>
+		</svg>
+	{:else if ext === '.yml' || ext === '.yaml'}
+		<!-- YAML icon -->
+		<svg
+			class="size-3.5 shrink-0 text-purple-500"
+			viewBox="0 0 16 16"
+			fill="currentColor"
+			aria-hidden="true"
+		>
+			<path
+				d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011Z"
+			/>
+		</svg>
+	{:else if ext === '.toml'}
+		<!-- TOML icon -->
+		<svg
+			class="size-3.5 shrink-0 text-orange-500"
+			viewBox="0 0 16 16"
+			fill="currentColor"
+			aria-hidden="true"
+		>
+			<path
+				d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011Z"
+			/>
+		</svg>
+	{:else}
+		<!-- Generic file icon -->
+		<svg
+			class="size-3.5 shrink-0 text-muted-foreground"
+			viewBox="0 0 16 16"
+			fill="currentColor"
+			aria-hidden="true"
+		>
+			<path
+				d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011Z"
+			/>
+		</svg>
+	{/if}
 {/snippet}

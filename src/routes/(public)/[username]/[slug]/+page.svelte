@@ -75,16 +75,6 @@
 	let localFeatured = $state<boolean | null>(null);
 	const isFeatured = $derived(localFeatured !== null ? localFeatured : !!data.setup.featuredAt);
 
-	// Optimistic override for stars count — set on button click, cleared when server data refreshes.
-	let starsCountOverride = $state<number | null>(null);
-	const localStarsCount = $derived(starsCountOverride ?? data.setup.starsCount);
-	$effect(() => {
-		// When revalidation brings fresh server data, drop the optimistic override.
-		// eslint-disable-next-line @typescript-eslint/no-unused-expressions
-		data.setup.starsCount;
-		starsCountOverride = null;
-	});
-
 	let deleteDialogOpen = $state(false);
 
 	function copyCloneCommand() {
@@ -107,7 +97,7 @@
 	twitterCard="summary_large_image"
 />
 
-<div class="mx-auto max-w-5xl px-4 py-6 lg:py-8">
+<div class="mx-auto max-w-6xl px-4 py-6 lg:py-8">
 	<!-- Header band (full-width) -->
 	<div class="mb-6 border-b border-border pb-6 lg:mb-8 lg:pb-8" data-testid="setup-header">
 		<div class="flex items-start justify-between gap-4">
@@ -160,10 +150,9 @@
 							</a>
 						{/each}
 
-						<!-- Stats -->
-						<span class="ml-auto text-xs text-muted-foreground">
-							{localStarsCount}
-							{localStarsCount === 1 ? 'star' : 'stars'} · updated {timeAgo(displayedUpdatedAt)}
+						<span class="text-xs text-muted-foreground">·</span>
+						<span class="text-xs text-muted-foreground">
+							updated {timeAgo(displayedUpdatedAt)}
 						</span>
 					</div>
 				{:else}
@@ -236,13 +225,7 @@
 
 			<!-- Right: Star button -->
 			<div class="shrink-0">
-				<StarButton
-					isStarred={data.isStarred}
-					starsCount={data.setup.starsCount}
-					onoptimisticchange={(count) => {
-						starsCountOverride = count;
-					}}
-				/>
+				<StarButton isStarred={data.isStarred} starsCount={data.setup.starsCount} />
 			</div>
 		</div>
 	</div>
@@ -291,14 +274,13 @@
 			<!-- README section -->
 			{#if !editMode}
 				<!-- View mode -->
-				<div class="mb-2 flex items-center justify-between">
-					<span class="text-sm font-semibold text-muted-foreground">README</span>
-					{#if isOwner}
+				{#if isOwner}
+					<div class="mb-2 flex items-center justify-end">
 						<Button variant="outline" size="sm" onclick={startEdit} data-testid="edit-readme-btn">
 							Edit
 						</Button>
-					{/if}
-				</div>
+					</div>
+				{/if}
 				{#if displayedReadmeHtml}
 					<div class="prose dark:prose-invert max-w-none [&_pre]:!bg-secondary">
 						{@html displayedReadmeHtml}
@@ -414,7 +396,7 @@
 		</div>
 
 		<!-- Slim sticky sidebar (~200px, desktop only) -->
-		<aside class="w-full shrink-0 lg:w-52" data-testid="sidebar">
+		<aside class="w-full shrink-0 lg:w-64" data-testid="sidebar">
 			<div class="lg:sticky lg:top-16 space-y-6">
 				<!-- Clone command (desktop only — mobile version is above) -->
 				<div class="hidden lg:block">
