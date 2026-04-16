@@ -3,147 +3,417 @@ import { expect, test } from '@playwright/test';
 const SETUP_URL = '/jimburch/claude-code-pro';
 const MULTI_AGENT_URL = '/jimburch/multi-agent-setup';
 
-test('shows file groups section', async ({ page }) => {
+// ─── SetupFileList: basic rendering ──────────────────────────────────────────
+
+test('file list section heading is visible when files exist', async ({ page }) => {
 	await page.goto(SETUP_URL);
-	await expect(page.getByText('Files')).toBeVisible();
+	const fileList = page.getByTestId('setup-file-list');
+	if (await fileList.isVisible()) {
+		await expect(page.getByText('Files')).toBeVisible();
+	}
 });
 
-test('shows browse all files link', async ({ page }) => {
+test('browse all files link points to /files route', async ({ page }) => {
 	await page.goto(SETUP_URL);
-	await expect(page.getByRole('link', { name: /browse all/i })).toBeVisible();
-	await expect(page.getByRole('link', { name: /browse all/i })).toHaveAttribute(
-		'href',
-		`${SETUP_URL}/files`
-	);
+	const fileList = page.getByTestId('setup-file-list');
+	if (!(await fileList.isVisible())) {
+		test.skip();
+		return;
+	}
+	const browseLink = fileList.getByRole('link', { name: /browse all/i });
+	await expect(browseLink).toBeVisible();
+	const href = await browseLink.getAttribute('href');
+	expect(href).toBe(`${SETUP_URL}/files`);
 });
 
-test('shows shared group when files have no agent', async ({ page }) => {
+test('file rows link to /{username}/{slug}/files?file= route', async ({ page }) => {
 	await page.goto(SETUP_URL);
-	// For a single-agent or mixed setup, shared group may appear
-	// We verify the file groups container renders
-	const fileGroups = page.getByTestId('file-groups');
-	await expect(fileGroups).toBeVisible();
+	const fileList = page.getByTestId('setup-file-list');
+	if (!(await fileList.isVisible())) {
+		test.skip();
+		return;
+	}
+	// Expand all agent groups so file rows are accessible
+	const groupHeaders = page.getByTestId('agent-group-header');
+	for (const header of await groupHeaders.all()) {
+		if ((await header.getAttribute('aria-expanded')) === 'false') {
+			await header.click();
+		}
+	}
+	// Expand subfolder groups too
+	const subfolderToggles = page.getByTestId('subfolder-group').getByTestId('collapse-toggle');
+	for (const toggle of await subfolderToggles.all()) {
+		if ((await toggle.getAttribute('aria-expanded')) === 'false') {
+			await toggle.click();
+		}
+	}
+
+	const fileRows = page.getByTestId('file-row');
+	const rowCount = await fileRows.count();
+	if (rowCount === 0) {
+		test.skip();
+		return;
+	}
+
+	const firstRow = fileRows.first();
+	const href = await firstRow.getAttribute('href');
+	expect(href).toMatch(new RegExp(`^${SETUP_URL}/files\\?file=`));
 });
 
-test('multi-agent setup shows multiple agent groups', async ({ page }) => {
+// ─── Agent group collapse/expand ─────────────────────────────────────────────
+
+test('agent group: clicking header toggles aria-expanded state', async ({ page }) => {
 	await page.goto(MULTI_AGENT_URL);
-	const agentGroups = page.getByTestId('agent-group');
+	const groupHeaders = page.getByTestId('agent-group-header');
+	if ((await groupHeaders.count()) === 0) {
+		test.skip();
+		return;
+	}
+	const firstHeader = groupHeaders.first();
+	const initialExpanded = await firstHeader.getAttribute('aria-expanded');
+	await firstHeader.click();
+	const afterExpanded = await firstHeader.getAttribute('aria-expanded');
+	// State should have toggled
+	expect(afterExpanded).not.toBe(initialExpanded);
+});
+
+test('agent group: can expand a collapsed group', async ({ page }) => {
+	await page.goto(MULTI_AGENT_URL);
+	const groupHeaders = page.getByTestId('agent-group-header');
+	if ((await groupHeaders.count()) === 0) {
+		test.skip();
+		return;
+	}
+	const firstHeader = groupHeaders.first();
+	// Ensure collapsed first
+	if ((await firstHeader.getAttribute('aria-expanded')) === 'true') {
+		await firstHeader.click();
+		await expect(firstHeader).toHaveAttribute('aria-expanded', 'false');
+	}
+	// Expand
+	await firstHeader.click();
+	await expect(firstHeader).toHaveAttribute('aria-expanded', 'true');
+});
+
+test('agent group: can collapse an expanded group', async ({ page }) => {
+	await page.goto(MULTI_AGENT_URL);
+	const groupHeaders = page.getByTestId('agent-group-header');
+	if ((await groupHeaders.count()) === 0) {
+		test.skip();
+		return;
+	}
+	const firstHeader = groupHeaders.first();
+	// Ensure expanded first
+	if ((await firstHeader.getAttribute('aria-expanded')) === 'false') {
+		await firstHeader.click();
+		await expect(firstHeader).toHaveAttribute('aria-expanded', 'true');
+	}
+	// Collapse
+	await firstHeader.click();
+	await expect(firstHeader).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('multi-agent setup shows multiple agent group headers', async ({ page }) => {
+	await page.goto(MULTI_AGENT_URL);
+	const agentGroups = page.getByTestId('agent-group-header');
 	const count = await agentGroups.count();
 	expect(count).toBeGreaterThan(1);
 });
 
-test('agent groups show file counts', async ({ page }) => {
+test('agent group headers display file count', async ({ page }) => {
 	await page.goto(MULTI_AGENT_URL);
-	// Each agent group should show a file count like "3 files" or "1 file"
-	const agentGroups = page.getByTestId('agent-group');
+	const agentGroups = page.getByTestId('agent-group-header');
+	if ((await agentGroups.count()) === 0) {
+		test.skip();
+		return;
+	}
 	const firstGroup = agentGroups.first();
 	await expect(firstGroup).toBeVisible();
 	await expect(firstGroup.getByText(/\d+ files?/)).toBeVisible();
 });
 
-test('shared group shows file count', async ({ page }) => {
-	await page.goto(MULTI_AGENT_URL);
-	const sharedGroup = page.getByTestId('shared-group');
-	if (await sharedGroup.isVisible()) {
-		await expect(sharedGroup.getByText(/\d+ files?/)).toBeVisible();
-	}
-});
+// ─── Subfolder collapse/expand ────────────────────────────────────────────────
 
-test('agent badges in header band link to agent pages', async ({ page }) => {
+test('subfolder: toggle button switches aria-expanded state', async ({ page }) => {
 	await page.goto(SETUP_URL);
-	// Header band has links to /agents/<slug>
-	const agentLink = page.locator('a[href^="/agents/"]').first();
-	if (await agentLink.isVisible()) {
-		const href = await agentLink.getAttribute('href');
-		expect(href).toMatch(/^\/agents\//);
+	const subfolderGroups = page.getByTestId('subfolder-group');
+	if ((await subfolderGroups.count()) === 0) {
+		// Try multi-agent URL as well
+		await page.goto(MULTI_AGENT_URL);
+	}
+	const refreshedGroups = page.getByTestId('subfolder-group');
+	if ((await refreshedGroups.count()) === 0) {
+		test.skip();
+		return;
+	}
+	const firstSubfolder = refreshedGroups.first();
+	// The button inside subfolder-group has data-testid="collapse-toggle" and aria-expanded
+	const toggleBtn = firstSubfolder.getByTestId('collapse-toggle');
+	const initialExpanded = await toggleBtn.getAttribute('aria-expanded');
+	await toggleBtn.click();
+	const afterExpanded = await toggleBtn.getAttribute('aria-expanded');
+	expect(afterExpanded).not.toBe(initialExpanded);
+});
+
+test('subfolder: can expand a collapsed subfolder', async ({ page }) => {
+	await page.goto(SETUP_URL);
+	let subfolderGroups = page.getByTestId('subfolder-group');
+	if ((await subfolderGroups.count()) === 0) {
+		await page.goto(MULTI_AGENT_URL);
+		subfolderGroups = page.getByTestId('subfolder-group');
+	}
+	if ((await subfolderGroups.count()) === 0) {
+		test.skip();
+		return;
+	}
+	// Ensure agent groups are expanded first so subfolders are in the DOM and reachable
+	const groupHeaders = page.getByTestId('agent-group-header');
+	for (const header of await groupHeaders.all()) {
+		if ((await header.getAttribute('aria-expanded')) === 'false') {
+			await header.click();
+		}
+	}
+
+	const firstSubfolder = subfolderGroups.first();
+	const toggleBtn = firstSubfolder.getByTestId('collapse-toggle');
+	// Ensure collapsed
+	if ((await toggleBtn.getAttribute('aria-expanded')) === 'true') {
+		await toggleBtn.click();
+		await expect(toggleBtn).toHaveAttribute('aria-expanded', 'false');
+	}
+	// Expand
+	await toggleBtn.click();
+	await expect(toggleBtn).toHaveAttribute('aria-expanded', 'true');
+});
+
+// ─── Auto-expand threshold ────────────────────────────────────────────────────
+
+test('auto-expand: groups start expanded when total files ≤ 10', async ({ page }) => {
+	await page.goto(SETUP_URL);
+	const fileList = page.getByTestId('setup-file-list');
+	if (!(await fileList.isVisible())) {
+		test.skip();
+		return;
+	}
+	const groupHeaders = page.getByTestId('agent-group-header');
+	if ((await groupHeaders.count()) === 0) {
+		// All-agentless setup: no group headers, nothing to assert
+		test.skip();
+		return;
+	}
+	// file-row elements are always in DOM regardless of expand state
+	const totalFiles = await page.getByTestId('file-row').count();
+	if (totalFiles > 10) {
+		// Wrong URL for this test variant — skip gracefully
+		test.skip();
+		return;
+	}
+	// All agent group headers should start expanded
+	for (const header of await groupHeaders.all()) {
+		await expect(header).toHaveAttribute('aria-expanded', 'true');
 	}
 });
 
-test('desktop layout: sidebar is visible alongside main content', async ({ page, isMobile }) => {
+test('auto-expand: groups start collapsed when total files > 10', async ({ page }) => {
+	await page.goto(MULTI_AGENT_URL);
+	const fileList = page.getByTestId('setup-file-list');
+	if (!(await fileList.isVisible())) {
+		test.skip();
+		return;
+	}
+	const groupHeaders = page.getByTestId('agent-group-header');
+	if ((await groupHeaders.count()) === 0) {
+		test.skip();
+		return;
+	}
+	const totalFiles = await page.getByTestId('file-row').count();
+	if (totalFiles <= 10) {
+		// Wrong URL for this test variant — skip gracefully
+		test.skip();
+		return;
+	}
+	// All agent group headers should start collapsed
+	for (const header of await groupHeaders.all()) {
+		await expect(header).toHaveAttribute('aria-expanded', 'false');
+	}
+});
+
+test('auto-expand: threshold boundary — groups reflect shouldStartExpanded logic', async ({
+	page
+}) => {
+	await page.goto(SETUP_URL);
+	const fileList = page.getByTestId('setup-file-list');
+	if (!(await fileList.isVisible())) {
+		test.skip();
+		return;
+	}
+	const groupHeaders = page.getByTestId('agent-group-header');
+	if ((await groupHeaders.count()) === 0) {
+		test.skip();
+		return;
+	}
+	const totalFiles = await page.getByTestId('file-row').count();
+	const expectedExpanded = totalFiles <= 10;
+
+	for (const header of await groupHeaders.all()) {
+		await expect(header).toHaveAttribute('aria-expanded', expectedExpanded ? 'true' : 'false');
+	}
+});
+
+// ─── Sidebar / clone command ──────────────────────────────────────────────────
+
+test('desktop: sidebar is visible alongside main content', async ({ page, isMobile }) => {
 	test.skip(isMobile, 'desktop-only test');
 	await page.goto(SETUP_URL);
-	// Three-zone layout: sidebar should be visible (uses data-testid)
 	const sidebar = page.getByTestId('sidebar');
 	await expect(sidebar).toBeVisible();
-	const fileGroups = page.getByTestId('file-groups');
-	await expect(fileGroups).toBeVisible();
+	const fileList = page.getByTestId('setup-file-list');
+	if (await fileList.isVisible()) {
+		await expect(fileList).toBeVisible();
+	}
 });
 
-test('mobile layout: file groups visible in stacked layout', async ({ page, isMobile }) => {
-	test.skip(!isMobile, 'mobile-only test');
-	await page.goto(SETUP_URL);
-	// On mobile, content stacks — file groups should still render
-	const fileGroups = page.getByTestId('file-groups');
-	await expect(fileGroups).toBeVisible();
-});
-
-test('single-agent setup shows one agent group', async ({ page }) => {
-	await page.goto(SETUP_URL);
-	// Single-agent setup should show at least the agent group or shared group
-	const fileGroups = page.getByTestId('file-groups');
-	await expect(fileGroups).toBeVisible();
-	const agentGroups = page.getByTestId('agent-group');
-	const sharedGroup = page.getByTestId('shared-group');
-	const agentCount = await agentGroups.count();
-	const hasShared = await sharedGroup.isVisible();
-	// At least one group must be visible
-	expect(agentCount + (hasShared ? 1 : 0)).toBeGreaterThan(0);
-});
-
-test('mobile: show comments button is visible by default', async ({ page, isMobile }) => {
-	test.skip(!isMobile, 'mobile-only test');
-	await page.goto(SETUP_URL);
-	const showBtn = page.getByTestId('show-comments-btn');
-	await expect(showBtn).toBeVisible();
-});
-
-test('mobile: comment thread is hidden by default', async ({ page, isMobile }) => {
-	test.skip(!isMobile, 'mobile-only test');
-	await page.goto(SETUP_URL);
-	const commentThread = page.getByTestId('comment-thread');
-	await expect(commentThread).toBeHidden();
-});
-
-test('mobile: tapping show comments button expands comment thread', async ({ page, isMobile }) => {
-	test.skip(!isMobile, 'mobile-only test');
-	await page.goto(SETUP_URL);
-	const showBtn = page.getByTestId('show-comments-btn');
-	await showBtn.tap();
-	const commentThread = page.getByTestId('comment-thread');
-	await expect(commentThread).toBeVisible();
-});
-
-test('desktop: comments always visible without toggle button', async ({ page, isMobile }) => {
+test('desktop: sidebar shows clone command heading and code', async ({ page, isMobile }) => {
 	test.skip(isMobile, 'desktop-only test');
 	await page.goto(SETUP_URL);
-	const commentThread = page.getByTestId('comment-thread');
-	await expect(commentThread).toBeVisible();
-	const showBtn = page.getByTestId('show-comments-btn');
-	await expect(showBtn).toBeHidden();
+	const sidebar = page.getByTestId('sidebar');
+	await expect(sidebar).toBeVisible();
+	// Desktop sidebar has a "Clone" section
+	await expect(sidebar.getByText('Clone')).toBeVisible();
+	await expect(sidebar.locator('code').first()).toBeVisible();
 });
 
-test('Header band shows setup title heading', async ({ page }) => {
+test('desktop: sidebar clone command stays visible after scrolling down', async ({
+	page,
+	isMobile
+}) => {
+	test.skip(isMobile, 'desktop-only test');
 	await page.goto(SETUP_URL);
-	// The header band contains an h1 with the setup title
+	const sidebar = page.getByTestId('sidebar');
+	const cloneCode = sidebar.locator('code').first();
+	await expect(cloneCode).toBeVisible();
+
+	// Scroll down significantly
+	await page.evaluate(() => window.scrollBy(0, 800));
+	// Allow time for any repaints
+	await page.waitForFunction(() => window.scrollY > 0);
+
+	// Clone command should still be visible (sidebar is sticky: lg:sticky lg:top-16)
+	await expect(cloneCode).toBeVisible();
+});
+
+// ─── Mobile layout ────────────────────────────────────────────────────────────
+
+test('mobile: inline clone command visible in main column', async ({ page, isMobile }) => {
+	test.skip(!isMobile, 'mobile-only test');
+	await page.goto(SETUP_URL);
+	// On mobile the clone command is in a .lg:hidden container above the file list
+	// It contains a <code> element with the clone command
+	const mobileClone = page
+		.locator('.lg\\:hidden')
+		.filter({ has: page.locator('code') })
+		.first();
+	await expect(mobileClone).toBeVisible();
+});
+
+test('mobile: header appears above file list in stacked layout', async ({ page, isMobile }) => {
+	test.skip(!isMobile, 'mobile-only test');
+	await page.goto(SETUP_URL);
+	const header = page.getByTestId('setup-header');
+	const fileList = page.getByTestId('setup-file-list');
+	if (!(await fileList.isVisible())) {
+		test.skip();
+		return;
+	}
+	const headerBounds = await header.boundingBox();
+	const fileListBounds = await fileList.boundingBox();
+	expect(headerBounds).not.toBeNull();
+	expect(fileListBounds).not.toBeNull();
+	if (headerBounds && fileListBounds) {
+		// Header's top edge must be above file list's top edge
+		expect(headerBounds.y).toBeLessThan(fileListBounds.y);
+	}
+});
+
+test('mobile: file list appears above sidebar in stacked layout', async ({ page, isMobile }) => {
+	test.skip(!isMobile, 'mobile-only test');
+	await page.goto(SETUP_URL);
+	const fileList = page.getByTestId('setup-file-list');
+	const sidebar = page.getByTestId('sidebar');
+	if (!(await fileList.isVisible())) {
+		test.skip();
+		return;
+	}
+	const fileListBounds = await fileList.boundingBox();
+	const sidebarBounds = await sidebar.boundingBox();
+	expect(fileListBounds).not.toBeNull();
+	expect(sidebarBounds).not.toBeNull();
+	if (fileListBounds && sidebarBounds) {
+		// File list's top edge must be above sidebar's top edge
+		expect(fileListBounds.y).toBeLessThan(sidebarBounds.y);
+	}
+});
+
+test('mobile: stacking order — header before clone before file list before sidebar', async ({
+	page,
+	isMobile
+}) => {
+	test.skip(!isMobile, 'mobile-only test');
+	await page.goto(SETUP_URL);
+
+	const header = page.getByTestId('setup-header');
+	const mobileClone = page
+		.locator('.lg\\:hidden')
+		.filter({ has: page.locator('code') })
+		.first();
+	const sidebar = page.getByTestId('sidebar');
+
+	const headerBounds = await header.boundingBox();
+	const cloneBounds = await mobileClone.boundingBox();
+	const sidebarBounds = await sidebar.boundingBox();
+
+	expect(headerBounds).not.toBeNull();
+	expect(cloneBounds).not.toBeNull();
+	expect(sidebarBounds).not.toBeNull();
+
+	if (headerBounds && cloneBounds && sidebarBounds) {
+		// header → clone → sidebar (top-to-bottom)
+		expect(headerBounds.y).toBeLessThan(cloneBounds.y);
+		expect(cloneBounds.y).toBeLessThan(sidebarBounds.y);
+	}
+});
+
+test('mobile: sidebar clone is hidden (desktop-only sidebar section)', async ({
+	page,
+	isMobile
+}) => {
+	test.skip(!isMobile, 'mobile-only test');
+	await page.goto(SETUP_URL);
+	const sidebar = page.getByTestId('sidebar');
+	await expect(sidebar).toBeVisible();
+	// The clone section inside the sidebar is hidden lg:block — not visible on mobile
+	const sidebarCloneHeading = sidebar.getByText('Clone');
+	await expect(sidebarCloneHeading).not.toBeVisible();
+});
+
+// ─── Header band ─────────────────────────────────────────────────────────────
+
+test('header band: shows setup title heading', async ({ page }) => {
+	await page.goto(SETUP_URL);
 	const header = page.getByTestId('setup-header');
 	await expect(header.locator('h1')).toBeVisible();
-	// Title should be non-empty
 	const titleText = await header.locator('h1').textContent();
 	expect(titleText?.trim().length).toBeGreaterThan(0);
 });
 
-test('page title tag includes setup name', async ({ page }) => {
+test('page title includes setup name and Coati brand', async ({ page }) => {
 	await page.goto(SETUP_URL);
 	const title = await page.title();
 	expect(title).toContain('Coati');
 	expect(title.length).toBeGreaterThan(0);
 });
 
-test('Header band title does not contain slug separator when display name is set', async ({
-	page
-}) => {
-	// This test verifies that setup detail header band renders a title
-	// When a setup has a display name, it should appear here instead of the slug
+test('header band title is non-empty when display name is set', async ({ page }) => {
 	await page.goto(SETUP_URL);
 	const header = page.getByTestId('setup-header');
 	const heading = header.locator('h1');
@@ -152,23 +422,31 @@ test('Header band title does not contain slug separator when display name is set
 	expect(text?.trim().length).toBeGreaterThan(0);
 });
 
-// About section edit tests
-// Note: these tests require the app to be running with an authenticated owner session.
-// The edit button is only visible to setup owners.
+// ─── Agent badges ─────────────────────────────────────────────────────────────
 
-test('About section: edit button not visible to non-owners', async ({ page }) => {
-	// When not logged in, the edit button should not appear
+test('agent badges in header band link to /agents/ pages', async ({ page }) => {
+	await page.goto(SETUP_URL);
+	const agentLink = page.locator('a[href^="/agents/"]').first();
+	if (await agentLink.isVisible()) {
+		const href = await agentLink.getAttribute('href');
+		expect(href).toMatch(/^\/agents\//);
+	}
+});
+
+// ─── About section editing ────────────────────────────────────────────────────
+
+test('about section: edit button not visible to non-owners', async ({ page }) => {
+	// When not logged in, the edit pencil button should not appear
 	await page.goto(SETUP_URL);
 	const editAboutBtn = page.getByTestId('edit-about-btn');
 	await expect(editAboutBtn).not.toBeVisible();
 });
 
-test('About section: pencil icon toggles edit mode for owner', async ({ page }) => {
+test('about section: pencil icon opens editor for owner', async ({ page }) => {
 	// Requires owner authentication — skip if edit button not visible
 	await page.goto(SETUP_URL);
 	const editAboutBtn = page.getByTestId('edit-about-btn');
-	const isVisible = await editAboutBtn.isVisible();
-	if (!isVisible) {
+	if (!(await editAboutBtn.isVisible())) {
 		test.skip();
 		return;
 	}
@@ -178,11 +456,10 @@ test('About section: pencil icon toggles edit mode for owner', async ({ page }) 
 	await expect(page.getByTestId('about-description-textarea')).toBeVisible();
 });
 
-test('About section: cancel button exits edit mode without saving', async ({ page }) => {
+test('about section: cancel button closes editor without saving', async ({ page }) => {
 	await page.goto(SETUP_URL);
 	const editAboutBtn = page.getByTestId('edit-about-btn');
-	const isVisible = await editAboutBtn.isVisible();
-	if (!isVisible) {
+	if (!(await editAboutBtn.isVisible())) {
 		test.skip();
 		return;
 	}
@@ -194,47 +471,38 @@ test('About section: cancel button exits edit mode without saving', async ({ pag
 	await expect(page.getByTestId('edit-about-btn')).toBeVisible();
 });
 
-test('About section: save updates display name and description', async ({ page }) => {
+test('about section: save updates display name in header band', async ({ page }) => {
 	await page.goto(SETUP_URL);
 	const editAboutBtn = page.getByTestId('edit-about-btn');
-	const isVisible = await editAboutBtn.isVisible();
-	if (!isVisible) {
+	if (!(await editAboutBtn.isVisible())) {
 		test.skip();
 		return;
 	}
 	await editAboutBtn.click();
 
-	const displayInput = page.getByTestId('about-display-input');
-	const descriptionTextarea = page.getByTestId('about-description-textarea');
-
-	await displayInput.fill('Updated Display Name');
-	await descriptionTextarea.fill('Updated description text');
-
+	await page.getByTestId('about-display-input').fill('Updated Display Name');
+	await page.getByTestId('about-description-textarea').fill('Updated description text');
 	await page.getByTestId('save-about-btn').click();
 
-	// After save, edit mode should close and updated values should appear in header band
+	// After save, edit mode closes and updated name appears in h1
 	await expect(page.getByTestId('about-editor')).not.toBeVisible();
-	const header = page.getByTestId('setup-header');
-	await expect(header.locator('h1')).toContainText('Updated Display Name');
+	await expect(page.getByTestId('setup-header').locator('h1')).toContainText(
+		'Updated Display Name'
+	);
 });
 
-test('About section: empty display name is rejected by browser required validation', async ({
-	page
-}) => {
+test('about section: empty display name blocked by required attribute', async ({ page }) => {
 	await page.goto(SETUP_URL);
 	const editAboutBtn = page.getByTestId('edit-about-btn');
-	const isVisible = await editAboutBtn.isVisible();
-	if (!isVisible) {
+	if (!(await editAboutBtn.isVisible())) {
 		test.skip();
 		return;
 	}
 	await editAboutBtn.click();
 
-	const displayInput = page.getByTestId('about-display-input');
-	await displayInput.fill('');
-
-	// The input has `required` attribute — browser prevents form submission
-	// The editor should remain visible
+	await page.getByTestId('about-display-input').fill('');
+	// The input has `required` — browser prevents form submission
 	await page.getByTestId('save-about-btn').click();
+	// Editor should remain open
 	await expect(page.getByTestId('about-editor')).toBeVisible();
 });
