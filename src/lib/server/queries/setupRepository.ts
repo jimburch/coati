@@ -17,11 +17,21 @@ import {
 	getAgentBySlugWithSetups,
 	getSlugRedirect
 } from '$lib/server/queries/setups';
+import { getTeamSetupBySlug } from '$lib/server/queries/teams';
 import { canViewSetup } from '$lib/server/queries/access';
 
 export type SetupListItem = NonNullable<Awaited<ReturnType<typeof getSetupByOwnerSlug>>>;
 
 export type SetupDetail = SetupListItem & {
+	files: Awaited<ReturnType<typeof getSetupFiles>>;
+	tags: Awaited<ReturnType<typeof getSetupTags>>;
+	agents: Awaited<ReturnType<typeof getSetupAgents>>;
+	isStarred: boolean;
+};
+
+export type TeamSetupBase = NonNullable<Awaited<ReturnType<typeof getTeamSetupBySlug>>>;
+
+export type TeamSetupDetail = TeamSetupBase & {
 	files: Awaited<ReturnType<typeof getSetupFiles>>;
 	tags: Awaited<ReturnType<typeof getSetupTags>>;
 	agents: Awaited<ReturnType<typeof getSetupAgents>>;
@@ -117,5 +127,25 @@ export const setupRepo = {
 
 	async getSlugRedirect(ownerUsername: string, oldSlug: string): Promise<string | null> {
 		return getSlugRedirect(ownerUsername, oldSlug);
+	},
+
+	async getTeamSetupDetail(
+		teamSlug: string,
+		setupSlug: string,
+		viewerId?: string | null
+	): Promise<TeamSetupDetail | null> {
+		const setup = await getTeamSetupBySlug(teamSlug, setupSlug);
+		if (!setup) return null;
+
+		if (!(await canViewSetup(setup, viewerId))) return null;
+
+		const [files, tags, agents, isStarred] = await Promise.all([
+			getSetupFiles(setup.id),
+			getSetupTags(setup.id),
+			getSetupAgents(setup.id),
+			viewerId ? isSetupStarredByUser(setup.id, viewerId) : Promise.resolve(false)
+		]);
+
+		return { ...setup, files, tags, agents, isStarred };
 	}
 };

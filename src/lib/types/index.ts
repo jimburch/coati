@@ -55,6 +55,9 @@ export type SetupCardProps = {
 	updatedAt: Date;
 	agents?: { id: string; displayName: string; slug: string }[];
 	ownerAvatarUrl?: string;
+	teamSlug?: string | null;
+	teamName?: string | null;
+	teamAvatarUrl?: string | null;
 };
 
 export type ProfileUser = {
@@ -113,7 +116,8 @@ export const createSetupWithFilesSchema = createSetupSchema
 		prerequisites: z.array(z.string()).optional(),
 		files: z.array(createSetupFileSchema).optional(),
 		agentIds: z.array(z.string().uuid()).optional(),
-		tagIds: z.array(z.string().uuid()).optional()
+		tagIds: z.array(z.string().uuid()).optional(),
+		teamId: z.string().uuid().optional()
 	})
 	.refine((data) => !data.files || data.files.length <= 50, {
 		message: 'Maximum 50 files per setup'

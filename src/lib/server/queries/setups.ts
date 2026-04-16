@@ -151,6 +151,7 @@ export async function createSetup(userId: string, data: CreateSetupInput) {
 				minToolVersion: data.minToolVersion,
 				postInstall: data.postInstall,
 				prerequisites: data.prerequisites,
+				...(data.teamId && { teamId: data.teamId, visibility: 'private' }),
 				updatedAt: new Date()
 			})
 			.returning();
@@ -256,6 +257,20 @@ export async function deleteSetup(id: string, userId: string) {
 
 		if (deleted.length > 0) {
 			await counters.setupDeleted(tx, userId);
+		}
+
+		return deleted.length;
+	});
+}
+
+// Delete a setup by ID regardless of userId (for team admin use).
+// `ownerId` is the setup's userId, used for decrementing the owner's setup counter.
+export async function deleteSetupForce(id: string, ownerId: string) {
+	return db.transaction(async (tx) => {
+		const deleted = await tx.delete(setups).where(eq(setups.id, id)).returning();
+
+		if (deleted.length > 0) {
+			await counters.setupDeleted(tx, ownerId);
 		}
 
 		return deleted.length;

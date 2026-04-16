@@ -47,7 +47,16 @@
 			</h2>
 			<div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 lg:gap-4">
 				{#each team.setups as setup (setup.id)}
-					<SetupCard {setup} username={setup.ownerUsername} showAuthor />
+					<SetupCard
+						setup={{
+							...setup,
+							teamSlug: team.slug,
+							teamName: team.name,
+							teamAvatarUrl: team.avatarUrl
+						}}
+						username={setup.ownerUsername}
+						showAuthor
+					/>
 				{/each}
 			</div>
 		</div>

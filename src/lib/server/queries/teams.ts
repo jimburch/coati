@@ -35,7 +35,7 @@ export async function createTeam(userId: string, data: CreateTeamInput) {
 	});
 }
 
-export async function getTeamBySlug(slug: string) {
+export async function getTeamBySlug(slug: string, viewerId?: string | null) {
 	const result = await db
 		.select({
 			id: teams.id,
@@ -56,6 +56,12 @@ export async function getTeamBySlug(slug: string) {
 
 	const team = result[0];
 
+	let viewerIsMember = false;
+	if (viewerId) {
+		const role = await getTeamMemberRole(team.id, viewerId);
+		viewerIsMember = role !== null;
+	}
+
 	const teamSetups = await db
 		.select({
 			id: setups.id,
@@ -66,12 +72,20 @@ export async function getTeamBySlug(slug: string) {
 			starsCount: setups.starsCount,
 			clonesCount: setups.clonesCount,
 			updatedAt: setups.updatedAt,
+			teamSlug: teams.slug,
+			teamName: teams.name,
+			teamAvatarUrl: teams.avatarUrl,
 			ownerUsername: users.username,
 			ownerAvatarUrl: users.avatarUrl
 		})
 		.from(setups)
+		.innerJoin(teams, eq(setups.teamId, teams.id))
 		.innerJoin(users, eq(setups.userId, users.id))
-		.where(and(eq(setups.teamId, team.id), eq(setups.visibility, 'public')))
+		.where(
+			viewerIsMember
+				? eq(setups.teamId, team.id)
+				: and(eq(setups.teamId, team.id), eq(setups.visibility, 'public'))
+		)
 		.orderBy(desc(setups.createdAt));
 
 	return { ...team, setups: teamSetups };
@@ -87,6 +101,21 @@ export async function getTeamBySlugForAuth(slug: string) {
 		})
 		.from(teams)
 		.where(eq(teams.slug, slug))
+		.limit(1);
+
+	return result[0] ?? null;
+}
+
+export async function getTeamByIdForAuth(id: string) {
+	const result = await db
+		.select({
+			id: teams.id,
+			name: teams.name,
+			slug: teams.slug,
+			ownerId: teams.ownerId
+		})
+		.from(teams)
+		.where(eq(teams.id, id))
 		.limit(1);
 
 	return result[0] ?? null;
@@ -199,4 +228,70 @@ export async function changeTeamMemberRole(
 
 export async function leaveTeam(teamId: string, userId: string, ownerId: string) {
 	return removeTeamMember(teamId, userId, ownerId);
+}
+
+export async function getTeamSetupBySlug(teamSlug: string, setupSlug: string) {
+	const result = await db
+		.select({
+			id: setups.id,
+			userId: setups.userId,
+			name: setups.name,
+			slug: setups.slug,
+			description: setups.description,
+			display: setups.display,
+			readme: setups.readme,
+			category: setups.category,
+			license: setups.license,
+			minToolVersion: setups.minToolVersion,
+			postInstall: setups.postInstall,
+			prerequisites: setups.prerequisites,
+			visibility: setups.visibility,
+			teamId: setups.teamId,
+			starsCount: setups.starsCount,
+			clonesCount: setups.clonesCount,
+			commentsCount: setups.commentsCount,
+			createdAt: setups.createdAt,
+			updatedAt: setups.updatedAt,
+			featuredAt: setups.featuredAt,
+			ownerUsername: users.username,
+			ownerAvatarUrl: users.avatarUrl,
+			teamName: teams.name,
+			teamSlug: teams.slug,
+			teamAvatarUrl: teams.avatarUrl
+		})
+		.from(setups)
+		.innerJoin(teams, eq(setups.teamId, teams.id))
+		.innerJoin(users, eq(setups.userId, users.id))
+		.where(and(eq(teams.slug, teamSlug), eq(setups.slug, setupSlug)))
+		.limit(1);
+
+	return result[0] ?? null;
+}
+
+export async function getTeamSetups(teamId: string, viewerIsMember: boolean) {
+	return db
+		.select({
+			id: setups.id,
+			name: setups.name,
+			slug: setups.slug,
+			description: setups.description,
+			display: setups.display,
+			starsCount: setups.starsCount,
+			clonesCount: setups.clonesCount,
+			updatedAt: setups.updatedAt,
+			teamSlug: teams.slug,
+			teamName: teams.name,
+			teamAvatarUrl: teams.avatarUrl,
+			ownerUsername: users.username,
+			ownerAvatarUrl: users.avatarUrl
+		})
+		.from(setups)
+		.innerJoin(teams, eq(setups.teamId, teams.id))
+		.innerJoin(users, eq(setups.userId, users.id))
+		.where(
+			viewerIsMember
+				? eq(setups.teamId, teamId)
+				: and(eq(setups.teamId, teamId), eq(setups.visibility, 'public'))
+		)
+		.orderBy(desc(setups.createdAt));
 }

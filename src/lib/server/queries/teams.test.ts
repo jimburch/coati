@@ -537,3 +537,157 @@ describe('changeTeamMemberRoleSchema', () => {
 		expect(changeTeamMemberRoleSchema.safeParse({}).success).toBe(false);
 	});
 });
+
+import { getTeamByIdForAuth, getTeamSetupBySlug, getTeamSetups } from './teams';
+
+describe('getTeamByIdForAuth', () => {
+	beforeEach(() => {
+		state.rows = [];
+		vi.clearAllMocks();
+	});
+
+	it('returns null when team not found', async () => {
+		state.rows = [];
+		const result = await getTeamByIdForAuth('nonexistent-id');
+		expect(result).toBeNull();
+	});
+
+	it('returns team with id, name, slug, ownerId when found', async () => {
+		state.rows = [{ id: 'team-1', name: 'My Team', slug: 'my-team', ownerId: 'user-1' }];
+		const result = await getTeamByIdForAuth('team-1');
+		expect(result).not.toBeNull();
+		expect(result?.id).toBe('team-1');
+		expect(result?.ownerId).toBe('user-1');
+	});
+});
+
+describe('getTeamSetupBySlug', () => {
+	beforeEach(() => {
+		state.rows = [];
+		vi.clearAllMocks();
+	});
+
+	it('returns null when setup not found', async () => {
+		state.rows = [];
+		const result = await getTeamSetupBySlug('my-team', 'nonexistent-setup');
+		expect(result).toBeNull();
+	});
+
+	it('returns setup with team info when found', async () => {
+		state.rows = [
+			{
+				id: 'setup-1',
+				userId: 'user-1',
+				name: 'My Setup',
+				slug: 'my-setup',
+				description: 'A setup',
+				display: null,
+				readme: null,
+				category: null,
+				license: null,
+				minToolVersion: null,
+				postInstall: null,
+				prerequisites: null,
+				visibility: 'private',
+				teamId: 'team-1',
+				starsCount: 0,
+				clonesCount: 0,
+				commentsCount: 0,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+				featuredAt: null,
+				ownerUsername: 'alice',
+				ownerAvatarUrl: null,
+				teamName: 'My Team',
+				teamSlug: 'my-team',
+				teamAvatarUrl: null
+			}
+		];
+		const result = await getTeamSetupBySlug('my-team', 'my-setup');
+		expect(result).not.toBeNull();
+		expect(result?.teamName).toBe('My Team');
+		expect(result?.teamSlug).toBe('my-team');
+		expect(result?.visibility).toBe('private');
+	});
+});
+
+describe('getTeamSetups', () => {
+	beforeEach(() => {
+		state.rows = [];
+		vi.clearAllMocks();
+	});
+
+	it('returns empty array when team has no setups', async () => {
+		state.rows = [];
+		const result = await getTeamSetups('team-1', false);
+		expect(result).toEqual([]);
+	});
+
+	it('returns setups when team has setups', async () => {
+		state.rows = [
+			{
+				id: 'setup-1',
+				name: 'My Setup',
+				slug: 'my-setup',
+				description: 'A setup',
+				display: null,
+				starsCount: 0,
+				clonesCount: 0,
+				updatedAt: new Date(),
+				teamSlug: 'my-team',
+				teamName: 'My Team',
+				teamAvatarUrl: null,
+				ownerUsername: 'alice',
+				ownerAvatarUrl: null
+			}
+		];
+		const result = await getTeamSetups('team-1', true);
+		expect(result).toHaveLength(1);
+		expect(result[0].teamName).toBe('My Team');
+	});
+});
+
+describe('getTeamBySlug with viewerId (member visibility)', () => {
+	beforeEach(() => {
+		state.rows = [];
+		vi.clearAllMocks();
+	});
+
+	it('returns team with setups when viewerId is provided', async () => {
+		state.rows = [
+			{
+				id: 'team-1',
+				name: 'My Team',
+				slug: 'my-team',
+				description: null,
+				avatarUrl: null,
+				ownerId: 'user-1',
+				membersCount: 1,
+				createdAt: new Date(),
+				updatedAt: new Date()
+			}
+		];
+		const result = await getTeamBySlug('my-team', 'user-1');
+		expect(result).not.toBeNull();
+		expect(result?.setups).toBeInstanceOf(Array);
+	});
+
+	it('returns team without viewerId (backward-compatible)', async () => {
+		state.rows = [
+			{
+				id: 'team-1',
+				name: 'My Team',
+				slug: 'my-team',
+				description: null,
+				avatarUrl: null,
+				ownerId: 'user-1',
+				membersCount: 1,
+				createdAt: new Date(),
+				updatedAt: new Date()
+			}
+		];
+		const result = await getTeamBySlug('my-team');
+		expect(result).not.toBeNull();
+		expect(result?.setups).toBeInstanceOf(Array);
+	});
+});

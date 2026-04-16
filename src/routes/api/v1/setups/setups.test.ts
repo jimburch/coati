@@ -2,10 +2,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockSearchSetups = vi.fn();
 const mockCreateSetup = vi.fn();
+const mockGetTeamByIdForAuth = vi.fn();
+const mockGetTeamMemberRole = vi.fn();
 
 vi.mock('$lib/server/queries/setups', () => ({
 	searchSetups: (filters: unknown) => mockSearchSetups(filters),
 	createSetup: (userId: unknown, data: unknown) => mockCreateSetup(userId, data)
+}));
+
+vi.mock('$lib/server/queries/setupRepository', () => ({
+	setupRepo: {
+		search: (filters: unknown) => mockSearchSetups(filters),
+		create: (userId: unknown, data: unknown) => mockCreateSetup(userId, data)
+	}
+}));
+
+vi.mock('$lib/server/queries/teams', () => ({
+	getTeamByIdForAuth: (...args: unknown[]) => mockGetTeamByIdForAuth(...args),
+	getTeamMemberRole: (...args: unknown[]) => mockGetTeamMemberRole(...args)
 }));
 
 vi.mock('$lib/server/responses', async (importOriginal) => {
@@ -13,7 +27,8 @@ vi.mock('$lib/server/responses', async (importOriginal) => {
 });
 
 vi.mock('$lib/server/guards', () => ({
-	requireApiAuth: () => ({ id: 'user-id', username: 'testuser' })
+	requireApiAuth: () => ({ id: 'user-id', username: 'testuser', hasBetaFeatures: true }),
+	requireBetaFeatures: () => ({ id: 'user-id', username: 'testuser', hasBetaFeatures: true })
 }));
 
 const MOCK_SEARCH_RESULT = {
@@ -112,5 +127,136 @@ describe('GET /api/v1/setups', () => {
 		expect(mockSearchSetups).toHaveBeenCalledWith(
 			expect.objectContaining({ agentSlugs: undefined })
 		);
+	});
+});
+
+const MOCK_CREATED_SETUP = {
+	id: 'setup-uuid-1',
+	name: 'My Setup',
+	slug: 'my-setup',
+	description: 'A great setup',
+	userId: 'user-id',
+	teamId: null,
+	visibility: 'public',
+	starsCount: 0,
+	clonesCount: 0,
+	commentsCount: 0,
+	createdAt: new Date('2026-01-01'),
+	updatedAt: new Date('2026-01-01')
+};
+
+function makePostEvent(body: Record<string, unknown>) {
+	return {
+		request: new Request('http://localhost/api/v1/setups', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(body)
+		}),
+		locals: { user: { id: 'user-id', username: 'testuser', hasBetaFeatures: true } }
+	} as Parameters<(typeof import('./+server'))['POST']>[0];
+}
+
+describe('POST /api/v1/setups', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it('creates setup without teamId and returns 201', async () => {
+		mockCreateSetup.mockResolvedValue(MOCK_CREATED_SETUP);
+		const { POST } = await import('./+server');
+		const res = await POST(
+			makePostEvent({ name: 'My Setup', slug: 'my-setup', description: 'desc' })
+		);
+		expect(res.status).toBe(201);
+	});
+
+	it('returns 404 when teamId is provided but team not found', async () => {
+		mockGetTeamByIdForAuth.mockResolvedValue(null);
+		const { POST } = await import('./+server');
+		const res = await POST(
+			makePostEvent({
+				name: 'My Setup',
+				slug: 'my-setup',
+				description: 'desc',
+				teamId: '00000000-0000-4000-8000-000000000001'
+			})
+		);
+		expect(res.status).toBe(404);
+		const body = await res.json();
+		expect(body.code).toBe('NOT_FOUND');
+	});
+
+	it('returns 403 when teamId is provided but user is not a member', async () => {
+		mockGetTeamByIdForAuth.mockResolvedValue({
+			id: 'team-1',
+			name: 'My Team',
+			slug: 'my-team',
+			ownerId: 'owner-id'
+		});
+		mockGetTeamMemberRole.mockResolvedValue(null);
+		const { POST } = await import('./+server');
+		const res = await POST(
+			makePostEvent({
+				name: 'My Setup',
+				slug: 'my-setup',
+				description: 'desc',
+				teamId: '00000000-0000-4000-8000-000000000001'
+			})
+		);
+		expect(res.status).toBe(403);
+		const body = await res.json();
+		expect(body.code).toBe('FORBIDDEN');
+	});
+
+	it('creates team setup when user is a member', async () => {
+		mockGetTeamByIdForAuth.mockResolvedValue({
+			id: '00000000-0000-4000-8000-000000000001',
+			name: 'My Team',
+			slug: 'my-team',
+			ownerId: 'owner-id'
+		});
+		mockGetTeamMemberRole.mockResolvedValue('member');
+		mockCreateSetup.mockResolvedValue({
+			...MOCK_CREATED_SETUP,
+			teamId: '00000000-0000-4000-8000-000000000001',
+			visibility: 'private'
+		});
+		const { POST } = await import('./+server');
+		const res = await POST(
+			makePostEvent({
+				name: 'My Setup',
+				slug: 'my-setup',
+				description: 'desc',
+				teamId: '00000000-0000-4000-8000-000000000001'
+			})
+		);
+		expect(res.status).toBe(201);
+		const body = await res.json();
+		expect(body.data.teamId).toBe('00000000-0000-4000-8000-000000000001');
+	});
+
+	it('creates team setup when user is an admin', async () => {
+		mockGetTeamByIdForAuth.mockResolvedValue({
+			id: '00000000-0000-4000-8000-000000000001',
+			name: 'My Team',
+			slug: 'my-team',
+			ownerId: 'owner-id'
+		});
+		mockGetTeamMemberRole.mockResolvedValue('admin');
+		mockCreateSetup.mockResolvedValue({
+			...MOCK_CREATED_SETUP,
+			teamId: '00000000-0000-4000-8000-000000000001',
+			visibility: 'private'
+		});
+		const { POST } = await import('./+server');
+		const res = await POST(
+			makePostEvent({
+				name: 'My Setup',
+				slug: 'my-setup',
+				description: 'desc',
+				teamId: '00000000-0000-4000-8000-000000000001'
+			})
+		);
+		expect(res.status).toBe(201);
 	});
 });

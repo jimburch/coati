@@ -15,13 +15,18 @@
 
 	const featured = $derived(variant === 'featured');
 
+	const isTeamSetup = $derived(!!setup.teamSlug);
+	const href = $derived(
+		isTeamSetup ? `/org/${setup.teamSlug}/${setup.slug}` : `/${username}/${setup.slug}`
+	);
+
 	const MAX_AGENTS = 3;
 	const visibleAgents = $derived(setup.agents?.slice(0, MAX_AGENTS) ?? []);
 	const overflowCount = $derived(Math.max(0, (setup.agents?.length ?? 0) - MAX_AGENTS));
 </script>
 
 <a
-	href="/{username}/{setup.slug}"
+	{href}
 	class={featured
 		? 'flex h-full flex-col rounded-lg border border-primary/50 bg-card p-5 transition-colors hover:border-foreground/20 hover:bg-accent/50 lg:p-6'
 		: 'flex h-full flex-col rounded-lg border border-border bg-card p-3 transition-colors hover:border-foreground/20 hover:bg-accent/50 lg:p-4'}
@@ -80,15 +85,27 @@
 		{/if}
 
 		{#if showAuthor}
-			<span class="ml-auto inline-flex items-center gap-1.5">
-				<Avatar class="size-4 text-[8px]">
-					{#if setup.ownerAvatarUrl}
-						<AvatarImage src={setup.ownerAvatarUrl} alt={username} />
-					{/if}
-					<AvatarFallback>{username[0].toUpperCase()}</AvatarFallback>
-				</Avatar>
-				{username}
-			</span>
+			{#if isTeamSetup}
+				<span class="ml-auto inline-flex items-center gap-1.5">
+					<Avatar class="size-4 text-[8px]">
+						{#if setup.teamAvatarUrl}
+							<AvatarImage src={setup.teamAvatarUrl} alt={setup.teamName ?? ''} />
+						{/if}
+						<AvatarFallback>{(setup.teamName ?? 'T')[0].toUpperCase()}</AvatarFallback>
+					</Avatar>
+					{setup.teamName}
+				</span>
+			{:else}
+				<span class="ml-auto inline-flex items-center gap-1.5">
+					<Avatar class="size-4 text-[8px]">
+						{#if setup.ownerAvatarUrl}
+							<AvatarImage src={setup.ownerAvatarUrl} alt={username} />
+						{/if}
+						<AvatarFallback>{username[0].toUpperCase()}</AvatarFallback>
+					</Avatar>
+					{username}
+				</span>
+			{/if}
 		{:else}
 			<span class="ml-auto">{timeAgo(setup.updatedAt)}</span>
 		{/if}
