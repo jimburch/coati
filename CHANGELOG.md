@@ -1,3 +1,15 @@
+# [1.7.0](https://github.com/jimburch/coati/compare/v1.6.0...v1.7.0) (2026-04-16)
+
+
+### Bug Fixes
+
+* **ci:** use PAT for CLI release bump PRs to trigger CI checks ([96b774e](https://github.com/jimburch/coati/commit/96b774e327e7ddbaeaf8401aa6b1fe5054e28293))
+
+
+### Features
+
+* **ui:** add files view to setup pages ([#303](https://github.com/jimburch/coati/issues/303)) ([b5b1b7f](https://github.com/jimburch/coati/commit/b5b1b7fb5c9cdd0389f8c95dd050db6049703096))
+
 # [1.6.0](https://github.com/jimburch/coati/compare/v1.5.1...v1.6.0) (2026-04-16)
 
 
