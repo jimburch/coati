@@ -10,13 +10,9 @@
 	const { data } = $props();
 
 	const isOwner = $derived(!!data.user && data.user.username === data.setup.ownerUsername);
-	let localUpdatedAt = $state<Date | null>(null);
+	let readmeUpdatedAt = $state<Date | null>(null);
 
-	const displayedUpdatedAt = $derived(localUpdatedAt ?? data.setup.updatedAt);
-
-	function handleReadmeSaved(update: { updatedAt: Date | null }) {
-		localUpdatedAt = update.updatedAt;
-	}
+	const displayedUpdatedAt = $derived(readmeUpdatedAt ?? data.setup.updatedAt);
 </script>
 
 <svelte:head>
@@ -60,7 +56,7 @@
 				readmeHtml={data.readmeHtml}
 				readmeRaw={data.setup.readme ?? null}
 				{isOwner}
-				onSaved={handleReadmeSaved}
+				onSaved={(update) => (readmeUpdatedAt = update.updatedAt)}
 			/>
 		</div>
 
