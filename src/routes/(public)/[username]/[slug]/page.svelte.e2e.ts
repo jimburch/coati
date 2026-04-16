@@ -49,9 +49,9 @@ test('shared group shows file count', async ({ page }) => {
 	}
 });
 
-test('agent badges in sidebar link to agent pages', async ({ page }) => {
+test('agent badges in header band link to agent pages', async ({ page }) => {
 	await page.goto(SETUP_URL);
-	// Agents section has links to /agents/<slug>
+	// Header band has links to /agents/<slug>
 	const agentLink = page.locator('a[href^="/agents/"]').first();
 	if (await agentLink.isVisible()) {
 		const href = await agentLink.getAttribute('href');
@@ -62,8 +62,8 @@ test('agent badges in sidebar link to agent pages', async ({ page }) => {
 test('desktop layout: sidebar is visible alongside main content', async ({ page, isMobile }) => {
 	test.skip(isMobile, 'desktop-only test');
 	await page.goto(SETUP_URL);
-	// Two-column layout: sidebar should be visible
-	const sidebar = page.locator('.lg\\:w-72');
+	// Three-zone layout: sidebar should be visible (uses data-testid)
+	const sidebar = page.getByTestId('sidebar');
 	await expect(sidebar).toBeVisible();
 	const fileGroups = page.getByTestId('file-groups');
 	await expect(fileGroups).toBeVisible();
@@ -72,7 +72,7 @@ test('desktop layout: sidebar is visible alongside main content', async ({ page,
 test('mobile layout: file groups visible in stacked layout', async ({ page, isMobile }) => {
 	test.skip(!isMobile, 'mobile-only test');
 	await page.goto(SETUP_URL);
-	// On mobile, sidebar stacks below content — file groups should still render
+	// On mobile, content stacks — file groups should still render
 	const fileGroups = page.getByTestId('file-groups');
 	await expect(fileGroups).toBeVisible();
 });
@@ -122,13 +122,13 @@ test('desktop: comments always visible without toggle button', async ({ page, is
 	await expect(showBtn).toBeHidden();
 });
 
-test('About section shows setup title heading', async ({ page }) => {
+test('Header band shows setup title heading', async ({ page }) => {
 	await page.goto(SETUP_URL);
-	// The About section contains an h2 with the setup title
-	const sidebar = page.locator('.lg\\:w-72');
-	await expect(sidebar.locator('h2')).toBeVisible();
+	// The header band contains an h1 with the setup title
+	const header = page.getByTestId('setup-header');
+	await expect(header.locator('h1')).toBeVisible();
 	// Title should be non-empty
-	const titleText = await sidebar.locator('h2').textContent();
+	const titleText = await header.locator('h1').textContent();
 	expect(titleText?.trim().length).toBeGreaterThan(0);
 });
 
@@ -139,14 +139,14 @@ test('page title tag includes setup name', async ({ page }) => {
 	expect(title.length).toBeGreaterThan(0);
 });
 
-test('About section title does not contain slug separator when display name is set', async ({
+test('Header band title does not contain slug separator when display name is set', async ({
 	page
 }) => {
-	// This test verifies that setup detail About section renders a title
+	// This test verifies that setup detail header band renders a title
 	// When a setup has a display name, it should appear here instead of the slug
 	await page.goto(SETUP_URL);
-	const sidebar = page.locator('.lg\\:w-72');
-	const heading = sidebar.locator('h2');
+	const header = page.getByTestId('setup-header');
+	const heading = header.locator('h1');
 	await expect(heading).toBeVisible();
 	const text = await heading.textContent();
 	expect(text?.trim().length).toBeGreaterThan(0);
@@ -212,10 +212,10 @@ test('About section: save updates display name and description', async ({ page }
 
 	await page.getByTestId('save-about-btn').click();
 
-	// After save, edit mode should close and updated values should appear
+	// After save, edit mode should close and updated values should appear in header band
 	await expect(page.getByTestId('about-editor')).not.toBeVisible();
-	const sidebar = page.locator('.lg\\:w-72');
-	await expect(sidebar.locator('h2')).toContainText('Updated Display Name');
+	const header = page.getByTestId('setup-header');
+	await expect(header.locator('h1')).toContainText('Updated Display Name');
 });
 
 test('About section: empty display name is rejected by browser required validation', async ({
