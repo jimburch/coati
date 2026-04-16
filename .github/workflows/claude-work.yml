@@ -15,7 +15,7 @@ on:
 jobs:
   worker:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 360
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     permissions:
