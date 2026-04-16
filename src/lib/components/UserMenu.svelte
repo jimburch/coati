@@ -33,6 +33,11 @@
 		<a href="/settings">
 			<DropdownMenuItem>Settings</DropdownMenuItem>
 		</a>
+		{#if user.hasBetaFeatures}
+			<a href="/teams">
+				<DropdownMenuItem>My Teams</DropdownMenuItem>
+			</a>
+		{/if}
 		{#if user.isAdmin}
 			<a href="/admin/beta">
 				<DropdownMenuItem>Admin</DropdownMenuItem>

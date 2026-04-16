@@ -179,6 +179,18 @@ export const usernameSchema = z
 	.max(50)
 	.regex(/^[a-z0-9]+(-[a-z0-9]+)*$/);
 
+export const createTeamSchema = z.object({
+	name: z.string().min(1).max(100),
+	slug: z.string().min(1).max(100).regex(SLUG_NAME_REGEX),
+	description: z.string().max(300).optional()
+});
+
+export const updateTeamSchema = z.object({
+	name: z.string().min(1).max(100).optional(),
+	description: z.string().max(300).nullable().optional(),
+	avatarUrl: z.string().url().nullable().optional()
+});
+
 export const mcpServerConfigSchema = z.object({
 	command: z.string().min(1),
 	args: z.array(z.string()).optional(),
