@@ -7,6 +7,7 @@
 	import DeleteSetupDialog from '$lib/components/DeleteSetupDialog.svelte';
 	import { enhance, deserialize } from '$app/forms';
 	import { timeAgo } from '$lib/utils';
+	import SetupFileList from '$lib/components/SetupFileList.svelte';
 
 	const { data } = $props();
 
@@ -83,20 +84,6 @@
 		data.setup.starsCount;
 		starsCountOverride = null;
 	});
-
-	const fileGroups = $derived(
-		(() => {
-			const agentGroups = data.agents
-				.map((agent) => ({
-					agent,
-					count: data.files.filter((f) => f.agent === agent.slug).length
-				}))
-				.filter((g) => g.count > 0);
-
-			const sharedCount = data.files.filter((f) => !f.agent).length;
-			return { agentGroups, sharedCount };
-		})()
-	);
 
 	let deleteDialogOpen = $state(false);
 
@@ -293,50 +280,13 @@
 				</div>
 			</div>
 
-			<!-- Files section (placeholder — full component in next issue) -->
-			<div class="mb-6">
-				<div class="mb-2 flex items-center justify-between">
-					<span class="text-sm font-semibold text-muted-foreground">Files</span>
-					<a
-						href="/{data.setup.ownerUsername}/{data.setup.slug}/files"
-						class="text-xs text-muted-foreground hover:underline"
-					>
-						Browse all {data.files.length}
-						{data.files.length === 1 ? 'file' : 'files'} →
-					</a>
-				</div>
-				<div class="space-y-1.5" data-testid="file-groups">
-					{#each fileGroups.agentGroups as group (group.agent.slug)}
-						<div class="flex items-center gap-2 text-sm" data-testid="agent-group">
-							<AgentIcon slug={group.agent.slug} size={16} />
-							<span class="font-medium">{group.agent.displayName}</span>
-							<span class="ml-auto text-xs text-muted-foreground"
-								>{group.count}
-								{group.count === 1 ? 'file' : 'files'}</span
-							>
-						</div>
-					{/each}
-					{#if fileGroups.sharedCount > 0}
-						<div class="flex items-center gap-2 text-sm" data-testid="shared-group">
-							<svg
-								class="size-4 shrink-0 text-muted-foreground"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								aria-hidden="true"
-							>
-								<path
-									d="M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75Z"
-								/>
-							</svg>
-							<span class="font-medium">Shared</span>
-							<span class="ml-auto text-xs text-muted-foreground"
-								>{fileGroups.sharedCount}
-								{fileGroups.sharedCount === 1 ? 'file' : 'files'}</span
-							>
-						</div>
-					{/if}
-				</div>
-			</div>
+			<!-- Files section -->
+			<SetupFileList
+				files={data.files}
+				agents={data.agents}
+				username={data.setup.ownerUsername}
+				slug={data.setup.slug}
+			/>
 
 			<!-- README section -->
 			{#if !editMode}
