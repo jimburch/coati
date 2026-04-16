@@ -66,6 +66,17 @@
 | **Device Flow**  | OAuth 2.0 Device Authorization Grant used by the CLI for GitHub login              | CLI auth, device code login    |
 | **Bearer Token** | The session token sent by the CLI as `Authorization: Bearer <token>`               | API key, access token          |
 
+## Environment naming (canonical)
+
+| Term           | Definition                                                                                               | Aliases to avoid            |
+| -------------- | -------------------------------------------------------------------------------------------------------- | --------------------------- |
+| **local**      | A developer's own machine, running the app against a local database and local environment variables      | dev, development, localhost |
+| **test**       | Ephemeral environments spun up by CI/CD pipelines to run automated test suites; torn down after each run | ci, integration, automated  |
+| **staging**    | A persistent environment that mirrors production configuration; used for pre-release verification and QA | preview, pre-prod, uat      |
+| **production** | The live service at coati.sh serving real users; the only environment where real user data is stored     | prod, live, main            |
+
+These four tiers are the only canonical environment names. All scripts, configuration files, environment variables, and documentation must use exactly these names.
+
 ## Moderation
 
 | Term       | Definition                                                               | Aliases to avoid |

@@ -63,9 +63,29 @@ jobs:
       - name: Bump version
         working-directory: cli
         run: |
+          PRE_BUMP=$(node -p "require('./package.json').version")
+          echo "PRE_BUMP_VERSION=$PRE_BUMP" >> "$GITHUB_ENV"
           npm version ${{ steps.bump.outputs.type }} --no-git-tag-version
           VERSION=$(node -p "require('./package.json').version")
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Verify version bump
+        working-directory: cli
+        run: |
+          EXPECTED=$(node -e "
+            const v = process.env.PRE_BUMP_VERSION.split('.').map(Number);
+            const type = '${{ steps.bump.outputs.type }}';
+            let [major, minor, patch] = v;
+            if (type === 'major') { major++; minor = 0; patch = 0; }
+            else if (type === 'minor') { minor++; patch = 0; }
+            else { patch++; }
+            console.log(major + '.' + minor + '.' + patch);
+          ")
+          if [ "$VERSION" != "$EXPECTED" ]; then
+            echo "ERROR: cli/package.json version ($VERSION) does not match expected ($EXPECTED) from pre-bump $PRE_BUMP_VERSION + ${{ steps.bump.outputs.type }}"
+            exit 1
+          fi
+          echo "Verified: ${PRE_BUMP_VERSION} → ${VERSION} (${{ steps.bump.outputs.type }})"
 
       - name: Build CLI
         working-directory: cli

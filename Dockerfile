@@ -5,6 +5,11 @@ RUN corepack enable
 
 WORKDIR /app
 
+# Inject app version at build time for Sentry release tagging
+# Pass: --build-arg APP_VERSION=$(node -p "require('./package.json').version")
+ARG APP_VERSION=unknown
+ENV PUBLIC_APP_VERSION=$APP_VERSION
+
 # Copy workspace config and lockfile first for better layer caching
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 
@@ -72,6 +77,10 @@ COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
 ENV NODE_ENV=production
 ENV PORT=3000
+
+# Propagate build-time version into the runtime image for Sentry release tagging
+ARG APP_VERSION=unknown
+ENV PUBLIC_APP_VERSION=$APP_VERSION
 
 EXPOSE 3000
 
