@@ -33,7 +33,7 @@ vi.mock('$lib/server/rate-limit', () => ({
 
 import { handle, betaGate, getThemeFromCookie } from './hooks.server';
 
-function makeEvent(opts: { cookie?: string; bearerToken?: string } = {}) {
+function makeEvent(opts: { cookie?: string; bearerToken?: string; userAgent?: string } = {}) {
 	const locals: Record<string, unknown> = {};
 	const cookies = {
 		get: vi.fn().mockReturnValue(undefined),
@@ -42,6 +42,9 @@ function makeEvent(opts: { cookie?: string; bearerToken?: string } = {}) {
 	const headers = new Headers();
 	if (opts.bearerToken) {
 		headers.set('Authorization', `Bearer ${opts.bearerToken}`);
+	}
+	if (opts.userAgent) {
+		headers.set('User-Agent', opts.userAgent);
 	}
 	return {
 		event: {
@@ -295,6 +298,48 @@ describe('getThemeFromCookie', () => {
 	it('returns "dark" for invalid cookie values', () => {
 		const cookies = { get: vi.fn().mockReturnValue('invalid') };
 		expect(getThemeFromCookie(cookies as never)).toBe('dark');
+	});
+});
+
+describe('handle surface detection', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockPublicBetaMode = '';
+		mockCheckRateLimit.mockResolvedValue({ limited: false, retryAfter: 0 });
+		mockGetSessionToken.mockReturnValue(undefined);
+	});
+
+	it('sets surface to "web" and cliVersion to null when no user-agent is present', async () => {
+		const { event } = makeEvent();
+		const resolve = makeResolve();
+
+		await handle({ event, resolve } as never);
+
+		expect(event.locals.surface).toBe('web');
+		expect(event.locals.cliVersion).toBeNull();
+	});
+
+	it('sets surface to "web" and cliVersion to null for a browser user-agent', async () => {
+		const { event } = makeEvent({
+			userAgent:
+				'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+		});
+		const resolve = makeResolve();
+
+		await handle({ event, resolve } as never);
+
+		expect(event.locals.surface).toBe('web');
+		expect(event.locals.cliVersion).toBeNull();
+	});
+
+	it('sets surface to "cli" and extracts cliVersion from @coati/cli user-agent', async () => {
+		const { event } = makeEvent({ userAgent: '@coati/cli/0.3.2' });
+		const resolve = makeResolve();
+
+		await handle({ event, resolve } as never);
+
+		expect(event.locals.surface).toBe('cli');
+		expect(event.locals.cliVersion).toBe('0.3.2');
 	});
 });
 

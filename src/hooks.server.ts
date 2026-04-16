@@ -9,6 +9,7 @@ import {
 import { checkRateLimit } from '$lib/server/rate-limit';
 import { env } from '$env/dynamic/public';
 import { startScheduler } from '$lib/server/scheduler';
+import { detectSurface } from '$lib/server/observability/surface';
 
 startScheduler();
 
@@ -55,6 +56,11 @@ export function betaGate(event: GateEvent, betaModeEnabled: boolean): Response |
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
+	// Surface detection — identify web vs CLI requests
+	const { surface, cliVersion } = detectSurface(event.request.headers.get('user-agent'));
+	event.locals.surface = surface;
+	event.locals.cliVersion = cliVersion;
+
 	// Auth resolution — must happen before rate limit so event.locals.user is populated
 	const cookieToken = getSessionToken(event.cookies);
 	const bearerToken = event.request.headers.get('Authorization')?.replace('Bearer ', '');
