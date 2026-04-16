@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/jimburch/coati/compare/v1.5.0...v1.5.1) (2026-04-16)
+
+
+### Bug Fixes
+
+* **ci:** repair cli release flow with PR-based version bumps and sync 0.4.0 ([93c53fb](https://github.com/jimburch/coati/commit/93c53fb93c9fcd38a0333bbf1787bdb6acb5fbee))
+
 # [1.5.0](https://github.com/jimburch/coati/compare/v1.4.1...v1.5.0) (2026-04-15)
 
 
