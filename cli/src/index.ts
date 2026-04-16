@@ -1,3 +1,7 @@
+import { initCliCrashReporting } from './observability.js';
+// Initialise crash reporting before any other code runs.
+initCliCrashReporting();
+
 import { Command } from 'commander';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
@@ -5,6 +9,7 @@ import { dirname, join } from 'path';
 import { registerLogin } from './commands/login.js';
 import { registerLogout } from './commands/logout.js';
 import { registerClone } from './commands/clone.js';
+import { registerConfig } from './commands/config.js';
 import { registerInit } from './commands/init.js';
 import { registerPublish } from './commands/publish.js';
 import { registerSearch } from './commands/search.js';
@@ -70,6 +75,7 @@ program.hook('postAction', async () => {
 registerLogin(program, ctx);
 registerLogout(program, ctx);
 registerClone(program, ctx);
+registerConfig(program, ctx);
 registerInit(program, ctx);
 registerPublish(program, ctx);
 registerSearch(program, ctx);

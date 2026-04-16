@@ -24,6 +24,7 @@
 	},
 	"dependencies": {
 		"@clack/prompts": "^1.1.0",
+		"@sentry/node": "^8.0.0",
 		"commander": "^12.1.0",
 		"diff": "^8.0.4",
 		"open": "^11.0.0",
