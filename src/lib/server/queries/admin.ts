@@ -12,6 +12,7 @@ export async function getAllUsersWithFeedbackCount(search?: string) {
 			githubUsername: users.githubUsername,
 			isAdmin: users.isAdmin,
 			isBetaApproved: users.isBetaApproved,
+			hasBetaFeatures: users.hasBetaFeatures,
 			lastLoginAt: users.lastLoginAt,
 			createdAt: users.createdAt,
 			feedbackCount: count(feedbackSubmissions.id)
@@ -30,4 +31,8 @@ export async function getAllUsersWithFeedbackCount(search?: string) {
 
 export async function setUserBetaApproval(userId: string, approved: boolean) {
 	await db.update(users).set({ isBetaApproved: approved }).where(eq(users.id, userId));
+}
+
+export async function setUserBetaFeaturesEnabled(userId: string, enabled: boolean) {
+	await db.update(users).set({ hasBetaFeatures: enabled }).where(eq(users.id, userId));
 }

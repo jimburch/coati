@@ -39,6 +39,7 @@ export type LayoutUser = {
 	bio: string | null;
 	isBetaApproved: boolean;
 	isAdmin: boolean;
+	hasBetaFeatures: boolean;
 };
 
 export type ExploreSort = 'trending' | 'stars' | 'newest';

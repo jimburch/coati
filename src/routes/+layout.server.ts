@@ -9,7 +9,8 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 					avatarUrl: locals.user.avatarUrl,
 					bio: locals.user.bio,
 					isBetaApproved: locals.user.isBetaApproved,
-					isAdmin: locals.user.isAdmin
+					isAdmin: locals.user.isAdmin,
+					hasBetaFeatures: locals.user.hasBetaFeatures
 				}
 			: null
 	};
