@@ -323,7 +323,10 @@ export const activities = pgTable(
 		actionType: actionTypeEnum('action_type').notNull(),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 	},
-	(table) => [index('activities_user_id_created_at_idx').on(table.userId, table.createdAt)]
+	(table) => [
+		index('activities_user_id_created_at_idx').on(table.userId, table.createdAt),
+		index('activities_setup_id_created_at_idx').on(table.setupId, table.createdAt)
+	]
 );
 
 // ─── Teams ───────────────────────────────────────────────────────────────────
