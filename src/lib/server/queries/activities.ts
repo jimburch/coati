@@ -2,15 +2,24 @@ import { and, desc, eq, inArray, lt, ne, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '$lib/server/db';
-import { activities, comments, follows, setups, users } from '$lib/server/db/schema';
+import { activities, comments, follows, setups, teams, users } from '$lib/server/db/schema';
 
 const actorUser = alias(users, 'actor');
 const setupOwnerUser = alias(users, 'setup_owner');
 const targetUserAlias = alias(users, 'target_user');
+const activityTeam = alias(teams, 'activity_team');
 
 export type FeedItem = {
 	id: string;
-	actionType: 'created_setup' | 'commented' | 'followed_user' | 'starred_setup';
+	actionType:
+		| 'created_setup'
+		| 'commented'
+		| 'followed_user'
+		| 'starred_setup'
+		| 'created_team'
+		| 'joined_team'
+		| 'left_team'
+		| 'invited_to_team';
 	createdAt: Date;
 	actorUsername: string;
 	actorAvatarUrl: string;
@@ -23,19 +32,31 @@ export type FeedItem = {
 	targetAvatarUrl: string | null;
 	commentId: string | null;
 	commentBody: string | null;
+	teamId: string | null;
+	teamName: string | null;
+	teamSlug: string | null;
+	teamAvatarUrl: string | null;
 };
 
 const FEED_ACTION_TYPES = [
 	'created_setup',
 	'commented',
-	'followed_user'
+	'followed_user',
+	'created_team',
+	'joined_team',
+	'left_team',
+	'invited_to_team'
 ] as const satisfies readonly FeedItem['actionType'][];
 
 const PROFILE_ACTION_TYPES = [
 	'created_setup',
 	'commented',
 	'followed_user',
-	'starred_setup'
+	'starred_setup',
+	'created_team',
+	'joined_team',
+	'left_team',
+	'invited_to_team'
 ] as const satisfies readonly FeedItem['actionType'][];
 
 // Private: single 6-join query with cursor pagination.
@@ -74,7 +95,11 @@ async function queryFeed(
 			targetUsername: targetUserAlias.username,
 			targetAvatarUrl: targetUserAlias.avatarUrl,
 			commentId: activities.commentId,
-			commentBody: comments.body
+			commentBody: comments.body,
+			teamId: activities.teamId,
+			teamName: activityTeam.name,
+			teamSlug: activityTeam.slug,
+			teamAvatarUrl: activityTeam.avatarUrl
 		})
 		.from(activities)
 		.innerJoin(actorUser, eq(activities.userId, actorUser.id))
@@ -82,6 +107,7 @@ async function queryFeed(
 		.leftJoin(setupOwnerUser, eq(setups.userId, setupOwnerUser.id))
 		.leftJoin(targetUserAlias, eq(activities.targetUserId, targetUserAlias.id))
 		.leftJoin(comments, eq(activities.commentId, comments.id))
+		.leftJoin(activityTeam, eq(activities.teamId, activityTeam.id))
 		.where(conditions)
 		.orderBy(desc(activities.createdAt))
 		.limit(limit + 1);

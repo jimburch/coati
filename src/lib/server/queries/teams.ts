@@ -348,6 +348,13 @@ export async function createInviteByUsername(
 		})
 		.returning();
 
+	await db.insert(activities).values({
+		userId: invitedByUserId,
+		teamId,
+		targetUserId: targetUser.id,
+		actionType: 'invited_to_team'
+	});
+
 	return { ok: true, invite };
 }
 
@@ -468,6 +475,12 @@ export async function createInviteLink(
 			expiresAt
 		})
 		.returning();
+
+	await db.insert(activities).values({
+		userId: invitedByUserId,
+		teamId,
+		actionType: 'invited_to_team'
+	});
 
 	return { ok: true, token: invite.token };
 }

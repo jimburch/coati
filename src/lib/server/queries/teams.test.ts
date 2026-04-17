@@ -711,9 +711,11 @@ import {
 	acceptInvite,
 	declineInvite,
 	getPendingInvites,
-	getTeamPendingInviteCount
+	getTeamPendingInviteCount,
+	createInviteLink
 } from './teams';
 import { createInviteSchema } from '$lib/types';
+import { db } from '$lib/server/db';
 
 describe('createInviteSchema', () => {
 	it('accepts valid username', () => {
@@ -951,5 +953,76 @@ describe('getPendingInvites', () => {
 		expect(result).toHaveLength(1);
 		expect(result[0].teamName).toBe('My Team');
 		expect(result[0].invitedByUsername).toBe('alice');
+	});
+});
+
+describe('createInviteLink', () => {
+	beforeEach(() => {
+		state.rows = [];
+		state.txInsertCalls = [];
+		vi.clearAllMocks();
+	});
+
+	it('returns ok with token on success', async () => {
+		state.rows = [{ id: 'invite-1', token: 'abc123', teamId: 'team-1' }];
+		const result = await createInviteLink('team-1', 'user-1');
+		expect(result).toMatchObject({ ok: true, token: 'abc123' });
+	});
+
+	it('logs invited_to_team activity after creating invite link', async () => {
+		state.rows = [{ id: 'invite-1', token: 'abc123', teamId: 'team-1' }];
+		await createInviteLink('team-1', 'user-1');
+		expect(mockInsertValues).toHaveBeenCalledWith(
+			expect.objectContaining({
+				userId: 'user-1',
+				teamId: 'team-1',
+				actionType: 'invited_to_team'
+			})
+		);
+	});
+
+	it('does not set targetUserId for link invites (anyone can accept)', async () => {
+		state.rows = [{ id: 'invite-1', token: 'abc123', teamId: 'team-1' }];
+		await createInviteLink('team-1', 'user-1');
+		const activityCall = mockInsertValues.mock.calls.find(
+			(call) => call[0]?.actionType === 'invited_to_team'
+		);
+		expect(activityCall).toBeDefined();
+		expect(activityCall![0]).not.toHaveProperty('targetUserId');
+	});
+});
+
+describe('createInviteByUsername invited_to_team activity', () => {
+	beforeEach(() => {
+		state.rows = [];
+		state.txInsertCalls = [];
+		vi.clearAllMocks();
+	});
+
+	it('logs invited_to_team with targetUserId when invite is created successfully', async () => {
+		// Override limit() to return different values for each sequential select query.
+		// Cast through unknown because the mock replaces db with a plain chain object.
+		const mockDb = db as unknown as Record<string, ReturnType<typeof vi.fn>>;
+		mockDb['limit']
+			.mockResolvedValueOnce([{ id: 'target-user-id' }]) // user found
+			.mockResolvedValueOnce([]) // not a member
+			.mockResolvedValueOnce([]) // no existing invite
+			.mockResolvedValueOnce([{ count: 0 }]); // pending count = 0
+
+		state.rows = [
+			{ id: 'invite-1', token: 'tok123', teamId: 'team-1', invitedUserId: 'target-user-id' }
+		];
+
+		const result = await createInviteByUsername('team-1', 'inviter-id', 'targetuser');
+
+		expect(result).toMatchObject({ ok: true });
+		expect(mockInsertValues).toHaveBeenCalledWith(
+			expect.objectContaining({
+				userId: 'inviter-id',
+				teamId: 'team-1',
+				targetUserId: 'target-user-id',
+				actionType: 'invited_to_team'
+			})
+		);
 	});
 });
