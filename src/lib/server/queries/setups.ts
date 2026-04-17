@@ -553,6 +553,56 @@ export async function getForYouSetups(userId: string, limit: number) {
 	}));
 }
 
+export async function getSetupsFromFollowedUsers(userId: string, limit: number) {
+	type SetupRow = {
+		id: string;
+		name: string;
+		slug: string;
+		description: string;
+		display: string | null;
+		stars_count: number;
+		clones_count: number;
+		created_at: Date;
+		updated_at: Date;
+		owner_username: string;
+		owner_avatar_url: string;
+	};
+
+	const rows = await db.execute<SetupRow>(
+		sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
+			${setups.display}, ${setups.starsCount}, ${setups.clonesCount},
+			${setups.createdAt}, ${setups.updatedAt},
+			${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
+			FROM ${setups}
+			INNER JOIN ${users} ON ${setups.userId} = ${users.id}
+			WHERE ${setups.userId} IN (
+				SELECT follower_id_sub.following_id FROM follows follower_id_sub
+				WHERE follower_id_sub.follower_id = ${userId}
+			)
+			AND ${setups.visibility} = 'public'
+			ORDER BY ${setups.createdAt} DESC
+			LIMIT ${limit}`
+	);
+
+	const setupIds = rows.map((r) => r.id);
+	const agentsMap = setupIds.length > 0 ? await getAgentsForSetups(setupIds) : {};
+
+	return rows.map((row) => ({
+		id: row.id,
+		name: row.name,
+		slug: row.slug,
+		description: row.description,
+		display: row.display,
+		starsCount: row.stars_count,
+		clonesCount: row.clones_count,
+		createdAt: new Date(row.created_at),
+		updatedAt: new Date(row.updated_at),
+		ownerUsername: row.owner_username,
+		ownerAvatarUrl: row.owner_avatar_url,
+		agents: agentsMap[row.id] ?? []
+	}));
+}
+
 export async function getRecentSetups(limit = 12, viewerId?: string) {
 	return db
 		.select({

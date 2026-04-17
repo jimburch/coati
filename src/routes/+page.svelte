@@ -62,6 +62,7 @@
 				<DiscoveryTabs
 					trendingSetups={data.trendingSetups}
 					forYouSetups={data.forYouSetups}
+					followingSetups={data.followingSetups}
 					activeTab={data.activeTab}
 				/>
 

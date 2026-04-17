@@ -5,6 +5,7 @@ import {
 	getAgentsForSetups,
 	getTrendingSetups,
 	getForYouSetups,
+	getSetupsFromFollowedUsers,
 	searchSetups
 } from '$lib/server/queries/setups';
 import {
@@ -39,17 +40,27 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			? (rawTab as Tab)
 			: 'for-you';
 
-		const [featured, recent, userStats, userSetups, userAgents, trending, yourActivity, forYou] =
-			await Promise.all([
-				getFeaturedSetups(3, viewerId),
-				getRecentSetups(3, viewerId),
-				getUserAggregateStats(viewerId),
-				getUserSetups(viewerId, 5),
-				getUserSetupAgents(viewerId),
-				getTrendingSetups(6, viewerId),
-				getActivityOnUserSetups(viewerId),
-				getForYouSetups(viewerId, 6)
-			]);
+		const [
+			featured,
+			recent,
+			userStats,
+			userSetups,
+			userAgents,
+			trending,
+			yourActivity,
+			forYou,
+			following
+		] = await Promise.all([
+			getFeaturedSetups(3, viewerId),
+			getRecentSetups(3, viewerId),
+			getUserAggregateStats(viewerId),
+			getUserSetups(viewerId, 5),
+			getUserSetupAgents(viewerId),
+			getTrendingSetups(6, viewerId),
+			getActivityOnUserSetups(viewerId),
+			getForYouSetups(viewerId, 6),
+			getSetupsFromFollowedUsers(viewerId, 6)
+		]);
 
 		const dashboardIds = [...featured.map((s) => s.id), ...recent.map((s) => s.id)];
 		const dashboardAgentsMap =
@@ -115,6 +126,21 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 					agents: s.agents
 				})
 			),
+			followingSetups: following.map(
+				(s): DashboardSetup => ({
+					id: s.id,
+					name: s.name,
+					slug: s.slug,
+					description: s.description,
+					display: s.display,
+					starsCount: s.starsCount,
+					clonesCount: s.clonesCount,
+					updatedAt: s.updatedAt,
+					ownerUsername: s.ownerUsername,
+					ownerAvatarUrl: s.ownerAvatarUrl || undefined,
+					agents: s.agents
+				})
+			),
 			activeTab,
 			userStats,
 			userSetups,
@@ -145,6 +171,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			})
 		),
 		forYouSetups: [] as DashboardSetup[],
+		followingSetups: [] as DashboardSetup[],
 		recentSetups: [] as DashboardSetup[],
 		userStats: null,
 		userSetups: [] as {

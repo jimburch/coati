@@ -20,10 +20,11 @@
 	type Props = {
 		trendingSetups: Setup[];
 		forYouSetups: Setup[];
+		followingSetups: Setup[];
 		activeTab: Tab;
 	};
 
-	const { trendingSetups, forYouSetups, activeTab }: Props = $props();
+	const { trendingSetups, forYouSetups, followingSetups, activeTab }: Props = $props();
 
 	const tabs: { id: Tab; label: string }[] = [
 		{ id: 'for-you', label: 'For You' },
@@ -68,12 +69,23 @@
 			</a>
 		</div>
 	{:else if activeTab === 'following'}
-		<div class="rounded-lg border border-dashed border-border py-8 text-center">
-			<p class="text-sm text-muted-foreground">Setups from people you follow will appear here.</p>
-		</div>
+		{#if followingSetups.length > 0}
+			<div class="grid grid-cols-2 gap-3">
+				{#each followingSetups as setup (setup.id)}
+					<SetupCard {setup} username={setup.ownerUsername} showAuthor />
+				{/each}
+			</div>
+		{:else}
+			<div class="rounded-lg border border-dashed border-border py-8 text-center">
+				<p class="text-sm text-muted-foreground">
+					Follow people to see their setups here.
+					<a href="/explore" class="underline hover:text-foreground">Explore setups</a>
+				</p>
+			</div>
+		{/if}
 		<div class="mt-3 flex justify-end">
 			<a
-				href="/explore?filter=following"
+				href="/explore"
 				class="text-xs text-muted-foreground transition-colors hover:text-foreground"
 			>
 				View more &rarr;
