@@ -2,6 +2,10 @@
 	import { buttonVariants } from '$lib/components/ui/button/button.svelte';
 	import SetupCard from '$lib/components/SetupCard.svelte';
 	import OgMeta from '$lib/components/OgMeta.svelte';
+	import ProfileCard from '$lib/components/ProfileCard.svelte';
+	import StatsGrid from '$lib/components/StatsGrid.svelte';
+	import YourSetupsList from '$lib/components/YourSetupsList.svelte';
+	import ZeroStateCard from '$lib/components/ZeroStateCard.svelte';
 	import { Upload, Search, Download } from '@lucide/svelte';
 
 	const { data } = $props();
@@ -29,90 +33,107 @@
 />
 
 {#if data.user}
-	<!-- Authenticated: Discovery Dashboard -->
-
-	{#if data.featuredSetups.length > 0}
-		<!-- Featured Setups -->
-		<section class="border-b border-border">
-			<div class="mx-auto max-w-7xl px-4 py-10 lg:py-16">
-				<div class="mb-6 flex items-baseline justify-between lg:mb-8">
-					<h2 class="text-xl font-bold tracking-tight lg:text-2xl">Featured Setups</h2>
-				</div>
-				<div class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-					{#each data.featuredSetups as setup (setup.id)}
-						<SetupCard {setup} username={setup.ownerUsername} showAuthor variant="featured" />
-					{/each}
-				</div>
-			</div>
-		</section>
-	{/if}
-
-	<!-- Trending -->
-	<section class="border-b border-border">
-		<div class="mx-auto max-w-7xl px-4 py-10 lg:py-16">
-			<div class="mb-6 flex items-baseline justify-between lg:mb-8">
-				<h2 class="text-xl font-bold tracking-tight lg:text-2xl">Trending</h2>
-				<a
-					href="/explore?sort=trending"
-					class="text-sm text-muted-foreground transition-colors hover:text-foreground"
-				>
-					View all trending &rarr;
-				</a>
-			</div>
-
-			{#if data.trendingSetups.length > 0}
-				<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-					{#each data.trendingSetups as setup, i (setup.id)}
-						<div class={i >= 3 && !showAllTrending ? 'hidden lg:block' : ''}>
-							<SetupCard {setup} username={setup.ownerUsername} showAuthor />
-						</div>
-					{/each}
-				</div>
-
-				{#if data.trendingSetups.length > 3}
-					<div class="mt-4 text-center lg:hidden">
-						<button
-							onclick={() => (showAllTrending = !showAllTrending)}
-							class={buttonVariants({ variant: 'outline', size: 'sm' })}
-						>
-							{showAllTrending ? 'Show less' : 'Show more'}
-						</button>
-					</div>
+	<!-- Authenticated: Two-column dashboard -->
+	<div class="mx-auto max-w-7xl px-4 py-6 lg:py-10">
+		<div class="flex flex-col gap-6 lg:grid lg:grid-cols-[280px_1fr]">
+			<!-- Left rail: identity -->
+			<aside class="flex flex-col gap-4">
+				<ProfileCard
+					username={data.user.username}
+					avatarUrl={data.user.avatarUrl}
+					name={data.user.name ?? null}
+				/>
+				{#if data.userSetups.length === 0}
+					<ZeroStateCard />
+				{:else}
+					{#if data.userStats}
+						<StatsGrid stats={data.userStats} />
+					{/if}
+					<YourSetupsList setups={data.userSetups} username={data.user.username} />
 				{/if}
-			{:else}
-				<div class="rounded-lg border border-dashed border-border py-12 text-center">
-					<p class="text-muted-foreground">No trending setups yet.</p>
-				</div>
-			{/if}
-		</div>
-	</section>
+			</aside>
 
-	<!-- Recently Added -->
-	<section>
-		<div class="mx-auto max-w-7xl px-4 py-10 lg:py-16">
-			<div class="mb-6 flex items-baseline justify-between lg:mb-8">
-				<h2 class="text-xl font-bold tracking-tight lg:text-2xl">Recently Added</h2>
-				<a
-					href="/explore?sort=newest"
-					class="text-sm text-muted-foreground transition-colors hover:text-foreground"
-				>
-					View all recent &rarr;
-				</a>
+			<!-- Right column: discovery sections -->
+			<div class="flex flex-col gap-0">
+				{#if data.featuredSetups.length > 0}
+					<!-- Featured Setups -->
+					<section class="border-b border-border pb-8 lg:pb-10">
+						<div class="mb-5 flex items-baseline justify-between lg:mb-6">
+							<h2 class="text-lg font-bold tracking-tight lg:text-xl">Featured Setups</h2>
+						</div>
+						<div class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+							{#each data.featuredSetups as setup (setup.id)}
+								<SetupCard {setup} username={setup.ownerUsername} showAuthor variant="featured" />
+							{/each}
+						</div>
+					</section>
+				{/if}
+
+				<!-- Trending -->
+				<section class="border-b border-border py-8 lg:py-10">
+					<div class="mb-5 flex items-baseline justify-between lg:mb-6">
+						<h2 class="text-lg font-bold tracking-tight lg:text-xl">Trending</h2>
+						<a
+							href="/explore?sort=trending"
+							class="text-sm text-muted-foreground transition-colors hover:text-foreground"
+						>
+							View all trending &rarr;
+						</a>
+					</div>
+
+					{#if data.trendingSetups.length > 0}
+						<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+							{#each data.trendingSetups as setup, i (setup.id)}
+								<div class={i >= 3 && !showAllTrending ? 'hidden lg:block' : ''}>
+									<SetupCard {setup} username={setup.ownerUsername} showAuthor />
+								</div>
+							{/each}
+						</div>
+
+						{#if data.trendingSetups.length > 3}
+							<div class="mt-4 text-center lg:hidden">
+								<button
+									onclick={() => (showAllTrending = !showAllTrending)}
+									class={buttonVariants({ variant: 'outline', size: 'sm' })}
+								>
+									{showAllTrending ? 'Show less' : 'Show more'}
+								</button>
+							</div>
+						{/if}
+					{:else}
+						<div class="rounded-lg border border-dashed border-border py-12 text-center">
+							<p class="text-muted-foreground">No trending setups yet.</p>
+						</div>
+					{/if}
+				</section>
+
+				<!-- Recently Added -->
+				<section class="pt-8 lg:pt-10">
+					<div class="mb-5 flex items-baseline justify-between lg:mb-6">
+						<h2 class="text-lg font-bold tracking-tight lg:text-xl">Recently Added</h2>
+						<a
+							href="/explore?sort=newest"
+							class="text-sm text-muted-foreground transition-colors hover:text-foreground"
+						>
+							View all recent &rarr;
+						</a>
+					</div>
+
+					{#if data.recentSetups.length > 0}
+						<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+							{#each data.recentSetups as setup (setup.id)}
+								<SetupCard {setup} username={setup.ownerUsername} showAuthor />
+							{/each}
+						</div>
+					{:else}
+						<div class="rounded-lg border border-dashed border-border py-12 text-center">
+							<p class="text-muted-foreground">No setups yet. Be the first to share one!</p>
+						</div>
+					{/if}
+				</section>
 			</div>
-
-			{#if data.recentSetups.length > 0}
-				<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-					{#each data.recentSetups as setup (setup.id)}
-						<SetupCard {setup} username={setup.ownerUsername} showAuthor />
-					{/each}
-				</div>
-			{:else}
-				<div class="rounded-lg border border-dashed border-border py-12 text-center">
-					<p class="text-muted-foreground">No setups yet. Be the first to share one!</p>
-				</div>
-			{/if}
 		</div>
-	</section>
+	</div>
 {:else}
 	<!-- Unauthenticated: Marketing landing page -->
 

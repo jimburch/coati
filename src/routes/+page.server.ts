@@ -6,6 +6,7 @@ import {
 	getAgentsForSetups,
 	searchSetups
 } from '$lib/server/queries/setups';
+import { getUserAggregateStats, getUserSetups } from '$lib/server/queries/users';
 
 type DashboardSetup = {
 	id: string;
@@ -24,10 +25,12 @@ type DashboardSetup = {
 export const load: PageServerLoad = async ({ locals }) => {
 	if (locals.user) {
 		const viewerId = locals.user.id;
-		const [featured, trending, recent] = await Promise.all([
+		const [featured, trending, recent, userStats, userSetups] = await Promise.all([
 			getFeaturedSetups(5, viewerId),
 			getTrendingSetups(6, viewerId),
-			getRecentSetups(6, viewerId)
+			getRecentSetups(6, viewerId),
+			getUserAggregateStats(viewerId),
+			getUserSetups(viewerId, 5)
 		]);
 
 		const dashboardIds = [
@@ -67,7 +70,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 			user: locals.user,
 			featuredSetups: featured.map(toCard),
 			trendingSetups: trending.map(toCard),
-			recentSetups: recent.map(toCard)
+			recentSetups: recent.map(toCard),
+			userStats,
+			userSetups
 		};
 	}
 
@@ -93,6 +98,18 @@ export const load: PageServerLoad = async ({ locals }) => {
 				agents: agentsMap[s.id] ?? []
 			})
 		),
-		recentSetups: [] as DashboardSetup[]
+		recentSetups: [] as DashboardSetup[],
+		userStats: null,
+		userSetups: [] as {
+			id: string;
+			name: string;
+			slug: string;
+			description: string;
+			display: string | null | undefined;
+			visibility: 'public' | 'private';
+			starsCount: number;
+			clonesCount: number;
+			updatedAt: Date;
+		}[]
 	};
 };
