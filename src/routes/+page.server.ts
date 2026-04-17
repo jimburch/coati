@@ -1,7 +1,6 @@
 import type { PageServerLoad } from './$types';
 import {
 	getFeaturedSetups,
-	getTrendingSetups,
 	getRecentSetups,
 	getAgentsForSetups,
 	searchSetups
@@ -25,19 +24,14 @@ type DashboardSetup = {
 export const load: PageServerLoad = async ({ locals }) => {
 	if (locals.user) {
 		const viewerId = locals.user.id;
-		const [featured, trending, recent, userStats, userSetups] = await Promise.all([
-			getFeaturedSetups(5, viewerId),
-			getTrendingSetups(6, viewerId),
-			getRecentSetups(6, viewerId),
+		const [featured, recent, userStats, userSetups] = await Promise.all([
+			getFeaturedSetups(3, viewerId),
+			getRecentSetups(3, viewerId),
 			getUserAggregateStats(viewerId),
 			getUserSetups(viewerId, 5)
 		]);
 
-		const dashboardIds = [
-			...featured.map((s) => s.id),
-			...trending.map((s) => s.id),
-			...recent.map((s) => s.id)
-		];
+		const dashboardIds = [...featured.map((s) => s.id), ...recent.map((s) => s.id)];
 		const dashboardAgentsMap =
 			dashboardIds.length > 0 ? await getAgentsForSetups(dashboardIds) : {};
 
@@ -69,7 +63,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 		return {
 			user: locals.user,
 			featuredSetups: featured.map(toCard),
-			trendingSetups: trending.map(toCard),
 			recentSetups: recent.map(toCard),
 			userStats,
 			userSetups
