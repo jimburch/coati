@@ -11,6 +11,7 @@ import {
 	getUserSetups,
 	getUserSetupAgents
 } from '$lib/server/queries/users';
+import { getActivityOnUserSetups, type SetupActivityEntry } from '$lib/server/queries/activities';
 
 type DashboardSetup = {
 	id: string;
@@ -37,14 +38,16 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			? (rawTab as Tab)
 			: 'for-you';
 
-		const [featured, recent, userStats, userSetups, userAgents, trending] = await Promise.all([
-			getFeaturedSetups(3, viewerId),
-			getRecentSetups(3, viewerId),
-			getUserAggregateStats(viewerId),
-			getUserSetups(viewerId, 5),
-			getUserSetupAgents(viewerId),
-			getTrendingSetups(6, viewerId)
-		]);
+		const [featured, recent, userStats, userSetups, userAgents, trending, yourActivity] =
+			await Promise.all([
+				getFeaturedSetups(3, viewerId),
+				getRecentSetups(3, viewerId),
+				getUserAggregateStats(viewerId),
+				getUserSetups(viewerId, 5),
+				getUserSetupAgents(viewerId),
+				getTrendingSetups(6, viewerId),
+				getActivityOnUserSetups(viewerId)
+			]);
 
 		const dashboardIds = [...featured.map((s) => s.id), ...recent.map((s) => s.id)];
 		const dashboardAgentsMap =
@@ -79,6 +82,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			user: locals.user,
 			featuredSetups: featured.map(toCard),
 			recentSetups: recent.map(toCard),
+			yourActivity,
 			trendingSetups: trending.map(
 				(s): DashboardSetup => ({
 					id: s.id,
@@ -136,6 +140,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			clonesCount: number;
 			updatedAt: Date;
 		}[],
-		userAgents: [] as { id: string; slug: string; displayName: string }[]
+		userAgents: [] as { id: string; slug: string; displayName: string }[],
+		yourActivity: [] as SetupActivityEntry[]
 	};
 };
