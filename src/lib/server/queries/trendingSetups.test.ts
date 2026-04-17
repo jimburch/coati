@@ -33,7 +33,9 @@ vi.mock('$lib/server/db/schema', () => ({
 		createdAt: 'setups.createdAt',
 		updatedAt: 'setups.updatedAt',
 		searchVector: 'setups.searchVector',
-		featuredAt: 'setups.featuredAt'
+		featuredAt: 'setups.featuredAt',
+		visibility: 'setups.visibility',
+		teamId: 'setups.teamId'
 	},
 	users: {
 		id: 'users.id',
@@ -223,5 +225,25 @@ describe('getTrendingSetups', () => {
 
 		const result = await getTrendingSetups(5);
 		expect(result).toEqual([]);
+	});
+
+	it('includes team_members subquery when viewerId is provided', async () => {
+		mockExecute.mockResolvedValueOnce([makeTrendingRow()]); // trending
+
+		await getTrendingSetups(1, 'user-123');
+
+		const hasTeamMembersCondition = capturedSql.queries.some((q) => q.includes('team_members'));
+		expect(hasTeamMembersCondition).toBe(true);
+	});
+
+	it('uses public-only visibility condition when viewerId is absent', async () => {
+		mockExecute
+			.mockResolvedValueOnce([]) // trending: empty
+			.mockResolvedValueOnce([]); // backfill
+
+		await getTrendingSetups(5);
+
+		const hasTeamMembersCondition = capturedSql.queries.some((q) => q.includes('team_members'));
+		expect(hasTeamMembersCondition).toBe(false);
 	});
 });

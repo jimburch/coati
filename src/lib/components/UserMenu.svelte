@@ -10,7 +10,8 @@
 	} from '$lib/components/ui/dropdown-menu';
 	import type { LayoutUser } from '$lib/types';
 
-	let { user }: { user: LayoutUser } = $props();
+	let { user, pendingInviteCount = 0 }: { user: LayoutUser; pendingInviteCount?: number } =
+		$props();
 
 	async function signOut() {
 		await fetch('/auth/logout', { method: 'POST' });
@@ -21,10 +22,19 @@
 
 <DropdownMenu>
 	<DropdownMenuTrigger>
-		<Avatar class="h-8 w-8 cursor-pointer">
-			<AvatarImage src={user.avatarUrl} alt={user.username} />
-			<AvatarFallback>{user.username[0].toUpperCase()}</AvatarFallback>
-		</Avatar>
+		<div class="relative">
+			<Avatar class="h-8 w-8 cursor-pointer">
+				<AvatarImage src={user.avatarUrl} alt={user.username} />
+				<AvatarFallback>{user.username[0].toUpperCase()}</AvatarFallback>
+			</Avatar>
+			{#if pendingInviteCount > 0}
+				<span
+					class="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground"
+				>
+					{pendingInviteCount}
+				</span>
+			{/if}
+		</div>
 	</DropdownMenuTrigger>
 	<DropdownMenuContent align="end" class="w-48">
 		<a href="/{user.username}">
@@ -33,6 +43,25 @@
 		<a href="/settings">
 			<DropdownMenuItem>Settings</DropdownMenuItem>
 		</a>
+		{#if user.hasBetaFeatures}
+			<a href="/teams">
+				<DropdownMenuItem>My Teams</DropdownMenuItem>
+			</a>
+			<a href="/invites">
+				<DropdownMenuItem>
+					<span class="flex w-full items-center justify-between">
+						Pending Invites
+						{#if pendingInviteCount > 0}
+							<span
+								class="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground"
+							>
+								{pendingInviteCount}
+							</span>
+						{/if}
+					</span>
+				</DropdownMenuItem>
+			</a>
+		{/if}
 		{#if user.isAdmin}
 			<a href="/admin/beta">
 				<DropdownMenuItem>Admin</DropdownMenuItem>

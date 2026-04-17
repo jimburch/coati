@@ -10,7 +10,8 @@ const betaUser: LayoutUser = {
 	avatarUrl: 'https://example.com/avatar.png',
 	bio: null,
 	isBetaApproved: true,
-	isAdmin: false
+	isAdmin: false,
+	hasBetaFeatures: false
 };
 
 const adminUser: LayoutUser = {
@@ -19,7 +20,8 @@ const adminUser: LayoutUser = {
 	avatarUrl: 'https://example.com/avatar2.png',
 	bio: null,
 	isBetaApproved: false,
-	isAdmin: true
+	isAdmin: true,
+	hasBetaFeatures: false
 };
 
 const nonBetaUser: LayoutUser = {
@@ -28,7 +30,8 @@ const nonBetaUser: LayoutUser = {
 	avatarUrl: 'https://example.com/avatar3.png',
 	bio: null,
 	isBetaApproved: false,
-	isAdmin: false
+	isAdmin: false,
+	hasBetaFeatures: false
 };
 
 // ─── shouldShowNudge ─────────────────────────────────────────────────────────

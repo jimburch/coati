@@ -12,8 +12,9 @@ const featuredSchema = z.object({
 export const POST: RequestHandler = async (event) => {
 	const authResult = requireAdmin(event);
 	if (authResult instanceof Response) return authResult;
+	const admin = authResult;
 
-	const setup = await setupRepo.getByOwnerSlug(event.params.owner, event.params.slug);
+	const setup = await setupRepo.getByOwnerSlug(event.params.owner, event.params.slug, admin.id);
 	if (!setup) {
 		return error('Setup not found', 'NOT_FOUND', 404);
 	}

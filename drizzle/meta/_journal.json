@@ -134,6 +134,13 @@
 			"when": 1742342400000,
 			"tag": "0017_add_display_column",
 			"breakpoints": true
+		},
+		{
+			"idx": 19,
+			"version": "7",
+			"when": 1744848000000,
+			"tag": "0018_private_setups_teams",
+			"breakpoints": true
 		}
 	]
 }

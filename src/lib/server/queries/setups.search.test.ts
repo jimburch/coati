@@ -33,7 +33,9 @@ vi.mock('$lib/server/db/schema', () => ({
 		commentsCount: 'setups.commentsCount',
 		createdAt: 'setups.createdAt',
 		updatedAt: 'setups.updatedAt',
-		searchVector: 'setups.searchVector'
+		searchVector: 'setups.searchVector',
+		visibility: 'setups.visibility',
+		teamId: 'setups.teamId'
 	},
 	users: {
 		id: 'users.id',

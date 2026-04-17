@@ -16,6 +16,7 @@ const mockRecordClone = vi.fn();
 const mockSearchSetups = vi.fn();
 const mockGetAllAgentsWithSetupCount = vi.fn();
 const mockGetAgentBySlugWithSetups = vi.fn();
+const mockCanViewSetup = vi.fn();
 
 vi.mock('$lib/server/queries/setups', () => ({
 	getSetupByOwnerSlug: (...args: unknown[]) => mockGetSetupByOwnerSlug(...args),
@@ -36,6 +37,10 @@ vi.mock('$lib/server/queries/setups', () => ({
 	getAgentBySlugWithSetups: (...args: unknown[]) => mockGetAgentBySlugWithSetups(...args)
 }));
 
+vi.mock('$lib/server/queries/access', () => ({
+	canViewSetup: (...args: unknown[]) => mockCanViewSetup(...args)
+}));
+
 import { setupRepo } from './setupRepository';
 
 const MOCK_SETUP = {
@@ -50,6 +55,8 @@ const MOCK_SETUP = {
 	minToolVersion: null,
 	postInstall: null,
 	prerequisites: null,
+	visibility: 'public' as const,
+	teamId: null,
 	starsCount: 5,
 	clonesCount: 2,
 	commentsCount: 0,
@@ -82,6 +89,7 @@ describe('setupRepo.getDetail', () => {
 		mockGetSetupTags.mockResolvedValue(MOCK_TAGS);
 		mockGetSetupAgents.mockResolvedValue(MOCK_AGENTS);
 		mockIsSetupStarredByUser.mockResolvedValue(false);
+		mockCanViewSetup.mockResolvedValue(true);
 	});
 
 	it('returns null when setup not found', async () => {
@@ -160,20 +168,48 @@ describe('setupRepo.getDetail', () => {
 		expect(result!.ownerUsername).toBe(MOCK_SETUP.ownerUsername);
 		expect(result!.starsCount).toBe(MOCK_SETUP.starsCount);
 	});
+
+	it('returns null when canViewSetup returns false', async () => {
+		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
+		mockCanViewSetup.mockResolvedValue(false);
+
+		const result = await setupRepo.getDetail('alice', 'my-setup', 'other-user');
+
+		expect(result).toBeNull();
+	});
+
+	it('calls canViewSetup with setup and viewerId', async () => {
+		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
+
+		await setupRepo.getDetail('alice', 'my-setup', 'viewer-123');
+
+		expect(mockCanViewSetup).toHaveBeenCalledWith(MOCK_SETUP, 'viewer-123');
+	});
+
+	it('does not fetch files/tags/agents when access denied', async () => {
+		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
+		mockCanViewSetup.mockResolvedValue(false);
+
+		await setupRepo.getDetail('alice', 'my-setup', 'other-user');
+
+		expect(mockGetSetupFiles).not.toHaveBeenCalled();
+		expect(mockGetSetupTags).not.toHaveBeenCalled();
+		expect(mockGetSetupAgents).not.toHaveBeenCalled();
+	});
 });
 
 describe('setupRepo.getById', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mockCanViewSetup.mockResolvedValue(true);
 	});
 
-	it('returns setup when found by id', async () => {
-		const mockSetup = { id: 'setup-1', userId: 'user-1', name: 'Test' };
-		mockGetSetupById.mockResolvedValue(mockSetup);
+	it('returns setup when found by id and access allowed', async () => {
+		mockGetSetupById.mockResolvedValue(MOCK_SETUP);
 
 		const result = await setupRepo.getById('setup-1');
 
-		expect(result).toEqual(mockSetup);
+		expect(result).toEqual(MOCK_SETUP);
 		expect(mockGetSetupById).toHaveBeenCalledWith('setup-1');
 	});
 
@@ -181,6 +217,15 @@ describe('setupRepo.getById', () => {
 		mockGetSetupById.mockResolvedValue(null);
 
 		const result = await setupRepo.getById('nonexistent');
+
+		expect(result).toBeNull();
+	});
+
+	it('returns null when access denied', async () => {
+		mockGetSetupById.mockResolvedValue(MOCK_SETUP);
+		mockCanViewSetup.mockResolvedValue(false);
+
+		const result = await setupRepo.getById('setup-1', 'other-user');
 
 		expect(result).toBeNull();
 	});
@@ -221,9 +266,10 @@ describe('setupRepo.getAllTags', () => {
 describe('setupRepo.getByOwnerSlug', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mockCanViewSetup.mockResolvedValue(true);
 	});
 
-	it('returns setup when found', async () => {
+	it('returns setup when found and access allowed', async () => {
 		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
 		const result = await setupRepo.getByOwnerSlug('alice', 'my-setup');
 		expect(result).toEqual(MOCK_SETUP);
@@ -234,6 +280,19 @@ describe('setupRepo.getByOwnerSlug', () => {
 		mockGetSetupByOwnerSlug.mockResolvedValue(null);
 		const result = await setupRepo.getByOwnerSlug('alice', 'missing');
 		expect(result).toBeNull();
+	});
+
+	it('returns null when access denied', async () => {
+		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
+		mockCanViewSetup.mockResolvedValue(false);
+		const result = await setupRepo.getByOwnerSlug('alice', 'my-setup', 'other-user');
+		expect(result).toBeNull();
+	});
+
+	it('passes viewerId to canViewSetup', async () => {
+		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
+		await setupRepo.getByOwnerSlug('alice', 'my-setup', 'viewer-123');
+		expect(mockCanViewSetup).toHaveBeenCalledWith(MOCK_SETUP, 'viewer-123');
 	});
 });
 

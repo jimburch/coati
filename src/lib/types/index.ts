@@ -39,6 +39,7 @@ export type LayoutUser = {
 	bio: string | null;
 	isBetaApproved: boolean;
 	isAdmin: boolean;
+	hasBetaFeatures: boolean;
 };
 
 export type ExploreSort = 'trending' | 'stars' | 'newest';
@@ -49,11 +50,15 @@ export type SetupCardProps = {
 	slug: string;
 	description: string;
 	display?: string | null;
+	visibility?: 'public' | 'private' | null;
 	starsCount: number;
 	clonesCount: number;
 	updatedAt: Date;
 	agents?: { id: string; displayName: string; slug: string }[];
 	ownerAvatarUrl?: string;
+	teamSlug?: string | null;
+	teamName?: string | null;
+	teamAvatarUrl?: string | null;
 };
 
 export type ProfileUser = {
@@ -112,7 +117,8 @@ export const createSetupWithFilesSchema = createSetupSchema
 		prerequisites: z.array(z.string()).optional(),
 		files: z.array(createSetupFileSchema).optional(),
 		agentIds: z.array(z.string().uuid()).optional(),
-		tagIds: z.array(z.string().uuid()).optional()
+		tagIds: z.array(z.string().uuid()).optional(),
+		teamId: z.string().uuid().optional()
 	})
 	.refine((data) => !data.files || data.files.length <= 50, {
 		message: 'Maximum 50 files per setup'
@@ -134,6 +140,7 @@ export const updateSetupSchema = z
 		minToolVersion: z.string().max(20).nullable().optional(),
 		postInstall: postInstallSchema.nullable().optional(),
 		prerequisites: z.array(z.string()).nullable().optional(),
+		visibility: z.enum(['public', 'private']).optional(),
 		files: z.array(createSetupFileSchema).optional()
 	})
 	.refine((data) => !data.files || data.files.length <= 50, {
@@ -177,6 +184,30 @@ export const usernameSchema = z
 	.min(2)
 	.max(50)
 	.regex(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+
+export const createTeamSchema = z.object({
+	name: z.string().min(1).max(100),
+	slug: z.string().min(1).max(100).regex(SLUG_NAME_REGEX),
+	description: z.string().max(300).optional()
+});
+
+export const updateTeamSchema = z.object({
+	name: z.string().min(1).max(100).optional(),
+	description: z.string().max(300).nullable().optional(),
+	avatarUrl: z.string().url().nullable().optional()
+});
+
+export const changeTeamMemberRoleSchema = z.object({
+	role: z.enum(['admin', 'member'])
+});
+
+export const createShareSchema = z.object({
+	username: z.string().min(1).max(50)
+});
+
+export const createInviteSchema = z.object({
+	username: z.string().min(1).max(50)
+});
 
 export const mcpServerConfigSchema = z.object({
 	command: z.string().min(1),

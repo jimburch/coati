@@ -41,5 +41,8 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 	setSessionCookie(cookies, token);
 	await updateLastLoginAt(userId);
 
-	return redirect(302, '/');
+	const redirectTo = cookies.get('oauth_redirect');
+	cookies.delete('oauth_redirect', { path: '/' });
+
+	return redirect(302, redirectTo ?? '/');
 };

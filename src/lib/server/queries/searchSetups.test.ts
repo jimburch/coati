@@ -32,7 +32,9 @@ vi.mock('$lib/server/db/schema', () => ({
 		commentsCount: 'setups.commentsCount',
 		createdAt: 'setups.createdAt',
 		updatedAt: 'setups.updatedAt',
-		searchVector: 'setups.searchVector'
+		searchVector: 'setups.searchVector',
+		visibility: 'setups.visibility',
+		teamId: 'setups.teamId'
 	},
 	users: {
 		id: 'users.id',
@@ -238,5 +240,27 @@ describe('searchSetups', () => {
 			(q) => q.includes('SELECT COUNT(') && q.includes('INTERVAL')
 		);
 		expect(hasCorrelatedSubquery).toBe(false);
+	});
+
+	it('includes team_members subquery when viewerId is provided', async () => {
+		mockExecute
+			.mockResolvedValueOnce([makeItemRow()]) // items
+			.mockResolvedValueOnce([{ count: '1' }]); // count
+
+		await searchSetups({ sort: 'newest', page: 1, viewerId: 'user-123' });
+
+		const hasTeamMembersCondition = capturedSql.queries.some((q) => q.includes('team_members'));
+		expect(hasTeamMembersCondition).toBe(true);
+	});
+
+	it('uses public-only condition when viewerId is absent', async () => {
+		mockExecute
+			.mockResolvedValueOnce([makeItemRow()]) // items
+			.mockResolvedValueOnce([{ count: '1' }]); // count
+
+		await searchSetups({ sort: 'newest', page: 1 });
+
+		const hasTeamMembersCondition = capturedSql.queries.some((q) => q.includes('team_members'));
+		expect(hasTeamMembersCondition).toBe(false);
 	});
 });

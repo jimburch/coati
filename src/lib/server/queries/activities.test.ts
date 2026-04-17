@@ -2,15 +2,23 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Hoist mock state so it's accessible inside vi.mock factories
 const state = vi.hoisted(() => ({ rows: [] as Record<string, unknown>[] }));
+const capturedSql = vi.hoisted(() => ({ queries: [] as string[] }));
 
-vi.mock('drizzle-orm', () => ({
-	and: vi.fn((...args: unknown[]) => ({ _type: 'and', args })),
-	desc: vi.fn((col: unknown) => ({ _type: 'desc', col })),
-	eq: vi.fn((a: unknown, b: unknown) => ({ _type: 'eq', a, b })),
-	inArray: vi.fn((col: unknown, arr: unknown) => ({ _type: 'inArray', col, arr })),
-	lt: vi.fn((a: unknown, b: unknown) => ({ _type: 'lt', a, b })),
-	ne: vi.fn((a: unknown, b: unknown) => ({ _type: 'ne', a, b }))
-}));
+vi.mock('drizzle-orm', () => {
+	function sqlFn(strings: TemplateStringsArray, ...values: unknown[]) {
+		capturedSql.queries.push(strings.join('__'));
+		return { _type: 'sql', strings: Array.from(strings), values };
+	}
+	return {
+		and: vi.fn((...args: unknown[]) => ({ _type: 'and', args })),
+		desc: vi.fn((col: unknown) => ({ _type: 'desc', col })),
+		eq: vi.fn((a: unknown, b: unknown) => ({ _type: 'eq', a, b })),
+		inArray: vi.fn((col: unknown, arr: unknown) => ({ _type: 'inArray', col, arr })),
+		lt: vi.fn((a: unknown, b: unknown) => ({ _type: 'lt', a, b })),
+		ne: vi.fn((a: unknown, b: unknown) => ({ _type: 'ne', a, b })),
+		sql: sqlFn
+	};
+});
 
 vi.mock('drizzle-orm/pg-core', () => ({
 	alias: vi.fn(() => ({}))
@@ -24,11 +32,25 @@ vi.mock('$lib/server/db/schema', () => ({
 		userId: 'activities.userId',
 		setupId: 'activities.setupId',
 		targetUserId: 'activities.targetUserId',
-		commentId: 'activities.commentId'
+		commentId: 'activities.commentId',
+		teamId: 'activities.teamId'
 	},
 	comments: { id: 'comments.id', body: 'comments.body' },
 	follows: { followerId: 'follows.followerId', followingId: 'follows.followingId' },
-	setups: { id: 'setups.id', userId: 'setups.userId', name: 'setups.name', slug: 'setups.slug' },
+	setups: {
+		id: 'setups.id',
+		userId: 'setups.userId',
+		name: 'setups.name',
+		slug: 'setups.slug',
+		visibility: 'setups.visibility',
+		teamId: 'setups.teamId'
+	},
+	teams: {
+		id: 'teams.id',
+		name: 'teams.name',
+		slug: 'teams.slug',
+		avatarUrl: 'teams.avatarUrl'
+	},
 	users: { id: 'users.id', username: 'users.username', avatarUrl: 'users.avatarUrl' }
 }));
 
@@ -60,6 +82,10 @@ function makeRow(overrides: Partial<Record<string, unknown>> = {}): Record<strin
 		targetAvatarUrl: null,
 		commentId: null,
 		commentBody: null,
+		teamId: null,
+		teamName: null,
+		teamSlug: null,
+		teamAvatarUrl: null,
 		...overrides
 	};
 }
@@ -67,6 +93,7 @@ function makeRow(overrides: Partial<Record<string, unknown>> = {}): Record<strin
 describe('getHomeFeed', () => {
 	beforeEach(() => {
 		state.rows = [];
+		capturedSql.queries = [];
 		vi.clearAllMocks();
 	});
 
@@ -121,6 +148,77 @@ describe('getHomeFeed', () => {
 		const result = await getHomeFeed('user-1', undefined, 5);
 
 		expect(result.items[0].actionType).toBe('commented');
+	});
+
+	it('applies team_members visibility filter in feed', async () => {
+		state.rows = [];
+
+		await getHomeFeed('user-123', undefined, 20);
+
+		const hasTeamMembersCondition = capturedSql.queries.some((q) => q.includes('team_members'));
+		expect(hasTeamMembersCondition).toBe(true);
+	});
+
+	it('applies public-only visibility filter for null setupId activities', async () => {
+		state.rows = [];
+
+		await getHomeFeed('user-123', undefined, 20);
+
+		const hasNullSetupIdCondition = capturedSql.queries.some((q) => q.includes('IS NULL'));
+		expect(hasNullSetupIdCondition).toBe(true);
+	});
+
+	it('returns created_team actionType on team activity rows', async () => {
+		state.rows = [
+			makeRow({
+				actionType: 'created_team',
+				setupId: null,
+				teamId: 'team-1',
+				teamName: 'My Team',
+				teamSlug: 'my-team'
+			})
+		];
+
+		const result = await getHomeFeed('user-1', undefined, 5);
+
+		expect(result.items[0].actionType).toBe('created_team');
+		expect(result.items[0].teamId).toBe('team-1');
+		expect(result.items[0].teamName).toBe('My Team');
+		expect(result.items[0].teamSlug).toBe('my-team');
+	});
+
+	it('returns joined_team actionType on join activity rows', async () => {
+		state.rows = [makeRow({ actionType: 'joined_team', setupId: null, teamId: 'team-1' })];
+
+		const result = await getHomeFeed('user-1', undefined, 5);
+
+		expect(result.items[0].actionType).toBe('joined_team');
+	});
+
+	it('returns left_team actionType on departure activity rows', async () => {
+		state.rows = [makeRow({ actionType: 'left_team', setupId: null, teamId: 'team-1' })];
+
+		const result = await getHomeFeed('user-1', undefined, 5);
+
+		expect(result.items[0].actionType).toBe('left_team');
+	});
+
+	it('returns invited_to_team actionType on invite activity rows', async () => {
+		state.rows = [
+			makeRow({
+				actionType: 'invited_to_team',
+				setupId: null,
+				teamId: 'team-1',
+				targetUserId: 'user-2',
+				targetUsername: 'bob'
+			})
+		];
+
+		const result = await getHomeFeed('user-1', undefined, 5);
+
+		expect(result.items[0].actionType).toBe('invited_to_team');
+		expect(result.items[0].targetUserId).toBe('user-2');
+		expect(result.items[0].targetUsername).toBe('bob');
 	});
 });
 
