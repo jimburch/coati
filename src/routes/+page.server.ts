@@ -3,6 +3,7 @@ import {
 	getFeaturedSetups,
 	getRecentSetups,
 	getAgentsForSetups,
+	getTrendingSetups,
 	searchSetups
 } from '$lib/server/queries/setups';
 import {
@@ -25,15 +26,24 @@ type DashboardSetup = {
 	agents: { id: string; displayName: string; slug: string }[];
 };
 
-export const load: PageServerLoad = async ({ locals }) => {
+const VALID_TABS = ['for-you', 'following', 'trending'] as const;
+type Tab = (typeof VALID_TABS)[number];
+
+export const load: PageServerLoad = async ({ locals, url }) => {
 	if (locals.user) {
 		const viewerId = locals.user.id;
-		const [featured, recent, userStats, userSetups, userAgents] = await Promise.all([
+		const rawTab = url.searchParams.get('tab');
+		const activeTab: Tab = (VALID_TABS as readonly string[]).includes(rawTab ?? '')
+			? (rawTab as Tab)
+			: 'for-you';
+
+		const [featured, recent, userStats, userSetups, userAgents, trending] = await Promise.all([
 			getFeaturedSetups(3, viewerId),
 			getRecentSetups(3, viewerId),
 			getUserAggregateStats(viewerId),
 			getUserSetups(viewerId, 5),
-			getUserSetupAgents(viewerId)
+			getUserSetupAgents(viewerId),
+			getTrendingSetups(6, viewerId)
 		]);
 
 		const dashboardIds = [...featured.map((s) => s.id), ...recent.map((s) => s.id)];
@@ -69,6 +79,22 @@ export const load: PageServerLoad = async ({ locals }) => {
 			user: locals.user,
 			featuredSetups: featured.map(toCard),
 			recentSetups: recent.map(toCard),
+			trendingSetups: trending.map(
+				(s): DashboardSetup => ({
+					id: s.id,
+					name: s.name,
+					slug: s.slug,
+					description: s.description,
+					display: s.display,
+					starsCount: s.starsCount,
+					clonesCount: s.clonesCount,
+					updatedAt: s.updatedAt,
+					ownerUsername: s.ownerUsername,
+					ownerAvatarUrl: s.ownerAvatarUrl ?? undefined,
+					agents: []
+				})
+			),
+			activeTab,
 			userStats,
 			userSetups,
 			userAgents

@@ -8,6 +8,7 @@
 	import ZeroStateCard from '$lib/components/ZeroStateCard.svelte';
 	import QuickActions from '$lib/components/QuickActions.svelte';
 	import AgentChips from '$lib/components/AgentChips.svelte';
+	import DiscoveryTabs from '$lib/components/DiscoveryTabs.svelte';
 	import { Upload, Search, Download } from '@lucide/svelte';
 
 	const { data } = $props();
@@ -57,6 +58,8 @@
 
 			<!-- Right column: discovery sections -->
 			<div class="flex flex-col gap-6">
+				<DiscoveryTabs trendingSetups={data.trendingSetups} activeTab={data.activeTab} />
+
 				{#if data.featuredSetups.length > 0}
 					<!-- Featured Setups -->
 					<section>

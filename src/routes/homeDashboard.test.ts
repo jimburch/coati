@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockGetFeaturedSetups = vi.hoisted(() => vi.fn());
 const mockGetRecentSetups = vi.hoisted(() => vi.fn());
 const mockGetAgentsForSetups = vi.hoisted(() => vi.fn());
+const mockGetTrendingSetups = vi.hoisted(() => vi.fn());
 const mockGetUserAggregateStats = vi.hoisted(() => vi.fn());
 const mockGetUserSetups = vi.hoisted(() => vi.fn());
 const mockGetUserSetupAgents = vi.hoisted(() => vi.fn());
@@ -12,7 +13,7 @@ vi.mock('$lib/server/queries/setups', () => ({
 	getFeaturedSetups: mockGetFeaturedSetups,
 	getRecentSetups: mockGetRecentSetups,
 	getAgentsForSetups: mockGetAgentsForSetups,
-	getTrendingSetups: vi.fn(),
+	getTrendingSetups: mockGetTrendingSetups,
 	searchSetups: vi.fn()
 }));
 
@@ -44,6 +45,7 @@ describe('home dashboard server load', () => {
 		mockGetFeaturedSetups.mockResolvedValue([]);
 		mockGetRecentSetups.mockResolvedValue([]);
 		mockGetAgentsForSetups.mockResolvedValue({});
+		mockGetTrendingSetups.mockResolvedValue([]);
 		mockGetUserAggregateStats.mockResolvedValue({
 			setupsCount: 0,
 			starsReceived: 0,
@@ -58,7 +60,7 @@ describe('home dashboard server load', () => {
 		const { load } = await import('./+page.server');
 		mockGetFeaturedSetups.mockResolvedValue(makeSetups(3));
 
-		await load({ locals: { user: { id: 'u1' } } } as never);
+		await load({ locals: { user: { id: 'u1' } }, url: new URL('http://localhost/') } as never);
 
 		expect(mockGetFeaturedSetups).toHaveBeenCalledWith(3, 'u1');
 	});
@@ -67,17 +69,69 @@ describe('home dashboard server load', () => {
 		const { load } = await import('./+page.server');
 		mockGetRecentSetups.mockResolvedValue(makeSetups(3));
 
-		await load({ locals: { user: { id: 'u1' } } } as never);
+		await load({ locals: { user: { id: 'u1' } }, url: new URL('http://localhost/') } as never);
 
 		expect(mockGetRecentSetups).toHaveBeenCalledWith(3, 'u1');
 	});
 
-	it('does not return trendingSetups in authenticated response', async () => {
+	it('fetches trending setups with limit 6 for DiscoveryTabs', async () => {
 		const { load } = await import('./+page.server');
 
-		const result = await load({ locals: { user: { id: 'u1' } } } as never);
+		await load({ locals: { user: { id: 'u1' } }, url: new URL('http://localhost/') } as never);
 
-		expect(result).not.toHaveProperty('trendingSetups');
+		expect(mockGetTrendingSetups).toHaveBeenCalledWith(6, 'u1');
+	});
+
+	it('returns trendingSetups in authenticated response', async () => {
+		const { load } = await import('./+page.server');
+		mockGetTrendingSetups.mockResolvedValue([
+			{
+				...makeSetup('t1'),
+				ownerAvatarUrl: 'https://example.com/avatar.png',
+				agents: ['claude-code']
+			}
+		]);
+
+		const result = (await load({
+			locals: { user: { id: 'u1' } },
+			url: new URL('http://localhost/')
+		} as never)) as Record<string, unknown>;
+
+		expect(Array.isArray(result.trendingSetups)).toBe(true);
+		expect((result.trendingSetups as unknown[]).length).toBe(1);
+	});
+
+	it('defaults activeTab to for-you when no tab param', async () => {
+		const { load } = await import('./+page.server');
+
+		const result = (await load({
+			locals: { user: { id: 'u1' } },
+			url: new URL('http://localhost/')
+		} as never)) as Record<string, unknown>;
+
+		expect(result.activeTab).toBe('for-you');
+	});
+
+	it('sets activeTab to trending when ?tab=trending', async () => {
+		const { load } = await import('./+page.server');
+
+		const result = (await load({
+			locals: { user: { id: 'u1' } },
+			url: new URL('http://localhost/?tab=trending')
+		} as never)) as Record<string, unknown>;
+
+		expect(result.activeTab).toBe('trending');
+	});
+
+	it('falls back to for-you for invalid tab values', async () => {
+		const { load } = await import('./+page.server');
+
+		const result = (await load({
+			locals: { user: { id: 'u1' } },
+			url: new URL('http://localhost/?tab=invalid')
+		} as never)) as Record<string, unknown>;
+
+		expect(result.activeTab).toBe('for-you');
 	});
 
 	it('maps featured setups with ownerAvatarUrl undefined when null', async () => {
@@ -85,7 +139,8 @@ describe('home dashboard server load', () => {
 		mockGetFeaturedSetups.mockResolvedValue([makeSetup('x')]);
 
 		const result = (await load({
-			locals: { user: { id: 'u1' } }
+			locals: { user: { id: 'u1' } },
+			url: new URL('http://localhost/')
 		} as never)) as Record<string, unknown>;
 
 		const featured = result.featuredSetups as { ownerAvatarUrl: unknown }[];
@@ -101,7 +156,8 @@ describe('home dashboard server load', () => {
 		});
 
 		const result = (await load({
-			locals: { user: { id: 'u1' } }
+			locals: { user: { id: 'u1' } },
+			url: new URL('http://localhost/')
 		} as never)) as Record<string, unknown>;
 
 		const featured = result.featuredSetups as {
@@ -116,7 +172,8 @@ describe('home dashboard server load', () => {
 		mockGetRecentSetups.mockResolvedValue(makeSetups(3));
 
 		const result = (await load({
-			locals: { user: { id: 'u1' } }
+			locals: { user: { id: 'u1' } },
+			url: new URL('http://localhost/')
 		} as never)) as Record<string, unknown>;
 
 		expect((result.featuredSetups as unknown[]).length).toBe(3);
