@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lt, ne } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, ne, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '$lib/server/db';
@@ -44,12 +44,18 @@ async function queryFeed(
 	filter: SQL | undefined,
 	actionTypes: readonly FeedItem['actionType'][],
 	cursor: Date | undefined,
-	limit: number
+	limit: number,
+	viewerId?: string
 ): Promise<{ items: FeedItem[]; nextCursor: string | null }> {
+	const visibilityCondition = viewerId
+		? sql`(${activities.setupId} IS NULL OR ${setups.visibility} = 'public' OR ${setups.userId} = ${viewerId} OR (${setups.teamId} IS NOT NULL AND ${setups.teamId} IN (SELECT team_id FROM team_members WHERE user_id = ${viewerId})))`
+		: sql`(${activities.setupId} IS NULL OR ${setups.visibility} = 'public')`;
+
 	const conditions = and(
 		filter,
 		inArray(activities.actionType, [...actionTypes]),
-		...(cursor ? [lt(activities.createdAt, cursor)] : [])
+		...(cursor ? [lt(activities.createdAt, cursor)] : []),
+		visibilityCondition
 	);
 
 	// Fetch limit+1 to detect whether a next page exists
@@ -109,7 +115,7 @@ export async function getHomeFeed(
 
 	const filter = and(inArray(activities.userId, followingSubquery), ne(activities.userId, userId));
 
-	return queryFeed(filter, FEED_ACTION_TYPES, cursor, limit);
+	return queryFeed(filter, FEED_ACTION_TYPES, cursor, limit, userId);
 }
 
 export async function getProfileFeed(

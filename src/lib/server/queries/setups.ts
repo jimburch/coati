@@ -21,6 +21,13 @@ type CreateSetupInput = z.infer<typeof createSetupWithFilesSchema>;
 type UpdateSetupInput = z.infer<typeof updateSetupSchema>;
 type FileInput = CreateSetupInput['files'];
 
+function buildVisibilitySQL(viewerId?: string | null) {
+	if (!viewerId) {
+		return sql`${setups.visibility} = 'public'`;
+	}
+	return sql`(${setups.visibility} = 'public' OR ${setups.userId} = ${viewerId} OR (${setups.teamId} IS NOT NULL AND ${setups.teamId} IN (SELECT team_id FROM team_members WHERE user_id = ${viewerId})))`;
+}
+
 function toSetupFileRows(setupId: string, files: NonNullable<FileInput>) {
 	return files.map((f) => ({
 		setupId,
@@ -350,7 +357,7 @@ export async function setStar(
 	});
 }
 
-export async function getTrendingSetups(limit: number) {
+export async function getTrendingSetups(limit: number, viewerId?: string) {
 	type SetupRow = {
 		id: string;
 		name: string;
@@ -364,6 +371,8 @@ export async function getTrendingSetups(limit: number) {
 		owner_avatar_url: string;
 	};
 
+	const visibilityCondition = buildVisibilitySQL(viewerId);
+
 	const trendingRows = await db.execute<SetupRow>(
 		sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
 			${setups.display}, ${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
@@ -371,7 +380,7 @@ export async function getTrendingSetups(limit: number) {
 			FROM ${setups}
 			INNER JOIN ${users} ON ${setups.userId} = ${users.id}
 			INNER JOIN trending_setups_mv ON trending_setups_mv.setup_id = ${setups.id}
-			WHERE ${setups.visibility} = 'public'
+			WHERE ${visibilityCondition}
 			ORDER BY trending_setups_mv.recent_stars_count DESC
 			LIMIT ${limit}`
 	);
@@ -387,7 +396,7 @@ export async function getTrendingSetups(limit: number) {
 				FROM ${setups}
 				INNER JOIN ${users} ON ${setups.userId} = ${users.id}
 				WHERE ${setups.id} NOT IN (SELECT setup_id FROM trending_setups_mv)
-				AND ${setups.visibility} = 'public'
+				AND ${visibilityCondition}
 				ORDER BY ${setups.starsCount} DESC
 				LIMIT ${backfillLimit}`
 		);
@@ -412,7 +421,7 @@ export async function getTrendingSetups(limit: number) {
 	}));
 }
 
-export async function getRecentSetups(limit = 12) {
+export async function getRecentSetups(limit = 12, viewerId?: string) {
 	return db
 		.select({
 			id: setups.id,
@@ -428,7 +437,7 @@ export async function getRecentSetups(limit = 12) {
 		})
 		.from(setups)
 		.innerJoin(users, eq(setups.userId, users.id))
-		.where(eq(setups.visibility, 'public'))
+		.where(buildVisibilitySQL(viewerId))
 		.orderBy(desc(setups.createdAt))
 		.limit(limit);
 }
@@ -502,8 +511,9 @@ export async function searchSetups(filters: {
 	agentSlugs?: string[];
 	sort: ExploreSort;
 	page: number;
+	viewerId?: string;
 }) {
-	const { q, agentSlugs, sort, page } = filters;
+	const { q, agentSlugs, sort, page, viewerId } = filters;
 	const offset = (page - 1) * PAGE_SIZE;
 
 	const conditions: ReturnType<typeof sql>[] = [];
@@ -543,8 +553,7 @@ export async function searchSetups(filters: {
 		);
 	}
 
-	// Always filter to public setups only in search results
-	conditions.push(sql`${setups.visibility} = 'public'`);
+	conditions.push(buildVisibilitySQL(viewerId));
 
 	const whereClause = sql`WHERE ${sql.join(conditions, sql` AND `)}`;
 
@@ -762,7 +771,7 @@ export async function getStarredSetupsByUserId(userId: string) {
 		.orderBy(desc(stars.createdAt));
 }
 
-export async function getFeaturedSetups(limit: number) {
+export async function getFeaturedSetups(limit: number, viewerId?: string) {
 	const rows = await db
 		.select({
 			id: setups.id,
@@ -782,7 +791,7 @@ export async function getFeaturedSetups(limit: number) {
 		})
 		.from(setups)
 		.innerJoin(users, eq(setups.userId, users.id))
-		.where(and(isNotNull(setups.featuredAt), eq(setups.visibility, 'public')))
+		.where(and(isNotNull(setups.featuredAt), buildVisibilitySQL(viewerId)))
 		.orderBy(desc(setups.featuredAt))
 		.limit(limit);
 

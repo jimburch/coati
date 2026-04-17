@@ -1,13 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('drizzle-orm', () => ({
-	eq: vi.fn((col, val) => ({ _type: 'eq', col, val })),
-	desc: vi.fn((col) => ({ _type: 'desc', col })),
-	isNotNull: vi.fn((col) => ({ _type: 'isNotNull', col })),
-	and: vi.fn(),
-	sql: vi.fn(),
-	inArray: vi.fn()
-}));
+const capturedSql = vi.hoisted(() => ({ queries: [] as string[] }));
+
+vi.mock('drizzle-orm', () => {
+	function sqlFn(strings: TemplateStringsArray, ...values: unknown[]) {
+		capturedSql.queries.push(strings.join('__'));
+		return { _type: 'sql', strings: Array.from(strings), values };
+	}
+	sqlFn.join = vi.fn();
+	return {
+		eq: vi.fn((col, val) => ({ _type: 'eq', col, val })),
+		desc: vi.fn((col) => ({ _type: 'desc', col })),
+		isNotNull: vi.fn((col) => ({ _type: 'isNotNull', col })),
+		and: vi.fn(),
+		sql: sqlFn,
+		inArray: vi.fn()
+	};
+});
 
 vi.mock('$lib/server/db/schema', () => ({
 	setups: {
@@ -22,7 +31,9 @@ vi.mock('$lib/server/db/schema', () => ({
 		commentsCount: 'setups.commentsCount',
 		featuredAt: 'setups.featuredAt',
 		createdAt: 'setups.createdAt',
-		updatedAt: 'setups.updatedAt'
+		updatedAt: 'setups.updatedAt',
+		visibility: 'setups.visibility',
+		teamId: 'setups.teamId'
 	},
 	users: {
 		id: 'users.id',
@@ -142,6 +153,7 @@ describe('getFeaturedSetups', () => {
 		updateState.setCall = null;
 		updateState.whereCall = null;
 		selectResults.queue = [];
+		capturedSql.queries = [];
 	});
 
 	it('returns empty array when no featured setups exist', async () => {
@@ -220,6 +232,20 @@ describe('getFeaturedSetups', () => {
 		selectResults.queue = [[makeSetupRow({ featuredAt })], []];
 		const result = await getFeaturedSetups(10);
 		expect(result[0].featuredAt).toEqual(featuredAt);
+	});
+
+	it('includes team_members subquery when viewerId is provided', async () => {
+		selectResults.queue = [[], []];
+		await getFeaturedSetups(5, 'user-123');
+		const hasTeamMembersCondition = capturedSql.queries.some((q) => q.includes('team_members'));
+		expect(hasTeamMembersCondition).toBe(true);
+	});
+
+	it('uses public-only condition when viewerId is absent', async () => {
+		selectResults.queue = [[], []];
+		await getFeaturedSetups(5);
+		const hasTeamMembersCondition = capturedSql.queries.some((q) => q.includes('team_members'));
+		expect(hasTeamMembersCondition).toBe(false);
 	});
 });
 
