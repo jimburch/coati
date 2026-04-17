@@ -16,9 +16,12 @@
 		agents: AgentLike[];
 		username: string;
 		slug: string;
+		basePath?: string;
 	}
 
-	const { files, agents, username, slug }: Props = $props();
+	const { files, agents, username, slug, basePath }: Props = $props();
+
+	const resolvedBasePath = $derived(basePath ?? `/${username}/${slug}/files`);
 
 	const groups = $derived(groupFilesByAgent(files, agents));
 	const startExpanded = $derived(shouldStartExpanded(files.length));
@@ -39,7 +42,7 @@
 	}
 
 	function fileHref(path: string): string {
-		return `/${username}/${slug}/files?file=${encodeURIComponent(path)}`;
+		return `${resolvedBasePath}?file=${encodeURIComponent(path)}`;
 	}
 
 	function nodeKey(node: FileNode): string {
@@ -59,7 +62,7 @@
 {#if files.length > 0}
 	<div class="mb-6" data-testid="setup-file-list">
 		<div class="mb-2 flex items-center justify-end">
-			<a href="/{username}/{slug}/files" class="text-xs text-muted-foreground hover:underline">
+			<a href={resolvedBasePath} class="text-xs text-muted-foreground hover:underline">
 				Browse all {files.length}
 				{files.length === 1 ? 'file' : 'files'} →
 			</a>

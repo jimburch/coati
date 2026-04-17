@@ -21,6 +21,13 @@ type CreateSetupInput = z.infer<typeof createSetupWithFilesSchema>;
 type UpdateSetupInput = z.infer<typeof updateSetupSchema>;
 type FileInput = CreateSetupInput['files'];
 
+function buildVisibilitySQL(viewerId?: string | null) {
+	if (!viewerId) {
+		return sql`${setups.visibility} = 'public'`;
+	}
+	return sql`(${setups.visibility} = 'public' OR ${setups.userId} = ${viewerId} OR (${setups.teamId} IS NOT NULL AND ${setups.teamId} IN (SELECT team_id FROM team_members WHERE user_id = ${viewerId})))`;
+}
+
 function toSetupFileRows(setupId: string, files: NonNullable<FileInput>) {
 	return files.map((f) => ({
 		setupId,
@@ -32,7 +39,7 @@ function toSetupFileRows(setupId: string, files: NonNullable<FileInput>) {
 	}));
 }
 
-export async function getSetupsByUserId(userId: string) {
+export async function getSetupsByUserId(userId: string, viewerIsOwner = false) {
 	return db
 		.select({
 			id: setups.id,
@@ -40,12 +47,17 @@ export async function getSetupsByUserId(userId: string) {
 			slug: setups.slug,
 			description: setups.description,
 			display: setups.display,
+			visibility: setups.visibility,
 			starsCount: setups.starsCount,
 			clonesCount: setups.clonesCount,
 			updatedAt: setups.updatedAt
 		})
 		.from(setups)
-		.where(eq(setups.userId, userId))
+		.where(
+			viewerIsOwner
+				? eq(setups.userId, userId)
+				: and(eq(setups.userId, userId), eq(setups.visibility, 'public'))
+		)
 		.orderBy(desc(setups.createdAt));
 }
 
@@ -64,6 +76,8 @@ export async function getSetupByOwnerSlug(ownerUsername: string, slug: string) {
 			minToolVersion: setups.minToolVersion,
 			postInstall: setups.postInstall,
 			prerequisites: setups.prerequisites,
+			visibility: setups.visibility,
+			teamId: setups.teamId,
 			starsCount: setups.starsCount,
 			clonesCount: setups.clonesCount,
 			commentsCount: setups.commentsCount,
@@ -110,6 +124,8 @@ export async function getSetupById(id: string) {
 			minToolVersion: setups.minToolVersion,
 			postInstall: setups.postInstall,
 			prerequisites: setups.prerequisites,
+			visibility: setups.visibility,
+			teamId: setups.teamId,
 			starsCount: setups.starsCount,
 			clonesCount: setups.clonesCount,
 			commentsCount: setups.commentsCount,
@@ -142,6 +158,7 @@ export async function createSetup(userId: string, data: CreateSetupInput) {
 				minToolVersion: data.minToolVersion,
 				postInstall: data.postInstall,
 				prerequisites: data.prerequisites,
+				...(data.teamId && { teamId: data.teamId, visibility: 'private' }),
 				updatedAt: new Date()
 			})
 			.returning();
@@ -195,6 +212,7 @@ export async function updateSetup(id: string, data: UpdateSetupInput) {
 			...(data.minToolVersion !== undefined && { minToolVersion: data.minToolVersion }),
 			...(data.postInstall !== undefined && { postInstall: data.postInstall }),
 			...(data.prerequisites !== undefined && { prerequisites: data.prerequisites }),
+			...(data.visibility !== undefined && { visibility: data.visibility }),
 			updatedAt: new Date()
 		};
 
@@ -246,6 +264,20 @@ export async function deleteSetup(id: string, userId: string) {
 
 		if (deleted.length > 0) {
 			await counters.setupDeleted(tx, userId);
+		}
+
+		return deleted.length;
+	});
+}
+
+// Delete a setup by ID regardless of userId (for team admin use).
+// `ownerId` is the setup's userId, used for decrementing the owner's setup counter.
+export async function deleteSetupForce(id: string, ownerId: string) {
+	return db.transaction(async (tx) => {
+		const deleted = await tx.delete(setups).where(eq(setups.id, id)).returning();
+
+		if (deleted.length > 0) {
+			await counters.setupDeleted(tx, ownerId);
 		}
 
 		return deleted.length;
@@ -325,7 +357,7 @@ export async function setStar(
 	});
 }
 
-export async function getTrendingSetups(limit: number) {
+export async function getTrendingSetups(limit: number, viewerId?: string) {
 	type SetupRow = {
 		id: string;
 		name: string;
@@ -339,6 +371,8 @@ export async function getTrendingSetups(limit: number) {
 		owner_avatar_url: string;
 	};
 
+	const visibilityCondition = buildVisibilitySQL(viewerId);
+
 	const trendingRows = await db.execute<SetupRow>(
 		sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
 			${setups.display}, ${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
@@ -346,6 +380,7 @@ export async function getTrendingSetups(limit: number) {
 			FROM ${setups}
 			INNER JOIN ${users} ON ${setups.userId} = ${users.id}
 			INNER JOIN trending_setups_mv ON trending_setups_mv.setup_id = ${setups.id}
+			WHERE ${visibilityCondition}
 			ORDER BY trending_setups_mv.recent_stars_count DESC
 			LIMIT ${limit}`
 	);
@@ -361,6 +396,7 @@ export async function getTrendingSetups(limit: number) {
 				FROM ${setups}
 				INNER JOIN ${users} ON ${setups.userId} = ${users.id}
 				WHERE ${setups.id} NOT IN (SELECT setup_id FROM trending_setups_mv)
+				AND ${visibilityCondition}
 				ORDER BY ${setups.starsCount} DESC
 				LIMIT ${backfillLimit}`
 		);
@@ -385,7 +421,7 @@ export async function getTrendingSetups(limit: number) {
 	}));
 }
 
-export async function getRecentSetups(limit = 12) {
+export async function getRecentSetups(limit = 12, viewerId?: string) {
 	return db
 		.select({
 			id: setups.id,
@@ -401,6 +437,7 @@ export async function getRecentSetups(limit = 12) {
 		})
 		.from(setups)
 		.innerJoin(users, eq(setups.userId, users.id))
+		.where(buildVisibilitySQL(viewerId))
 		.orderBy(desc(setups.createdAt))
 		.limit(limit);
 }
@@ -447,7 +484,7 @@ export async function getAgentBySlugWithSetups(slug: string) {
 		.from(setupAgents)
 		.innerJoin(setups, eq(setupAgents.setupId, setups.id))
 		.innerJoin(users, eq(setups.userId, users.id))
-		.where(eq(setupAgents.agentId, agent.id))
+		.where(and(eq(setupAgents.agentId, agent.id), eq(setups.visibility, 'public')))
 		.orderBy(desc(setups.createdAt));
 
 	const setupIds = setupRows.map((s) => s.id);
@@ -474,8 +511,9 @@ export async function searchSetups(filters: {
 	agentSlugs?: string[];
 	sort: ExploreSort;
 	page: number;
+	viewerId?: string;
 }) {
-	const { q, agentSlugs, sort, page } = filters;
+	const { q, agentSlugs, sort, page, viewerId } = filters;
 	const offset = (page - 1) * PAGE_SIZE;
 
 	const conditions: ReturnType<typeof sql>[] = [];
@@ -515,8 +553,9 @@ export async function searchSetups(filters: {
 		);
 	}
 
-	const whereClause =
-		conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
+	conditions.push(buildVisibilitySQL(viewerId));
+
+	const whereClause = sql`WHERE ${sql.join(conditions, sql` AND `)}`;
 
 	let joinClause: ReturnType<typeof sql> = sql``;
 	let orderClause: ReturnType<typeof sql>;
@@ -610,6 +649,8 @@ export async function getSetupByIdWithOwner(id: string) {
 			minToolVersion: setups.minToolVersion,
 			postInstall: setups.postInstall,
 			prerequisites: setups.prerequisites,
+			visibility: setups.visibility,
+			teamId: setups.teamId,
 			starsCount: setups.starsCount,
 			clonesCount: setups.clonesCount,
 			commentsCount: setups.commentsCount,
@@ -645,6 +686,7 @@ export async function updateSetupByIdWithSlugRedirects(
 			...(data.minToolVersion !== undefined && { minToolVersion: data.minToolVersion }),
 			...(data.postInstall !== undefined && { postInstall: data.postInstall }),
 			...(data.prerequisites !== undefined && { prerequisites: data.prerequisites }),
+			...(data.visibility !== undefined && { visibility: data.visibility }),
 			updatedAt: new Date()
 		};
 
@@ -725,11 +767,11 @@ export async function getStarredSetupsByUserId(userId: string) {
 		.from(stars)
 		.innerJoin(setups, eq(stars.setupId, setups.id))
 		.innerJoin(users, eq(setups.userId, users.id))
-		.where(eq(stars.userId, userId))
+		.where(and(eq(stars.userId, userId), eq(setups.visibility, 'public')))
 		.orderBy(desc(stars.createdAt));
 }
 
-export async function getFeaturedSetups(limit: number) {
+export async function getFeaturedSetups(limit: number, viewerId?: string) {
 	const rows = await db
 		.select({
 			id: setups.id,
@@ -749,7 +791,7 @@ export async function getFeaturedSetups(limit: number) {
 		})
 		.from(setups)
 		.innerJoin(users, eq(setups.userId, users.id))
-		.where(isNotNull(setups.featuredAt))
+		.where(and(isNotNull(setups.featuredAt), buildVisibilitySQL(viewerId)))
 		.orderBy(desc(setups.featuredAt))
 		.limit(limit);
 

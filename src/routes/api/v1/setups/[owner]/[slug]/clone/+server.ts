@@ -4,7 +4,7 @@ import { setupRepo } from '$lib/server/queries/setupRepository';
 import { track } from '$lib/server/observability/mixpanel';
 
 export const POST: RequestHandler = async ({ params, locals }) => {
-	const setup = await setupRepo.getByOwnerSlug(params.owner, params.slug);
+	const setup = await setupRepo.getByOwnerSlug(params.owner, params.slug, locals.user?.id);
 	if (!setup) {
 		return error('Setup not found', 'NOT_FOUND', 404);
 	}

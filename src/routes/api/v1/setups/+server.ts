@@ -1,9 +1,10 @@
 import type { RequestHandler } from './$types';
-import { requireApiAuth } from '$lib/server/guards';
+import { requireApiAuth, requireBetaFeatures } from '$lib/server/guards';
 import { success, error, isUniqueViolation, parseRequestBody } from '$lib/server/responses';
 import { createSetupWithFilesSchema } from '$lib/types';
 import type { ExploreSort } from '$lib/types';
 import { setupRepo } from '$lib/server/queries/setupRepository';
+import { getTeamByIdForAuth, getTeamMemberRole } from '$lib/server/queries/teams';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const q = url.searchParams.get('q') ?? undefined;
@@ -27,6 +28,21 @@ export const POST: RequestHandler = async (event) => {
 
 	const parsed = await parseRequestBody(event.request, createSetupWithFilesSchema);
 	if (parsed instanceof Response) return parsed;
+
+	if (parsed.teamId) {
+		const betaResult = requireBetaFeatures(event);
+		if (betaResult instanceof Response) return betaResult;
+
+		const team = await getTeamByIdForAuth(parsed.teamId);
+		if (!team) {
+			return error('Team not found', 'NOT_FOUND', 404);
+		}
+
+		const role = await getTeamMemberRole(team.id, user.id);
+		if (!role) {
+			return error('You are not a member of this team', 'FORBIDDEN', 403);
+		}
+	}
 
 	try {
 		const setup = await setupRepo.create(user.id, parsed);

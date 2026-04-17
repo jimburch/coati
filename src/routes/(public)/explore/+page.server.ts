@@ -9,7 +9,7 @@ import { searchUsers } from '$lib/server/queries/users';
 
 const VALID_SORTS: ExploreSort[] = ['trending', 'stars', 'newest'];
 
-export const load: PageServerLoad = async ({ url }) => {
+export const load: PageServerLoad = async ({ url, locals }) => {
 	const q = url.searchParams.get('q') || undefined;
 	const agents = url.searchParams.getAll('agent').filter(Boolean);
 	const sortParam = url.searchParams.get('sort') || 'trending';
@@ -17,13 +17,15 @@ export const load: PageServerLoad = async ({ url }) => {
 		? (sortParam as ExploreSort)
 		: 'trending';
 	const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
+	const viewerId = locals.user?.id;
 
 	const [results, allAgents, userResults] = await Promise.all([
 		searchSetups({
 			q,
 			agentSlugs: agents.length > 0 ? agents : undefined,
 			sort,
-			page
+			page,
+			viewerId
 		}),
 		getAllAgentsWithSetupCount(),
 		q ? searchUsers(q, 6) : Promise.resolve([])

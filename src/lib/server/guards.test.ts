@@ -1,9 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { requireAuth, requireApiAuth, requireAdmin } from './guards';
+import { requireAuth, requireApiAuth, requireAdmin, requireBetaFeatures } from './guards';
 import type { RequestEvent } from '@sveltejs/kit';
 
 function makeEvent(user: unknown = null): RequestEvent {
 	return { locals: { user, session: user ? { id: 'sess-1' } : null } } as unknown as RequestEvent;
+}
+
+function makeBetaUser(hasBetaFeatures: boolean) {
+	return { id: 'u1', username: 'test', isAdmin: false, hasBetaFeatures };
 }
 
 describe('auth guards', () => {
@@ -60,6 +64,29 @@ describe('auth guards', () => {
 
 		it('returns 401 when not authenticated', async () => {
 			const result = requireAdmin(makeEvent());
+			expect(result).toBeInstanceOf(Response);
+			expect((result as Response).status).toBe(401);
+		});
+	});
+
+	describe('requireBetaFeatures', () => {
+		it('returns user when authenticated and hasBetaFeatures is true', () => {
+			const user = makeBetaUser(true);
+			const result = requireBetaFeatures(makeEvent(user));
+			expect(result).toBe(user);
+		});
+
+		it('returns 403 when authenticated but hasBetaFeatures is false', async () => {
+			const user = makeBetaUser(false);
+			const result = requireBetaFeatures(makeEvent(user));
+			expect(result).toBeInstanceOf(Response);
+			expect((result as Response).status).toBe(403);
+			const body = await (result as Response).json();
+			expect(body.code).toBe('FORBIDDEN');
+		});
+
+		it('returns 401 when not authenticated', async () => {
+			const result = requireBetaFeatures(makeEvent());
 			expect(result).toBeInstanceOf(Response);
 			expect((result as Response).status).toBe(401);
 		});

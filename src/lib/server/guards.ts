@@ -33,3 +33,15 @@ export function requireAdmin(event: RequestEvent): User | Response {
 	}
 	return result;
 }
+
+/**
+ * For beta-gated API routes — returns 401/403 JSON if not authenticated or hasBetaFeatures is false.
+ */
+export function requireBetaFeatures(event: RequestEvent): User | Response {
+	const result = requireApiAuth(event);
+	if (result instanceof Response) return result;
+	if (!result.hasBetaFeatures) {
+		return error('Beta features access required', 'FORBIDDEN', 403);
+	}
+	return result;
+}

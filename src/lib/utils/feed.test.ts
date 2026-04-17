@@ -19,7 +19,11 @@ function makeItem(
 		targetUsername: null,
 		targetAvatarUrl: null,
 		commentId: null,
-		commentBody: null
+		commentBody: null,
+		teamId: null,
+		teamName: null,
+		teamSlug: null,
+		teamAvatarUrl: null
 	};
 }
 

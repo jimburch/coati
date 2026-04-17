@@ -58,6 +58,7 @@
 						<th class="text-muted-foreground px-4 py-3 text-left font-medium">Last login</th>
 						<th class="text-muted-foreground px-4 py-3 text-center font-medium">Feedback</th>
 						<th class="text-muted-foreground px-4 py-3 text-center font-medium">Beta approved</th>
+						<th class="text-muted-foreground px-4 py-3 text-center font-medium">Beta features</th>
 					</tr>
 				</thead>
 				<tbody class="divide-border divide-y">
@@ -149,13 +150,63 @@
 									</button>
 								</form>
 							</td>
+							<td class="px-4 py-3 text-center">
+								<form
+									method="POST"
+									action="?/toggleBetaFeatures"
+									use:enhance={() => {
+										pendingUserId = user.id;
+										const username = user.username;
+										const granting = !user.hasBetaFeatures;
+										return async ({ result, update }) => {
+											pendingUserId = null;
+											if (result.type === 'failure' || result.type === 'error') {
+												toast.error('Failed to update beta features access');
+											} else {
+												toast.success(
+													granting
+														? `Beta features enabled for ${username}`
+														: `Beta features disabled for ${username}`
+												);
+												await update();
+											}
+										};
+									}}
+									data-testid="toggle-beta-features-form"
+								>
+									<input type="hidden" name="userId" value={user.id} />
+									<input
+										type="hidden"
+										name="enabled"
+										value={user.hasBetaFeatures ? 'false' : 'true'}
+									/>
+									<button
+										type="submit"
+										disabled={pendingUserId === user.id}
+										class="inline-flex h-6 w-11 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {user.hasBetaFeatures
+											? 'bg-primary'
+											: 'bg-muted'}"
+										aria-label="{user.hasBetaFeatures
+											? 'Disable'
+											: 'Enable'} beta features for {user.username}"
+										data-testid="beta-features-toggle"
+										data-enabled={user.hasBetaFeatures}
+									>
+										<span
+											class="pointer-events-none block h-5 w-5 rounded-full bg-white shadow-sm transition-transform {user.hasBetaFeatures
+												? 'translate-x-5'
+												: 'translate-x-0.5'}"
+										></span>
+									</button>
+								</form>
+							</td>
 						</tr>
 					{/each}
 
 					{#if data.users.length === 0}
 						<tr>
 							<td
-								colspan="6"
+								colspan="7"
 								class="text-muted-foreground px-4 py-8 text-center"
 								data-testid="empty-state"
 							>
@@ -258,6 +309,54 @@
 
 					<dt class="text-muted-foreground">Feedback</dt>
 					<dd class="text-foreground" data-testid="user-feedback-count">{user.feedbackCount}</dd>
+
+					<dt class="text-muted-foreground">Beta features</dt>
+					<dd>
+						<form
+							method="POST"
+							action="?/toggleBetaFeatures"
+							use:enhance={() => {
+								pendingUserId = user.id;
+								const username = user.username;
+								const granting = !user.hasBetaFeatures;
+								return async ({ result, update }) => {
+									pendingUserId = null;
+									if (result.type === 'failure' || result.type === 'error') {
+										toast.error('Failed to update beta features access');
+									} else {
+										toast.success(
+											granting
+												? `Beta features enabled for ${username}`
+												: `Beta features disabled for ${username}`
+										);
+										await update();
+									}
+								};
+							}}
+							data-testid="toggle-beta-features-form"
+						>
+							<input type="hidden" name="userId" value={user.id} />
+							<input type="hidden" name="enabled" value={user.hasBetaFeatures ? 'false' : 'true'} />
+							<button
+								type="submit"
+								disabled={pendingUserId === user.id}
+								class="inline-flex h-6 w-11 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {user.hasBetaFeatures
+									? 'bg-primary'
+									: 'bg-muted'}"
+								aria-label="{user.hasBetaFeatures
+									? 'Disable'
+									: 'Enable'} beta features for {user.username}"
+								data-testid="beta-features-toggle"
+								data-enabled={user.hasBetaFeatures}
+							>
+								<span
+									class="pointer-events-none block h-5 w-5 rounded-full bg-white shadow-sm transition-transform {user.hasBetaFeatures
+										? 'translate-x-5'
+										: 'translate-x-0.5'}"
+								></span>
+							</button>
+						</form>
+					</dd>
 				</dl>
 			</div>
 		{/each}

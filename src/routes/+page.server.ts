@@ -23,10 +23,11 @@ type DashboardSetup = {
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (locals.user) {
+		const viewerId = locals.user.id;
 		const [featured, trending, recent] = await Promise.all([
-			getFeaturedSetups(5),
-			getTrendingSetups(6),
-			getRecentSetups(6)
+			getFeaturedSetups(5, viewerId),
+			getTrendingSetups(6, viewerId),
+			getRecentSetups(6, viewerId)
 		]);
 
 		const dashboardIds = [
@@ -70,7 +71,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		};
 	}
 
-	const results = await searchSetups({ sort: 'trending', page: 1 });
+	const results = await searchSetups({ sort: 'trending', page: 1, viewerId: undefined });
 	const setupIds = results.items.slice(0, 6).map((s) => s.id);
 	const agentsMap = await getAgentsForSetups(setupIds);
 

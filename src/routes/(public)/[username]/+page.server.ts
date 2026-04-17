@@ -56,7 +56,8 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 	let activityItems: Awaited<ReturnType<typeof getProfileFeed>>['items'] = [];
 
 	if (tab === 'setups') {
-		const rawSetups = await getSetupsByUserId(user.id);
+		const viewerIsOwner = locals.user?.id === user.id;
+		const rawSetups = await getSetupsByUserId(user.id, viewerIsOwner);
 		const agentsMap = await getAgentsForSetups(rawSetups.map((s) => s.id));
 		setups = rawSetups.map((s) => ({
 			...s,

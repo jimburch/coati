@@ -9,9 +9,11 @@
 	interface SetupProp {
 		display: string | null;
 		name: string;
+		slug: string;
 		description: string | null;
 		ownerUsername: string;
 		ownerAvatarUrl: string | null;
+		visibility: 'public' | 'private';
 	}
 
 	interface AgentProp {
@@ -62,6 +64,14 @@
 			{#if !aboutEditMode}
 				<div class="flex items-center gap-2">
 					<h1 class="text-xl font-bold lg:text-2xl">{displayedAboutDisplay}</h1>
+					{#if setup.visibility === 'private'}
+						<span
+							class="inline-flex items-center rounded-full border border-border bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground"
+							data-testid="private-badge"
+						>
+							Private
+						</span>
+					{/if}
 					{#if isOwner}
 						<button
 							onclick={startAboutEdit}
@@ -75,6 +85,18 @@
 								/>
 							</svg>
 						</button>
+						<a
+							href="/{setup.ownerUsername}/{setup.slug}/settings"
+							class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+							aria-label="Setup settings"
+							data-testid="settings-link"
+						>
+							<svg class="size-3.5" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+								<path
+									d="M8 0a8.2 8.2 0 0 1 .701.031C9.444.095 9.99.645 10.16 1.29l.288 1.107c.018.066.079.158.212.224.231.114.454.243.668.386.123.082.233.09.299.071l1.103-.303c.644-.176 1.392.021 1.82.63.27.385.506.792.704 1.218.315.675.111 1.422-.364 1.891l-.814.806c-.049.048-.098.147-.088.294.016.257.016.515 0 .772-.01.147.038.246.088.294l.814.806c.475.469.679 1.216.364 1.891a7.977 7.977 0 0 1-.704 1.217c-.428.61-1.176.807-1.82.63l-1.102-.302c-.067-.019-.177-.011-.3.071a5.909 5.909 0 0 1-.668.386c-.133.066-.194.158-.211.224l-.29 1.106c-.168.646-.715 1.196-1.458 1.26a8.006 8.006 0 0 1-1.402 0c-.743-.064-1.289-.614-1.458-1.26l-.289-1.106c-.018-.066-.079-.158-.212-.224a5.738 5.738 0 0 1-.668-.386c-.123-.082-.233-.09-.299-.071l-1.103.303c-.644.176-1.392-.021-1.82-.63a8.12 8.12 0 0 1-.704-1.218c-.315-.675-.111-1.422.363-1.891l.815-.806c.05-.048.098-.147.088-.294a6.214 6.214 0 0 1 0-.772c.01-.147-.038-.246-.088-.294l-.815-.806C.635 6.045.431 5.298.746 4.623a7.92 7.92 0 0 1 .704-1.217c.428-.61 1.176-.807 1.82-.63l1.102.302c.067.019.177.011.3-.071.214-.143.437-.272.668-.386.133-.066.194-.158.211-.224l.29-1.106C6.717.645 7.264.095 8.007.031 8.23.01 8.617 0 8 0Zm0 5a3 3 0 1 0 0 6A3 3 0 0 0 8 5Zm0 1.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"
+								/>
+							</svg>
+						</a>
 					{/if}
 				</div>
 				{#if displayedAboutDescription}
