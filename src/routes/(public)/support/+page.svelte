@@ -2,15 +2,14 @@
 	import OgMeta from '$lib/components/OgMeta.svelte';
 	import { BMC_URL, GITHUB_REPO_URL } from '$lib/config/support';
 
-	const otherWays: Array<{ emoji: string; label: string; href: string; external: boolean }> = [
-		{ emoji: '⭐', label: 'Star the repo on GitHub', href: GITHUB_REPO_URL, external: true },
+	const otherWays: Array<{ emoji: string; label: string; href: string }> = [
+		{ emoji: '⭐', label: 'Star the repo on GitHub', href: GITHUB_REPO_URL },
 		{
 			emoji: '🐞',
 			label: 'Report a bug or request a feature',
-			href: `${GITHUB_REPO_URL}/issues/new`,
-			external: true
+			href: `${GITHUB_REPO_URL}/issues/new`
 		},
-		{ emoji: '🤝', label: 'Contribute on GitHub', href: GITHUB_REPO_URL, external: true }
+		{ emoji: '🤝', label: 'Contribute on GitHub', href: GITHUB_REPO_URL }
 	];
 </script>
 
@@ -48,9 +47,9 @@
 					<span aria-hidden="true">{way.emoji}</span>
 					<a
 						href={way.href}
+						target="_blank"
+						rel="noopener noreferrer"
 						class="text-foreground underline hover:no-underline"
-						target={way.external ? '_blank' : undefined}
-						rel={way.external ? 'noopener noreferrer' : undefined}
 					>
 						{way.label}
 					</a>

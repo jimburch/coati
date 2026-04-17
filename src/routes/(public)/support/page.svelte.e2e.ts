@@ -25,15 +25,11 @@ test('BMC button is visible with correct href, target, and rel', async ({ page }
 	expect(rel).toContain('noreferrer');
 });
 
-test('all four "Other ways to help" links are present', async ({ page }) => {
+test('all three "Other ways to help" links are present', async ({ page }) => {
 	await page.goto(SUPPORT_URL);
 	await expect(page.getByRole('link', { name: 'Star the repo on GitHub' })).toHaveAttribute(
 		'href',
 		GITHUB_REPO_URL
-	);
-	await expect(page.getByRole('link', { name: "Share a setup you've built" })).toHaveAttribute(
-		'href',
-		'/new'
 	);
 	await expect(
 		page.getByRole('link', { name: 'Report a bug or request a feature' })
@@ -44,20 +40,13 @@ test('all four "Other ways to help" links are present', async ({ page }) => {
 	);
 });
 
-test('external "Other ways" links open in new tab with noopener noreferrer', async ({ page }) => {
+test('"Other ways" links open in new tab with noopener noreferrer', async ({ page }) => {
 	await page.goto(SUPPORT_URL);
 	const starLink = page.getByRole('link', { name: 'Star the repo on GitHub' });
 	await expect(starLink).toHaveAttribute('target', '_blank');
 	const rel = await starLink.getAttribute('rel');
 	expect(rel).toContain('noopener');
 	expect(rel).toContain('noreferrer');
-});
-
-test('internal "Share a setup" link does not open in a new tab', async ({ page }) => {
-	await page.goto(SUPPORT_URL);
-	const shareLink = page.getByRole('link', { name: "Share a setup you've built" });
-	const target = await shareLink.getAttribute('target');
-	expect(target).toBeNull();
 });
 
 test('page is accessible without authentication', async ({ page }) => {
