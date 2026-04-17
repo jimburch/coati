@@ -11,7 +11,7 @@
  */
 
 import { db } from '$lib/server/db';
-import { users, setups } from '$lib/server/db/schema';
+import { users, setups, agents, setupAgents } from '$lib/server/db/schema';
 import type { User, Setup } from '$lib/server/db/schema';
 import { inArray } from 'drizzle-orm';
 
@@ -58,10 +58,42 @@ export async function createTestSetup(userId: string): Promise<Setup> {
 }
 
 /**
+ * Insert a test agent. Returns the full agent row.
+ * The caller is responsible for adding the agent's ID to a cleanup list
+ * (agents are not owned by users, so they don't cascade from deleteTestUsers).
+ */
+export async function createTestAgent(): Promise<{ id: string; slug: string }> {
+	const id = uid();
+	const [agent] = await db
+		.insert(agents)
+		.values({
+			slug: `test-agent-${id}`,
+			displayName: `Test Agent ${id}`
+		})
+		.returning();
+	return agent;
+}
+
+/**
+ * Link an agent to a setup via the setup_agents join table.
+ */
+export async function linkAgentToSetup(setupId: string, agentId: string): Promise<void> {
+	await db.insert(setupAgents).values({ setupId, agentId });
+}
+
+/**
  * Delete test users by ID. Cascades to setups, stars, follows, comments, etc.
  * Call this in `afterEach` to clean up test data.
  */
 export async function deleteTestUsers(userIds: string[]): Promise<void> {
 	if (userIds.length === 0) return;
 	await db.delete(users).where(inArray(users.id, userIds));
+}
+
+/**
+ * Delete test agents by ID. Cascades to setup_agents rows.
+ */
+export async function deleteTestAgents(agentIds: string[]): Promise<void> {
+	if (agentIds.length === 0) return;
+	await db.delete(agents).where(inArray(agents.id, agentIds));
 }

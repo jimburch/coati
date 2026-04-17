@@ -130,6 +130,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 };
 
 export const handleError: HandleServerError = ({ error, event }) => {
+	console.error(`[handleError] ${event.request.method} ${event.url.pathname}`, error);
+
 	// Build sanitized headers — strip Authorization and Cookie to avoid leaking credentials
 	const sanitizedHeaders: Record<string, string> = {};
 	event.request.headers.forEach((value, key) => {

@@ -129,14 +129,16 @@ describe('getForYouSetups', () => {
 	});
 
 	describe('agent-filtered path', () => {
-		it('uses agent subquery filter when user has agents', async () => {
+		it('uses EXISTS + setup_agents filter when user has agents', async () => {
 			mockWhere.mockReturnValueOnce(Promise.resolve([{ agentId: 'agent-1' }]));
 			mockExecute.mockResolvedValueOnce([makeSetupRow()]);
 
 			await getForYouSetups('user-1', 6);
 
-			const hasAgentFilter = capturedSql.queries.some((q) => q.includes('setup_agents sa'));
-			expect(hasAgentFilter).toBe(true);
+			const hasExistsFilter = capturedSql.queries.some(
+				(q) => q.includes('EXISTS') && q.includes('SELECT 1 FROM')
+			);
+			expect(hasExistsFilter).toBe(true);
 		});
 
 		it('excludes user own setups via != condition', async () => {
@@ -195,15 +197,15 @@ describe('getForYouSetups', () => {
 			expect(result[0].id).toBe('setup-fallback');
 		});
 
-		it('does not include setup_agents subquery filter in fallback path', async () => {
+		it('does not include setup_agents EXISTS filter in fallback path', async () => {
 			mockWhere.mockReturnValueOnce(Promise.resolve([])); // no agents
 			mockExecute.mockResolvedValueOnce([]);
 			mockExecute.mockResolvedValueOnce([]);
 
 			await getForYouSetups('user-1', 6);
 
-			const hasAgentFilter = capturedSql.queries.some((q) => q.includes('setup_agents sa'));
-			expect(hasAgentFilter).toBe(false);
+			const hasExistsFilter = capturedSql.queries.some((q) => q.includes('EXISTS'));
+			expect(hasExistsFilter).toBe(false);
 		});
 
 		it('still excludes starred setups in fallback path', async () => {
@@ -270,7 +272,7 @@ describe('getForYouSetups', () => {
 			expect(backfillQuery).toContain('trending_setups_mv');
 		});
 
-		it('backfill with agent filter also uses agent subquery', async () => {
+		it('backfill with agent filter also uses EXISTS + setup_agents', async () => {
 			mockWhere.mockReturnValueOnce(Promise.resolve([{ agentId: 'agent-1' }])); // has agents
 			mockExecute
 				.mockResolvedValueOnce([]) // trending agent-filtered: empty
@@ -278,8 +280,8 @@ describe('getForYouSetups', () => {
 
 			await getForYouSetups('user-1', 3);
 
-			// Both queries should contain setup_agents sa
-			const agentFilteredQueries = capturedSql.queries.filter((q) => q.includes('setup_agents sa'));
+			// Both queries should use the EXISTS pattern
+			const agentFilteredQueries = capturedSql.queries.filter((q) => q.includes('EXISTS'));
 			expect(agentFilteredQueries.length).toBeGreaterThanOrEqual(2);
 		});
 	});

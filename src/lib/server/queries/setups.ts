@@ -458,17 +458,16 @@ export async function getForYouSetups(userId: string, limit: number) {
 	if (hasAgents) {
 		// Step 2a: Trending setups whose agents overlap with the user's agents
 		rows = await db.execute<SetupRow>(
-			sql`SELECT DISTINCT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
+			sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
 				${setups.display}, ${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
 				${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
 				FROM ${setups}
 				INNER JOIN ${users} ON ${setups.userId} = ${users.id}
 				INNER JOIN trending_setups_mv ON trending_setups_mv.setup_id = ${setups.id}
-				INNER JOIN ${setupAgents} ON ${setupAgents.setupId} = ${setups.id}
-				WHERE ${setupAgents.agentId} IN (
-					SELECT sa.agent_id FROM setup_agents sa
-					INNER JOIN setups s ON sa.setup_id = s.id
-					WHERE s.user_id = ${userId}
+				WHERE EXISTS (
+					SELECT 1 FROM ${setupAgents}
+					WHERE ${setupAgents.setupId} = ${setups.id}
+					AND ${inArray(setupAgents.agentId, agentIds)}
 				)
 				AND ${setups.userId} != ${userId}
 				AND ${setups.id} NOT IN (SELECT setup_id FROM stars WHERE user_id = ${userId})
@@ -499,16 +498,15 @@ export async function getForYouSetups(userId: string, limit: number) {
 
 		if (hasAgents) {
 			backfillRows = await db.execute<SetupRow>(
-				sql`SELECT DISTINCT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
+				sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
 					${setups.display}, ${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
 					${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
 					FROM ${setups}
 					INNER JOIN ${users} ON ${setups.userId} = ${users.id}
-					INNER JOIN ${setupAgents} ON ${setupAgents.setupId} = ${setups.id}
-					WHERE ${setupAgents.agentId} IN (
-						SELECT sa.agent_id FROM setup_agents sa
-						INNER JOIN setups s ON sa.setup_id = s.id
-						WHERE s.user_id = ${userId}
+					WHERE EXISTS (
+						SELECT 1 FROM ${setupAgents}
+						WHERE ${setupAgents.setupId} = ${setups.id}
+						AND ${inArray(setupAgents.agentId, agentIds)}
 					)
 					AND ${setups.id} NOT IN (SELECT setup_id FROM trending_setups_mv)
 					AND ${setups.userId} != ${userId}
