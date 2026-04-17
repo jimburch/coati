@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { Avatar, AvatarImage, AvatarFallback } from '$lib/components/ui/avatar';
 	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
 	import type { PageData, ActionData } from './$types';
 
 	const { data, form }: { data: PageData; form: ActionData } = $props();
@@ -10,6 +11,8 @@
 	const members = $derived(data.members);
 	const isOwner = $derived(data.isOwner);
 	const currentUserId = $derived(data.currentUserId);
+
+	let inviteUsername = $state('');
 
 	function roleBadgeClass(role: string, isTeamOwner: boolean) {
 		if (isTeamOwner) return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200';
@@ -46,6 +49,41 @@
 			class="mb-4 rounded-md border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive"
 		>
 			{form.error}
+		</div>
+	{/if}
+
+	{#if form?.inviteSuccess}
+		<div
+			class="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200"
+		>
+			Invite sent to @{form.invitedUsername}
+		</div>
+	{/if}
+
+	{#if isOwner || data.members.some((m) => m.userId === currentUserId && m.role === 'admin')}
+		<div class="mb-6 rounded-lg border border-border bg-card p-4">
+			<h2 class="mb-3 text-sm font-semibold text-foreground">Invite member</h2>
+			<form
+				method="POST"
+				action="?/inviteMember"
+				use:enhance={() => {
+					return ({ result, update }) => {
+						if (result.type === 'success') inviteUsername = '';
+						update();
+					};
+				}}
+				class="flex gap-2"
+			>
+				<Input
+					type="text"
+					name="username"
+					bind:value={inviteUsername}
+					placeholder="Username"
+					class="h-9 flex-1 text-sm"
+					required
+				/>
+				<Button type="submit" size="sm" class="shrink-0">Invite</Button>
+			</form>
 		</div>
 	{/if}
 

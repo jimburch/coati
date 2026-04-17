@@ -9,7 +9,8 @@
 	import UserMenu from './UserMenu.svelte';
 	import type { LayoutUser } from '$lib/types';
 
-	let { user }: { user: LayoutUser | null } = $props();
+	let { user, pendingInviteCount = 0 }: { user: LayoutUser | null; pendingInviteCount?: number } =
+		$props();
 
 	let menuOpen = $state(false);
 	let mobileSearchOpen = $state(false);
@@ -141,7 +142,7 @@
 					{/if}
 					{#if user}
 						{#if browser}
-							<UserMenu {user} />
+							<UserMenu {user} {pendingInviteCount} />
 						{:else}
 							<div
 								class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-muted"
@@ -179,7 +180,7 @@
 				{/if}
 				{#if user}
 					{#if browser}
-						<UserMenu {user} />
+						<UserMenu {user} {pendingInviteCount} />
 					{:else}
 						<div
 							class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-muted"
@@ -280,6 +281,21 @@
 					>My Profile</a
 				>
 				<a href="/settings" class="block rounded-md px-3 py-2 text-sm hover:bg-muted">Settings</a>
+				{#if user.hasBetaFeatures}
+					<a href="/teams" class="block rounded-md px-3 py-2 text-sm hover:bg-muted">My Teams</a>
+					<a
+						href="/invites"
+						class="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
+					>
+						Pending Invites
+						{#if pendingInviteCount > 0}
+							<span
+								class="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground"
+								>{pendingInviteCount}</span
+							>
+						{/if}
+					</a>
+				{/if}
 				{#if user.isAdmin}
 					<a href="/admin/beta" class="block rounded-md px-3 py-2 text-sm hover:bg-muted">Admin</a>
 				{/if}

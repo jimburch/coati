@@ -1,6 +1,7 @@
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, sql, count } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { teams, teamMembers, setups, users, activities } from '$lib/server/db/schema';
+import { teams, teamMembers, teamInvites, setups, users, activities } from '$lib/server/db/schema';
+import { randomBytes } from 'crypto';
 import type { z } from 'zod';
 import type { createTeamSchema, updateTeamSchema } from '$lib/types';
 
@@ -266,6 +267,174 @@ export async function getTeamSetupBySlug(teamSlug: string, setupSlug: string) {
 		.limit(1);
 
 	return result[0] ?? null;
+}
+
+export async function getTeamPendingInviteCount(teamId: string): Promise<number> {
+	const result = await db
+		.select({ count: count() })
+		.from(teamInvites)
+		.where(and(eq(teamInvites.teamId, teamId), eq(teamInvites.status, 'pending')))
+		.limit(1);
+	return result[0]?.count ?? 0;
+}
+
+export async function createInviteByUsername(
+	teamId: string,
+	invitedByUserId: string,
+	username: string
+): Promise<
+	{ ok: true; invite: typeof teamInvites.$inferSelect } | { ok: false; error: string; code: string }
+> {
+	const invitedUser = await db
+		.select({ id: users.id })
+		.from(users)
+		.where(eq(users.username, username))
+		.limit(1);
+
+	if (!invitedUser[0]) {
+		return { ok: false, error: 'User not found', code: 'NOT_FOUND' };
+	}
+
+	const targetUser = invitedUser[0];
+
+	const existingMember = await db
+		.select({ userId: teamMembers.userId })
+		.from(teamMembers)
+		.where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, targetUser.id)))
+		.limit(1);
+
+	if (existingMember[0]) {
+		return { ok: false, error: 'User is already a team member', code: 'ALREADY_MEMBER' };
+	}
+
+	const existingInvite = await db
+		.select({ id: teamInvites.id })
+		.from(teamInvites)
+		.where(
+			and(
+				eq(teamInvites.teamId, teamId),
+				eq(teamInvites.invitedUserId, targetUser.id),
+				eq(teamInvites.status, 'pending')
+			)
+		)
+		.limit(1);
+
+	if (existingInvite[0]) {
+		return { ok: false, error: 'User already has a pending invite', code: 'ALREADY_INVITED' };
+	}
+
+	const pendingCount = await getTeamPendingInviteCount(teamId);
+	if (pendingCount >= 50) {
+		return {
+			ok: false,
+			error: 'Team has reached the maximum number of pending invites',
+			code: 'RATE_LIMIT'
+		};
+	}
+
+	const token = randomBytes(32).toString('hex');
+	const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+	const [invite] = await db
+		.insert(teamInvites)
+		.values({
+			teamId,
+			invitedByUserId,
+			invitedUserId: targetUser.id,
+			token,
+			status: 'pending',
+			expiresAt
+		})
+		.returning();
+
+	return { ok: true, invite };
+}
+
+export async function acceptInvite(
+	token: string,
+	userId: string
+): Promise<{ ok: true } | { ok: false; error: string; code: string }> {
+	const inviteResult = await db
+		.select()
+		.from(teamInvites)
+		.where(eq(teamInvites.token, token))
+		.limit(1);
+
+	const invite = inviteResult[0];
+	if (!invite) return { ok: false, error: 'Invite not found', code: 'NOT_FOUND' };
+	if (invite.invitedUserId !== userId)
+		return { ok: false, error: 'This invite is not for you', code: 'FORBIDDEN' };
+	if (invite.status !== 'pending')
+		return { ok: false, error: 'Invite is no longer pending', code: 'INVALID_STATUS' };
+	if (invite.expiresAt < new Date())
+		return { ok: false, error: 'Invite has expired', code: 'EXPIRED' };
+
+	await db.transaction(async (tx) => {
+		await tx.insert(teamMembers).values({
+			teamId: invite.teamId,
+			userId,
+			role: 'member'
+		});
+
+		await tx.update(teamInvites).set({ status: 'accepted' }).where(eq(teamInvites.id, invite.id));
+
+		await tx
+			.update(teams)
+			.set({ membersCount: sql`${teams.membersCount} + 1` })
+			.where(eq(teams.id, invite.teamId));
+
+		await tx.insert(activities).values({
+			userId,
+			teamId: invite.teamId,
+			actionType: 'joined_team'
+		});
+	});
+
+	return { ok: true };
+}
+
+export async function declineInvite(
+	token: string,
+	userId: string
+): Promise<{ ok: true } | { ok: false; error: string; code: string }> {
+	const inviteResult = await db
+		.select()
+		.from(teamInvites)
+		.where(eq(teamInvites.token, token))
+		.limit(1);
+
+	const invite = inviteResult[0];
+	if (!invite) return { ok: false, error: 'Invite not found', code: 'NOT_FOUND' };
+	if (invite.invitedUserId !== userId)
+		return { ok: false, error: 'This invite is not for you', code: 'FORBIDDEN' };
+	if (invite.status !== 'pending')
+		return { ok: false, error: 'Invite is no longer pending', code: 'INVALID_STATUS' };
+
+	await db.update(teamInvites).set({ status: 'declined' }).where(eq(teamInvites.id, invite.id));
+
+	return { ok: true };
+}
+
+export async function getPendingInvites(userId: string) {
+	return db
+		.select({
+			id: teamInvites.id,
+			token: teamInvites.token,
+			status: teamInvites.status,
+			expiresAt: teamInvites.expiresAt,
+			createdAt: teamInvites.createdAt,
+			teamId: teams.id,
+			teamName: teams.name,
+			teamSlug: teams.slug,
+			teamAvatarUrl: teams.avatarUrl,
+			invitedByUsername: users.username,
+			invitedByAvatarUrl: users.avatarUrl
+		})
+		.from(teamInvites)
+		.innerJoin(teams, eq(teamInvites.teamId, teams.id))
+		.leftJoin(users, eq(teamInvites.invitedByUserId, users.id))
+		.where(and(eq(teamInvites.invitedUserId, userId), eq(teamInvites.status, 'pending')))
+		.orderBy(desc(teamInvites.createdAt));
 }
 
 export async function getTeamSetups(teamId: string, viewerIsMember: boolean) {

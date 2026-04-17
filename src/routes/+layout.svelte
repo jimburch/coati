@@ -28,7 +28,7 @@
 </script>
 
 <div class="flex min-h-screen flex-col">
-	<Navbar user={data.user} />
+	<Navbar user={data.user} pendingInviteCount={data.pendingInviteCount ?? 0} />
 	<main class="flex-1 pt-14">
 		{@render children()}
 	</main>

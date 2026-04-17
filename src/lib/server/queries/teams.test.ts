@@ -90,7 +90,8 @@ vi.mock('drizzle-orm', () => ({
 	eq: vi.fn((a: unknown, b: unknown) => ({ _type: 'eq', a, b })),
 	and: vi.fn((...args: unknown[]) => ({ _type: 'and', args })),
 	desc: vi.fn((col: unknown) => ({ _type: 'desc', col })),
-	sql: vi.fn(() => ({ _type: 'sql' }))
+	sql: vi.fn(() => ({ _type: 'sql' })),
+	count: vi.fn(() => ({ _type: 'count' }))
 }));
 
 vi.mock('$lib/server/db/schema', () => ({
@@ -136,6 +137,16 @@ vi.mock('$lib/server/db/schema', () => ({
 		userId: 'activities.userId',
 		teamId: 'activities.teamId',
 		actionType: 'activities.actionType'
+	},
+	teamInvites: {
+		id: 'teamInvites.id',
+		teamId: 'teamInvites.teamId',
+		invitedByUserId: 'teamInvites.invitedByUserId',
+		invitedUserId: 'teamInvites.invitedUserId',
+		status: 'teamInvites.status',
+		token: 'teamInvites.token',
+		expiresAt: 'teamInvites.expiresAt',
+		createdAt: 'teamInvites.createdAt'
 	}
 }));
 
@@ -173,6 +184,8 @@ vi.mock('$lib/server/db', () => {
 	txChain['where'] = vi.fn(() => txChain);
 	txChain['limit'] = vi.fn(() => Promise.resolve(state.rows));
 	txChain['innerJoin'] = vi.fn(() => txChain);
+	txChain['leftJoin'] = vi.fn(() => txChain);
+	txChain['orderBy'] = vi.fn(() => Promise.resolve(state.rows));
 	txChain['delete'] = vi.fn(() => ({
 		where: vi.fn(() => {
 			mockDeleteWhere();
@@ -192,6 +205,7 @@ vi.mock('$lib/server/db', () => {
 	chain['where'] = vi.fn(() => chain);
 	chain['limit'] = vi.fn(() => Promise.resolve(state.rows));
 	chain['innerJoin'] = vi.fn(() => chain);
+	chain['leftJoin'] = vi.fn(() => chain);
 	chain['orderBy'] = vi.fn(() => Promise.resolve(state.rows));
 	chain['insert'] = vi.fn(() => ({
 		values: vi.fn((...args: unknown[]) => {
@@ -689,5 +703,253 @@ describe('getTeamBySlug with viewerId (member visibility)', () => {
 		const result = await getTeamBySlug('my-team');
 		expect(result).not.toBeNull();
 		expect(result?.setups).toBeInstanceOf(Array);
+	});
+});
+
+import {
+	createInviteByUsername,
+	acceptInvite,
+	declineInvite,
+	getPendingInvites,
+	getTeamPendingInviteCount
+} from './teams';
+import { createInviteSchema } from '$lib/types';
+
+describe('createInviteSchema', () => {
+	it('accepts valid username', () => {
+		expect(createInviteSchema.safeParse({ username: 'alice' }).success).toBe(true);
+	});
+
+	it('rejects empty username', () => {
+		expect(createInviteSchema.safeParse({ username: '' }).success).toBe(false);
+	});
+
+	it('rejects username over 50 chars', () => {
+		expect(createInviteSchema.safeParse({ username: 'a'.repeat(51) }).success).toBe(false);
+	});
+
+	it('rejects missing username', () => {
+		expect(createInviteSchema.safeParse({}).success).toBe(false);
+	});
+});
+
+describe('getTeamPendingInviteCount', () => {
+	beforeEach(() => {
+		state.rows = [];
+		vi.clearAllMocks();
+	});
+
+	it('returns 0 when no pending invites exist', async () => {
+		state.rows = [];
+		const result = await getTeamPendingInviteCount('team-1');
+		expect(result).toBe(0);
+	});
+
+	it('returns count from rows', async () => {
+		state.rows = [{ count: 7 }];
+		const result = await getTeamPendingInviteCount('team-1');
+		expect(result).toBe(7);
+	});
+});
+
+describe('createInviteByUsername', () => {
+	beforeEach(() => {
+		state.rows = [];
+		state.txInsertCalls = [];
+		vi.clearAllMocks();
+	});
+
+	it('returns NOT_FOUND when user does not exist', async () => {
+		state.rows = [];
+		const result = await createInviteByUsername('team-1', 'inviter-id', 'nonexistent');
+		expect(result).toMatchObject({ ok: false, code: 'NOT_FOUND' });
+	});
+
+	it('returns ALREADY_MEMBER when user is already a team member', async () => {
+		// First query (user lookup) returns user; second (member check) also returns non-empty
+		state.rows = [{ id: 'user-1' }];
+		const result = await createInviteByUsername('team-1', 'inviter-id', 'alice');
+		expect(result).toMatchObject({ ok: false, code: 'ALREADY_MEMBER' });
+	});
+});
+
+describe('acceptInvite', () => {
+	beforeEach(() => {
+		state.rows = [];
+		state.txInsertCalls = [];
+		vi.clearAllMocks();
+	});
+
+	it('returns NOT_FOUND when invite does not exist', async () => {
+		state.rows = [];
+		const result = await acceptInvite('bad-token', 'user-1');
+		expect(result).toMatchObject({ ok: false, code: 'NOT_FOUND' });
+	});
+
+	it('returns FORBIDDEN when invite belongs to different user', async () => {
+		state.rows = [
+			{
+				id: 'invite-1',
+				teamId: 'team-1',
+				invitedUserId: 'other-user',
+				status: 'pending',
+				expiresAt: new Date(Date.now() + 86400000)
+			}
+		];
+		const result = await acceptInvite('some-token', 'user-1');
+		expect(result).toMatchObject({ ok: false, code: 'FORBIDDEN' });
+	});
+
+	it('returns INVALID_STATUS when invite is not pending', async () => {
+		state.rows = [
+			{
+				id: 'invite-1',
+				teamId: 'team-1',
+				invitedUserId: 'user-1',
+				status: 'accepted',
+				expiresAt: new Date(Date.now() + 86400000)
+			}
+		];
+		const result = await acceptInvite('some-token', 'user-1');
+		expect(result).toMatchObject({ ok: false, code: 'INVALID_STATUS' });
+	});
+
+	it('returns EXPIRED when invite has passed its expiry date', async () => {
+		state.rows = [
+			{
+				id: 'invite-1',
+				teamId: 'team-1',
+				invitedUserId: 'user-1',
+				status: 'pending',
+				expiresAt: new Date(Date.now() - 1000)
+			}
+		];
+		const result = await acceptInvite('some-token', 'user-1');
+		expect(result).toMatchObject({ ok: false, code: 'EXPIRED' });
+	});
+
+	it('inserts member row and logs activity on success', async () => {
+		state.rows = [
+			{
+				id: 'invite-1',
+				teamId: 'team-1',
+				invitedUserId: 'user-1',
+				status: 'pending',
+				expiresAt: new Date(Date.now() + 86400000)
+			}
+		];
+		const result = await acceptInvite('valid-token', 'user-1');
+		expect(result).toMatchObject({ ok: true });
+		expect(mockInsertValues).toHaveBeenCalledWith(
+			expect.objectContaining({ teamId: 'team-1', userId: 'user-1', role: 'member' })
+		);
+		expect(mockInsertValues).toHaveBeenCalledWith(
+			expect.objectContaining({ userId: 'user-1', actionType: 'joined_team' })
+		);
+	});
+
+	it('updates invite status to accepted on success', async () => {
+		state.rows = [
+			{
+				id: 'invite-1',
+				teamId: 'team-1',
+				invitedUserId: 'user-1',
+				status: 'pending',
+				expiresAt: new Date(Date.now() + 86400000)
+			}
+		];
+		await acceptInvite('valid-token', 'user-1');
+		expect(mockUpdateSet).toHaveBeenCalledWith(expect.objectContaining({ status: 'accepted' }));
+	});
+});
+
+describe('declineInvite', () => {
+	beforeEach(() => {
+		state.rows = [];
+		vi.clearAllMocks();
+	});
+
+	it('returns NOT_FOUND when invite does not exist', async () => {
+		state.rows = [];
+		const result = await declineInvite('bad-token', 'user-1');
+		expect(result).toMatchObject({ ok: false, code: 'NOT_FOUND' });
+	});
+
+	it('returns FORBIDDEN when invite belongs to different user', async () => {
+		state.rows = [
+			{
+				id: 'invite-1',
+				teamId: 'team-1',
+				invitedUserId: 'other-user',
+				status: 'pending',
+				expiresAt: new Date(Date.now() + 86400000)
+			}
+		];
+		const result = await declineInvite('some-token', 'user-1');
+		expect(result).toMatchObject({ ok: false, code: 'FORBIDDEN' });
+	});
+
+	it('returns INVALID_STATUS when invite is not pending', async () => {
+		state.rows = [
+			{
+				id: 'invite-1',
+				teamId: 'team-1',
+				invitedUserId: 'user-1',
+				status: 'declined',
+				expiresAt: new Date(Date.now() + 86400000)
+			}
+		];
+		const result = await declineInvite('some-token', 'user-1');
+		expect(result).toMatchObject({ ok: false, code: 'INVALID_STATUS' });
+	});
+
+	it('updates status to declined on success', async () => {
+		state.rows = [
+			{
+				id: 'invite-1',
+				teamId: 'team-1',
+				invitedUserId: 'user-1',
+				status: 'pending',
+				expiresAt: new Date(Date.now() + 86400000)
+			}
+		];
+		const result = await declineInvite('valid-token', 'user-1');
+		expect(result).toMatchObject({ ok: true });
+		expect(mockUpdateSet).toHaveBeenCalledWith(expect.objectContaining({ status: 'declined' }));
+	});
+});
+
+describe('getPendingInvites', () => {
+	beforeEach(() => {
+		state.rows = [];
+		vi.clearAllMocks();
+	});
+
+	it('returns empty array when user has no pending invites', async () => {
+		state.rows = [];
+		const result = await getPendingInvites('user-1');
+		expect(result).toEqual([]);
+	});
+
+	it('returns pending invites with team info', async () => {
+		state.rows = [
+			{
+				id: 'invite-1',
+				token: 'tok123',
+				status: 'pending',
+				expiresAt: new Date(Date.now() + 86400000),
+				createdAt: new Date(),
+				teamId: 'team-1',
+				teamName: 'My Team',
+				teamSlug: 'my-team',
+				teamAvatarUrl: null,
+				invitedByUsername: 'alice',
+				invitedByAvatarUrl: null
+			}
+		];
+		const result = await getPendingInvites('user-1');
+		expect(result).toHaveLength(1);
+		expect(result[0].teamName).toBe('My Team');
+		expect(result[0].invitedByUsername).toBe('alice');
 	});
 });

@@ -1,13 +1,14 @@
 import { error, redirect, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { requireAuth } from '$lib/server/guards';
-import { changeTeamMemberRoleSchema } from '$lib/types';
+import { changeTeamMemberRoleSchema, createInviteSchema } from '$lib/types';
 import {
 	getTeamBySlugForAuth,
 	getTeamMemberRole,
 	getTeamMembers,
 	removeTeamMember,
-	changeTeamMemberRole
+	changeTeamMemberRole,
+	createInviteByUsername
 } from '$lib/server/queries/teams';
 
 export const load: PageServerLoad = async (event) => {
@@ -60,6 +61,35 @@ export const actions: Actions = {
 
 		await removeTeamMember(team.id, targetUserId, team.ownerId);
 		return { success: true };
+	},
+
+	inviteMember: async (event) => {
+		if (!event.locals.user) throw redirect(302, '/auth/login/github');
+		const user = event.locals.user;
+
+		if (!user.hasBetaFeatures) return fail(403, { error: 'Beta features required' });
+
+		const team = await getTeamBySlugForAuth(event.params.teamSlug);
+		if (!team) return fail(404, { error: 'Team not found' });
+
+		const isOwner = team.ownerId === user.id;
+		const role = await getTeamMemberRole(team.id, user.id);
+		if (!isOwner && role !== 'admin') {
+			return fail(403, { error: 'Only team owners and admins can invite members' });
+		}
+
+		const formData = await event.request.formData();
+		const username = formData.get('username') as string;
+
+		const parsed = createInviteSchema.safeParse({ username });
+		if (!parsed.success) return fail(400, { error: parsed.error.issues[0].message });
+
+		const result = await createInviteByUsername(team.id, user.id, parsed.data.username);
+		if (!result.ok) {
+			return fail(result.code === 'NOT_FOUND' ? 404 : 409, { error: result.error });
+		}
+
+		return { inviteSuccess: true, invitedUsername: parsed.data.username };
 	},
 
 	changeRole: async (event) => {
