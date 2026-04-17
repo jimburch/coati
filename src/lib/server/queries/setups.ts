@@ -421,6 +421,138 @@ export async function getTrendingSetups(limit: number, viewerId?: string) {
 	}));
 }
 
+export async function getForYouSetups(userId: string, limit: number) {
+	// Step 1: Determine agent IDs used across the user's setups
+	const agentRows = await db
+		.select({ agentId: setupAgents.agentId })
+		.from(setupAgents)
+		.innerJoin(setups, eq(setupAgents.setupId, setups.id))
+		.where(eq(setups.userId, userId));
+
+	const seen = new Set<string>();
+	const agentIds: string[] = [];
+	for (const row of agentRows) {
+		if (!seen.has(row.agentId)) {
+			seen.add(row.agentId);
+			agentIds.push(row.agentId);
+		}
+	}
+
+	const hasAgents = agentIds.length > 0;
+
+	type SetupRow = {
+		id: string;
+		name: string;
+		slug: string;
+		description: string;
+		display: string | null;
+		stars_count: number;
+		clones_count: number;
+		updated_at: Date;
+		owner_username: string;
+		owner_avatar_url: string;
+	};
+
+	let rows: SetupRow[];
+
+	if (hasAgents) {
+		// Step 2a: Trending setups whose agents overlap with the user's agents
+		rows = await db.execute<SetupRow>(
+			sql`SELECT DISTINCT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
+				${setups.display}, ${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
+				${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
+				FROM ${setups}
+				INNER JOIN ${users} ON ${setups.userId} = ${users.id}
+				INNER JOIN trending_setups_mv ON trending_setups_mv.setup_id = ${setups.id}
+				INNER JOIN ${setupAgents} ON ${setupAgents.setupId} = ${setups.id}
+				WHERE ${setupAgents.agentId} IN (
+					SELECT sa.agent_id FROM setup_agents sa
+					INNER JOIN setups s ON sa.setup_id = s.id
+					WHERE s.user_id = ${userId}
+				)
+				AND ${setups.userId} != ${userId}
+				AND ${setups.id} NOT IN (SELECT setup_id FROM stars WHERE user_id = ${userId})
+				AND ${setups.visibility} = 'public'
+				ORDER BY trending_setups_mv.recent_stars_count DESC
+				LIMIT ${limit}`
+		);
+	} else {
+		// Step 2b: Fallback — global trending with same exclusions
+		rows = await db.execute<SetupRow>(
+			sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
+				${setups.display}, ${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
+				${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
+				FROM ${setups}
+				INNER JOIN ${users} ON ${setups.userId} = ${users.id}
+				INNER JOIN trending_setups_mv ON trending_setups_mv.setup_id = ${setups.id}
+				WHERE ${setups.userId} != ${userId}
+				AND ${setups.id} NOT IN (SELECT setup_id FROM stars WHERE user_id = ${userId})
+				AND ${setups.visibility} = 'public'
+				ORDER BY trending_setups_mv.recent_stars_count DESC
+				LIMIT ${limit}`
+		);
+	}
+
+	if (rows.length < limit) {
+		const backfillLimit = limit - rows.length;
+		let backfillRows: SetupRow[];
+
+		if (hasAgents) {
+			backfillRows = await db.execute<SetupRow>(
+				sql`SELECT DISTINCT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
+					${setups.display}, ${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
+					${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
+					FROM ${setups}
+					INNER JOIN ${users} ON ${setups.userId} = ${users.id}
+					INNER JOIN ${setupAgents} ON ${setupAgents.setupId} = ${setups.id}
+					WHERE ${setupAgents.agentId} IN (
+						SELECT sa.agent_id FROM setup_agents sa
+						INNER JOIN setups s ON sa.setup_id = s.id
+						WHERE s.user_id = ${userId}
+					)
+					AND ${setups.id} NOT IN (SELECT setup_id FROM trending_setups_mv)
+					AND ${setups.userId} != ${userId}
+					AND ${setups.id} NOT IN (SELECT setup_id FROM stars WHERE user_id = ${userId})
+					AND ${setups.visibility} = 'public'
+					ORDER BY ${setups.starsCount} DESC
+					LIMIT ${backfillLimit}`
+			);
+		} else {
+			backfillRows = await db.execute<SetupRow>(
+				sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
+					${setups.display}, ${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
+					${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
+					FROM ${setups}
+					INNER JOIN ${users} ON ${setups.userId} = ${users.id}
+					WHERE ${setups.id} NOT IN (SELECT setup_id FROM trending_setups_mv)
+					AND ${setups.userId} != ${userId}
+					AND ${setups.id} NOT IN (SELECT setup_id FROM stars WHERE user_id = ${userId})
+					AND ${setups.visibility} = 'public'
+					ORDER BY ${setups.starsCount} DESC
+					LIMIT ${backfillLimit}`
+			);
+		}
+		rows = [...rows, ...backfillRows];
+	}
+
+	const setupIds = rows.map((r) => r.id);
+	const agentsMap = setupIds.length > 0 ? await getAgentsForSetups(setupIds) : {};
+
+	return rows.map((row) => ({
+		id: row.id,
+		name: row.name,
+		slug: row.slug,
+		description: row.description,
+		display: row.display,
+		starsCount: row.stars_count,
+		clonesCount: row.clones_count,
+		updatedAt: new Date(row.updated_at),
+		ownerUsername: row.owner_username,
+		ownerAvatarUrl: row.owner_avatar_url,
+		agents: agentsMap[row.id] ?? []
+	}));
+}
+
 export async function getRecentSetups(limit = 12, viewerId?: string) {
 	return db
 		.select({

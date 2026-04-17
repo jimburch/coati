@@ -59,7 +59,11 @@
 
 			<!-- Right column: discovery sections -->
 			<div class="flex flex-col gap-6">
-				<DiscoveryTabs trendingSetups={data.trendingSetups} activeTab={data.activeTab} />
+				<DiscoveryTabs
+					trendingSetups={data.trendingSetups}
+					forYouSetups={data.forYouSetups}
+					activeTab={data.activeTab}
+				/>
 
 				<YourActivityPanel activity={data.yourActivity} username={data.user.username} />
 

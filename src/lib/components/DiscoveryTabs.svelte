@@ -19,10 +19,11 @@
 
 	type Props = {
 		trendingSetups: Setup[];
+		forYouSetups: Setup[];
 		activeTab: Tab;
 	};
 
-	const { trendingSetups, activeTab }: Props = $props();
+	const { trendingSetups, forYouSetups, activeTab }: Props = $props();
 
 	const tabs: { id: Tab; label: string }[] = [
 		{ id: 'for-you', label: 'For You' },
@@ -79,9 +80,19 @@
 			</a>
 		</div>
 	{:else}
-		<div class="rounded-lg border border-dashed border-border py-8 text-center">
-			<p class="text-sm text-muted-foreground">Personalized recommendations coming soon.</p>
-		</div>
+		{#if forYouSetups.length > 0}
+			<div class="grid grid-cols-2 gap-3">
+				{#each forYouSetups as setup (setup.id)}
+					<SetupCard {setup} username={setup.ownerUsername} showAuthor />
+				{/each}
+			</div>
+		{:else}
+			<div class="rounded-lg border border-dashed border-border py-8 text-center">
+				<p class="text-sm text-muted-foreground">
+					No recommendations yet. Star some setups to help us learn your taste!
+				</p>
+			</div>
+		{/if}
 		<div class="mt-3 flex justify-end">
 			<a
 				href="/explore"
