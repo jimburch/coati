@@ -36,81 +36,105 @@
 
 {#if data.user}
 	<!-- Authenticated: Two-column dashboard -->
+	<!-- Mobile order controlled via CSS order; desktop placement via lg:col-start/row-start -->
 	<div class="mx-auto max-w-7xl px-4 py-6 lg:py-10">
-		<div class="flex flex-col gap-6 lg:grid lg:grid-cols-[280px_1fr]">
-			<!-- Left rail: identity -->
-			<aside class="flex flex-col gap-4">
+		<div class="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
+			<!-- ProfileCard: mobile order 1, desktop col-1 row-1 -->
+			<div class="order-1 lg:col-start-1 lg:row-start-1" data-testid="profile-card">
 				<ProfileCard
 					username={data.user.username}
 					avatarUrl={data.user.avatarUrl}
 					name={data.user.name ?? null}
 				/>
-				{#if data.userSetups.length === 0}
-					<ZeroStateCard />
-				{:else}
-					{#if data.userStats}
-						<StatsGrid stats={data.userStats} />
-					{/if}
-					<YourSetupsList setups={data.userSetups} username={data.user.username} />
-				{/if}
-				<QuickActions />
-				<AgentChips agents={data.userAgents} />
-			</aside>
+			</div>
 
-			<!-- Right column: discovery sections -->
-			<div class="flex flex-col gap-6">
+			<!-- Stats / Zero state: mobile order 2, desktop col-1 row-2 -->
+			<div class="order-2 lg:col-start-1 lg:row-start-2">
+				{#if data.userSetups.length === 0}
+					<div data-testid="zero-state-card"><ZeroStateCard /></div>
+				{:else if data.userStats}
+					<div data-testid="stats-grid"><StatsGrid stats={data.userStats} /></div>
+				{/if}
+			</div>
+
+			<!-- DiscoveryTabs: mobile order 3, desktop col-2 row-1 -->
+			<div class="order-3 lg:col-start-2 lg:row-start-1" data-testid="discovery-tabs">
 				<DiscoveryTabs
 					trendingSetups={data.trendingSetups}
 					forYouSetups={data.forYouSetups}
 					followingSetups={data.followingSetups}
 					activeTab={data.activeTab}
 				/>
+			</div>
 
-				<YourActivityPanel activity={data.yourActivity} username={data.user.username} />
+			<!-- YourSetupsList: mobile order 4, desktop col-1 row-3 (only when setups exist) -->
+			{#if data.userSetups.length > 0}
+				<div class="order-4 lg:col-start-1 lg:row-start-3" data-testid="your-setups-list">
+					<YourSetupsList setups={data.userSetups} username={data.user.username} />
+				</div>
+			{/if}
 
-				{#if data.featuredSetups.length > 0}
-					<!-- Featured Setups -->
-					<section>
-						<div class="mb-3 flex items-baseline justify-between">
-							<h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-								Featured
-							</h2>
-						</div>
-						<div class="flex flex-col gap-1.5">
-							{#each data.featuredSetups as setup (setup.id)}
-								<SetupCard {setup} username={setup.ownerUsername} showAuthor variant="compact" />
-							{/each}
-						</div>
-					</section>
-				{/if}
+			<!-- QuickActions: mobile order 5, desktop col-1 row-4 -->
+			<div class="order-5 lg:col-start-1 lg:row-start-4" data-testid="quick-actions">
+				<QuickActions />
+			</div>
 
-				<!-- Recently Added -->
-				<section>
+			<!-- AgentChips: mobile order 6, desktop col-1 row-5 (only when agents exist) -->
+			{#if data.userAgents.length > 0}
+				<div class="order-6 lg:col-start-1 lg:row-start-5" data-testid="agent-chips">
+					<AgentChips agents={data.userAgents} />
+				</div>
+			{/if}
+
+			<!-- Featured Setups: mobile order 7, desktop col-2 row-3 -->
+			{#if data.featuredSetups.length > 0}
+				<section class="order-7 lg:col-start-2 lg:row-start-3" data-testid="featured-setups">
 					<div class="mb-3 flex items-baseline justify-between">
 						<h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-							Recently Added
+							Featured
 						</h2>
-						<a
-							href="/explore"
-							class="text-xs text-muted-foreground transition-colors hover:text-foreground"
-						>
-							View all &rarr;
-						</a>
 					</div>
-
-					{#if data.recentSetups.length > 0}
-						<div class="flex flex-col gap-1.5">
-							{#each data.recentSetups as setup (setup.id)}
-								<SetupCard {setup} username={setup.ownerUsername} showAuthor variant="compact" />
-							{/each}
-						</div>
-					{:else}
-						<div class="rounded-lg border border-dashed border-border py-8 text-center">
-							<p class="text-sm text-muted-foreground">No setups yet. Be the first to share one!</p>
-						</div>
-					{/if}
+					<div class="flex flex-col gap-1.5">
+						{#each data.featuredSetups as setup (setup.id)}
+							<SetupCard {setup} username={setup.ownerUsername} showAuthor variant="compact" />
+						{/each}
+					</div>
 				</section>
-			</div>
+			{/if}
+
+			<!-- YourActivityPanel: mobile order 8, desktop col-2 row-2 -->
+			{#if data.yourActivity.length > 0}
+				<div class="order-8 lg:col-start-2 lg:row-start-2" data-testid="your-activity-panel">
+					<YourActivityPanel activity={data.yourActivity} username={data.user.username} />
+				</div>
+			{/if}
+
+			<!-- Recently Added: mobile order 9, desktop col-2 row-4 -->
+			<section class="order-9 lg:col-start-2 lg:row-start-4" data-testid="recently-added">
+				<div class="mb-3 flex items-baseline justify-between">
+					<h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+						Recently Added
+					</h2>
+					<a
+						href="/explore"
+						class="text-xs text-muted-foreground transition-colors hover:text-foreground"
+					>
+						View all &rarr;
+					</a>
+				</div>
+
+				{#if data.recentSetups.length > 0}
+					<div class="flex flex-col gap-1.5">
+						{#each data.recentSetups as setup (setup.id)}
+							<SetupCard {setup} username={setup.ownerUsername} showAuthor variant="compact" />
+						{/each}
+					</div>
+				{:else}
+					<div class="rounded-lg border border-dashed border-border py-8 text-center">
+						<p class="text-sm text-muted-foreground">No setups yet. Be the first to share one!</p>
+					</div>
+				{/if}
+			</section>
 		</div>
 	</div>
 {:else}
