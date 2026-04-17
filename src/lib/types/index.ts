@@ -50,6 +50,7 @@ export type SetupCardProps = {
 	slug: string;
 	description: string;
 	display?: string | null;
+	visibility?: 'public' | 'private' | null;
 	starsCount: number;
 	clonesCount: number;
 	updatedAt: Date;

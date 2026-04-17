@@ -42,7 +42,7 @@
 	{#if team.setups.length > 0}
 		<div>
 			<h2 class="mb-4 text-base font-semibold text-foreground lg:text-lg">
-				Public Setups
+				Setups
 				<span class="ml-1.5 text-sm font-normal text-muted-foreground">({team.setups.length})</span>
 			</h2>
 			<div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 lg:gap-4">
@@ -62,7 +62,7 @@
 		</div>
 	{:else}
 		<div class="py-12 text-center">
-			<p class="text-muted-foreground">This team has no public setups yet.</p>
+			<p class="text-muted-foreground">This team has no setups yet.</p>
 		</div>
 	{/if}
 </div>

@@ -10,8 +10,8 @@ import {
 	deleteTeam
 } from '$lib/server/queries/teams';
 
-export const GET: RequestHandler = async ({ params }) => {
-	const team = await getTeamBySlug(params.slug);
+export const GET: RequestHandler = async ({ params, locals }) => {
+	const team = await getTeamBySlug(params.slug, locals.user?.id);
 	if (!team) return error('Team not found', 'NOT_FOUND', 404);
 	return success(team);
 };
