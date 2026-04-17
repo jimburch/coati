@@ -1,6 +1,6 @@
-import { eq, or, ilike } from 'drizzle-orm';
+import { eq, or, ilike, desc, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { users } from '$lib/server/db/schema';
+import { users, setups, follows, setupAgents, agents } from '$lib/server/db/schema';
 
 export async function getUserByUsername(username: string) {
 	const result = await db
@@ -99,4 +99,71 @@ export async function updateUserProfile(userId: string, data: UpdateProfileData)
 		.returning();
 
 	return result[0] ?? null;
+}
+
+export async function getUserAggregateStats(userId: string) {
+	const [setupStats, followStats] = await Promise.all([
+		db
+			.select({
+				setupsCount: sql<number>`count(*)::int`,
+				starsReceived: sql<number>`coalesce(sum(${setups.starsCount}), 0)::int`,
+				clonesTotal: sql<number>`coalesce(sum(${setups.clonesCount}), 0)::int`
+			})
+			.from(setups)
+			.where(eq(setups.userId, userId))
+			.limit(1),
+		db
+			.select({ followingCount: sql<number>`count(*)::int` })
+			.from(follows)
+			.where(eq(follows.followerId, userId))
+			.limit(1)
+	]);
+
+	const s = setupStats[0];
+	const f = followStats[0];
+	return {
+		setupsCount: s?.setupsCount ?? 0,
+		starsReceived: s?.starsReceived ?? 0,
+		clonesTotal: s?.clonesTotal ?? 0,
+		followingCount: f?.followingCount ?? 0
+	};
+}
+
+export async function getUserSetupAgents(userId: string) {
+	const rows = await db
+		.select({
+			id: agents.id,
+			slug: agents.slug,
+			displayName: agents.displayName
+		})
+		.from(setups)
+		.innerJoin(setupAgents, eq(setupAgents.setupId, setups.id))
+		.innerJoin(agents, eq(setupAgents.agentId, agents.id))
+		.where(eq(setups.userId, userId));
+
+	const seen = new Set<string>();
+	return rows.filter((row) => {
+		if (seen.has(row.id)) return false;
+		seen.add(row.id);
+		return true;
+	});
+}
+
+export async function getUserSetups(userId: string, limit: number) {
+	return db
+		.select({
+			id: setups.id,
+			name: setups.name,
+			slug: setups.slug,
+			description: setups.description,
+			display: setups.display,
+			visibility: setups.visibility,
+			starsCount: setups.starsCount,
+			clonesCount: setups.clonesCount,
+			updatedAt: setups.updatedAt
+		})
+		.from(setups)
+		.where(eq(setups.userId, userId))
+		.orderBy(desc(setups.updatedAt))
+		.limit(limit);
 }

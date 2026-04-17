@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lt, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lt, ne, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '$lib/server/db';
@@ -152,4 +152,66 @@ export async function getProfileFeed(
 	const filter = eq(activities.userId, userId);
 
 	return queryFeed(filter, PROFILE_ACTION_TYPES, cursor, limit);
+}
+
+export type SetupActivityEntry = {
+	setupId: string;
+	setupName: string;
+	setupSlug: string;
+	actionType: 'starred_setup' | 'cloned_setup';
+	count: number;
+	actorUsernames: string[];
+};
+
+export async function getActivityOnUserSetups(
+	userId: string,
+	sinceDays = 7
+): Promise<SetupActivityEntry[]> {
+	const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000);
+
+	const rows = await db
+		.select({
+			setupId: activities.setupId,
+			setupName: setups.name,
+			setupSlug: setups.slug,
+			actionType: activities.actionType,
+			actorUsername: actorUser.username
+		})
+		.from(activities)
+		.innerJoin(setups, eq(activities.setupId, setups.id))
+		.innerJoin(actorUser, eq(activities.userId, actorUser.id))
+		.where(
+			and(
+				eq(setups.userId, userId),
+				ne(activities.userId, userId),
+				inArray(activities.actionType, ['starred_setup', 'cloned_setup']),
+				gte(activities.createdAt, since)
+			)
+		)
+		.orderBy(desc(activities.createdAt))
+		.limit(500);
+
+	const map = new Map<string, SetupActivityEntry>();
+
+	for (const row of rows) {
+		if (!row.setupId) continue;
+		const key = `${row.setupId}:${row.actionType}`;
+		if (!map.has(key)) {
+			map.set(key, {
+				setupId: row.setupId,
+				setupName: row.setupName ?? '',
+				setupSlug: row.setupSlug ?? '',
+				actionType: row.actionType as 'starred_setup' | 'cloned_setup',
+				count: 0,
+				actorUsernames: []
+			});
+		}
+		const entry = map.get(key)!;
+		entry.count++;
+		if (row.actionType === 'starred_setup' && entry.actorUsernames.length < 3) {
+			entry.actorUsernames.push(row.actorUsername);
+		}
+	}
+
+	return [...map.values()];
 }
