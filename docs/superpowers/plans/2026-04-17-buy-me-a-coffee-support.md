@@ -29,6 +29,7 @@
 ## File Structure
 
 **Create:**
+
 - `src/lib/config/support.ts` — shared constants (BMC URL, BMC handle, GitHub repo URL).
 - `src/lib/config/support.test.ts` — unit tests for the constants module.
 - `src/routes/(public)/support/+page.svelte` — the `/support` page.
@@ -36,6 +37,7 @@
 - `.github/FUNDING.yml` — GitHub native Sponsor button config.
 
 **Modify:**
+
 - `src/lib/components/Footer.svelte` — add a "Support" link between "How to use Coati" and "Privacy".
 - `README.md` — add BMC badge to top badge row and a "Support" section above `## License`.
 
@@ -44,6 +46,7 @@
 ## Task 1: Create the shared support constants module
 
 **Files:**
+
 - Create: `src/lib/config/support.ts`
 - Create: `src/lib/config/support.test.ts`
 
@@ -107,6 +110,7 @@ Stop here and surface the files changed to the user. Do not run git commands.
 ## Task 2: Add the "Support" link to the footer
 
 **Files:**
+
 - Modify: `src/lib/components/Footer.svelte`
 
 - [ ] **Step 1: Read the current Footer**
@@ -165,6 +169,7 @@ Files: `src/lib/components/Footer.svelte`
 ## Task 3: Create the `/support` page (static content)
 
 **Files:**
+
 - Create: `src/routes/(public)/support/+page.svelte`
 
 - [ ] **Step 1: Create the page with full content**
@@ -210,12 +215,7 @@ Create `src/routes/(public)/support/+page.svelte`:
 		<p class="text-muted-foreground mb-4 text-sm leading-relaxed">
 			A one-time thank-you goes toward hosting and the domain.
 		</p>
-		<Button
-			href={BMC_URL}
-			target="_blank"
-			rel="noopener noreferrer"
-			data-testid="bmc-button"
-		>
+		<Button href={BMC_URL} target="_blank" rel="noopener noreferrer" data-testid="bmc-button">
 			Buy me a coffee
 		</Button>
 	</section>
@@ -248,6 +248,7 @@ Note: The shadcn-svelte `Button` forwards `href`, `target`, and `rel` and render
 Run: `pnpm dev` (if not already running).
 
 Navigate to `http://localhost:5173/support` and confirm:
+
 - H1 "Support Coati" is visible.
 - BMC button is visible, inspecting it in DevTools shows `href="https://buymeacoffee.com/jimburch"`, `target="_blank"`, and `rel` contains `noopener` and `noreferrer`.
 - If those attributes are missing from the button, replace the `<Button>` with the `<a><Button>...</Button></a>` fallback noted in Step 1, save, reload, and re-verify.
@@ -275,6 +276,7 @@ Files: `src/routes/(public)/support/+page.svelte`
 ## Task 4: Add the e2e test for the `/support` page and footer link
 
 **Files:**
+
 - Create: `src/routes/(public)/support/page.svelte.e2e.ts`
 
 - [ ] **Step 1: Write the e2e test file**
@@ -398,6 +400,7 @@ Files: `src/routes/(public)/support/page.svelte.e2e.ts`
 ## Task 5: Add `.github/FUNDING.yml`
 
 **Files:**
+
 - Create: `.github/FUNDING.yml`
 
 - [ ] **Step 1: Confirm the `.github` directory exists**
@@ -440,6 +443,7 @@ Note: GitHub surfaces the "♥ Sponsor" button only after the file is merged int
 ## Task 6: Update `README.md` with BMC badge and Support section
 
 **Files:**
+
 - Modify: `README.md`
 
 - [ ] **Step 1: Add the BMC badge to the top badge row**
@@ -482,6 +486,7 @@ ISC
 - [ ] **Step 3: Verify the README renders correctly**
 
 Open `README.md` in a Markdown preview (VS Code: Cmd-Shift-V) and confirm:
+
 - Top badge row now includes the yellow BMC badge.
 - A new "Support" section appears above "License".
 - All three links in the Support section are active.

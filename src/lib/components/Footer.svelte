@@ -10,9 +10,13 @@
 				rel="noopener noreferrer"
 				class="hover:text-foreground transition-colors hover:underline">v{__APP_VERSION__}</a
 			>
+			&middot;
+			<a href="/guide" class="hover:text-foreground transition-colors hover:underline"
+				>How to use Coati</a
+			>
 		</p>
 		<nav class="text-muted-foreground flex gap-3 text-xs lg:gap-4 lg:text-sm">
-			<a href="/guide" class="hover:text-foreground transition-colors">How to use Coati</a>
+			<a href="/support" class="hover:text-foreground transition-colors">Support</a>
 			<a href="/privacy" class="hover:text-foreground transition-colors">Privacy</a>
 			<a href="/terms" class="hover:text-foreground transition-colors">Terms</a>
 			<a

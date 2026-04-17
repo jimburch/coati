@@ -8,6 +8,7 @@
 [![Playwright](https://img.shields.io/badge/Playwright-e2e-2EAD33?logo=playwright&logoColor=white)](https://playwright.dev/)
 [![Coverage](https://img.shields.io/badge/coverage-47%25-yellowgreen)](./README.md)
 [![License: ISC](https://img.shields.io/badge/license-ISC-blue.svg)](./LICENSE)
+[![Buy Me a Coffee](https://img.shields.io/badge/support-buy%20me%20a%20coffee-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/jimburch)
 
 Share, discover, and clone AI coding workflows.
 
@@ -185,6 +186,10 @@ Key endpoints:
 
 - **Web:** GitHub OAuth via Lucia + Arctic. Session cookie set on callback, validated in `hooks.server.ts`.
 - **CLI:** GitHub Device Flow. User runs `coati login`, authorizes in browser, token saved to `~/.coati/config.json` and sent as `Authorization: Bearer <token>`.
+
+## Support
+
+Coati is free and open source. If it's useful to you, you can support development at [buymeacoffee.com/jimburch](https://buymeacoffee.com/jimburch), [star the repo](https://github.com/jimburch/coati), or share a setup you've built. See [coati.sh/support](https://coati.sh/support) for more ways to help.
 
 ## License
 
