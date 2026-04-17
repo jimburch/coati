@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/jimburch/coati/compare/v1.7.0...v1.8.0) (2026-04-17)
+
+
+### Features
+
+* **teams:** enable teams, shared setups, and private setups ([#327](https://github.com/jimburch/coati/issues/327)) ([c611fee](https://github.com/jimburch/coati/commit/c611fee2134ae4fab39cf1adb417a56918afc1d3))
+
 # [1.7.0](https://github.com/jimburch/coati/compare/v1.6.0...v1.7.0) (2026-04-16)
 
 
