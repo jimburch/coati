@@ -9,9 +9,16 @@
 		username: string;
 		showAuthor?: boolean;
 		variant?: 'default' | 'featured' | 'compact';
+		highlighted?: boolean;
 	};
 
-	const { setup, username, showAuthor = false, variant = 'default' }: Props = $props();
+	const {
+		setup,
+		username,
+		showAuthor = false,
+		variant = 'default',
+		highlighted = false
+	}: Props = $props();
 
 	const featured = $derived(variant === 'featured');
 	const compact = $derived(variant === 'compact');
@@ -29,9 +36,14 @@
 {#if compact}
 	<a
 		{href}
-		class="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5 transition-colors hover:border-foreground/20 hover:bg-accent/50"
+		class={[
+			'flex items-center rounded-lg border bg-card transition-colors hover:bg-accent/50',
+			highlighted
+				? 'gap-5 border-primary/60 px-5 py-4 hover:border-primary'
+				: 'gap-3 border-border px-3 py-2.5 hover:border-foreground/20'
+		].join(' ')}
 	>
-		<div class="min-w-0 flex-1">
+		<div class="flex min-w-0 flex-1 flex-col gap-3">
 			<span class="block truncate text-sm font-semibold text-foreground"
 				>{setup.display ?? setup.name}</span
 			>
@@ -39,6 +51,19 @@
 				<span class="block truncate text-xs text-muted-foreground">{setup.description}</span>
 			{/if}
 		</div>
+		{#if showAuthor}
+			{@const authorName = isTeamSetup ? (setup.teamName ?? '') : username}
+			{@const authorAvatar = isTeamSetup ? setup.teamAvatarUrl : setup.ownerAvatarUrl}
+			<span class="shrink-0 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+				<Avatar class="size-4 text-[8px]">
+					{#if authorAvatar}
+						<AvatarImage src={authorAvatar} alt={authorName} />
+					{/if}
+					<AvatarFallback>{(authorName || 'U')[0].toUpperCase()}</AvatarFallback>
+				</Avatar>
+				<span class="max-w-[8rem] truncate">{authorName}</span>
+			</span>
+		{/if}
 		<span class="shrink-0 inline-flex items-center gap-1 text-xs text-muted-foreground">
 			<svg class="size-3" viewBox="0 0 16 16" fill="currentColor">
 				<path

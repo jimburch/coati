@@ -1,7 +1,5 @@
 <script lang="ts">
-	import { buttonVariants } from '$lib/components/ui/button/button.svelte';
-
-	const CLI_SNIPPET = 'npx @coati/sh@latest';
+	const CLI_SNIPPET = 'npx @coati/sh@latest init';
 	let copied = $state(false);
 
 	function copySnippet() {
@@ -14,7 +12,7 @@
 <div class="rounded-lg border border-border bg-card px-4 py-3">
 	<h2 class="mb-3 text-sm font-semibold text-foreground">Quick Actions</h2>
 	<div class="flex flex-col gap-2">
-		<a href="/new" class={buttonVariants({ variant: 'default', size: 'sm' })}>New setup</a>
+		<p class="text-sm text-foreground">Create a setup...</p>
 
 		<div class="flex items-center gap-1 rounded-md border border-border bg-muted p-2">
 			<code class="flex-1 truncate text-xs">{CLI_SNIPPET}</code>

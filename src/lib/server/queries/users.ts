@@ -113,9 +113,9 @@ export async function getUserAggregateStats(userId: string) {
 			.where(eq(setups.userId, userId))
 			.limit(1),
 		db
-			.select({ followingCount: sql<number>`count(*)::int` })
+			.select({ followersCount: sql<number>`count(*)::int` })
 			.from(follows)
-			.where(eq(follows.followerId, userId))
+			.where(eq(follows.followingId, userId))
 			.limit(1)
 	]);
 
@@ -125,7 +125,7 @@ export async function getUserAggregateStats(userId: string) {
 		setupsCount: s?.setupsCount ?? 0,
 		starsReceived: s?.starsReceived ?? 0,
 		clonesTotal: s?.clonesTotal ?? 0,
-		followingCount: f?.followingCount ?? 0
+		followersCount: f?.followersCount ?? 0
 	};
 }
 

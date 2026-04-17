@@ -42,15 +42,6 @@ test('happy path: quick actions section is visible', async ({ page }) => {
 	await expect(page.getByTestId('quick-actions')).toBeVisible();
 });
 
-test('happy path: recently added section is visible', async ({ page }) => {
-	await page.goto(HOME);
-	if (isAuthRedirect(page.url())) {
-		test.skip();
-		return;
-	}
-	await expect(page.getByTestId('recently-added')).toBeVisible();
-});
-
 test('happy path: stats grid shown when user has setups', async ({ page }) => {
 	await page.goto(HOME);
 	if (isAuthRedirect(page.url())) {
@@ -358,28 +349,6 @@ test('mobile: DiscoveryTabs appears above YourSetupsList', async ({ page, isMobi
 	}
 });
 
-test('mobile: QuickActions appears above RecentlyAdded', async ({ page, isMobile }) => {
-	test.skip(!isMobile, 'mobile-only test');
-	await page.goto(HOME);
-	if (isAuthRedirect(page.url())) {
-		test.skip();
-		return;
-	}
-
-	const quick = page.getByTestId('quick-actions');
-	const recent = page.getByTestId('recently-added');
-	await expect(quick).toBeVisible();
-	await expect(recent).toBeVisible();
-
-	const quickBox = await quick.boundingBox();
-	const recentBox = await recent.boundingBox();
-	expect(quickBox).not.toBeNull();
-	expect(recentBox).not.toBeNull();
-	if (quickBox && recentBox) {
-		expect(quickBox.y).toBeLessThan(recentBox.y);
-	}
-});
-
 test('mobile: Featured Setups appears above YourActivityPanel', async ({ page, isMobile }) => {
 	test.skip(!isMobile, 'mobile-only test');
 	await page.goto(HOME);
@@ -408,10 +377,7 @@ test('mobile: Featured Setups appears above YourActivityPanel', async ({ page, i
 	}
 });
 
-test('mobile: full section ordering — profile → stats → discovery → quick → recent', async ({
-	page,
-	isMobile
-}) => {
+test('mobile: full section ordering — profile → discovery → quick', async ({ page, isMobile }) => {
 	test.skip(!isMobile, 'mobile-only test');
 	await page.goto(HOME);
 	if (isAuthRedirect(page.url())) {
@@ -422,22 +388,18 @@ test('mobile: full section ordering — profile → stats → discovery → quic
 	const profile = page.getByTestId('profile-card');
 	const discovery = page.getByTestId('discovery-tabs');
 	const quick = page.getByTestId('quick-actions');
-	const recent = page.getByTestId('recently-added');
 
 	await expect(profile).toBeVisible();
 	await expect(discovery).toBeVisible();
 	await expect(quick).toBeVisible();
-	await expect(recent).toBeVisible();
 
 	const profileBox = await profile.boundingBox();
 	const discoveryBox = await discovery.boundingBox();
 	const quickBox = await quick.boundingBox();
-	const recentBox = await recent.boundingBox();
 
 	// Assert top-to-bottom ordering of key anchors
 	if (profileBox && discoveryBox) expect(profileBox.y).toBeLessThan(discoveryBox.y);
 	if (discoveryBox && quickBox) expect(discoveryBox.y).toBeLessThan(quickBox.y);
-	if (quickBox && recentBox) expect(quickBox.y).toBeLessThan(recentBox.y);
 });
 
 // ─── Desktop layout (sanity) ──────────────────────────────────────────────────

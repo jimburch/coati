@@ -3,7 +3,7 @@
 		setupsCount: number;
 		starsReceived: number;
 		clonesTotal: number;
-		followingCount: number;
+		followersCount: number;
 	};
 
 	type Props = { stats: Stats };
@@ -14,7 +14,7 @@
 		{ label: 'Setups', value: stats.setupsCount },
 		{ label: 'Stars received', value: stats.starsReceived },
 		{ label: 'Clones', value: stats.clonesTotal },
-		{ label: 'Following', value: stats.followingCount }
+		{ label: 'Followers', value: stats.followersCount }
 	]);
 </script>
 

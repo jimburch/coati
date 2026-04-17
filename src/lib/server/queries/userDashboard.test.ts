@@ -12,7 +12,7 @@ vi.mock('drizzle-orm', () => ({
 }));
 
 vi.mock('$lib/server/db/schema', () => ({
-	users: { id: 'users.id', followingCount: 'users.followingCount' },
+	users: { id: 'users.id', followersCount: 'users.followersCount' },
 	setups: {
 		id: 'setups.id',
 		userId: 'setups.userId',
@@ -53,7 +53,7 @@ describe('getUserAggregateStats', () => {
 	it('returns computed stats for a user with setups and follows', async () => {
 		mockLimit
 			.mockReturnValueOnce(Promise.resolve([{ setupsCount: 3, starsReceived: 12, clonesTotal: 7 }]))
-			.mockReturnValueOnce(Promise.resolve([{ followingCount: 5 }]));
+			.mockReturnValueOnce(Promise.resolve([{ followersCount: 5 }]));
 
 		const result = await getUserAggregateStats('user-1');
 
@@ -61,14 +61,14 @@ describe('getUserAggregateStats', () => {
 			setupsCount: 3,
 			starsReceived: 12,
 			clonesTotal: 7,
-			followingCount: 5
+			followersCount: 5
 		});
 	});
 
 	it('returns zeros when user has no setups or follows', async () => {
 		mockLimit
 			.mockReturnValueOnce(Promise.resolve([{ setupsCount: 0, starsReceived: 0, clonesTotal: 0 }]))
-			.mockReturnValueOnce(Promise.resolve([{ followingCount: 0 }]));
+			.mockReturnValueOnce(Promise.resolve([{ followersCount: 0 }]));
 
 		const result = await getUserAggregateStats('user-empty');
 
@@ -76,7 +76,7 @@ describe('getUserAggregateStats', () => {
 			setupsCount: 0,
 			starsReceived: 0,
 			clonesTotal: 0,
-			followingCount: 0
+			followersCount: 0
 		});
 	});
 
@@ -89,7 +89,7 @@ describe('getUserAggregateStats', () => {
 			setupsCount: 0,
 			starsReceived: 0,
 			clonesTotal: 0,
-			followingCount: 0
+			followersCount: 0
 		});
 	});
 });

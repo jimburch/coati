@@ -1,7 +1,6 @@
 import type { PageServerLoad } from './$types';
 import {
 	getFeaturedSetups,
-	getRecentSetups,
 	getAgentsForSetups,
 	getTrendingSetups,
 	getForYouSetups,
@@ -40,31 +39,20 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			? (rawTab as Tab)
 			: 'for-you';
 
-		const [
-			featured,
-			recent,
-			userStats,
-			userSetups,
-			userAgents,
-			trending,
-			yourActivity,
-			forYou,
-			following
-		] = await Promise.all([
-			getFeaturedSetups(3, viewerId),
-			getRecentSetups(3, viewerId),
-			getUserAggregateStats(viewerId),
-			getUserSetups(viewerId, 5),
-			getUserSetupAgents(viewerId),
-			getTrendingSetups(6, viewerId),
-			getActivityOnUserSetups(viewerId),
-			getForYouSetups(viewerId, 6),
-			getSetupsFromFollowedUsers(viewerId, 6)
-		]);
+		const [featured, userStats, userSetups, userAgents, trending, yourActivity, forYou, following] =
+			await Promise.all([
+				getFeaturedSetups(3, viewerId),
+				getUserAggregateStats(viewerId),
+				getUserSetups(viewerId, 5),
+				getUserSetupAgents(viewerId),
+				getTrendingSetups(6, viewerId),
+				getActivityOnUserSetups(viewerId),
+				getForYouSetups(viewerId, 6),
+				getSetupsFromFollowedUsers(viewerId, 6)
+			]);
 
-		const dashboardIds = [...featured.map((s) => s.id), ...recent.map((s) => s.id)];
-		const dashboardAgentsMap =
-			dashboardIds.length > 0 ? await getAgentsForSetups(dashboardIds) : {};
+		const featuredIds = featured.map((s) => s.id);
+		const dashboardAgentsMap = featuredIds.length > 0 ? await getAgentsForSetups(featuredIds) : {};
 
 		const toCard = (s: {
 			id: string;
@@ -94,7 +82,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		return {
 			user: locals.user,
 			featuredSetups: featured.map(toCard),
-			recentSetups: recent.map(toCard),
 			yourActivity,
 			trendingSetups: trending.map(
 				(s): DashboardSetup => ({
@@ -172,7 +159,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		),
 		forYouSetups: [] as DashboardSetup[],
 		followingSetups: [] as DashboardSetup[],
-		recentSetups: [] as DashboardSetup[],
 		userStats: null,
 		userSetups: [] as {
 			id: string;
