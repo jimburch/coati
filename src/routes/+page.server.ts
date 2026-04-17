@@ -5,7 +5,11 @@ import {
 	getAgentsForSetups,
 	searchSetups
 } from '$lib/server/queries/setups';
-import { getUserAggregateStats, getUserSetups } from '$lib/server/queries/users';
+import {
+	getUserAggregateStats,
+	getUserSetups,
+	getUserSetupAgents
+} from '$lib/server/queries/users';
 
 type DashboardSetup = {
 	id: string;
@@ -24,11 +28,12 @@ type DashboardSetup = {
 export const load: PageServerLoad = async ({ locals }) => {
 	if (locals.user) {
 		const viewerId = locals.user.id;
-		const [featured, recent, userStats, userSetups] = await Promise.all([
+		const [featured, recent, userStats, userSetups, userAgents] = await Promise.all([
 			getFeaturedSetups(3, viewerId),
 			getRecentSetups(3, viewerId),
 			getUserAggregateStats(viewerId),
-			getUserSetups(viewerId, 5)
+			getUserSetups(viewerId, 5),
+			getUserSetupAgents(viewerId)
 		]);
 
 		const dashboardIds = [...featured.map((s) => s.id), ...recent.map((s) => s.id)];
@@ -65,7 +70,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 			featuredSetups: featured.map(toCard),
 			recentSetups: recent.map(toCard),
 			userStats,
-			userSetups
+			userSetups,
+			userAgents
 		};
 	}
 
@@ -103,6 +109,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			starsCount: number;
 			clonesCount: number;
 			updatedAt: Date;
-		}[]
+		}[],
+		userAgents: [] as { id: string; slug: string; displayName: string }[]
 	};
 };

@@ -6,6 +6,7 @@ const mockGetRecentSetups = vi.hoisted(() => vi.fn());
 const mockGetAgentsForSetups = vi.hoisted(() => vi.fn());
 const mockGetUserAggregateStats = vi.hoisted(() => vi.fn());
 const mockGetUserSetups = vi.hoisted(() => vi.fn());
+const mockGetUserSetupAgents = vi.hoisted(() => vi.fn());
 
 vi.mock('$lib/server/queries/setups', () => ({
 	getFeaturedSetups: mockGetFeaturedSetups,
@@ -17,7 +18,8 @@ vi.mock('$lib/server/queries/setups', () => ({
 
 vi.mock('$lib/server/queries/users', () => ({
 	getUserAggregateStats: mockGetUserAggregateStats,
-	getUserSetups: mockGetUserSetups
+	getUserSetups: mockGetUserSetups,
+	getUserSetupAgents: mockGetUserSetupAgents
 }));
 
 const makeSetup = (id: string) => ({
@@ -49,6 +51,7 @@ describe('home dashboard server load', () => {
 			followingCount: 0
 		});
 		mockGetUserSetups.mockResolvedValue([]);
+		mockGetUserSetupAgents.mockResolvedValue([]);
 	});
 
 	it('fetches featured setups with limit 3', async () => {

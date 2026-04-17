@@ -1,6 +1,6 @@
 import { eq, or, ilike, desc, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { users, setups, follows } from '$lib/server/db/schema';
+import { users, setups, follows, setupAgents, agents } from '$lib/server/db/schema';
 
 export async function getUserByUsername(username: string) {
 	const result = await db
@@ -127,6 +127,26 @@ export async function getUserAggregateStats(userId: string) {
 		clonesTotal: s?.clonesTotal ?? 0,
 		followingCount: f?.followingCount ?? 0
 	};
+}
+
+export async function getUserSetupAgents(userId: string) {
+	const rows = await db
+		.select({
+			id: agents.id,
+			slug: agents.slug,
+			displayName: agents.displayName
+		})
+		.from(setups)
+		.innerJoin(setupAgents, eq(setupAgents.setupId, setups.id))
+		.innerJoin(agents, eq(setupAgents.agentId, agents.id))
+		.where(eq(setups.userId, userId));
+
+	const seen = new Set<string>();
+	return rows.filter((row) => {
+		if (seen.has(row.id)) return false;
+		seen.add(row.id);
+		return true;
+	});
 }
 
 export async function getUserSetups(userId: string, limit: number) {

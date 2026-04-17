@@ -6,6 +6,8 @@
 	import StatsGrid from '$lib/components/StatsGrid.svelte';
 	import YourSetupsList from '$lib/components/YourSetupsList.svelte';
 	import ZeroStateCard from '$lib/components/ZeroStateCard.svelte';
+	import QuickActions from '$lib/components/QuickActions.svelte';
+	import AgentChips from '$lib/components/AgentChips.svelte';
 	import { Upload, Search, Download } from '@lucide/svelte';
 
 	const { data } = $props();
@@ -49,6 +51,8 @@
 					{/if}
 					<YourSetupsList setups={data.userSetups} username={data.user.username} />
 				{/if}
+				<QuickActions />
+				<AgentChips agents={data.userAgents} />
 			</aside>
 
 			<!-- Right column: discovery sections -->
