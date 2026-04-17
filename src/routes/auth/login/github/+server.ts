@@ -3,10 +3,10 @@ import { dev } from '$app/environment';
 import { github } from '$lib/server/auth';
 import { generateState } from 'arctic';
 
-export const GET: RequestHandler = async ({ cookies }) => {
+export const GET: RequestHandler = async ({ url, cookies }) => {
 	const state = generateState();
-	const url = github.createAuthorizationURL(state, ['read:user', 'user:email']);
-	url.searchParams.set('prompt', 'consent');
+	const authUrl = github.createAuthorizationURL(state, ['read:user', 'user:email']);
+	authUrl.searchParams.set('prompt', 'consent');
 
 	cookies.set('github_oauth_state', state, {
 		httpOnly: true,
@@ -16,5 +16,16 @@ export const GET: RequestHandler = async ({ cookies }) => {
 		maxAge: 60 * 10 // 10 minutes
 	});
 
-	return redirect(302, url.toString());
+	const redirectTo = url.searchParams.get('redirect');
+	if (redirectTo && redirectTo.startsWith('/')) {
+		cookies.set('oauth_redirect', redirectTo, {
+			httpOnly: true,
+			secure: !dev,
+			sameSite: 'lax',
+			path: '/',
+			maxAge: 60 * 10
+		});
+	}
+
+	return redirect(302, authUrl.toString());
 };

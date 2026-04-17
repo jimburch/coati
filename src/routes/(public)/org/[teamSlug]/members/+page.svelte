@@ -13,6 +13,34 @@
 	const currentUserId = $derived(data.currentUserId);
 
 	let inviteUsername = $state('');
+	let copyingLink = $state(false);
+	let copyLinkMessage = $state('');
+
+	const isOwnerOrAdmin = $derived(
+		isOwner || data.members.some((m) => m.userId === currentUserId && m.role === 'admin')
+	);
+
+	async function copyInviteLink() {
+		copyingLink = true;
+		copyLinkMessage = '';
+		try {
+			const res = await fetch(`/api/v1/teams/${team.slug}/invites`, { method: 'POST' });
+			const json = await res.json();
+			if (res.ok) {
+				await navigator.clipboard.writeText(json.data.inviteUrl);
+				copyLinkMessage = 'Invite link copied!';
+				setTimeout(() => {
+					copyLinkMessage = '';
+				}, 3000);
+			} else {
+				copyLinkMessage = json.error ?? 'Failed to generate invite link';
+			}
+		} catch {
+			copyLinkMessage = 'Something went wrong. Please try again.';
+		} finally {
+			copyingLink = false;
+		}
+	}
 
 	function roleBadgeClass(role: string, isTeamOwner: boolean) {
 		if (isTeamOwner) return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200';
@@ -60,7 +88,7 @@
 		</div>
 	{/if}
 
-	{#if isOwner || data.members.some((m) => m.userId === currentUserId && m.role === 'admin')}
+	{#if isOwnerOrAdmin}
 		<div class="mb-6 rounded-lg border border-border bg-card p-4">
 			<h2 class="mb-3 text-sm font-semibold text-foreground">Invite member</h2>
 			<form
@@ -84,6 +112,26 @@
 				/>
 				<Button type="submit" size="sm" class="shrink-0">Invite</Button>
 			</form>
+			<div class="mt-3 flex items-center gap-2 border-t border-border pt-3">
+				<Button
+					variant="outline"
+					size="sm"
+					class="shrink-0 text-xs"
+					onclick={copyInviteLink}
+					disabled={copyingLink}
+				>
+					{copyingLink ? 'Generating…' : 'Copy invite link'}
+				</Button>
+				{#if copyLinkMessage}
+					<span
+						class="text-xs {copyLinkMessage === 'Invite link copied!'
+							? 'text-green-600 dark:text-green-400'
+							: 'text-destructive'}"
+					>
+						{copyLinkMessage}
+					</span>
+				{/if}
+			</div>
 		</div>
 	{/if}
 

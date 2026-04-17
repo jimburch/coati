@@ -363,12 +363,24 @@ export async function acceptInvite(
 
 	const invite = inviteResult[0];
 	if (!invite) return { ok: false, error: 'Invite not found', code: 'NOT_FOUND' };
-	if (invite.invitedUserId !== userId)
+	// Link invites have null invitedUserId — anyone can accept them
+	if (invite.invitedUserId !== null && invite.invitedUserId !== userId)
 		return { ok: false, error: 'This invite is not for you', code: 'FORBIDDEN' };
 	if (invite.status !== 'pending')
 		return { ok: false, error: 'Invite is no longer pending', code: 'INVALID_STATUS' };
 	if (invite.expiresAt < new Date())
 		return { ok: false, error: 'Invite has expired', code: 'EXPIRED' };
+
+	// For link invites (null invitedUserId), guard against duplicate membership
+	if (invite.invitedUserId === null) {
+		const existingMember = await db
+			.select({ userId: teamMembers.userId })
+			.from(teamMembers)
+			.where(and(eq(teamMembers.teamId, invite.teamId), eq(teamMembers.userId, userId)))
+			.limit(1);
+		if (existingMember[0])
+			return { ok: false, error: 'You are already a team member', code: 'ALREADY_MEMBER' };
+	}
 
 	await db.transaction(async (tx) => {
 		await tx.insert(teamMembers).values({
@@ -436,6 +448,58 @@ export async function getPendingInvites(userId: string) {
 		.leftJoin(users, eq(teamInvites.invitedByUserId, users.id))
 		.where(and(eq(teamInvites.invitedUserId, userId), eq(teamInvites.status, 'pending')))
 		.orderBy(desc(teamInvites.createdAt));
+}
+
+export async function createInviteLink(
+	teamId: string,
+	invitedByUserId: string
+): Promise<{ ok: true; token: string } | { ok: false; error: string; code: string }> {
+	const token = randomBytes(32).toString('hex');
+	const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+	const [invite] = await db
+		.insert(teamInvites)
+		.values({
+			teamId,
+			invitedByUserId,
+			invitedUserId: null,
+			token,
+			status: 'pending',
+			expiresAt
+		})
+		.returning();
+
+	return { ok: true, token: invite.token };
+}
+
+export async function getInviteByToken(token: string) {
+	const result = await db
+		.select({
+			id: teamInvites.id,
+			token: teamInvites.token,
+			status: teamInvites.status,
+			expiresAt: teamInvites.expiresAt,
+			teamId: teams.id,
+			teamName: teams.name,
+			teamSlug: teams.slug,
+			teamDescription: teams.description,
+			teamAvatarUrl: teams.avatarUrl,
+			invitedByUsername: users.username,
+			invitedByAvatarUrl: users.avatarUrl
+		})
+		.from(teamInvites)
+		.innerJoin(teams, eq(teamInvites.teamId, teams.id))
+		.leftJoin(users, eq(teamInvites.invitedByUserId, users.id))
+		.where(eq(teamInvites.token, token))
+		.limit(1);
+
+	return result[0] ?? null;
+}
+
+export function isInviteValid(invite: { status: string; expiresAt: Date | null }): boolean {
+	if (invite.status !== 'pending') return false;
+	if (invite.expiresAt && invite.expiresAt < new Date()) return false;
+	return true;
 }
 
 export async function getTeamSetups(teamId: string, viewerIsMember: boolean) {
