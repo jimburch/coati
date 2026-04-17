@@ -2,23 +2,36 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockSelect = vi.fn();
 const mockUpdate = vi.fn();
+const mockDelete = vi.fn();
 
 vi.mock('$lib/server/db', () => ({
 	db: {
 		select: (...args: unknown[]) => mockSelect(...args),
-		update: (...args: unknown[]) => mockUpdate(...args)
+		update: (...args: unknown[]) => mockUpdate(...args),
+		delete: (...args: unknown[]) => mockDelete(...args)
 	}
 }));
 
 vi.mock('$lib/server/db/schema', () => ({
 	users: { id: 'id', username: 'username', email: 'email', isBetaApproved: 'is_beta_approved' },
-	feedbackSubmissions: { id: 'id', userId: 'user_id' }
+	feedbackSubmissions: { id: 'id', userId: 'user_id' },
+	teams: {
+		id: 'id',
+		name: 'name',
+		slug: 'slug',
+		avatarUrl: 'avatar_url',
+		ownerId: 'owner_id',
+		membersCount: 'members_count',
+		createdAt: 'created_at'
+	},
+	setups: { id: 'id', teamId: 'team_id' }
 }));
 
 vi.mock('drizzle-orm', () => ({
 	eq: vi.fn((a, b) => ({ type: 'eq', a, b })),
 	ilike: vi.fn((col, pattern) => ({ type: 'ilike', col, pattern })),
-	count: vi.fn((col) => ({ type: 'count', col }))
+	count: vi.fn((col) => ({ type: 'count', col })),
+	or: vi.fn((...args) => ({ type: 'or', args }))
 }));
 
 const SAMPLE_USERS = [
@@ -52,11 +65,19 @@ function makeChain(result: unknown) {
 	const chain: Record<string, unknown> = {};
 	chain.from = vi.fn().mockReturnValue(chain);
 	chain.leftJoin = vi.fn().mockReturnValue(chain);
+	chain.innerJoin = vi.fn().mockReturnValue(chain);
 	chain.groupBy = vi.fn().mockReturnValue(chain);
 	chain.orderBy = vi.fn().mockReturnValue(chain);
 	chain.where = vi.fn().mockResolvedValue(result);
 	// Make the chain itself thenable so awaiting it works when .where is not called
 	chain.then = (resolve: (v: unknown) => void) => Promise.resolve(result).then(resolve);
+	return chain;
+}
+
+function makeDeleteChain(result: unknown) {
+	const chain: Record<string, unknown> = {};
+	chain.where = vi.fn().mockReturnValue(chain);
+	chain.returning = vi.fn().mockResolvedValue(result);
 	return chain;
 }
 
@@ -147,5 +168,113 @@ describe('setUserBetaApproval', () => {
 		expect(mockUpdate).toHaveBeenCalled();
 		expect(chain.set).toHaveBeenCalledWith({ isBetaApproved: false });
 		expect(chain.where).toHaveBeenCalled();
+	});
+});
+
+const SAMPLE_TEAMS = [
+	{
+		id: 'team-1',
+		name: 'Acme Corp',
+		slug: 'acme-corp',
+		avatarUrl: null,
+		ownerId: 'user-1',
+		ownerUsername: 'alice',
+		membersCount: 3,
+		setupsCount: 5,
+		createdAt: new Date('2026-01-01')
+	},
+	{
+		id: 'team-2',
+		name: 'Beta Team',
+		slug: 'beta-team',
+		avatarUrl: 'https://example.com/avatar.png',
+		ownerId: 'user-2',
+		ownerUsername: 'bob',
+		membersCount: 1,
+		setupsCount: 0,
+		createdAt: new Date('2026-02-01')
+	}
+];
+
+describe('getAllTeamsWithAdminDetails', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it('returns all teams when no search is provided', async () => {
+		const chain = makeChain(SAMPLE_TEAMS);
+		mockSelect.mockReturnValue(chain);
+
+		const { getAllTeamsWithAdminDetails } = await import('./admin');
+		const result = await getAllTeamsWithAdminDetails();
+
+		expect(result).toEqual(SAMPLE_TEAMS);
+		expect(chain.from).toHaveBeenCalled();
+		expect(chain.innerJoin).toHaveBeenCalled();
+		expect(chain.leftJoin).toHaveBeenCalled();
+		expect(chain.groupBy).toHaveBeenCalled();
+		expect(chain.orderBy).toHaveBeenCalled();
+		expect(chain.where).not.toHaveBeenCalled();
+	});
+
+	it('filters by name or slug when search is provided', async () => {
+		const filtered = [SAMPLE_TEAMS[0]];
+		const chain = makeChain(filtered);
+		mockSelect.mockReturnValue(chain);
+
+		const { getAllTeamsWithAdminDetails } = await import('./admin');
+		const result = await getAllTeamsWithAdminDetails('acme');
+
+		expect(chain.where).toHaveBeenCalled();
+		expect(result).toEqual(filtered);
+	});
+
+	it('does not call .where when search is empty string', async () => {
+		const chain = makeChain(SAMPLE_TEAMS);
+		mockSelect.mockReturnValue(chain);
+
+		const { getAllTeamsWithAdminDetails } = await import('./admin');
+		await getAllTeamsWithAdminDetails('');
+
+		expect(chain.where).not.toHaveBeenCalled();
+	});
+
+	it('returns empty array when no teams match', async () => {
+		const chain = makeChain([]);
+		mockSelect.mockReturnValue(chain);
+
+		const { getAllTeamsWithAdminDetails } = await import('./admin');
+		const result = await getAllTeamsWithAdminDetails('zzz');
+
+		expect(result).toEqual([]);
+	});
+});
+
+describe('adminDeleteTeam', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it('deletes the team and returns 1 on success', async () => {
+		const chain = makeDeleteChain([{ id: 'team-1' }]);
+		mockDelete.mockReturnValue(chain);
+
+		const { adminDeleteTeam } = await import('./admin');
+		const result = await adminDeleteTeam('team-1');
+
+		expect(mockDelete).toHaveBeenCalled();
+		expect(chain.where).toHaveBeenCalled();
+		expect(chain.returning).toHaveBeenCalled();
+		expect(result).toBe(1);
+	});
+
+	it('returns 0 when team not found', async () => {
+		const chain = makeDeleteChain([]);
+		mockDelete.mockReturnValue(chain);
+
+		const { adminDeleteTeam } = await import('./admin');
+		const result = await adminDeleteTeam('nonexistent-id');
+
+		expect(result).toBe(0);
 	});
 });
