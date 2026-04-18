@@ -70,6 +70,7 @@ describe('createContext', () => {
 			expect(ctx.io.promptAgentSelection).toBe(prompts.promptAgentSelection);
 			expect(ctx.io.checklist).toBe(prompts.checklist);
 			expect(ctx.io.promptMetadata).toBe(prompts.promptMetadata);
+			expect(ctx.io.promptVisibility).toBe(prompts.promptVisibility);
 			expect(ctx.io.confirmFileList).toBe(prompts.confirmFileList);
 			expect(ctx.io.confirmPostInstall).toBe(prompts.confirmPostInstall);
 			expect(ctx.io.pickFiles).toBe(prompts.pickFiles);

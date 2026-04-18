@@ -69,9 +69,9 @@ export interface IoClient {
 	promptMetadata(
 		prefilledAgents?: string[],
 		agentChoices?: { label: string; value: string }[],
-		categoryChoices?: { label: string; value: string }[],
-		opts?: { skipVisibilityPrompt?: boolean }
+		categoryChoices?: { label: string; value: string }[]
 	): Promise<prompts.SetupMetadata>;
+	promptVisibility(): Promise<'public' | 'private'>;
 	confirmFileList(files: string[]): Promise<boolean>;
 	confirmPostInstall(command: string): Promise<boolean>;
 	pickFiles(files: prompts.PickableFile[]): Promise<number[]>;
@@ -157,8 +157,8 @@ export function createContext(): CommandContext {
 			promptDestination: prompts.promptDestination,
 			promptAgentSelection: prompts.promptAgentSelection,
 			checklist: prompts.checklist,
-			promptMetadata: (prefilledAgents, agentChoices, categoryChoices, opts) =>
-				prompts.promptMetadata(prefilledAgents, agentChoices, categoryChoices, opts),
+			promptMetadata: prompts.promptMetadata,
+			promptVisibility: prompts.promptVisibility,
 			confirmFileList: prompts.confirmFileList,
 			confirmPostInstall: prompts.confirmPostInstall,
 			pickFiles: prompts.pickFiles

@@ -137,7 +137,7 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 	// Fetch teams once and determine org/visibility from user choice
 	const teams = await fetchTeams(ctx);
 	let pickedOrg: string | undefined;
-	let skipVisibilityPrompt = false;
+	let visibility: 'public' | 'private' = 'public';
 
 	if (teams.length > 0 && !ctx.io.isJson()) {
 		const orgChoices: { label: string; value: string }[] = [
@@ -147,8 +147,12 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 		const orgChoice = await ctx.io.select('Where does this setup live?', orgChoices);
 		if (orgChoice !== '__personal__') {
 			pickedOrg = orgChoice;
-			skipVisibilityPrompt = true;
+			visibility = 'private';
+		} else {
+			visibility = await ctx.io.promptVisibility();
 		}
+	} else if (!ctx.io.isJson()) {
+		visibility = await ctx.io.promptVisibility();
 	}
 
 	// Build choice lists for interactive prompts
@@ -164,9 +168,7 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 
 	// Prompt for setup metadata (agents pre-filled from detection)
 	ctx.io.print('\nSetup metadata:\n');
-	const metadata = await ctx.io.promptMetadata(autoDetectedAgents, agentChoices, categoryChoices, {
-		skipVisibilityPrompt
-	});
+	const metadata = await ctx.io.promptMetadata(autoDetectedAgents, agentChoices, categoryChoices);
 
 	// Derive and validate the slug from the name
 	const display = metadata.name.trim();
@@ -196,9 +198,8 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 		...(category !== undefined && { category }),
 		...(allAgents.length > 0 && { agents: allAgents }),
 		...(metadata.tags.length > 0 && { tags: metadata.tags }),
-		...(pickedOrg
-			? { org: pickedOrg, visibility: 'private' }
-			: { visibility: metadata.visibility }),
+		...(pickedOrg ? { org: pickedOrg } : {}),
+		visibility,
 		files: filesToInclude.map((f) => ({
 			path: f.path,
 			componentType: f.componentType,

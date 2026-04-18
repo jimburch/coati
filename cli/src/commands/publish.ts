@@ -122,7 +122,7 @@ async function fetchTeams(ctx: CommandContext): Promise<TeamInfo[]> {
 }
 
 /**
- * Prompt for org and/or visibility when both are absent from the manifest.
+ * Prompt for org and/or visibility when visibility is absent from the manifest.
  * Persists chosen values back to coati.json and returns the updated manifest.
  */
 async function promptAndPersistOrgVisibility(
@@ -131,6 +131,13 @@ async function promptAndPersistOrgVisibility(
 	teams: TeamInfo[],
 	cwd: string
 ): Promise<Manifest> {
+	// Manifest already has an org — org-owned setups are always private. Persist and return.
+	if (manifest.org) {
+		const updated = { ...manifest, visibility: 'private' as const };
+		writeManifest(cwd, updated);
+		return updated;
+	}
+
 	if (teams.length > 0) {
 		const orgChoices: { label: string; value: string }[] = [
 			{ label: 'My profile', value: '__personal__' },
@@ -146,10 +153,7 @@ async function promptAndPersistOrgVisibility(
 	}
 
 	// Personal or no teams — ask visibility
-	const vis = await ctx.io.select<'public' | 'private'>('Visibility', [
-		{ label: 'Public', value: 'public' },
-		{ label: 'Private', value: 'private' }
-	]);
+	const vis = await ctx.io.promptVisibility();
 	const updated = { ...manifest, visibility: vis };
 	writeManifest(cwd, updated);
 	return updated;
@@ -220,8 +224,8 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 				return;
 			}
 
-			// Prompt for org/visibility when both are absent from manifest (same logic as init)
-			const needsPrompt = !manifest.org && !manifest.visibility;
+			// Prompt for org/visibility when visibility is absent from manifest (same logic as init)
+			const needsPrompt = !manifest.visibility;
 			const needsTeams = !!manifest.org || needsPrompt;
 
 			let teams: TeamInfo[] = [];

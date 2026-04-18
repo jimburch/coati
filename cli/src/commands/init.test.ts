@@ -82,8 +82,7 @@ const DEFAULT_METADATA = {
 	description: 'A test setup',
 	category: 'general',
 	agents: [] as string[],
-	tags: ['test'],
-	visibility: 'public' as const
+	tags: ['test']
 };
 
 const MOCK_TEAMS = [
@@ -107,6 +106,7 @@ beforeEach(() => {
 	vi.mocked(ctx.io.checklist).mockResolvedValue(DETECTED_FILES.map((f) => f.path));
 	mockFormatFileList.mockReturnValue('(formatted file list)');
 	vi.mocked(ctx.io.promptMetadata).mockResolvedValue(DEFAULT_METADATA);
+	vi.mocked(ctx.io.promptVisibility).mockResolvedValue('public');
 	mockWriteManifest.mockReturnValue(undefined);
 	// Default: no teams
 	vi.mocked(ctx.api.get).mockResolvedValue({ teams: [], hasBetaFeatures: false });
@@ -205,44 +205,34 @@ describe('runInitFlow — org prompt when user has teams', () => {
 		expect(written.visibility).toBe('private');
 	});
 
-	it('passes skipVisibilityPrompt=true to promptMetadata when team picked', async () => {
+	it('does not prompt for visibility when a team is picked', async () => {
 		vi.mocked(ctx.io.select).mockResolvedValue('acme');
 
 		await runInitFlow(ctx, CWD);
 
-		expect(ctx.io.promptMetadata).toHaveBeenCalledWith(
-			expect.any(Array),
-			expect.any(Array),
-			expect.any(Array),
-			expect.objectContaining({ skipVisibilityPrompt: true })
-		);
+		expect(ctx.io.promptVisibility).not.toHaveBeenCalled();
 	});
 
-	it('falls through to visibility prompt when My profile is picked', async () => {
+	it('prompts for visibility right after My profile is picked', async () => {
 		vi.mocked(ctx.io.select).mockResolvedValue('__personal__');
-		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({
-			...DEFAULT_METADATA,
-			visibility: 'public'
-		});
+		vi.mocked(ctx.io.promptVisibility).mockResolvedValue('public');
 
 		await runInitFlow(ctx, CWD);
 
+		expect(ctx.io.promptVisibility).toHaveBeenCalledTimes(1);
 		const written = mockWriteManifest.mock.calls[0]![1];
 		expect(written.org).toBeUndefined();
 		expect(written.visibility).toBe('public');
 	});
 
-	it('passes skipVisibilityPrompt=false to promptMetadata when My profile picked', async () => {
+	it('writes private visibility when My profile + private selected', async () => {
 		vi.mocked(ctx.io.select).mockResolvedValue('__personal__');
+		vi.mocked(ctx.io.promptVisibility).mockResolvedValue('private');
 
 		await runInitFlow(ctx, CWD);
 
-		expect(ctx.io.promptMetadata).toHaveBeenCalledWith(
-			expect.any(Array),
-			expect.any(Array),
-			expect.any(Array),
-			expect.objectContaining({ skipVisibilityPrompt: false })
-		);
+		const written = mockWriteManifest.mock.calls[0]![1];
+		expect(written.visibility).toBe('private');
 	});
 });
 
@@ -257,14 +247,12 @@ describe('runInitFlow — org prompt skipped with zero teams', () => {
 		expect(ctx.io.select).not.toHaveBeenCalled();
 	});
 
-	it('writes visibility from metadata (no org) when user has no teams', async () => {
-		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({
-			...DEFAULT_METADATA,
-			visibility: 'public'
-		});
+	it('prompts for visibility when user has no teams', async () => {
+		vi.mocked(ctx.io.promptVisibility).mockResolvedValue('public');
 
 		await runInitFlow(ctx, CWD);
 
+		expect(ctx.io.promptVisibility).toHaveBeenCalledTimes(1);
 		const written = mockWriteManifest.mock.calls[0]![1];
 		expect(written.org).toBeUndefined();
 		expect(written.visibility).toBe('public');
@@ -525,8 +513,7 @@ describe('runInitFlow — agents array auto-populated', () => {
 		expect(ctx.io.promptMetadata).toHaveBeenCalledWith(
 			['claude-code'],
 			expect.any(Array),
-			expect.any(Array),
-			expect.any(Object)
+			expect.any(Array)
 		);
 	});
 
@@ -770,11 +757,8 @@ describe('runInitFlow — display field', () => {
 // ── visibility field written by init ──────────────────────────────────────────
 
 describe('runInitFlow — visibility field', () => {
-	it('writes public visibility when user picks public (default)', async () => {
-		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({
-			...DEFAULT_METADATA,
-			visibility: 'public'
-		});
+	it('writes public visibility when user picks public', async () => {
+		vi.mocked(ctx.io.promptVisibility).mockResolvedValue('public');
 
 		await runInitFlow(ctx, CWD);
 
@@ -783,10 +767,7 @@ describe('runInitFlow — visibility field', () => {
 	});
 
 	it('writes private visibility when user picks private', async () => {
-		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({
-			...DEFAULT_METADATA,
-			visibility: 'private'
-		});
+		vi.mocked(ctx.io.promptVisibility).mockResolvedValue('private');
 
 		await runInitFlow(ctx, CWD);
 
@@ -795,9 +776,18 @@ describe('runInitFlow — visibility field', () => {
 	});
 
 	it('defaults to public visibility', async () => {
-		// DEFAULT_METADATA has visibility: 'public' — assert the default is written
 		await runInitFlow(ctx, CWD);
 
+		const written = mockWriteManifest.mock.calls[0]![1];
+		expect(written.visibility).toBe('public');
+	});
+
+	it('does not prompt for visibility in JSON mode', async () => {
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
+
+		await runInitFlow(ctx, CWD);
+
+		expect(ctx.io.promptVisibility).not.toHaveBeenCalled();
 		const written = mockWriteManifest.mock.calls[0]![1];
 		expect(written.visibility).toBe('public');
 	});
