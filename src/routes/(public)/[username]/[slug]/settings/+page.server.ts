@@ -38,13 +38,6 @@ export const actions: Actions = {
 			return fail(400, { error: 'Invalid visibility value', code: 'INVALID_VISIBILITY' });
 		}
 
-		if (visibility === 'private' && !locals.user.hasBetaFeatures) {
-			return fail(403, {
-				error: 'Private setups require beta features access',
-				code: 'BETA_REQUIRED'
-			});
-		}
-
 		await updateSetup(setup.id, { visibility });
 
 		return { visibility };
@@ -52,9 +45,6 @@ export const actions: Actions = {
 
 	shareUser: async ({ locals, params, request }) => {
 		if (!locals.user) throw redirect(302, '/auth/login/github');
-		if (!locals.user.hasBetaFeatures) {
-			return fail(403, { error: 'Beta features access required', code: 'BETA_REQUIRED' });
-		}
 
 		const setup = await setupRepo.getDetail(params.username, params.slug, locals.user.id);
 		if (!setup) throw error(404, 'Setup not found');

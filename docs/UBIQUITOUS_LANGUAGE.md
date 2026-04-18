@@ -2,14 +2,15 @@
 
 ## Core entities
 
-| Term          | Definition                                                                                    | Aliases to avoid                  |
-| ------------- | --------------------------------------------------------------------------------------------- | --------------------------------- |
-| **Setup**     | A shareable, installable package of AI coding tool configuration — the platform's atomic unit | Workflow, config, repo, package   |
-| **SetupFile** | An individual file within a setup, tagged by component type and optional agent scope          | Asset, attachment, config file    |
-| **Manifest**  | The `coati.json` file that describes a setup's metadata, files, and install behavior          | Config, setup.json, package.json  |
-| **User**      | A person with a Coati account, authenticated via GitHub OAuth                                 | Account, member, developer        |
-| **Tag**       | A freeform lowercase label for categorizing and discovering setups                            | Label, keyword, topic             |
-| **Agent**     | An AI coding tool that a setup targets (e.g., Claude Code, Cursor, Windsurf)                  | Tool, assistant, provider, editor |
+| Term          | Definition                                                                                                                    | Aliases to avoid                  |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| **Setup**     | A shareable, installable package of AI coding tool configuration — the platform's atomic unit                                 | Workflow, config, repo, package   |
+| **SetupFile** | An individual file within a setup, tagged by component type and optional agent scope                                          | Asset, attachment, config file    |
+| **Manifest**  | The `coati.json` file that describes a setup's metadata, files, and install behavior                                          | Config, setup.json, package.json  |
+| **User**      | A person with a Coati account, authenticated via GitHub OAuth                                                                 | Account, member, developer        |
+| **Team**      | A named group of users that can co-own setups and share private setups among its members (appears as `org` in URL paths only) | Organization, workspace, group    |
+| **Tag**       | A freeform lowercase label for categorizing and discovering setups                                                            | Label, keyword, topic             |
+| **Agent**     | An AI coding tool that a setup targets (e.g., Claude Code, Cursor, Windsurf)                                                  | Tool, assistant, provider, editor |
 
 ## File taxonomy (ComponentType)
 
@@ -25,13 +26,35 @@
 
 ## Setup lifecycle (verbs)
 
-| Term        | Definition                                                                  | Aliases to avoid        |
-| ----------- | --------------------------------------------------------------------------- | ----------------------- |
-| **Publish** | Upload a setup from local disk to the Coati platform via CLI or API         | Upload, push, deploy    |
-| **Clone**   | Download and install a setup's files to the local machine                   | Download, install, pull |
-| **Star**    | Bookmark a setup as a favorite (one per user per setup, toggleable)         | Like, favorite, upvote  |
-| **Follow**  | Subscribe to another user's activity (one per pair, toggleable)             | Subscribe, watch        |
-| **Feature** | Admin action to editorially highlight a setup (sets `featuredAt` timestamp) | Promote, pin, spotlight |
+| Term        | Definition                                                                           | Aliases to avoid             |
+| ----------- | ------------------------------------------------------------------------------------ | ---------------------------- |
+| **Publish** | Upload a setup from local disk to the Coati platform via CLI or API                  | Upload, push, deploy         |
+| **Clone**   | Download and install a setup's files to the local machine                            | Download, install, pull      |
+| **Star**    | Bookmark a setup as a favorite (one per user per setup, toggleable)                  | Like, favorite, upvote       |
+| **Follow**  | Subscribe to another user's activity (one per pair, toggleable)                      | Subscribe, watch             |
+| **Feature** | Admin action to editorially highlight a setup (sets `featuredAt` timestamp)          | Promote, pin, spotlight      |
+| **Share**   | Grant a specific user direct access to a **private** setup owned by the current user | Invite-to-setup, give access |
+
+## Visibility and access
+
+| Term           | Definition                                                                                                                      | Aliases to avoid                 |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| **Visibility** | A setup's access mode: **public** (listed and cloneable by anyone) or **private** (hidden from discovery)                       | Privacy, mode, access            |
+| **Public**     | Visibility value meaning the setup appears in Explore, search, and trending, and is cloneable by anyone                         | Open, listed                     |
+| **Private**    | Visibility value meaning the setup is accessible only to its owner, its **Team** members, and users it has been **Shared** with | Hidden, unlisted, draft          |
+| **SetupShare** | A direct per-user grant of access to a private setup, created by its owner                                                      | Share link, invite, access grant |
+
+## Teams
+
+| Term              | Definition                                                                                                                      | Aliases to avoid             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| **Team**          | A named group of users that owns a shared roster of setups (public or private)                                                  | Org, organization, workspace |
+| **Team Owner**    | The single **User** who created a **Team**; has full control and cannot be removed                                              | Org admin, founder           |
+| **Team Member**   | A **User** who belongs to a **Team**, holding either the **Admin** or **Member** role                                           | Participant, collaborator    |
+| **Admin** (role)  | Team role that can manage members, invites, and team settings                                                                   | Maintainer, manager          |
+| **Member** (role) | Default team role that can view and contribute to team setups but not manage the team                                           | Contributor, collaborator    |
+| **Team Invite**   | A pending request for a **User** (or email address) to join a **Team**; has a status of pending, accepted, declined, or expired | Invitation link, join token  |
+| **Team Setup**    | A **Setup** whose `teamId` is set — co-owned by the team and visible to all team members regardless of **Visibility**           | Shared setup, org setup      |
 
 ## Placement and scope
 
@@ -43,20 +66,20 @@
 
 ## Discovery and ranking
 
-| Term         | Definition                                                                                 | Aliases to avoid      |
-| ------------ | ------------------------------------------------------------------------------------------ | --------------------- |
-| **Trending** | Algorithmically ranked setups using time-decayed scoring of stars, clones, and comments    | Popular, hot          |
-| **Featured** | Admin-curated setups highlighted on the platform (distinct from algorithmic trending)      | Promoted, editorial   |
-| **Category** | A fixed classification for setups: web-dev, mobile, data-science, devops, systems, general | Type, genre           |
-| **Explore**  | The browsable, filterable, sortable page for discovering setups                            | Browse, search, index |
+| Term         | Definition                                                                                         | Aliases to avoid      |
+| ------------ | -------------------------------------------------------------------------------------------------- | --------------------- |
+| **Trending** | Algorithmically ranked **public** setups using time-decayed scoring of stars, clones, and comments | Popular, hot          |
+| **Featured** | Admin-curated **public** setups highlighted on the platform (distinct from algorithmic trending)   | Promoted, editorial   |
+| **Category** | A fixed classification for setups: web-dev, mobile, data-science, devops, systems, general         | Type, genre           |
+| **Explore**  | The browsable, filterable, sortable page for discovering **public** setups                         | Browse, search, index |
 
 ## Social features
 
-| Term         | Definition                                                                        | Aliases to avoid    |
-| ------------ | --------------------------------------------------------------------------------- | ------------------- |
-| **Comment**  | User-authored discussion on a setup, supporting single-level threading via parent | Reply, review, note |
-| **Activity** | An audit-log entry recording a user action (star, clone, comment, follow, create) | Event, action, log  |
-| **Feed**     | Chronological list of activities from users the current user follows              | Timeline, stream    |
+| Term         | Definition                                                                                      | Aliases to avoid    |
+| ------------ | ----------------------------------------------------------------------------------------------- | ------------------- |
+| **Comment**  | User-authored discussion on a setup, supporting single-level threading via parent               | Reply, review, note |
+| **Activity** | An audit-log entry recording a user action (star, clone, comment, follow, create, team-related) | Event, action, log  |
+| **Feed**     | Chronological list of activities from users the current user follows                            | Timeline, stream    |
 
 ## Authentication
 
@@ -85,17 +108,23 @@ These four tiers are the only canonical environment names. All scripts, configur
 
 ## Identifiers
 
-| Term              | Definition                                                                                | Aliases to avoid |
-| ----------------- | ----------------------------------------------------------------------------------------- | ---------------- |
-| **Slug**          | A URL-safe, lowercase, hyphen-separated identifier (used for usernames and setups)        | Handle, URL name |
-| **Setup path**    | The `owner/slug` URL pattern that uniquely identifies a setup (e.g., `alice/my-workflow`) | URL, route       |
-| **Search vector** | PostgreSQL `tsvector` column enabling full-text search on setup name and description      | Index, FTS field |
+| Term              | Definition                                                                                      | Aliases to avoid |
+| ----------------- | ----------------------------------------------------------------------------------------------- | ---------------- |
+| **Slug**          | A URL-safe, lowercase, hyphen-separated identifier (used for usernames, team names, and setups) | Handle, URL name |
+| **Setup path**    | The `owner/slug` URL pattern that uniquely identifies a setup (e.g., `alice/my-workflow`)       | URL, route       |
+| **Search vector** | PostgreSQL `tsvector` column enabling full-text search on setup name and description            | Index, FTS field |
 
 ---
 
 ## Relationships
 
 - A **User** owns zero or more **Setups**
+- A **User** owns zero or more **Teams** (as **Team Owner**) and belongs to zero or more **Teams** (as **Team Member**)
+- A **Team** has exactly one **Team Owner** and zero or more **Team Members**, each with a role of **Admin** or **Member**
+- A **Team** issues zero or more **Team Invites**, each targeting either a **User** or an email address
+- A **Setup** is owned by exactly one **User** and optionally belongs to one **Team**
+- A **Setup** has exactly one **Visibility** (**public** or **private**)
+- A **private** **Setup** is accessible to its owner, the members of its **Team** (if any), and any **User** named in a **SetupShare** for it
 - A **Setup** contains one or more **SetupFiles**, each tagged with a **ComponentType**
 - A **Setup** has one **Manifest** (`coati.json`) that describes it
 - A **Setup** is associated with one or more **Agents** (which AI tools it targets)
@@ -105,28 +134,28 @@ These four tiers are the only canonical environment names. All scripts, configur
 - A **User** can **Star** a **Setup** exactly once
 - A **User** can **Follow** another **User** exactly once
 - A **Comment** belongs to one **Setup** and one **User**; a **Comment** may reply to one parent **Comment** (single-level threading only)
-- An **Activity** records one action by one **User**, optionally referencing a **Setup**, target **User**, or **Comment**
+- An **Activity** records one action by one **User**, optionally referencing a **Setup**, target **User**, **Comment**, or **Team**
 - A **SetupFile** may be scoped to a specific **Agent** (only installed when that agent is detected during **Clone**)
 
 ---
 
 ## Example dialogue
 
-> **Dev:** "When a user runs `coati clone alice/my-workflow`, what actually happens?"
+> **Dev:** "If I make a **Setup** **private**, who can still **Clone** it?"
 >
-> **Domain expert:** "The CLI fetches the **Setup** metadata and its **SetupFiles** from the API. It checks the **Placement** — if it's **global**, files go to `~/`; if **project**, they go to `./`. Before writing, it checks for conflicts with existing files."
+> **Domain expert:** "Only the owner, plus anyone explicitly granted access via a **SetupShare**. If the **Setup** also has a `teamId`, every **Team Member** of that **Team** can view and **Clone** it too."
 >
-> **Dev:** "What if the **Setup** targets multiple **Agents** — say Claude Code and Cursor?"
+> **Dev:** "So a **Team Setup** that's **private** is effectively shared across the whole **Team** without needing individual **SetupShares**?"
 >
-> **Domain expert:** "Each **SetupFile** can optionally declare an **Agent** scope. During **Clone**, the CLI detects which **Agents** are installed locally and only writes the relevant files. A file with no agent scope is always installed."
+> **Domain expert:** "Right. **Team** membership grants access; **SetupShare** is the one-off mechanism for users outside the **Team**. A **public** **Team Setup** is just a normal discoverable **Setup** that happens to be co-owned by the **Team**."
 >
-> **Dev:** "And how does the **Manifest** fit in?"
+> **Dev:** "How does someone join a **Team**?"
 >
-> **Domain expert:** "The **Manifest** is the `coati.json` file. On **Publish**, the CLI reads it to know what to upload. After **Clone**, the CLI writes clone-tracking metadata back into a local `coati.json` so we know where the **Setup** came from."
+> **Domain expert:** "The **Team Owner** or an **Admin** creates a **Team Invite** — either targeting a specific **User** or an email address. When accepted, the invitee becomes a **Team Member** with the **Member** role by default."
 >
-> **Dev:** "Is a **Clone** the same as a **Star**?"
+> **Dev:** "And does a **private** **Setup** show up in **Trending** or **Explore**?"
 >
-> **Domain expert:** "No. A **Star** is a bookmark — it's just a social signal, like a GitHub star. A **Clone** actually installs the files. Both increment counters on the **Setup**, but they're independent actions."
+> **Domain expert:** "Never. **Explore**, **Trending**, and **Featured** only surface **public** setups. Private setups are only reachable via direct URL by users with access."
 
 ---
 
@@ -138,3 +167,8 @@ These four tiers are the only canonical environment names. All scripts, configur
 - **"Post-install"** suggests a single command, but the field is actually an array of shell commands. **Recommendation:** Refer to "post-install commands" (plural) in docs and UI copy.
 - **"Explore" vs "Search"** — the Explore page includes search functionality, and a separate search API exists. **Recommendation:** Use **Explore** for the browsable UI page; use **Search** for the full-text query operation within it.
 - **"Version"** exists in the **Manifest** schema but is not persisted server-side. The platform stores only the current state of a **Setup** with no version history. **Recommendation:** Acknowledge this is a client-side-only field for MVP; do not imply version tracking exists on the platform.
+- **"Org" vs "Team"** — the URL path segment for team pages and team-owned setups uses `org` (e.g., `/org/<team-slug>`), so "org" and **Team** refer to the same entity in routing context. **Recommendation:** Use **Team** in all user-facing copy, docs, and code identifiers; treat `org` as a URL-only synonym and do not introduce it into UI labels or conversation.
+- **"Share"** is overloaded. It can mean the generic social act of linking a setup ("share this URL"), or the specific **SetupShare** grant to a user for a **private** setup. **Recommendation:** Use **SetupShare** (or "share access") for the access-granting action; prefer "link" or "copy URL" for the social act.
+- **"Admin"** is overloaded. At the platform level (`users.isAdmin`) it means a Coati site administrator; at the team level it is a **Team Member** role. **Recommendation:** Say **Platform Admin** when referring to `users.isAdmin`; use **Admin** alone only in a team context, or qualify as **Team Admin**.
+- **"Member"** can refer to any authenticated **User** colloquially or specifically to the non-admin **Team Member** role. **Recommendation:** Use **User** for any Coati account holder; reserve **Member** for the team role.
+- **"Private"** means access-restricted, not "draft" or "unpublished." A private setup is still a published, installable setup — just not discoverable. **Recommendation:** Don't equate **private** with "work in progress."

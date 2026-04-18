@@ -2,14 +2,19 @@
 	import { buttonVariants } from '$lib/components/ui/button/button.svelte';
 	import SetupCard from '$lib/components/SetupCard.svelte';
 	import OgMeta from '$lib/components/OgMeta.svelte';
+	import ProfileCard from '$lib/components/ProfileCard.svelte';
+	import StatsGrid from '$lib/components/StatsGrid.svelte';
+	import YourSetupsList from '$lib/components/YourSetupsList.svelte';
+	import YourTeamsList from '$lib/components/YourTeamsList.svelte';
+	import QuickActions from '$lib/components/QuickActions.svelte';
+	import DiscoveryTabs from '$lib/components/DiscoveryTabs.svelte';
+	import YourActivityPanel from '$lib/components/YourActivityPanel.svelte';
 	import { Upload, Search, Download } from '@lucide/svelte';
 
 	const { data } = $props();
 
 	const LBRACE = '{';
 	const RBRACE = '}';
-
-	let showAllTrending = $state(false);
 </script>
 
 <svelte:head>
@@ -29,90 +34,82 @@
 />
 
 {#if data.user}
-	<!-- Authenticated: Discovery Dashboard -->
-
-	{#if data.featuredSetups.length > 0}
-		<!-- Featured Setups -->
-		<section class="border-b border-border">
-			<div class="mx-auto max-w-7xl px-4 py-10 lg:py-16">
-				<div class="mb-6 flex items-baseline justify-between lg:mb-8">
-					<h2 class="text-xl font-bold tracking-tight lg:text-2xl">Featured Setups</h2>
-				</div>
-				<div class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-					{#each data.featuredSetups as setup (setup.id)}
-						<SetupCard {setup} username={setup.ownerUsername} showAuthor variant="featured" />
-					{/each}
-				</div>
-			</div>
-		</section>
-	{/if}
-
-	<!-- Trending -->
-	<section class="border-b border-border">
-		<div class="mx-auto max-w-7xl px-4 py-10 lg:py-16">
-			<div class="mb-6 flex items-baseline justify-between lg:mb-8">
-				<h2 class="text-xl font-bold tracking-tight lg:text-2xl">Trending</h2>
-				<a
-					href="/explore?sort=trending"
-					class="text-sm text-muted-foreground transition-colors hover:text-foreground"
-				>
-					View all trending &rarr;
-				</a>
-			</div>
-
-			{#if data.trendingSetups.length > 0}
-				<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-					{#each data.trendingSetups as setup, i (setup.id)}
-						<div class={i >= 3 && !showAllTrending ? 'hidden lg:block' : ''}>
-							<SetupCard {setup} username={setup.ownerUsername} showAuthor />
-						</div>
-					{/each}
+	<!-- Authenticated: Two-column dashboard -->
+	<!-- Mobile: single flex column; desktop: two independent flex columns so items pack tightly per column. -->
+	<!-- Wrappers use display:contents on mobile so order-N on grandchildren interleaves across columns. -->
+	<div class="mx-auto max-w-7xl px-4 py-6 lg:py-10">
+		<div class="flex flex-col gap-6 lg:grid lg:grid-cols-[280px_1fr]">
+			<!-- Left column -->
+			<div class="contents lg:flex lg:flex-col lg:gap-6">
+				<div class="order-1" data-testid="profile-card">
+					<ProfileCard
+						username={data.user.username}
+						avatarUrl={data.user.avatarUrl}
+						name={data.user.name ?? null}
+					/>
 				</div>
 
-				{#if data.trendingSetups.length > 3}
-					<div class="mt-4 text-center lg:hidden">
-						<button
-							onclick={() => (showAllTrending = !showAllTrending)}
-							class={buttonVariants({ variant: 'outline', size: 'sm' })}
-						>
-							{showAllTrending ? 'Show less' : 'Show more'}
-						</button>
+				{#if data.userStats}
+					<div class="order-2" data-testid="stats-grid">
+						<StatsGrid stats={data.userStats} />
 					</div>
 				{/if}
-			{:else}
-				<div class="rounded-lg border border-dashed border-border py-12 text-center">
-					<p class="text-muted-foreground">No trending setups yet.</p>
-				</div>
-			{/if}
-		</div>
-	</section>
 
-	<!-- Recently Added -->
-	<section>
-		<div class="mx-auto max-w-7xl px-4 py-10 lg:py-16">
-			<div class="mb-6 flex items-baseline justify-between lg:mb-8">
-				<h2 class="text-xl font-bold tracking-tight lg:text-2xl">Recently Added</h2>
-				<a
-					href="/explore?sort=newest"
-					class="text-sm text-muted-foreground transition-colors hover:text-foreground"
-				>
-					View all recent &rarr;
-				</a>
+				{#if data.userSetups.length > 0}
+					<div class="order-4" data-testid="your-setups-list">
+						<YourSetupsList setups={data.userSetups} username={data.user.username} />
+					</div>
+				{/if}
+
+				<div class="order-5" data-testid="quick-actions">
+					<QuickActions />
+				</div>
+
+				<div class="order-6" data-testid="your-teams-list">
+					<YourTeamsList teams={data.userTeams} />
+				</div>
 			</div>
 
-			{#if data.recentSetups.length > 0}
-				<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-					{#each data.recentSetups as setup (setup.id)}
-						<SetupCard {setup} username={setup.ownerUsername} showAuthor />
-					{/each}
+			<!-- Right column -->
+			<div class="contents lg:flex lg:flex-col lg:gap-6">
+				<div class="order-3" data-testid="discovery-tabs">
+					<DiscoveryTabs
+						trendingSetups={data.trendingSetups}
+						forYouSetups={data.forYouSetups}
+						followingSetups={data.followingSetups}
+						activeTab={data.activeTab}
+					/>
 				</div>
-			{:else}
-				<div class="rounded-lg border border-dashed border-border py-12 text-center">
-					<p class="text-muted-foreground">No setups yet. Be the first to share one!</p>
-				</div>
-			{/if}
+
+				{#if data.yourActivity.length > 0}
+					<div class="order-8" data-testid="your-activity-panel">
+						<YourActivityPanel activity={data.yourActivity} username={data.user.username} />
+					</div>
+				{/if}
+
+				{#if data.featuredSetups.length > 0}
+					<section class="order-7" data-testid="featured-setups">
+						<div class="mb-3 flex items-baseline justify-between">
+							<h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+								Featured
+							</h2>
+						</div>
+						<div class="flex flex-col gap-3">
+							{#each data.featuredSetups as setup (setup.id)}
+								<SetupCard
+									{setup}
+									username={setup.ownerUsername}
+									showAuthor
+									variant="compact"
+									highlighted
+								/>
+							{/each}
+						</div>
+					</section>
+				{/if}
+			</div>
 		</div>
-	</section>
+	</div>
 {:else}
 	<!-- Unauthenticated: Marketing landing page -->
 

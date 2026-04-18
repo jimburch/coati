@@ -1,4 +1,4 @@
-import { redirect, fail, error } from '@sveltejs/kit';
+import { redirect, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { requireAuth } from '$lib/server/guards';
 import { createTeamSchema } from '$lib/types';
@@ -20,7 +20,6 @@ export const actions: Actions = {
 	createTeam: async (event) => {
 		const { locals, request } = event;
 		if (!locals.user) throw redirect(302, '/auth/login/github');
-		if (!locals.user.hasBetaFeatures) throw error(403, 'Beta features required');
 
 		const formData = await request.formData();
 		const raw = {

@@ -23,8 +23,7 @@ vi.mock('$lib/server/responses', async (importOriginal) => {
 });
 
 vi.mock('$lib/server/guards', () => ({
-	requireApiAuth: vi.fn(),
-	requireBetaFeatures: vi.fn()
+	requireApiAuth: vi.fn()
 }));
 
 const OWNER = { id: 'owner-id', username: 'alice', hasBetaFeatures: true };
@@ -117,13 +116,13 @@ describe('GET /api/v1/setups/[id]/shares', () => {
 describe('POST /api/v1/setups/[id]/shares', () => {
 	beforeEach(async () => {
 		vi.clearAllMocks();
-		const { requireBetaFeatures } = await import('$lib/server/guards');
-		vi.mocked(requireBetaFeatures).mockReturnValue(OWNER as never);
+		const { requireApiAuth } = await import('$lib/server/guards');
+		vi.mocked(requireApiAuth).mockReturnValue(OWNER as never);
 	});
 
 	it('returns 401 when not authenticated', async () => {
-		const { requireBetaFeatures } = await import('$lib/server/guards');
-		vi.mocked(requireBetaFeatures).mockReturnValue(
+		const { requireApiAuth } = await import('$lib/server/guards');
+		vi.mocked(requireApiAuth).mockReturnValue(
 			new Response(JSON.stringify({ error: 'Authentication required', code: 'UNAUTHORIZED' }), {
 				status: 401,
 				headers: { 'Content-Type': 'application/json' }
@@ -132,19 +131,6 @@ describe('POST /api/v1/setups/[id]/shares', () => {
 		const { POST } = await import('./+server');
 		const res = await POST(makePostEvent('setup-uuid', { username: 'bob' }));
 		expect(res.status).toBe(401);
-	});
-
-	it('returns 403 when hasBetaFeatures is false', async () => {
-		const { requireBetaFeatures } = await import('$lib/server/guards');
-		vi.mocked(requireBetaFeatures).mockReturnValue(
-			new Response(JSON.stringify({ error: 'Beta features access required', code: 'FORBIDDEN' }), {
-				status: 403,
-				headers: { 'Content-Type': 'application/json' }
-			})
-		);
-		const { POST } = await import('./+server');
-		const res = await POST(makePostEvent('setup-uuid', { username: 'bob' }));
-		expect(res.status).toBe(403);
 	});
 
 	it('returns 404 when setup not found', async () => {

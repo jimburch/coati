@@ -329,6 +329,14 @@ export async function promptMetadata(
 	return { name, description, category, agents, tags };
 }
 
+/** Prompt the user for setup visibility (public/private). */
+export async function promptVisibility(): Promise<'public' | 'private'> {
+	return select<'public' | 'private'>('Visibility', [
+		{ label: 'Public', value: 'public' },
+		{ label: 'Private', value: 'private' }
+	]);
+}
+
 /** Show a numbered file list and ask for confirmation. */
 export async function confirmFileList(files: string[]): Promise<boolean> {
 	process.stdout.write('\nFiles to be included:\n');

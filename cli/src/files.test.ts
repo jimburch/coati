@@ -23,6 +23,7 @@ vi.mock('./prompts.js', () => ({
 	input: vi.fn(),
 	promptDestination: vi.fn(),
 	promptMetadata: vi.fn(),
+	promptVisibility: vi.fn(),
 	confirmFileList: vi.fn(),
 	confirmPostInstall: vi.fn()
 }));

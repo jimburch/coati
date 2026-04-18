@@ -15,8 +15,7 @@ vi.mock('$lib/server/responses', async (importOriginal) => {
 });
 
 vi.mock('$lib/server/guards', () => ({
-	requireApiAuth: vi.fn(),
-	requireBetaFeatures: vi.fn()
+	requireApiAuth: vi.fn()
 }));
 
 const USER = { id: 'user-id', username: 'alice', hasBetaFeatures: true };
@@ -94,13 +93,13 @@ describe('GET /api/v1/invites/pending', () => {
 describe('POST /api/v1/invites/[token]/accept', () => {
 	beforeEach(async () => {
 		vi.clearAllMocks();
-		const { requireBetaFeatures } = await import('$lib/server/guards');
-		vi.mocked(requireBetaFeatures).mockReturnValue(USER as never);
+		const { requireApiAuth } = await import('$lib/server/guards');
+		vi.mocked(requireApiAuth).mockReturnValue(USER as never);
 	});
 
 	it('returns 401 when not authenticated', async () => {
-		const { requireBetaFeatures } = await import('$lib/server/guards');
-		vi.mocked(requireBetaFeatures).mockReturnValue(
+		const { requireApiAuth } = await import('$lib/server/guards');
+		vi.mocked(requireApiAuth).mockReturnValue(
 			new Response(JSON.stringify({ error: 'Unauthorized', code: 'UNAUTHORIZED' }), {
 				status: 401,
 				headers: { 'Content-Type': 'application/json' }
@@ -112,8 +111,8 @@ describe('POST /api/v1/invites/[token]/accept', () => {
 	});
 
 	it('returns 404 when invite not found', async () => {
-		const { requireBetaFeatures } = await import('$lib/server/guards');
-		vi.mocked(requireBetaFeatures).mockReturnValue(USER as never);
+		const { requireApiAuth } = await import('$lib/server/guards');
+		vi.mocked(requireApiAuth).mockReturnValue(USER as never);
 		mockAcceptInvite.mockResolvedValue({
 			ok: false,
 			error: 'Invite not found',
@@ -125,8 +124,8 @@ describe('POST /api/v1/invites/[token]/accept', () => {
 	});
 
 	it('returns 403 when invite belongs to different user', async () => {
-		const { requireBetaFeatures } = await import('$lib/server/guards');
-		vi.mocked(requireBetaFeatures).mockReturnValue(USER as never);
+		const { requireApiAuth } = await import('$lib/server/guards');
+		vi.mocked(requireApiAuth).mockReturnValue(USER as never);
 		mockAcceptInvite.mockResolvedValue({ ok: false, error: 'Not for you', code: 'FORBIDDEN' });
 		const { POST } = await import('./[token]/accept/+server');
 		const res = await POST(makeAcceptEvent('tok123'));
@@ -134,8 +133,8 @@ describe('POST /api/v1/invites/[token]/accept', () => {
 	});
 
 	it('returns 410 when invite has expired', async () => {
-		const { requireBetaFeatures } = await import('$lib/server/guards');
-		vi.mocked(requireBetaFeatures).mockReturnValue(USER as never);
+		const { requireApiAuth } = await import('$lib/server/guards');
+		vi.mocked(requireApiAuth).mockReturnValue(USER as never);
 		mockAcceptInvite.mockResolvedValue({ ok: false, error: 'Expired', code: 'EXPIRED' });
 		const { POST } = await import('./[token]/accept/+server');
 		const res = await POST(makeAcceptEvent('tok123'));
@@ -143,8 +142,8 @@ describe('POST /api/v1/invites/[token]/accept', () => {
 	});
 
 	it('returns 200 when invite accepted successfully', async () => {
-		const { requireBetaFeatures } = await import('$lib/server/guards');
-		vi.mocked(requireBetaFeatures).mockReturnValue(USER as never);
+		const { requireApiAuth } = await import('$lib/server/guards');
+		vi.mocked(requireApiAuth).mockReturnValue(USER as never);
 		mockAcceptInvite.mockResolvedValue({ ok: true });
 		const { POST } = await import('./[token]/accept/+server');
 		const res = await POST(makeAcceptEvent('valid-token'));

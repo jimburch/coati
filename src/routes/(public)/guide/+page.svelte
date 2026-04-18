@@ -3,7 +3,7 @@
 	import CodeBlock from '$lib/components/CodeBlock.svelte';
 	import OgMeta from '$lib/components/OgMeta.svelte';
 
-	const sections = [
+	const sections: { id: string; title: string; beta?: boolean }[] = [
 		{ id: 'what-is-coati', title: 'What is Coati?' },
 		{ id: 'supported-agents', title: 'Supported Agents' },
 		{ id: 'discover-setups', title: 'Discover Setups' },
@@ -11,6 +11,8 @@
 		{ id: 'clone-a-setup', title: 'Clone a Setup' },
 		{ id: 'create-your-own-setup', title: 'Create Your Own Setup' },
 		{ id: 'publish-to-coati', title: 'Publish to Coati' },
+		{ id: 'private-setups', title: 'Private Setups' },
+		{ id: 'teams', title: 'Teams' },
 		{ id: 'social-features', title: 'Social Features' }
 	];
 
@@ -89,9 +91,16 @@
 				{#each sections as section (section.id)}
 					<a
 						href="#{section.id}"
-						class="block rounded px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+						class="flex items-center justify-between gap-2 rounded px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
 					>
-						{section.title}
+						<span>{section.title}</span>
+						{#if section.beta}
+							<span
+								class="rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary"
+							>
+								Beta
+							</span>
+						{/if}
 					</a>
 				{/each}
 			</nav>
@@ -353,6 +362,120 @@
 					<p class="text-muted-foreground">
 						These sections are edited on the web — no CLI publish needed. Great for updating docs
 						without touching your config files.
+					</p>
+				</div>
+			</section>
+
+			<!-- Section: Private Setups -->
+			<section id="private-setups" class="scroll-mt-20">
+				<div class="mb-4 flex flex-wrap items-center gap-3">
+					<h2 class="text-2xl font-bold tracking-tight">Private Setups</h2>
+				</div>
+				<div class="space-y-4 text-muted-foreground">
+					<p>
+						Not every setup is meant for the world. A <strong class="text-foreground"
+							>private setup</strong
+						> keeps your work off the Explore page, out of search, and out of trending. Only you, the
+						people you share it with, and your team members (if it belongs to a team) can see or clone
+						it.
+					</p>
+					<p>Use private setups for:</p>
+					<ul class="ml-4 list-disc space-y-2">
+						<li>
+							<strong class="text-foreground">Work in progress.</strong> Iterate on a setup without publishing
+							it to the world.
+						</li>
+						<li>
+							<strong class="text-foreground">Company configs.</strong> Internal workflows, house style
+							guides, and proprietary prompts that shouldn't leave the building.
+						</li>
+						<li>
+							<strong class="text-foreground">Personal dotfiles.</strong> Your own rig, shared with a
+							small circle of friends.
+						</li>
+					</ul>
+					<h3 class="mt-6 text-lg font-semibold text-foreground">Publish a setup as private</h3>
+					<p>
+						When you run <code
+							class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
+							>coati publish</code
+						>, the CLI prompts you to choose whether the setup should be public or private. Setups
+						published to a team are private by default.
+					</p>
+				</div>
+				<div class="mt-4 space-y-4">
+					<p class="text-muted-foreground">
+						You can flip visibility later from the setup's settings page on the web. Switching from
+						public to private hides it immediately. Switching back makes it discoverable again.
+					</p>
+					<h3 class="mt-6 text-lg font-semibold text-foreground">Share a private setup</h3>
+					<p class="text-muted-foreground">
+						Open the setup's settings and add collaborators by username. They'll see the setup on
+						their dashboard and can clone it like any other. Revoke access at any time.
+					</p>
+					<p class="text-muted-foreground">
+						Prefer to share with a whole group at once? Assign the setup to a <a
+							href="#teams"
+							class="text-foreground underline underline-offset-4 hover:text-primary">team</a
+						>. Every team member gets access automatically.
+					</p>
+				</div>
+			</section>
+
+			<!-- Section: Teams -->
+			<section id="teams" class="scroll-mt-20">
+				<div class="mb-4 flex flex-wrap items-center gap-3">
+					<h2 class="text-2xl font-bold tracking-tight">Teams</h2>
+				</div>
+				<div class="space-y-4 text-muted-foreground">
+					<p>
+						A <strong class="text-foreground">team</strong> is a shared home for setups. Create one for
+						your company, your open-source project, or any group that wants a common set of configs. Every
+						team member can view and clone every team setup, public or private, no individual sharing
+						required.
+					</p>
+					<h3 class="mt-6 text-lg font-semibold text-foreground">Create a team</h3>
+					<p>
+						Head to <a
+							href="/teams"
+							class="text-foreground underline underline-offset-4 hover:text-primary"
+							>your teams page</a
+						>
+						and click <strong class="text-foreground">New team</strong>. Pick a name and a slug. The
+						slug becomes the team's URL at
+						<code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
+							>/org/your-slug</code
+						>.
+					</p>
+					<h3 class="mt-6 text-lg font-semibold text-foreground">Invite members</h3>
+					<p>
+						From the team page, open <strong class="text-foreground">Members</strong> and send an invite
+						by Coati username or email. Invitees see pending invites on their dashboard and can accept
+						or decline. Members come in two roles:
+					</p>
+					<ul class="ml-4 list-disc space-y-2">
+						<li>
+							<strong class="text-foreground">Admin.</strong> Can manage members, send invites, and edit
+							team settings.
+						</li>
+						<li>
+							<strong class="text-foreground">Member.</strong> Can view and contribute to team setups.
+						</li>
+					</ul>
+					<p>
+						The user who creates the team is the <strong class="text-foreground">owner</strong> and always
+						has full control.
+					</p>
+					<h3 class="mt-6 text-lg font-semibold text-foreground">Add setups to a team</h3>
+					<p>
+						From a setup's settings page, choose a team under <strong class="text-foreground"
+							>Ownership</strong
+						>. The setup stays under your username, but every team member gets access. This works
+						for public and private setups alike.
+					</p>
+					<p>
+						Public team setups still show up in Explore and on your profile. Private team setups
+						stay hidden but are visible to the whole team.
 					</p>
 				</div>
 			</section>

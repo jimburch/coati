@@ -41,6 +41,7 @@ export function createTestContext(overrides?: Partial<CommandContext>): CommandC
 			promptAgentSelection: vi.fn(),
 			checklist: vi.fn(),
 			promptMetadata: vi.fn(),
+			promptVisibility: vi.fn().mockResolvedValue('public'),
 			confirmFileList: vi.fn(),
 			confirmPostInstall: vi.fn(),
 			pickFiles: vi.fn()

@@ -141,6 +141,13 @@
 			"when": 1744848000000,
 			"tag": "0018_private_setups_teams",
 			"breakpoints": true
+		},
+		{
+			"idx": 20,
+			"version": "7",
+			"when": 1745020800000,
+			"tag": "0019_activities_setup_id_idx",
+			"breakpoints": true
 		}
 	]
 }

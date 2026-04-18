@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { requireApiAuth, requireBetaFeatures } from '$lib/server/guards';
+import { requireApiAuth } from '$lib/server/guards';
 import { success, error, isUniqueViolation, parseRequestBody } from '$lib/server/responses';
 import { createSetupWithFilesSchema } from '$lib/types';
 import type { ExploreSort } from '$lib/types';
@@ -30,9 +30,6 @@ export const POST: RequestHandler = async (event) => {
 	if (parsed instanceof Response) return parsed;
 
 	if (parsed.teamId) {
-		const betaResult = requireBetaFeatures(event);
-		if (betaResult instanceof Response) return betaResult;
-
 		const team = await getTeamByIdForAuth(parsed.teamId);
 		if (!team) {
 			return error('Team not found', 'NOT_FOUND', 404);
@@ -44,8 +41,11 @@ export const POST: RequestHandler = async (event) => {
 		}
 	}
 
+	// Server refinement: team setups are always private regardless of payload
+	const createData = parsed.teamId ? { ...parsed, visibility: 'private' as const } : parsed;
+
 	try {
-		const setup = await setupRepo.create(user.id, parsed);
+		const setup = await setupRepo.create(user.id, createData);
 		return success(setup, 201);
 	} catch (err: unknown) {
 		if (isUniqueViolation(err)) {

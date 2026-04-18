@@ -14,9 +14,6 @@ export const actions: Actions = {
 		if (!event.locals.user) throw redirect(302, '/auth/login/github');
 		const user = event.locals.user;
 
-		if (!user.hasBetaFeatures)
-			return fail(403, { error: 'Beta features required to accept invites' });
-
 		const formData = await event.request.formData();
 		const token = formData.get('token') as string;
 		if (!token) return fail(400, { error: 'Missing token' });

@@ -17,8 +17,7 @@ vi.mock('$lib/server/responses', async (importOriginal) => {
 });
 
 vi.mock('$lib/server/guards', () => ({
-	requireApiAuth: vi.fn(),
-	requireBetaFeatures: vi.fn()
+	requireApiAuth: vi.fn()
 }));
 
 const OWNER = { id: 'owner-id', username: 'alice', hasBetaFeatures: true };
@@ -107,15 +106,15 @@ describe('GET /api/v1/teams/[slug]/members', () => {
 describe('POST /api/v1/teams/[slug]/members', () => {
 	beforeEach(async () => {
 		vi.clearAllMocks();
-		const { requireBetaFeatures } = await import('$lib/server/guards');
-		vi.mocked(requireBetaFeatures).mockReturnValue(OWNER as never);
+		const { requireApiAuth } = await import('$lib/server/guards');
+		vi.mocked(requireApiAuth).mockReturnValue(OWNER as never);
 		mockGetTeamBySlugForAuth.mockResolvedValue(TEAM);
 		mockGetTeamMemberRole.mockResolvedValue('admin');
 	});
 
 	it('returns 401 when not authenticated', async () => {
-		const { requireBetaFeatures } = await import('$lib/server/guards');
-		vi.mocked(requireBetaFeatures).mockReturnValue(
+		const { requireApiAuth } = await import('$lib/server/guards');
+		vi.mocked(requireApiAuth).mockReturnValue(
 			new Response(JSON.stringify({ error: 'Unauthorized', code: 'UNAUTHORIZED' }), {
 				status: 401,
 				headers: { 'Content-Type': 'application/json' }
@@ -127,8 +126,8 @@ describe('POST /api/v1/teams/[slug]/members', () => {
 	});
 
 	it('returns 404 when team not found', async () => {
-		const { requireBetaFeatures } = await import('$lib/server/guards');
-		vi.mocked(requireBetaFeatures).mockReturnValue(OWNER as never);
+		const { requireApiAuth } = await import('$lib/server/guards');
+		vi.mocked(requireApiAuth).mockReturnValue(OWNER as never);
 		mockGetTeamBySlugForAuth.mockResolvedValue(null);
 		const { POST } = await import('./+server');
 		const res = await POST(makePostEvent('nonexistent', { username: 'dave' }));
@@ -136,8 +135,8 @@ describe('POST /api/v1/teams/[slug]/members', () => {
 	});
 
 	it('returns 403 when caller is not owner or admin', async () => {
-		const { requireBetaFeatures } = await import('$lib/server/guards');
-		vi.mocked(requireBetaFeatures).mockReturnValue(MEMBER as never);
+		const { requireApiAuth } = await import('$lib/server/guards');
+		vi.mocked(requireApiAuth).mockReturnValue(MEMBER as never);
 		mockGetTeamBySlugForAuth.mockResolvedValue(TEAM);
 		mockGetTeamMemberRole.mockResolvedValue('member');
 		const { POST } = await import('./+server');
@@ -146,8 +145,8 @@ describe('POST /api/v1/teams/[slug]/members', () => {
 	});
 
 	it('returns 400 for empty username', async () => {
-		const { requireBetaFeatures } = await import('$lib/server/guards');
-		vi.mocked(requireBetaFeatures).mockReturnValue(OWNER as never);
+		const { requireApiAuth } = await import('$lib/server/guards');
+		vi.mocked(requireApiAuth).mockReturnValue(OWNER as never);
 		mockGetTeamBySlugForAuth.mockResolvedValue(TEAM);
 		mockGetTeamMemberRole.mockResolvedValue(null);
 		const { POST } = await import('./+server');
@@ -156,8 +155,8 @@ describe('POST /api/v1/teams/[slug]/members', () => {
 	});
 
 	it('returns 404 when invited user not found', async () => {
-		const { requireBetaFeatures } = await import('$lib/server/guards');
-		vi.mocked(requireBetaFeatures).mockReturnValue(OWNER as never);
+		const { requireApiAuth } = await import('$lib/server/guards');
+		vi.mocked(requireApiAuth).mockReturnValue(OWNER as never);
 		mockGetTeamBySlugForAuth.mockResolvedValue(TEAM);
 		mockGetTeamMemberRole.mockResolvedValue(null);
 		mockCreateInviteByUsername.mockResolvedValue({
@@ -171,8 +170,8 @@ describe('POST /api/v1/teams/[slug]/members', () => {
 	});
 
 	it('returns 409 when user already a member', async () => {
-		const { requireBetaFeatures } = await import('$lib/server/guards');
-		vi.mocked(requireBetaFeatures).mockReturnValue(OWNER as never);
+		const { requireApiAuth } = await import('$lib/server/guards');
+		vi.mocked(requireApiAuth).mockReturnValue(OWNER as never);
 		mockGetTeamBySlugForAuth.mockResolvedValue(TEAM);
 		mockGetTeamMemberRole.mockResolvedValue(null);
 		mockCreateInviteByUsername.mockResolvedValue({
@@ -186,8 +185,8 @@ describe('POST /api/v1/teams/[slug]/members', () => {
 	});
 
 	it('returns 429 when rate limit exceeded', async () => {
-		const { requireBetaFeatures } = await import('$lib/server/guards');
-		vi.mocked(requireBetaFeatures).mockReturnValue(OWNER as never);
+		const { requireApiAuth } = await import('$lib/server/guards');
+		vi.mocked(requireApiAuth).mockReturnValue(OWNER as never);
 		mockGetTeamBySlugForAuth.mockResolvedValue(TEAM);
 		mockGetTeamMemberRole.mockResolvedValue(null);
 		mockCreateInviteByUsername.mockResolvedValue({
@@ -201,8 +200,8 @@ describe('POST /api/v1/teams/[slug]/members', () => {
 	});
 
 	it('returns 201 with token when invite created successfully', async () => {
-		const { requireBetaFeatures } = await import('$lib/server/guards');
-		vi.mocked(requireBetaFeatures).mockReturnValue(OWNER as never);
+		const { requireApiAuth } = await import('$lib/server/guards');
+		vi.mocked(requireApiAuth).mockReturnValue(OWNER as never);
 		mockGetTeamBySlugForAuth.mockResolvedValue(TEAM);
 		mockGetTeamMemberRole.mockResolvedValue(null);
 		mockCreateInviteByUsername.mockResolvedValue({
@@ -217,8 +216,8 @@ describe('POST /api/v1/teams/[slug]/members', () => {
 	});
 
 	it('owner can invite without needing admin role result', async () => {
-		const { requireBetaFeatures } = await import('$lib/server/guards');
-		vi.mocked(requireBetaFeatures).mockReturnValue(OWNER as never);
+		const { requireApiAuth } = await import('$lib/server/guards');
+		vi.mocked(requireApiAuth).mockReturnValue(OWNER as never);
 		mockGetTeamBySlugForAuth.mockResolvedValue(TEAM);
 		mockGetTeamMemberRole.mockResolvedValue(null);
 		mockCreateInviteByUsername.mockResolvedValue({

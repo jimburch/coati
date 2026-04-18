@@ -52,6 +52,13 @@ export const manifestSchema = z.object({
 	readme: z.string().optional(),
 	agents: z.array(z.string()).optional(),
 	tags: z.array(z.string()).optional(),
+	visibility: z.enum(['public', 'private']).optional(),
+	org: z
+		.string()
+		.min(1)
+		.max(100)
+		.regex(SLUG_NAME_REGEX, 'Must be a valid team slug (lowercase letters, digits, hyphens)')
+		.optional(),
 	/** Clone-tracking fields — written by `coati clone`, ignored during publish. */
 	source: z.string().optional(),
 	clonedAt: z.string().optional(),

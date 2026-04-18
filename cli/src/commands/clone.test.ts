@@ -112,12 +112,14 @@ describe('clone — argument parsing', () => {
 		expect(ctx.api.get).toHaveBeenCalledWith('/setups/alice/my-setup/files');
 	});
 
-	it('accepts a valid HTTP URL and extracts owner/slug', async () => {
+	it('rejects HTTP URLs (non-HTTPS)', async () => {
+		const spy = exitSpy();
 		const program = makeProgram();
-		await program.parseAsync(['clone', 'http://coati.sh/alice/my-setup'], { from: 'user' });
-
-		expect(ctx.api.get).toHaveBeenCalledWith('/setups/alice/my-setup');
-		expect(ctx.api.get).toHaveBeenCalledWith('/setups/alice/my-setup/files');
+		await expect(
+			program.parseAsync(['clone', 'http://coati.sh/alice/my-setup'], { from: 'user' })
+		).rejects.toThrow('process.exit');
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('Non-HTTPS'));
+		expect(spy).toHaveBeenCalledWith(1);
 	});
 
 	it('accepts a URL with a trailing slash', async () => {
@@ -697,6 +699,108 @@ describe('clone — --json output', () => {
 
 		expect(ctx.io.json).toHaveBeenCalledWith(
 			expect.objectContaining({ postInstall: expect.objectContaining({ ran: false }) })
+		);
+	});
+});
+
+// ── team clone routing ────────────────────────────────────────────────────────
+
+const TEAM_SETUP_META = {
+	id: 'team-setup-1',
+	name: 'shared-setup',
+	slug: 'shared-setup',
+	description: 'A team setup',
+	ownerUsername: 'alice',
+	clonesCount: 2,
+	starsCount: 3,
+	postInstall: null
+};
+
+describe('clone — team routing (three-part)', () => {
+	it('routes three-part org/team/setup to team endpoints', async () => {
+		vi.mocked(ctx.api.get).mockImplementation((url: string) => {
+			if (url.endsWith('/files')) return Promise.resolve(SETUP_FILES);
+			return Promise.resolve(TEAM_SETUP_META);
+		});
+
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'org/acme/shared-setup'], { from: 'user' });
+
+		expect(ctx.api.get).toHaveBeenCalledWith('/teams/acme/setups/shared-setup');
+		expect(ctx.api.get).toHaveBeenCalledWith('/teams/acme/setups/shared-setup/files');
+		expect(ctx.api.post).toHaveBeenCalledWith('/teams/acme/setups/shared-setup/clone', {});
+	});
+
+	it('routes https://coati.sh/org/team/setup URL to team endpoints', async () => {
+		vi.mocked(ctx.api.get).mockImplementation((url: string) => {
+			if (url.endsWith('/files')) return Promise.resolve(SETUP_FILES);
+			return Promise.resolve(TEAM_SETUP_META);
+		});
+
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'https://coati.sh/org/acme/shared-setup'], { from: 'user' });
+
+		expect(ctx.api.get).toHaveBeenCalledWith('/teams/acme/setups/shared-setup');
+		expect(ctx.api.get).toHaveBeenCalledWith('/teams/acme/setups/shared-setup/files');
+		expect(ctx.api.post).toHaveBeenCalledWith('/teams/acme/setups/shared-setup/clone', {});
+	});
+
+	it('two-part input still routes to personal endpoints', async () => {
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' });
+
+		expect(ctx.api.get).toHaveBeenCalledWith('/setups/alice/my-setup');
+		expect(ctx.api.get).toHaveBeenCalledWith('/setups/alice/my-setup/files');
+		expect(ctx.api.post).toHaveBeenCalledWith('/setups/alice/my-setup/clone', {});
+	});
+
+	it('writes coati.json with teamSlug/setupSlug as source for team clones', async () => {
+		vi.mocked(ctx.api.get).mockImplementation((url: string) => {
+			if (url.endsWith('/files')) return Promise.resolve(SETUP_FILES);
+			return Promise.resolve(TEAM_SETUP_META);
+		});
+
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'org/acme/shared-setup'], { from: 'user' });
+
+		expect(ctx.fs.writeJson).toHaveBeenCalledWith(
+			expect.stringContaining('coati.json'),
+			expect.objectContaining({
+				source: 'acme/shared-setup',
+				sourceId: 'team-setup-1',
+				clonedAt: expect.any(String),
+				revision: expect.any(String)
+			})
+		);
+	});
+
+	it('team clone stub contains only source, sourceId, clonedAt, revision', async () => {
+		vi.mocked(ctx.api.get).mockImplementation((url: string) => {
+			if (url.endsWith('/files')) return Promise.resolve(SETUP_FILES);
+			return Promise.resolve(TEAM_SETUP_META);
+		});
+
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'org/acme/shared-setup'], { from: 'user' });
+
+		const [, stubData] = vi.mocked(ctx.fs.writeJson).mock.calls[0]!;
+		const keys = Object.keys(stubData as object).sort();
+		expect(keys).toEqual(['clonedAt', 'revision', 'source', 'sourceId']);
+	});
+
+	it('uses teamSlug/setupSlug for --global path in team clone', async () => {
+		vi.mocked(ctx.api.get).mockImplementation((url: string) => {
+			if (url.endsWith('/files')) return Promise.resolve(SETUP_FILES);
+			return Promise.resolve(TEAM_SETUP_META);
+		});
+
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'org/acme/shared-setup', '--global'], { from: 'user' });
+
+		const expectedPath = path.join(os.homedir(), '.coati', 'setups', 'acme', 'shared-setup');
+		expect(ctx.fs.writeSetupFiles).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({ projectDir: expectedPath })
 		);
 	});
 });
