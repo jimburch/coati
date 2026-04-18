@@ -42,19 +42,27 @@ test('happy path: quick actions section is visible', async ({ page }) => {
 	await expect(page.getByTestId('quick-actions')).toBeVisible();
 });
 
-test('happy path: stats grid shown when user has setups', async ({ page }) => {
+test('happy path: stats grid always shown for authenticated users', async ({ page }) => {
 	await page.goto(HOME);
 	if (isAuthRedirect(page.url())) {
 		test.skip();
 		return;
 	}
-	const statsGrid = page.getByTestId('stats-grid');
-	const zeroState = page.getByTestId('zero-state-card');
-	// Exactly one of stats-grid or zero-state-card must be present
-	const statsVisible = await statsGrid.isVisible();
-	const zeroVisible = await zeroState.isVisible();
-	expect(statsVisible || zeroVisible).toBe(true);
-	expect(statsVisible && zeroVisible).toBe(false);
+	await expect(page.getByTestId('stats-grid')).toBeVisible();
+});
+
+test('happy path: stats grid shown alongside setups when user has setups', async ({ page }) => {
+	await page.goto(HOME);
+	if (isAuthRedirect(page.url())) {
+		test.skip();
+		return;
+	}
+	if ((await page.getByTestId('your-setups-list').count()) === 0) {
+		test.skip();
+		return;
+	}
+	await expect(page.getByTestId('stats-grid')).toBeVisible();
+	await expect(page.getByTestId('your-setups-list')).toBeVisible();
 });
 
 test('happy path: your setups list shown when user has setups', async ({ page }) => {
@@ -105,20 +113,18 @@ test('happy path: activity panel shown when user has recent activity', async ({ 
 
 // ─── Zero-state user ──────────────────────────────────────────────────────────
 
-test('zero-state: ZeroStateCard shown and StatsGrid absent when no setups', async ({ page }) => {
+test('zero-state: StatsGrid still shown when no setups', async ({ page }) => {
 	await page.goto(HOME);
 	if (isAuthRedirect(page.url())) {
 		test.skip();
 		return;
 	}
-	const zeroState = page.getByTestId('zero-state-card');
-	if (!(await zeroState.isVisible())) {
+	if ((await page.getByTestId('your-setups-list').count()) > 0) {
 		// Not a zero-state user — skip
 		test.skip();
 		return;
 	}
-	await expect(zeroState).toBeVisible();
-	await expect(page.getByTestId('stats-grid')).not.toBeVisible();
+	await expect(page.getByTestId('stats-grid')).toBeVisible();
 });
 
 test('zero-state: YourSetupsList absent when no setups', async ({ page }) => {
@@ -127,8 +133,7 @@ test('zero-state: YourSetupsList absent when no setups', async ({ page }) => {
 		test.skip();
 		return;
 	}
-	const zeroState = page.getByTestId('zero-state-card');
-	if (!(await zeroState.isVisible())) {
+	if ((await page.getByTestId('your-setups-list').count()) > 0) {
 		test.skip();
 		return;
 	}
@@ -141,8 +146,7 @@ test('zero-state: AgentChips absent when user has no setups', async ({ page }) =
 		test.skip();
 		return;
 	}
-	const zeroState = page.getByTestId('zero-state-card');
-	if (!(await zeroState.isVisible())) {
+	if ((await page.getByTestId('your-setups-list').count()) > 0) {
 		test.skip();
 		return;
 	}
@@ -155,8 +159,7 @@ test('zero-state: YourActivityPanel absent when user has no activity', async ({ 
 		test.skip();
 		return;
 	}
-	const zeroState = page.getByTestId('zero-state-card');
-	if (!(await zeroState.isVisible())) {
+	if ((await page.getByTestId('your-setups-list').count()) > 0) {
 		test.skip();
 		return;
 	}
@@ -170,8 +173,7 @@ test('zero-state: Following tab shows empty state', async ({ page }) => {
 		test.skip();
 		return;
 	}
-	const zeroState = page.getByTestId('zero-state-card');
-	if (!(await zeroState.isVisible())) {
+	if ((await page.getByTestId('your-setups-list').count()) > 0) {
 		test.skip();
 		return;
 	}
@@ -186,8 +188,7 @@ test('zero-state: For You tab still renders content', async ({ page }) => {
 		test.skip();
 		return;
 	}
-	const zeroState = page.getByTestId('zero-state-card');
-	if (!(await zeroState.isVisible())) {
+	if ((await page.getByTestId('your-setups-list').count()) > 0) {
 		test.skip();
 		return;
 	}

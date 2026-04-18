@@ -5,7 +5,6 @@
 	import ProfileCard from '$lib/components/ProfileCard.svelte';
 	import StatsGrid from '$lib/components/StatsGrid.svelte';
 	import YourSetupsList from '$lib/components/YourSetupsList.svelte';
-	import ZeroStateCard from '$lib/components/ZeroStateCard.svelte';
 	import QuickActions from '$lib/components/QuickActions.svelte';
 	import DiscoveryTabs from '$lib/components/DiscoveryTabs.svelte';
 	import YourActivityPanel from '$lib/components/YourActivityPanel.svelte';
@@ -49,13 +48,11 @@
 					/>
 				</div>
 
-				<div class="order-2">
-					{#if data.userSetups.length === 0}
-						<div data-testid="zero-state-card"><ZeroStateCard /></div>
-					{:else if data.userStats}
-						<div data-testid="stats-grid"><StatsGrid stats={data.userStats} /></div>
-					{/if}
-				</div>
+				{#if data.userStats}
+					<div class="order-2" data-testid="stats-grid">
+						<StatsGrid stats={data.userStats} />
+					</div>
+				{/if}
 
 				{#if data.userSetups.length > 0}
 					<div class="order-4" data-testid="your-setups-list">
