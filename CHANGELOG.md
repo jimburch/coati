@@ -1,3 +1,22 @@
+# [1.9.0](https://github.com/jimburch/coati/compare/v1.8.0...v1.9.0) (2026-04-18)
+
+
+### Bug Fixes
+
+* **cli:** fix teams and privacy prompts ([3d0bb9e](https://github.com/jimburch/coati/commit/3d0bb9e7e3f1dfaf80fd356df6ed735535d6c872))
+* **db:** check for no agents in setups to avoid 500 ([0d56c41](https://github.com/jimburch/coati/commit/0d56c41186f1a98eb0ed7e365e6fbd78860bf4ff))
+* **teams:** invite and settings in team page ([c85dc92](https://github.com/jimburch/coati/commit/c85dc920f353bbc425ad832bf56d0d698f4147d2))
+* **ui:** hides setups module if user has none ([429af11](https://github.com/jimburch/coati/commit/429af11ce7456479be0944dfa40c08d22b215989))
+* **ui:** tweaks to home dashboard ([d0a37f6](https://github.com/jimburch/coati/commit/d0a37f6b83a681e3cf93edb7e0c6083dbb45d325))
+
+
+### Features
+
+* **cli:** CLI team and private setup publishing ([#343](https://github.com/jimburch/coati/issues/343)) ([e40cf8d](https://github.com/jimburch/coati/commit/e40cf8d56f63521cfa7694e29580e682c1410236))
+* **support:** added buy me a coffee and support page ([578af98](https://github.com/jimburch/coati/commit/578af98163301872525697231cf7137e44316360))
+* **teams/privacy:** teams and private setups are open...for the people! ([667afbd](https://github.com/jimburch/coati/commit/667afbd28bc2519b4fb7f52b2e21730f8f0e31e4))
+* **ui:** new context-rich homepage ([#338](https://github.com/jimburch/coati/issues/338)) ([66b9694](https://github.com/jimburch/coati/commit/66b9694dc6f4a41fdcf744d0ad219cace8363d62))
+
 # Unreleased (2026-04-17)
 
 
