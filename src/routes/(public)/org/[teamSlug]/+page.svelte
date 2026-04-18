@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { Avatar, AvatarImage, AvatarFallback } from '$lib/components/ui/avatar';
+	import { Button } from '$lib/components/ui/button';
 	import SetupCard from '$lib/components/SetupCard.svelte';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
 
 	const team = $derived(data.team);
+	const isAdmin = $derived(data.isAdmin);
+	const isMember = $derived(data.isMember);
 </script>
 
 <svelte:head>
@@ -25,17 +28,38 @@
 			</AvatarFallback>
 		</Avatar>
 
-		<div class="min-w-0">
+		<div class="min-w-0 flex-1">
 			<h1 class="text-xl font-bold text-foreground lg:text-3xl">{team.name}</h1>
 			<p class="mt-0.5 text-sm text-muted-foreground font-mono">@{team.slug}</p>
 			{#if team.description}
 				<p class="mt-2 text-sm text-muted-foreground lg:text-base">{team.description}</p>
 			{/if}
-			<p class="mt-2 text-xs text-muted-foreground">
-				{team.membersCount}
-				{team.membersCount === 1 ? 'member' : 'members'}
-			</p>
+			{#if isMember}
+				<a
+					href="/org/{team.slug}/members"
+					class="mt-2 inline-block text-xs text-muted-foreground hover:text-foreground"
+				>
+					{team.membersCount}
+					{team.membersCount === 1 ? 'member' : 'members'}
+				</a>
+			{:else}
+				<p class="mt-2 text-xs text-muted-foreground">
+					{team.membersCount}
+					{team.membersCount === 1 ? 'member' : 'members'}
+				</p>
+			{/if}
 		</div>
+
+		{#if isAdmin}
+			<div class="flex flex-shrink-0 flex-wrap items-center justify-end gap-2">
+				<a href="/org/{team.slug}/members">
+					<Button variant="outline" size="sm">Invite</Button>
+				</a>
+				<a href="/org/{team.slug}/settings">
+					<Button variant="outline" size="sm">Settings</Button>
+				</a>
+			</div>
+		{/if}
 	</div>
 
 	<!-- Setups grid -->

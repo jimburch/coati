@@ -1,3 +1,11 @@
+# Unreleased (2026-04-17)
+
+
+### Features
+
+* **teams:** Teams are now generally available — every signed-in user can create teams, send invites, and manage members.
+* **setups:** Private Setups (and private-setup sharing) are now generally available — every signed-in user can flip a setup to private and share it with collaborators by username.
+
 # [1.8.0](https://github.com/jimburch/coati/compare/v1.7.0...v1.8.0) (2026-04-17)
 
 

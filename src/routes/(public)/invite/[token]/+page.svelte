@@ -116,12 +116,6 @@
 					<a href="/auth/login/github?redirect=/invite/{token}">
 						<Button class="w-full" size="sm">Sign in with GitHub to join</Button>
 					</a>
-				{:else if !user.hasBetaFeatures}
-					<div
-						class="rounded-md border border-muted bg-muted/30 px-4 py-3 text-center text-sm text-muted-foreground"
-					>
-						This feature isn't available for your account yet.
-					</div>
 				{:else}
 					<Button class="w-full" size="sm" onclick={handleJoin} disabled={joining}>
 						{joining ? 'Joining…' : 'Join team'}

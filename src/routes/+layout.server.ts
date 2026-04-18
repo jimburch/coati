@@ -6,7 +6,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		return { user: null };
 	}
 
-	const pendingInvites = locals.user.hasBetaFeatures ? await getPendingInvites(locals.user.id) : [];
+	const pendingInvites = await getPendingInvites(locals.user.id);
 
 	return {
 		user: {
