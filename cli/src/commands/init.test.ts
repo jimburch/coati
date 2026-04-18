@@ -75,7 +75,8 @@ const DEFAULT_METADATA = {
 	description: 'A test setup',
 	category: 'general',
 	agents: [] as string[],
-	tags: ['test']
+	tags: ['test'],
+	visibility: 'public' as const
 };
 
 const CWD = '/fake/cwd';
@@ -592,5 +593,41 @@ describe('runInitFlow — display field', () => {
 		const written = mockWriteManifest.mock.calls[0]![1];
 		expect(written.display).toBe('my-setup');
 		expect(written.name).toBe('my-setup');
+	});
+});
+
+// ── visibility field written by init ──────────────────────────────────────────
+
+describe('runInitFlow — visibility field', () => {
+	it('writes public visibility when user picks public (default)', async () => {
+		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({
+			...DEFAULT_METADATA,
+			visibility: 'public'
+		});
+
+		await runInitFlow(ctx, CWD);
+
+		const written = mockWriteManifest.mock.calls[0]![1];
+		expect(written.visibility).toBe('public');
+	});
+
+	it('writes private visibility when user picks private', async () => {
+		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({
+			...DEFAULT_METADATA,
+			visibility: 'private'
+		});
+
+		await runInitFlow(ctx, CWD);
+
+		const written = mockWriteManifest.mock.calls[0]![1];
+		expect(written.visibility).toBe('private');
+	});
+
+	it('defaults to public visibility', async () => {
+		// DEFAULT_METADATA has visibility: 'public' — assert the default is written
+		await runInitFlow(ctx, CWD);
+
+		const written = mockWriteManifest.mock.calls[0]![1];
+		expect(written.visibility).toBe('public');
 	});
 });

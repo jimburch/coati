@@ -280,6 +280,7 @@ export interface SetupMetadata {
 	category: string;
 	agents: string[];
 	tags: string[];
+	visibility: 'public' | 'private';
 }
 
 /** Interactively collect setup metadata from the user.
@@ -326,7 +327,12 @@ export async function promptMetadata(
 		.map((t) => t.trim())
 		.filter(Boolean);
 
-	return { name, description, category, agents, tags };
+	const visibility = await select<'public' | 'private'>('Visibility', [
+		{ label: 'Public', value: 'public' },
+		{ label: 'Private', value: 'private' }
+	]);
+
+	return { name, description, category, agents, tags, visibility };
 }
 
 /** Show a numbered file list and ask for confirmation. */

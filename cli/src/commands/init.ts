@@ -146,6 +146,7 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 		...(category !== undefined && { category }),
 		...(allAgents.length > 0 && { agents: allAgents }),
 		...(metadata.tags.length > 0 && { tags: metadata.tags }),
+		visibility: metadata.visibility,
 		files: filesToInclude.map((f) => ({
 			path: f.path,
 			componentType: f.componentType,

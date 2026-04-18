@@ -52,6 +52,7 @@ export const manifestSchema = z.object({
 	readme: z.string().optional(),
 	agents: z.array(z.string()).optional(),
 	tags: z.array(z.string()).optional(),
+	visibility: z.enum(['public', 'private']).optional(),
 	/** Clone-tracking fields — written by `coati clone`, ignored during publish. */
 	source: z.string().optional(),
 	clonedAt: z.string().optional(),

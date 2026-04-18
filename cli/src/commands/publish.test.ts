@@ -813,3 +813,52 @@ describe('error handling', () => {
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 });
+
+// ── visibility in publish payload ─────────────────────────────────────────────
+
+describe('visibility in publish payload', () => {
+	it('includes visibility: private in POST payload when manifest has private visibility', async () => {
+		mockReadManifest.mockReturnValue({ ...MOCK_MANIFEST, visibility: 'private' });
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		const postCall = vi.mocked(ctx.api.post).mock.calls[0][1] as Record<string, unknown>;
+		expect(postCall).toHaveProperty('visibility', 'private');
+	});
+
+	it('includes visibility: public in POST payload when manifest has public visibility', async () => {
+		mockReadManifest.mockReturnValue({ ...MOCK_MANIFEST, visibility: 'public' });
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		const postCall = vi.mocked(ctx.api.post).mock.calls[0][1] as Record<string, unknown>;
+		expect(postCall).toHaveProperty('visibility', 'public');
+	});
+
+	it('omits visibility from POST payload when manifest has no visibility field', async () => {
+		mockReadManifest.mockReturnValue(MOCK_MANIFEST);
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		const postCall = vi.mocked(ctx.api.post).mock.calls[0][1] as Record<string, unknown>;
+		expect(postCall).not.toHaveProperty('visibility');
+	});
+
+	it('includes visibility: private in PATCH payload when updating with private visibility', async () => {
+		mockReadManifest.mockReturnValue({ ...MOCK_MANIFEST_WITH_ID, visibility: 'private' });
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		const patchCall = vi.mocked(ctx.api.patch).mock.calls[0][1] as Record<string, unknown>;
+		expect(patchCall).toHaveProperty('visibility', 'private');
+	});
+
+	it('omits visibility from PATCH payload when manifest has no visibility field', async () => {
+		mockReadManifest.mockReturnValue(MOCK_MANIFEST_WITH_ID);
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		const patchCall = vi.mocked(ctx.api.patch).mock.calls[0][1] as Record<string, unknown>;
+		expect(patchCall).not.toHaveProperty('visibility');
+	});
+});

@@ -212,6 +212,7 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 				...(manifest.category ? { category: manifest.category } : {}),
 				...(manifest.license ? { license: manifest.license } : {}),
 				...(manifest.minToolVersion ? { minToolVersion: manifest.minToolVersion } : {}),
+				...(manifest.visibility ? { visibility: manifest.visibility } : {}),
 				files: filesPayload
 			};
 
