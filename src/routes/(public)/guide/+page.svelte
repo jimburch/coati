@@ -3,7 +3,7 @@
 	import CodeBlock from '$lib/components/CodeBlock.svelte';
 	import OgMeta from '$lib/components/OgMeta.svelte';
 
-	const sections = [
+	const sections: { id: string; title: string; beta?: boolean }[] = [
 		{ id: 'what-is-coati', title: 'What is Coati?' },
 		{ id: 'supported-agents', title: 'Supported Agents' },
 		{ id: 'discover-setups', title: 'Discover Setups' },
@@ -11,8 +11,8 @@
 		{ id: 'clone-a-setup', title: 'Clone a Setup' },
 		{ id: 'create-your-own-setup', title: 'Create Your Own Setup' },
 		{ id: 'publish-to-coati', title: 'Publish to Coati' },
-		{ id: 'private-setups', title: 'Private Setups', beta: true },
-		{ id: 'teams', title: 'Teams', beta: true },
+		{ id: 'private-setups', title: 'Private Setups' },
+		{ id: 'teams', title: 'Teams' },
 		{ id: 'social-features', title: 'Social Features' }
 	];
 
@@ -370,20 +370,8 @@
 			<section id="private-setups" class="scroll-mt-20">
 				<div class="mb-4 flex flex-wrap items-center gap-3">
 					<h2 class="text-2xl font-bold tracking-tight">Private Setups</h2>
-					<span
-						class="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-primary"
-					>
-						Beta
-					</span>
 				</div>
 				<div class="space-y-4 text-muted-foreground">
-					<p class="rounded-md border border-border bg-muted/50 p-4 text-sm">
-						<strong class="text-foreground">Beta access required.</strong> Private setups are in
-						closed beta. You'll need beta access on your account before you can create them or use
-						<code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
-							>--private</code
-						> on publish. Want in? Request access from the feedback widget.
-					</p>
 					<p>
 						Not every setup is meant for the world. A <strong class="text-foreground"
 							>private setup</strong
@@ -408,13 +396,14 @@
 					</ul>
 					<h3 class="mt-6 text-lg font-semibold text-foreground">Publish a setup as private</h3>
 					<p>
-						Pass the <code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
-							>--private</code
-						> flag when you publish:
+						When you run <code
+							class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
+							>coati publish</code
+						>, the CLI prompts you to choose whether the setup should be public or private. Setups
+						published to a team are private by default.
 					</p>
 				</div>
 				<div class="mt-4 space-y-4">
-					<CodeBlock code="coati publish --private" language="bash" label="Publish as private" />
 					<p class="text-muted-foreground">
 						You can flip visibility later from the setup's settings page on the web. Switching from
 						public to private hides it immediately. Switching back makes it discoverable again.
@@ -437,18 +426,8 @@
 			<section id="teams" class="scroll-mt-20">
 				<div class="mb-4 flex flex-wrap items-center gap-3">
 					<h2 class="text-2xl font-bold tracking-tight">Teams</h2>
-					<span
-						class="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-primary"
-					>
-						Beta
-					</span>
 				</div>
 				<div class="space-y-4 text-muted-foreground">
-					<p class="rounded-md border border-border bg-muted/50 p-4 text-sm">
-						<strong class="text-foreground">Beta access required.</strong> Teams are in closed beta. You'll
-						need beta access on your account before you can create a team or accept an invite. Request
-						access from the feedback widget.
-					</p>
 					<p>
 						A <strong class="text-foreground">team</strong> is a shared home for setups. Create one for
 						your company, your open-source project, or any group that wants a common set of configs. Every
