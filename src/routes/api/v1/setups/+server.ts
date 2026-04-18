@@ -41,8 +41,11 @@ export const POST: RequestHandler = async (event) => {
 		}
 	}
 
+	// Server refinement: team setups are always private regardless of payload
+	const createData = parsed.teamId ? { ...parsed, visibility: 'private' as const } : parsed;
+
 	try {
-		const setup = await setupRepo.create(user.id, parsed);
+		const setup = await setupRepo.create(user.id, createData);
 		return success(setup, 201);
 	} catch (err: unknown) {
 		if (isUniqueViolation(err)) {

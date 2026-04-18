@@ -22,6 +22,8 @@ export type ManifestCategory =
 	| 'systems'
 	| 'general';
 
+export type ManifestVisibility = 'public' | 'private';
+
 export interface ManifestFileEntry {
 	path: string;
 	componentType?: ManifestComponentType;
@@ -49,6 +51,9 @@ export interface Manifest {
 	minToolVersion?: string;
 	postInstall?: string[];
 	prerequisites?: string[];
+	visibility?: ManifestVisibility;
+	/** Team slug — written by `coati init` / `coati publish` when publishing to a team. */
+	org?: string;
 	readme?: string;
 	files: ManifestFileEntry[];
 	/** Clone-tracking fields — written by `coati clone`, ignored during publish. */

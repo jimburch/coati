@@ -5,6 +5,7 @@ import { AGENTS_BY_SLUG } from '@coati/agents-registry';
 import { ApiError } from '../context.js';
 import { detectInstalledAgents } from '../agent-detection.js';
 import { MANIFEST_FILENAME } from '../manifest.js';
+import { parseCloneIdentifier } from '../parse-clone-identifier.js';
 import type { CommandContext } from '../context.js';
 
 interface SetupMeta {
@@ -57,7 +58,7 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 	program
 		.command('clone')
 		.description('Clone and install a setup to your local machine')
-		.argument('<owner/slug>', 'Setup identifier (e.g. alice/my-setup)')
+		.argument('<identifier>', 'Setup identifier (e.g. alice/my-setup or org/team/setup)')
 		.option('--dry-run', 'Preview what would be written without writing anything')
 		.option('--force', 'Overwrite all conflicts without prompting')
 		.option('--pick', 'Interactively select which files to install')
@@ -71,54 +72,44 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 		.option('--project-dir <path>', 'Project directory for project-scoped files (default: cwd)')
 		.option('--agent <slug>', 'Override agent detection and install files for this agent only')
 		.option('--json', 'Output results as JSON')
-		.action(async (ownerSlug: string, opts: CloneOptions) => {
+		.action(async (identifier: string, opts: CloneOptions) => {
 			if (opts.json) {
 				ctx.io.setOutputMode('json');
 			}
 
-			// Parse <owner>/<slug> or full URL
-			let owner: string;
-			let slug: string;
-
-			if (ownerSlug.startsWith('http://') || ownerSlug.startsWith('https://')) {
-				let url: URL;
-				try {
-					url = new URL(ownerSlug);
-				} catch {
-					ctx.io.error('Invalid URL. Expected format: https://coati.sh/owner/slug or owner/slug');
-					process.exit(1);
-				}
-				const segments = url.pathname.split('/').filter(Boolean);
-				if (segments.length !== 2) {
-					if (segments.length > 2) {
-						ctx.io.error(
-							'Invalid URL: extra path segments detected. Expected format: https://coati.sh/owner/slug'
-						);
-					} else {
-						ctx.io.error('Invalid URL. Expected format: https://coati.sh/owner/slug or owner/slug');
-					}
-					process.exit(1);
-				}
-				owner = segments[0]!;
-				slug = segments[1]!;
-			} else {
-				const slashIdx = ownerSlug.indexOf('/');
-				if (slashIdx <= 0 || slashIdx === ownerSlug.length - 1) {
-					ctx.io.error('Invalid format. Expected: <owner>/<slug> (e.g. alice/my-setup)');
-					process.exit(1);
-				}
-				owner = ownerSlug.slice(0, slashIdx);
-				slug = ownerSlug.slice(slashIdx + 1);
+			// Parse identifier via pure parser
+			let parsed: ReturnType<typeof parseCloneIdentifier>;
+			try {
+				parsed = parseCloneIdentifier(identifier);
+			} catch (err) {
+				ctx.io.error(err instanceof Error ? err.message : 'Invalid identifier format');
+				process.exit(1);
 			}
+
+			// Derive API paths and display values from parsed identifier
+			const isTeam = parsed.kind === 'team';
+			const label = isTeam
+				? `org/${parsed.teamSlug}/${parsed.setupSlug}`
+				: `${parsed.owner}/${parsed.slug}`;
+			const metaPath = isTeam
+				? `/teams/${parsed.teamSlug}/setups/${parsed.setupSlug}`
+				: `/setups/${parsed.owner}/${parsed.slug}`;
+			const filesPath = `${metaPath}/files`;
+			const clonePath = `${metaPath}/clone`;
+
+			// For global path: use [namespaceDir, nameDir] components
+			const [namespaceDir, nameDir] = isTeam
+				? [parsed.teamSlug, parsed.setupSlug]
+				: [parsed.owner, parsed.slug];
 
 			// Fetch setup metadata
 			let setup: SetupMeta;
 			try {
-				setup = await ctx.api.get<SetupMeta>(`/setups/${owner}/${slug}`);
+				setup = await ctx.api.get<SetupMeta>(metaPath);
 			} catch (err) {
 				if (err instanceof ApiError && err.status === 404) {
 					ctx.io.error(
-						`Setup "${owner}/${slug}" not found.\nCheck the owner/slug spelling, or browse setups at https://coati.sh/explore`
+						`Setup "${label}" not found.\nCheck the spelling, or browse setups at https://coati.sh/explore`
 					);
 				} else if (err instanceof Error && isNetworkError(err)) {
 					ctx.io.error('Could not reach the Coati API. Check your internet connection.');
@@ -133,7 +124,7 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 			// Fetch setup files
 			let files: SetupFileRecord[];
 			try {
-				files = await ctx.api.get<SetupFileRecord[]>(`/setups/${owner}/${slug}/files`);
+				files = await ctx.api.get<SetupFileRecord[]>(filesPath);
 			} catch (err) {
 				if (err instanceof Error) {
 					ctx.io.error(`Failed to fetch setup files: ${err.message}`);
@@ -147,7 +138,9 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 				ctx.io.warning('This setup has no files to install.');
 				if (ctx.io.isJson()) {
 					ctx.io.json({
-						setup: { owner, slug, name: setup.name },
+						setup: isTeam
+							? { teamSlug: parsed.teamSlug, setupSlug: parsed.setupSlug, name: setup.name }
+							: { owner: parsed.owner, slug: parsed.slug, name: setup.name },
 						files: [],
 						written: 0,
 						skipped: 0,
@@ -218,14 +211,14 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 				// --dir takes precedence over everything
 				projectDir = path.resolve(opts.dir);
 			} else if (opts.global) {
-				projectDir = path.join(os.homedir(), '.coati', 'setups', owner, slug);
+				projectDir = path.join(os.homedir(), '.coati', 'setups', namespaceDir, nameDir);
 			} else if (opts.project) {
 				projectDir = opts.projectDir ? path.resolve(opts.projectDir) : process.cwd();
 			} else if (!ctx.io.isJson()) {
 				// Prompt user to choose placement
 				const destination = await ctx.io.promptDestination();
 				if (destination === 'global') {
-					projectDir = path.join(os.homedir(), '.coati', 'setups', owner, slug);
+					projectDir = path.join(os.homedir(), '.coati', 'setups', namespaceDir, nameDir);
 				} else {
 					projectDir = opts.projectDir ? path.resolve(opts.projectDir) : process.cwd();
 				}
@@ -234,13 +227,17 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 				projectDir = opts.projectDir ? path.resolve(opts.projectDir) : process.cwd();
 			}
 
+			const reviewUrl = isTeam
+				? `https://coati.sh/org/${parsed.teamSlug}/${parsed.setupSlug}`
+				: `https://coati.sh/${setup.ownerUsername}/${setup.slug}`;
+
 			if (!ctx.io.isJson()) {
-				ctx.io.info(`Review setup contents before installing: https://coati.sh/${owner}/${slug}`);
+				ctx.io.info(`Review setup contents before installing: ${reviewUrl}`);
 				ctx.io.info('Coati setups are community-contributed and not verified.');
 			}
 
 			if (!ctx.io.isJson()) {
-				ctx.io.print(`\nCloning ${owner}/${slug} → ${projectDir}\n`);
+				ctx.io.print(`\nCloning ${label} → ${projectDir}\n`);
 				if (opts.dryRun) {
 					ctx.io.info('Dry run — no files will be written.\n');
 				}
@@ -272,14 +269,17 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 			// Record clone event — best-effort, never fail the whole operation
 			if (!opts.dryRun) {
 				try {
-					await ctx.api.post(`/setups/${owner}/${slug}/clone`, {});
+					await ctx.api.post(clonePath, {});
 				} catch {
 					// Silently ignore — clone tracking is non-critical
 				}
 
 				// Write clone-tracking coati.json to the destination directory
+				const source = isTeam
+					? `${parsed.teamSlug}/${setup.slug}`
+					: `${setup.ownerUsername}/${setup.slug}`;
 				ctx.fs.writeJson(path.join(projectDir, MANIFEST_FILENAME), {
-					source: `${setup.ownerUsername}/${setup.slug}`,
+					source,
 					sourceId: setup.id,
 					clonedAt: new Date().toISOString(),
 					revision: setup.version ?? setup.id
@@ -325,7 +325,9 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 			// Output summary
 			if (ctx.io.isJson()) {
 				ctx.io.json({
-					setup: { owner, slug, name: setup.name },
+					setup: isTeam
+						? { teamSlug: parsed.teamSlug, setupSlug: parsed.setupSlug, name: setup.name }
+						: { owner: parsed.owner, slug: parsed.slug, name: setup.name },
 					projectDir,
 					dryRun: opts.dryRun ?? false,
 					written: writeResult.written,
@@ -341,7 +343,7 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 					ctx.io.success(`Dry run complete: ${writeResult.files.length} file(s) would be written.`);
 				} else {
 					if (writeResult.written > 0 || writeResult.backedUp > 0) {
-						ctx.io.success(`Cloned ${owner}/${slug} successfully.`);
+						ctx.io.success(`Cloned ${label} successfully.`);
 					} else if (writeResult.skipped === writeResult.files.length) {
 						ctx.io.warning('All files were skipped — nothing was written.');
 					}

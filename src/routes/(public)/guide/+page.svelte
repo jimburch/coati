@@ -397,7 +397,8 @@
 					<h3 class="mt-6 text-lg font-semibold text-foreground">Publish a setup as private</h3>
 					<p>
 						When you run <code
-							class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground">coati publish</code
+							class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
+							>coati publish</code
 						>, the CLI prompts you to choose whether the setup should be public or private. Setups
 						published to a team are private by default.
 					</p>

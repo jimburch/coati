@@ -115,6 +115,7 @@ export const createSetupWithFilesSchema = createSetupSchema
 		minToolVersion: z.string().max(20).optional(),
 		postInstall: postInstallSchema.optional(),
 		prerequisites: z.array(z.string()).optional(),
+		visibility: z.enum(['public', 'private']).optional(),
 		files: z.array(createSetupFileSchema).optional(),
 		agentIds: z.array(z.string().uuid()).optional(),
 		tagIds: z.array(z.string().uuid()).optional(),

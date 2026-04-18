@@ -158,7 +158,11 @@ export async function createSetup(userId: string, data: CreateSetupInput) {
 				minToolVersion: data.minToolVersion,
 				postInstall: data.postInstall,
 				prerequisites: data.prerequisites,
-				...(data.teamId && { teamId: data.teamId, visibility: 'private' }),
+				...(data.teamId
+					? { teamId: data.teamId, visibility: 'private' as const }
+					: data.visibility
+						? { visibility: data.visibility }
+						: {}),
 				updatedAt: new Date()
 			})
 			.returning();

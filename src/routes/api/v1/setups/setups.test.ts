@@ -259,3 +259,98 @@ describe('POST /api/v1/setups', () => {
 		expect(res.status).toBe(201);
 	});
 });
+
+// ── server refinement: forced-private when teamId is present ──────────────────
+
+describe('POST /api/v1/setups — forced-private when teamId is present', () => {
+	const TEAM_ID = '00000000-0000-4000-8000-000000000001';
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockGetTeamByIdForAuth.mockResolvedValue({
+			id: TEAM_ID,
+			name: 'My Team',
+			slug: 'my-team',
+			ownerId: 'owner-id'
+		});
+		mockGetTeamMemberRole.mockResolvedValue('member');
+		mockCreateSetup.mockResolvedValue({
+			...MOCK_CREATED_SETUP,
+			teamId: TEAM_ID,
+			visibility: 'private'
+		});
+	});
+
+	it('stores as private when payload has teamId + visibility: public', async () => {
+		const { POST } = await import('./+server');
+		const res = await POST(
+			makePostEvent({
+				name: 'My Setup',
+				slug: 'my-setup',
+				description: 'desc',
+				teamId: TEAM_ID,
+				visibility: 'public'
+			})
+		);
+		expect(res.status).toBe(201);
+		expect(mockCreateSetup).toHaveBeenCalledWith(
+			'user-id',
+			expect.objectContaining({ teamId: TEAM_ID, visibility: 'private' })
+		);
+	});
+
+	it('stores as private when payload has teamId but no visibility field', async () => {
+		const { POST } = await import('./+server');
+		const res = await POST(
+			makePostEvent({
+				name: 'My Setup',
+				slug: 'my-setup',
+				description: 'desc',
+				teamId: TEAM_ID
+			})
+		);
+		expect(res.status).toBe(201);
+		expect(mockCreateSetup).toHaveBeenCalledWith(
+			'user-id',
+			expect.objectContaining({ teamId: TEAM_ID, visibility: 'private' })
+		);
+	});
+
+	it('respects declared visibility when no teamId is present', async () => {
+		mockCreateSetup.mockResolvedValue({ ...MOCK_CREATED_SETUP, visibility: 'public' });
+		const { POST } = await import('./+server');
+		const res = await POST(
+			makePostEvent({
+				name: 'My Setup',
+				slug: 'my-setup',
+				description: 'desc',
+				visibility: 'public'
+			})
+		);
+		expect(res.status).toBe(201);
+		expect(mockCreateSetup).toHaveBeenCalledWith(
+			'user-id',
+			expect.objectContaining({ visibility: 'public' })
+		);
+		const payload = mockCreateSetup.mock.calls[0][1] as Record<string, unknown>;
+		expect(payload).not.toHaveProperty('teamId');
+	});
+
+	it('stores as private when teamId + visibility: private (no override needed)', async () => {
+		const { POST } = await import('./+server');
+		const res = await POST(
+			makePostEvent({
+				name: 'My Setup',
+				slug: 'my-setup',
+				description: 'desc',
+				teamId: TEAM_ID,
+				visibility: 'private'
+			})
+		);
+		expect(res.status).toBe(201);
+		expect(mockCreateSetup).toHaveBeenCalledWith(
+			'user-id',
+			expect.objectContaining({ teamId: TEAM_ID, visibility: 'private' })
+		);
+	});
+});

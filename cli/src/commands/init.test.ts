@@ -23,6 +23,13 @@ vi.mock('../format.js', () => ({
 	formatFileList: (...args: unknown[]) => mockFormatFileList(...args)
 }));
 
+const mockRunLoginFlow = vi.fn();
+
+vi.mock('./login.js', () => ({
+	runLoginFlow: (...args: unknown[]) => mockRunLoginFlow(...args),
+	registerLogin: vi.fn()
+}));
+
 // Import after mocks are registered
 const { runInitFlow, computeDetectedAgents, toSlug } = await import('./init.js');
 
@@ -75,8 +82,14 @@ const DEFAULT_METADATA = {
 	description: 'A test setup',
 	category: 'general',
 	agents: [] as string[],
-	tags: ['test']
+	tags: ['test'],
+	visibility: 'public' as const
 };
+
+const MOCK_TEAMS = [
+	{ id: 'team-uuid-1', name: 'Acme Corp', slug: 'acme' },
+	{ id: 'team-uuid-2', name: 'Beta Inc', slug: 'beta-inc' }
+];
 
 const CWD = '/fake/cwd';
 
@@ -86,6 +99,7 @@ beforeEach(() => {
 	ctx = createTestContext();
 	vi.clearAllMocks();
 
+	vi.mocked(ctx.auth.isLoggedIn).mockReturnValue(true);
 	vi.mocked(ctx.fs.existsSync).mockReturnValue(false);
 	mockDetectFiles.mockReturnValue(DETECTED_FILES);
 	vi.mocked(ctx.io.confirm).mockResolvedValue(true);
@@ -94,10 +108,167 @@ beforeEach(() => {
 	mockFormatFileList.mockReturnValue('(formatted file list)');
 	vi.mocked(ctx.io.promptMetadata).mockResolvedValue(DEFAULT_METADATA);
 	mockWriteManifest.mockReturnValue(undefined);
+	// Default: no teams
+	vi.mocked(ctx.api.get).mockResolvedValue({ teams: [], hasBetaFeatures: false });
+	mockRunLoginFlow.mockResolvedValue('alice');
 });
 
 afterEach(() => {
 	vi.restoreAllMocks();
+});
+
+// ── authentication required ───────────────────────────────────────────────────
+
+describe('runInitFlow — authentication required', () => {
+	beforeEach(() => {
+		vi.mocked(ctx.auth.isLoggedIn).mockReturnValue(false);
+	});
+
+	it('errors and exits in JSON mode when not logged in', async () => {
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
+		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+			throw new Error('process.exit');
+		});
+
+		await expect(runInitFlow(ctx, CWD)).rejects.toThrow('process.exit');
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('coati login'));
+		expect(exitSpy).toHaveBeenCalledWith(1);
+	});
+
+	it('offers login flow when not logged in in text mode', async () => {
+		vi.mocked(ctx.io.isJson).mockReturnValue(false);
+		vi.mocked(ctx.io.confirm).mockResolvedValue(true);
+		mockRunLoginFlow.mockResolvedValue('alice');
+		// After login, treat as logged in
+		vi.mocked(ctx.auth.isLoggedIn).mockReturnValue(false);
+
+		await runInitFlow(ctx, CWD);
+
+		expect(ctx.io.warning).toHaveBeenCalledWith(expect.stringContaining('not logged in'));
+		expect(ctx.io.confirm).toHaveBeenCalledWith(expect.stringContaining('log in'), true);
+		expect(mockRunLoginFlow).toHaveBeenCalledWith(ctx);
+	});
+
+	it('returns false and does not write manifest when user declines login', async () => {
+		vi.mocked(ctx.io.confirm).mockResolvedValue(false);
+
+		const result = await runInitFlow(ctx, CWD);
+
+		expect(result).toBe(false);
+		expect(mockRunLoginFlow).not.toHaveBeenCalled();
+		expect(mockWriteManifest).not.toHaveBeenCalled();
+	});
+
+	it('proceeds after successful login', async () => {
+		vi.mocked(ctx.io.confirm)
+			.mockResolvedValueOnce(true) // accept login
+			.mockResolvedValue(true); // any other confirms
+		mockRunLoginFlow.mockResolvedValue('alice');
+
+		const result = await runInitFlow(ctx, CWD);
+
+		expect(mockRunLoginFlow).toHaveBeenCalled();
+		expect(result).toBe(true);
+		expect(mockWriteManifest).toHaveBeenCalled();
+	});
+});
+
+// ── org prompt (teams) ────────────────────────────────────────────────────────
+
+describe('runInitFlow — org prompt when user has teams', () => {
+	beforeEach(() => {
+		vi.mocked(ctx.api.get).mockResolvedValue({ teams: MOCK_TEAMS, hasBetaFeatures: true });
+	});
+
+	it('shows org prompt with My profile and team options', async () => {
+		vi.mocked(ctx.io.select).mockResolvedValue('__personal__');
+
+		await runInitFlow(ctx, CWD);
+
+		expect(ctx.io.select).toHaveBeenCalledWith(
+			expect.stringContaining('Where does this setup live'),
+			expect.arrayContaining([
+				expect.objectContaining({ value: '__personal__', label: 'My profile' }),
+				expect.objectContaining({ value: 'acme', label: 'Acme Corp' }),
+				expect.objectContaining({ value: 'beta-inc', label: 'Beta Inc' })
+			])
+		);
+	});
+
+	it('writes org + private visibility when team is picked', async () => {
+		vi.mocked(ctx.io.select).mockResolvedValue('acme');
+
+		await runInitFlow(ctx, CWD);
+
+		const written = mockWriteManifest.mock.calls[0]![1];
+		expect(written.org).toBe('acme');
+		expect(written.visibility).toBe('private');
+	});
+
+	it('passes skipVisibilityPrompt=true to promptMetadata when team picked', async () => {
+		vi.mocked(ctx.io.select).mockResolvedValue('acme');
+
+		await runInitFlow(ctx, CWD);
+
+		expect(ctx.io.promptMetadata).toHaveBeenCalledWith(
+			expect.any(Array),
+			expect.any(Array),
+			expect.any(Array),
+			expect.objectContaining({ skipVisibilityPrompt: true })
+		);
+	});
+
+	it('falls through to visibility prompt when My profile is picked', async () => {
+		vi.mocked(ctx.io.select).mockResolvedValue('__personal__');
+		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({
+			...DEFAULT_METADATA,
+			visibility: 'public'
+		});
+
+		await runInitFlow(ctx, CWD);
+
+		const written = mockWriteManifest.mock.calls[0]![1];
+		expect(written.org).toBeUndefined();
+		expect(written.visibility).toBe('public');
+	});
+
+	it('passes skipVisibilityPrompt=false to promptMetadata when My profile picked', async () => {
+		vi.mocked(ctx.io.select).mockResolvedValue('__personal__');
+
+		await runInitFlow(ctx, CWD);
+
+		expect(ctx.io.promptMetadata).toHaveBeenCalledWith(
+			expect.any(Array),
+			expect.any(Array),
+			expect.any(Array),
+			expect.objectContaining({ skipVisibilityPrompt: false })
+		);
+	});
+});
+
+describe('runInitFlow — org prompt skipped with zero teams', () => {
+	beforeEach(() => {
+		vi.mocked(ctx.api.get).mockResolvedValue({ teams: [], hasBetaFeatures: false });
+	});
+
+	it('does not show org prompt when user has no teams', async () => {
+		await runInitFlow(ctx, CWD);
+
+		expect(ctx.io.select).not.toHaveBeenCalled();
+	});
+
+	it('writes visibility from metadata (no org) when user has no teams', async () => {
+		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({
+			...DEFAULT_METADATA,
+			visibility: 'public'
+		});
+
+		await runInitFlow(ctx, CWD);
+
+		const written = mockWriteManifest.mock.calls[0]![1];
+		expect(written.org).toBeUndefined();
+		expect(written.visibility).toBe('public');
+	});
 });
 
 // ── normal flow ───────────────────────────────────────────────────────────────
@@ -354,7 +525,8 @@ describe('runInitFlow — agents array auto-populated', () => {
 		expect(ctx.io.promptMetadata).toHaveBeenCalledWith(
 			['claude-code'],
 			expect.any(Array),
-			expect.any(Array)
+			expect.any(Array),
+			expect.any(Object)
 		);
 	});
 
@@ -592,5 +764,41 @@ describe('runInitFlow — display field', () => {
 		const written = mockWriteManifest.mock.calls[0]![1];
 		expect(written.display).toBe('my-setup');
 		expect(written.name).toBe('my-setup');
+	});
+});
+
+// ── visibility field written by init ──────────────────────────────────────────
+
+describe('runInitFlow — visibility field', () => {
+	it('writes public visibility when user picks public (default)', async () => {
+		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({
+			...DEFAULT_METADATA,
+			visibility: 'public'
+		});
+
+		await runInitFlow(ctx, CWD);
+
+		const written = mockWriteManifest.mock.calls[0]![1];
+		expect(written.visibility).toBe('public');
+	});
+
+	it('writes private visibility when user picks private', async () => {
+		vi.mocked(ctx.io.promptMetadata).mockResolvedValue({
+			...DEFAULT_METADATA,
+			visibility: 'private'
+		});
+
+		await runInitFlow(ctx, CWD);
+
+		const written = mockWriteManifest.mock.calls[0]![1];
+		expect(written.visibility).toBe('private');
+	});
+
+	it('defaults to public visibility', async () => {
+		// DEFAULT_METADATA has visibility: 'public' — assert the default is written
+		await runInitFlow(ctx, CWD);
+
+		const written = mockWriteManifest.mock.calls[0]![1];
+		expect(written.visibility).toBe('public');
 	});
 });
