@@ -67,8 +67,6 @@ export const actions: Actions = {
 		if (!event.locals.user) throw redirect(302, '/auth/login/github');
 		const user = event.locals.user;
 
-		if (!user.hasBetaFeatures) return fail(403, { error: 'Beta features required' });
-
 		const team = await getTeamBySlugForAuth(event.params.teamSlug);
 		if (!team) return fail(404, { error: 'Team not found' });
 

@@ -78,36 +78,19 @@
 				</label>
 
 				<label
-					class="flex cursor-pointer items-start gap-3 rounded-md border border-border p-3 hover:bg-accent/50 has-[:checked]:border-primary has-[:checked]:bg-accent/30 {!data
-						.user.hasBetaFeatures
-						? 'cursor-not-allowed opacity-50'
-						: ''}"
+					class="flex cursor-pointer items-start gap-3 rounded-md border border-border p-3 hover:bg-accent/50 has-[:checked]:border-primary has-[:checked]:bg-accent/30"
 				>
 					<input
 						type="radio"
 						name="visibility"
 						value="private"
 						checked={currentVisibility === 'private'}
-						disabled={!data.user.hasBetaFeatures}
 						class="mt-0.5"
 					/>
 					<div>
-						<p class="font-medium">
-							Private
-							{#if !data.user.hasBetaFeatures}
-								<span
-									class="ml-2 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground"
-								>
-									Beta
-								</span>
-							{/if}
-						</p>
+						<p class="font-medium">Private</p>
 						<p class="text-sm text-muted-foreground">
-							{#if data.user.hasBetaFeatures}
-								Only you (and shared users) can view this setup.
-							{:else}
-								Private setups are a beta feature. Contact us to get access.
-							{/if}
+							Only you (and shared users) can view this setup.
 						</p>
 					</div>
 				</label>
@@ -120,7 +103,7 @@
 	</div>
 
 	<!-- Sharing section — only shown for private setups -->
-	{#if currentVisibility === 'private' && data.user.hasBetaFeatures}
+	{#if currentVisibility === 'private'}
 		<div class="mt-6 rounded-lg border border-border p-6">
 			<h2 class="mb-1 text-lg font-semibold">Sharing</h2>
 			<p class="mb-4 text-sm text-muted-foreground">

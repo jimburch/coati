@@ -27,8 +27,7 @@ vi.mock('$lib/server/responses', async (importOriginal) => {
 });
 
 vi.mock('$lib/server/guards', () => ({
-	requireApiAuth: () => ({ id: 'user-id', username: 'testuser', hasBetaFeatures: true }),
-	requireBetaFeatures: () => ({ id: 'user-id', username: 'testuser', hasBetaFeatures: true })
+	requireApiAuth: () => ({ id: 'user-id', username: 'testuser', hasBetaFeatures: true })
 }));
 
 const MOCK_SEARCH_RESULT = {

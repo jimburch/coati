@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { requireApiAuth, requireBetaFeatures } from '$lib/server/guards';
+import { requireApiAuth } from '$lib/server/guards';
 import { success, error } from '$lib/server/responses';
 import {
 	getTeamBySlugForAuth,
@@ -26,7 +26,7 @@ export const GET: RequestHandler = async (event) => {
 };
 
 export const POST: RequestHandler = async (event) => {
-	const authResult = requireBetaFeatures(event);
+	const authResult = requireApiAuth(event);
 	if (authResult instanceof Response) return authResult;
 	const user = authResult;
 

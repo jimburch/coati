@@ -46,15 +46,13 @@
 <div class="mx-auto max-w-3xl px-4 py-6 lg:py-10">
 	<div class="mb-6 flex items-center justify-between lg:mb-8">
 		<h1 class="text-xl font-bold text-foreground lg:text-2xl">My Teams</h1>
-		{#if data.hasBetaFeatures}
-			<Button onclick={() => (showCreateForm = !showCreateForm)} variant="default" size="sm">
-				{showCreateForm ? 'Cancel' : 'Create Team'}
-			</Button>
-		{/if}
+		<Button onclick={() => (showCreateForm = !showCreateForm)} variant="default" size="sm">
+			{showCreateForm ? 'Cancel' : 'Create Team'}
+		</Button>
 	</div>
 
 	<!-- Create team form -->
-	{#if showCreateForm && data.hasBetaFeatures}
+	{#if showCreateForm}
 		<div class="mb-6 rounded-lg border border-border bg-card p-4 lg:mb-8 lg:p-6">
 			<h2 class="mb-4 text-base font-semibold text-foreground">Create a new team</h2>
 			<form
@@ -175,11 +173,9 @@
 	{:else}
 		<div class="rounded-lg border border-dashed border-border py-12 text-center">
 			<p class="text-muted-foreground">You haven't joined any teams yet.</p>
-			{#if data.hasBetaFeatures}
-				<Button variant="outline" size="sm" class="mt-3" onclick={() => (showCreateForm = true)}>
-					Create your first team
-				</Button>
-			{/if}
+			<Button variant="outline" size="sm" class="mt-3" onclick={() => (showCreateForm = true)}>
+				Create your first team
+			</Button>
 		</div>
 	{/if}
 </div>

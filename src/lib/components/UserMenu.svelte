@@ -43,25 +43,23 @@
 		<a href="/settings">
 			<DropdownMenuItem>Settings</DropdownMenuItem>
 		</a>
-		{#if user.hasBetaFeatures}
-			<a href="/teams">
-				<DropdownMenuItem>My Teams</DropdownMenuItem>
-			</a>
-			<a href="/invites">
-				<DropdownMenuItem>
-					<span class="flex w-full items-center justify-between">
-						Pending Invites
-						{#if pendingInviteCount > 0}
-							<span
-								class="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground"
-							>
-								{pendingInviteCount}
-							</span>
-						{/if}
-					</span>
-				</DropdownMenuItem>
-			</a>
-		{/if}
+		<a href="/teams">
+			<DropdownMenuItem>My Teams</DropdownMenuItem>
+		</a>
+		<a href="/invites">
+			<DropdownMenuItem>
+				<span class="flex w-full items-center justify-between">
+					Pending Invites
+					{#if pendingInviteCount > 0}
+						<span
+							class="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground"
+						>
+							{pendingInviteCount}
+						</span>
+					{/if}
+				</span>
+			</DropdownMenuItem>
+		</a>
 		{#if user.isAdmin}
 			<a href="/admin/beta">
 				<DropdownMenuItem>Admin</DropdownMenuItem>
