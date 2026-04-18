@@ -12,6 +12,7 @@ import {
 	getUserSetups,
 	getUserSetupAgents
 } from '$lib/server/queries/users';
+import { getUserTeams } from '$lib/server/queries/teams';
 import { getActivityOnUserSetups, type SetupActivityEntry } from '$lib/server/queries/activities';
 
 type DashboardSetup = {
@@ -39,17 +40,27 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			? (rawTab as Tab)
 			: 'for-you';
 
-		const [featured, userStats, userSetups, userAgents, trending, yourActivity, forYou, following] =
-			await Promise.all([
-				getFeaturedSetups(3, viewerId),
-				getUserAggregateStats(viewerId),
-				getUserSetups(viewerId, 5),
-				getUserSetupAgents(viewerId),
-				getTrendingSetups(6, viewerId),
-				getActivityOnUserSetups(viewerId),
-				getForYouSetups(viewerId, 6),
-				getSetupsFromFollowedUsers(viewerId, 6)
-			]);
+		const [
+			featured,
+			userStats,
+			userSetups,
+			userAgents,
+			userTeams,
+			trending,
+			yourActivity,
+			forYou,
+			following
+		] = await Promise.all([
+			getFeaturedSetups(3, viewerId),
+			getUserAggregateStats(viewerId),
+			getUserSetups(viewerId, 5),
+			getUserSetupAgents(viewerId),
+			getUserTeams(viewerId),
+			getTrendingSetups(6, viewerId),
+			getActivityOnUserSetups(viewerId),
+			getForYouSetups(viewerId, 6),
+			getSetupsFromFollowedUsers(viewerId, 6)
+		]);
 
 		const featuredIds = featured.map((s) => s.id);
 		const dashboardAgentsMap = featuredIds.length > 0 ? await getAgentsForSetups(featuredIds) : {};
@@ -131,7 +142,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			activeTab,
 			userStats,
 			userSetups,
-			userAgents
+			userAgents,
+			userTeams: userTeams.map((t) => ({
+				id: t.id,
+				name: t.name,
+				slug: t.slug,
+				avatarUrl: t.avatarUrl
+			}))
 		};
 	}
 
@@ -172,6 +189,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			updatedAt: Date;
 		}[],
 		userAgents: [] as { id: string; slug: string; displayName: string }[],
+		userTeams: [] as { id: string; name: string; slug: string; avatarUrl: string | null }[],
 		yourActivity: [] as SetupActivityEntry[]
 	};
 };

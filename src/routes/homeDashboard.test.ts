@@ -10,6 +10,7 @@ const mockGetUserSetupAgents = vi.hoisted(() => vi.fn());
 const mockGetActivityOnUserSetups = vi.hoisted(() => vi.fn());
 const mockGetForYouSetups = vi.hoisted(() => vi.fn());
 const mockGetSetupsFromFollowedUsers = vi.hoisted(() => vi.fn());
+const mockGetUserTeams = vi.hoisted(() => vi.fn());
 
 vi.mock('$lib/server/queries/setups', () => ({
 	getFeaturedSetups: mockGetFeaturedSetups,
@@ -28,6 +29,10 @@ vi.mock('$lib/server/queries/users', () => ({
 
 vi.mock('$lib/server/queries/activities', () => ({
 	getActivityOnUserSetups: mockGetActivityOnUserSetups
+}));
+
+vi.mock('$lib/server/queries/teams', () => ({
+	getUserTeams: mockGetUserTeams
 }));
 
 const makeSetup = (id: string) => ({
@@ -63,6 +68,7 @@ describe('home dashboard server load', () => {
 		mockGetActivityOnUserSetups.mockResolvedValue([]);
 		mockGetForYouSetups.mockResolvedValue([]);
 		mockGetSetupsFromFollowedUsers.mockResolvedValue([]);
+		mockGetUserTeams.mockResolvedValue([]);
 	});
 
 	it('fetches featured setups with limit 3', async () => {

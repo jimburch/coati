@@ -5,6 +5,7 @@
 	import ProfileCard from '$lib/components/ProfileCard.svelte';
 	import StatsGrid from '$lib/components/StatsGrid.svelte';
 	import YourSetupsList from '$lib/components/YourSetupsList.svelte';
+	import YourTeamsList from '$lib/components/YourTeamsList.svelte';
 	import QuickActions from '$lib/components/QuickActions.svelte';
 	import DiscoveryTabs from '$lib/components/DiscoveryTabs.svelte';
 	import YourActivityPanel from '$lib/components/YourActivityPanel.svelte';
@@ -62,6 +63,10 @@
 
 				<div class="order-5" data-testid="quick-actions">
 					<QuickActions />
+				</div>
+
+				<div class="order-6" data-testid="your-teams-list">
+					<YourTeamsList teams={data.userTeams} />
 				</div>
 			</div>
 
