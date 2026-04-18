@@ -8,6 +8,12 @@ import type { CommandContext } from '../context.js';
 import { runInitFlow } from './init.js';
 import { runLoginFlow } from './login.js';
 import { confirm } from '../prompts.js';
+import {
+	buildPublishPayload,
+	OrgNotFoundError,
+	type TeamInfo,
+	type PublishFileContent
+} from '../publish-payload.js';
 
 interface PublishOptions {
 	json?: boolean;
@@ -102,6 +108,53 @@ interface SetupResponse {
 	ownerUsername: string;
 }
 
+/**
+ * Fetch the user's teams from the API.
+ * Returns an empty array on error.
+ */
+async function fetchTeams(ctx: CommandContext): Promise<TeamInfo[]> {
+	try {
+		const res = await ctx.api.get<{ teams: TeamInfo[]; hasBetaFeatures: boolean }>('/teams');
+		return res?.teams ?? [];
+	} catch {
+		return [];
+	}
+}
+
+/**
+ * Prompt for org and/or visibility when both are absent from the manifest.
+ * Persists chosen values back to coati.json and returns the updated manifest.
+ */
+async function promptAndPersistOrgVisibility(
+	ctx: CommandContext,
+	manifest: Manifest,
+	teams: TeamInfo[],
+	cwd: string
+): Promise<Manifest> {
+	if (teams.length > 0) {
+		const orgChoices: { label: string; value: string }[] = [
+			{ label: 'My profile', value: '__personal__' },
+			...teams.map((t) => ({ label: t.name, value: t.slug }))
+		];
+		const orgChoice = await ctx.io.select('Where does this setup live?', orgChoices);
+
+		if (orgChoice !== '__personal__') {
+			const updated = { ...manifest, org: orgChoice, visibility: 'private' as const };
+			writeManifest(cwd, updated);
+			return updated;
+		}
+	}
+
+	// Personal or no teams — ask visibility
+	const vis = await ctx.io.select<'public' | 'private'>('Visibility', [
+		{ label: 'Public', value: 'public' },
+		{ label: 'Private', value: 'private' }
+	]);
+	const updated = { ...manifest, visibility: vis };
+	writeManifest(cwd, updated);
+	return updated;
+}
+
 export function registerPublish(program: Command, ctx: CommandContext): void {
 	program
 		.command('publish')
@@ -158,13 +211,26 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 			}
 
 			// Read and validate coati.json
-			let manifest;
+			let manifest: Manifest;
 			try {
 				manifest = readManifest(cwd);
 			} catch (e) {
 				ctx.io.error(e instanceof Error ? e.message : 'Failed to read coati.json.');
 				process.exit(1);
 				return;
+			}
+
+			// Prompt for org/visibility when both are absent from manifest (same logic as init)
+			const needsPrompt = !manifest.org && !manifest.visibility;
+			const needsTeams = !!manifest.org || needsPrompt;
+
+			let teams: TeamInfo[] = [];
+			if (needsTeams) {
+				teams = await fetchTeams(ctx);
+			}
+
+			if (needsPrompt && !ctx.io.isJson()) {
+				manifest = await promptAndPersistOrgVisibility(ctx, manifest, teams, cwd);
 			}
 
 			// Validate agent references in manifest
@@ -176,13 +242,7 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 			manifest = validatedManifest;
 
 			// Read file contents from disk
-			const filesPayload: Array<{
-				path: string;
-				componentType: string;
-				description?: string;
-				agent?: string;
-				content: string;
-			}> = [];
+			const filesPayload: PublishFileContent[] = [];
 
 			for (const file of manifest.files) {
 				const filePath = path.join(cwd, file.path);
@@ -203,18 +263,18 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 				});
 			}
 
-			// Build payload (excludes id, version, placement, and clone-tracking fields)
-			const payload = {
-				name: manifest.name,
-				slug: manifest.name,
-				description: manifest.description,
-				...(manifest.display ? { display: manifest.display } : {}),
-				...(manifest.category ? { category: manifest.category } : {}),
-				...(manifest.license ? { license: manifest.license } : {}),
-				...(manifest.minToolVersion ? { minToolVersion: manifest.minToolVersion } : {}),
-				...(manifest.visibility ? { visibility: manifest.visibility } : {}),
-				files: filesPayload
-			};
+			// Build payload using pure buildPublishPayload function
+			let payload: ReturnType<typeof buildPublishPayload>;
+			try {
+				payload = buildPublishPayload(manifest, teams, filesPayload);
+			} catch (e) {
+				if (e instanceof OrgNotFoundError) {
+					ctx.io.error(e.message);
+					process.exit(1);
+					return;
+				}
+				throw e;
+			}
 
 			const isUpdate = !!manifest.id;
 

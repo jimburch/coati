@@ -79,6 +79,11 @@ const MOCK_SETUP_RESPONSE = {
 	ownerUsername: 'alice'
 };
 
+const MOCK_TEAMS = [
+	{ id: 'team-uuid-1', name: 'Acme Corp', slug: 'acme' },
+	{ id: 'team-uuid-2', name: 'Beta Inc', slug: 'beta-inc' }
+];
+
 let ctx: ReturnType<typeof createTestContext>;
 
 function makeProgram() {
@@ -107,6 +112,8 @@ beforeEach(() => {
 	mockReadFileSync.mockReturnValue('file content here');
 	vi.mocked(ctx.api.post).mockResolvedValue(MOCK_SETUP_RESPONSE);
 	vi.mocked(ctx.api.patch).mockResolvedValue(MOCK_SETUP_RESPONSE);
+	// Default: no teams (empty)
+	vi.mocked(ctx.api.get).mockResolvedValue({ teams: [], hasBetaFeatures: false });
 	mockRunInitFlow.mockResolvedValue(true);
 	vi.mocked(ctx.io.confirm).mockResolvedValue(true);
 });
@@ -860,5 +867,187 @@ describe('visibility in publish payload', () => {
 
 		const patchCall = vi.mocked(ctx.api.patch).mock.calls[0][1] as Record<string, unknown>;
 		expect(patchCall).not.toHaveProperty('visibility');
+	});
+});
+
+// ── publish prompts when org/visibility absent from manifest ──────────────────
+
+describe('publish — prompts for missing org/visibility', () => {
+	it('fetches teams when both org and visibility absent', async () => {
+		mockReadManifest.mockReturnValue(MOCK_MANIFEST);
+		vi.mocked(ctx.api.get).mockResolvedValue({ teams: [], hasBetaFeatures: false });
+		vi.mocked(ctx.io.select).mockResolvedValue('public');
+
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		expect(ctx.api.get).toHaveBeenCalledWith('/teams');
+	});
+
+	it('does not fetch teams when visibility already set in manifest', async () => {
+		mockReadManifest.mockReturnValue({ ...MOCK_MANIFEST, visibility: 'public' });
+
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		expect(ctx.api.get).not.toHaveBeenCalled();
+	});
+
+	it('skips org prompt and asks visibility directly when user has no teams', async () => {
+		mockReadManifest.mockReturnValue(MOCK_MANIFEST);
+		vi.mocked(ctx.api.get).mockResolvedValue({ teams: [], hasBetaFeatures: false });
+		vi.mocked(ctx.io.select).mockResolvedValue('public');
+
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		expect(ctx.io.select).toHaveBeenCalledWith(
+			expect.stringContaining('Visibility'),
+			expect.any(Array)
+		);
+	});
+
+	it('shows org prompt when user has teams', async () => {
+		mockReadManifest.mockReturnValue(MOCK_MANIFEST);
+		vi.mocked(ctx.api.get).mockResolvedValue({ teams: MOCK_TEAMS, hasBetaFeatures: true });
+		vi.mocked(ctx.io.select).mockResolvedValue('__personal__');
+		// Second select for visibility
+		vi.mocked(ctx.io.select).mockResolvedValueOnce('__personal__').mockResolvedValue('public');
+
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		expect(ctx.io.select).toHaveBeenCalledWith(
+			expect.stringContaining('Where does this setup live'),
+			expect.arrayContaining([expect.objectContaining({ value: '__personal__' })])
+		);
+	});
+
+	it('persists visibility choice to coati.json when both fields absent', async () => {
+		mockReadManifest.mockReturnValue(MOCK_MANIFEST);
+		vi.mocked(ctx.api.get).mockResolvedValue({ teams: [], hasBetaFeatures: false });
+		vi.mocked(ctx.io.select).mockResolvedValue('private');
+
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		// writeManifest called once for visibility persist, once for id write-back
+		expect(mockWriteManifest).toHaveBeenCalledWith(
+			expect.any(String),
+			expect.objectContaining({ visibility: 'private' })
+		);
+	});
+
+	it('persists org + private visibility when team is picked during publish prompt', async () => {
+		mockReadManifest.mockReturnValue(MOCK_MANIFEST);
+		vi.mocked(ctx.api.get).mockResolvedValue({ teams: MOCK_TEAMS, hasBetaFeatures: true });
+		vi.mocked(ctx.io.select).mockResolvedValue('acme');
+
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		expect(mockWriteManifest).toHaveBeenCalledWith(
+			expect.any(String),
+			expect.objectContaining({ org: 'acme', visibility: 'private' })
+		);
+	});
+
+	it('does not prompt in JSON mode when fields absent', async () => {
+		mockReadManifest.mockReturnValue(MOCK_MANIFEST);
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
+
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish', '--json']);
+
+		expect(ctx.io.select).not.toHaveBeenCalled();
+	});
+});
+
+// ── team publishing — buildPublishPayload integration ────────────────────────
+
+describe('publish — team publishing', () => {
+	it('includes teamId in POST payload when manifest has org matching a team', async () => {
+		mockReadManifest.mockReturnValue({
+			...MOCK_MANIFEST,
+			org: 'acme',
+			visibility: 'private'
+		});
+		vi.mocked(ctx.api.get).mockResolvedValue({ teams: MOCK_TEAMS, hasBetaFeatures: true });
+
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		const postCall = vi.mocked(ctx.api.post).mock.calls[0][1] as Record<string, unknown>;
+		expect(postCall).toHaveProperty('teamId', 'team-uuid-1');
+		expect(postCall).toHaveProperty('visibility', 'private');
+	});
+
+	it('forces visibility to private in payload when org is set (even if manifest says public)', async () => {
+		mockReadManifest.mockReturnValue({
+			...MOCK_MANIFEST,
+			org: 'acme',
+			visibility: 'public'
+		});
+		vi.mocked(ctx.api.get).mockResolvedValue({ teams: MOCK_TEAMS, hasBetaFeatures: true });
+
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		const postCall = vi.mocked(ctx.api.post).mock.calls[0][1] as Record<string, unknown>;
+		expect(postCall).toHaveProperty('teamId', 'team-uuid-1');
+		expect(postCall).toHaveProperty('visibility', 'private');
+	});
+
+	it('errors and exits when manifest org does not match any team', async () => {
+		mockReadManifest.mockReturnValue({
+			...MOCK_MANIFEST,
+			org: 'unknown-org',
+			visibility: 'private'
+		});
+		vi.mocked(ctx.api.get).mockResolvedValue({ teams: MOCK_TEAMS, hasBetaFeatures: true });
+
+		const program = makeProgram();
+		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+			throw new Error('process.exit');
+		});
+
+		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
+		expect(ctx.io.error).toHaveBeenCalledWith(
+			expect.stringContaining('You are not a member of team')
+		);
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('unknown-org'));
+		expect(exitSpy).toHaveBeenCalledWith(1);
+	});
+
+	it('fetches teams when manifest has org set (even if visibility also set)', async () => {
+		mockReadManifest.mockReturnValue({
+			...MOCK_MANIFEST,
+			org: 'acme',
+			visibility: 'private'
+		});
+		vi.mocked(ctx.api.get).mockResolvedValue({ teams: MOCK_TEAMS, hasBetaFeatures: true });
+
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		expect(ctx.api.get).toHaveBeenCalledWith('/teams');
+	});
+
+	it('PATCH continues to use /setups/:id for id-bearing manifests with org', async () => {
+		mockReadManifest.mockReturnValue({
+			...MOCK_MANIFEST_WITH_ID,
+			org: 'acme',
+			visibility: 'private'
+		});
+		vi.mocked(ctx.api.get).mockResolvedValue({ teams: MOCK_TEAMS, hasBetaFeatures: true });
+
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		expect(ctx.api.patch).toHaveBeenCalledWith(
+			'/setups/setup-uuid-123',
+			expect.objectContaining({ teamId: 'team-uuid-1', visibility: 'private' })
+		);
+		expect(ctx.api.post).not.toHaveBeenCalled();
 	});
 });

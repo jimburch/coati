@@ -10,6 +10,8 @@ import {
 } from '../manifest.js';
 import { formatFileList } from '../format.js';
 import type { CommandContext } from '../context.js';
+import { runLoginFlow } from './login.js';
+import type { TeamInfo } from '../publish-payload.js';
 
 const VALID_CATEGORIES: ManifestCategory[] = [
 	'web-dev',
@@ -44,12 +46,41 @@ export function computeDetectedAgents(
 }
 
 /**
+ * Fetch the user's teams from the API.
+ * Returns an empty array on error so the flow can continue without a team prompt.
+ */
+async function fetchTeams(ctx: CommandContext): Promise<TeamInfo[]> {
+	try {
+		const res = await ctx.api.get<{ teams: TeamInfo[]; hasBetaFeatures: boolean }>('/teams');
+		return res?.teams ?? [];
+	} catch {
+		return [];
+	}
+}
+
+/**
  * Run the init flow in the given directory.
  * Returns true if coati.json was successfully written, false if the user cancelled.
  * Throws on unrecoverable errors (e.g. invalid slug).
  */
 export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boolean> {
 	const manifestPath = path.join(cwd, MANIFEST_FILENAME);
+
+	// Require authentication — offer login flow if not logged in
+	if (!ctx.auth.isLoggedIn()) {
+		if (ctx.io.isJson()) {
+			ctx.io.error('Not logged in. Run `coati login` to authenticate.');
+			process.exit(1);
+			return false;
+		}
+		ctx.io.warning('You are not logged in.');
+		const shouldLogin = await ctx.io.confirm('Would you like to log in now?', true);
+		if (!shouldLogin) {
+			ctx.io.print('Run `coati login` when you are ready to authenticate.');
+			return false;
+		}
+		await runLoginFlow(ctx);
+	}
 
 	// Edge case: coati.json already exists
 	if (ctx.fs.existsSync(manifestPath)) {
@@ -103,6 +134,23 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 		// In JSON mode: filesToInclude remains as detected (all files)
 	}
 
+	// Fetch teams once and determine org/visibility from user choice
+	const teams = await fetchTeams(ctx);
+	let pickedOrg: string | undefined;
+	let skipVisibilityPrompt = false;
+
+	if (teams.length > 0 && !ctx.io.isJson()) {
+		const orgChoices: { label: string; value: string }[] = [
+			{ label: 'My profile', value: '__personal__' },
+			...teams.map((t) => ({ label: t.name, value: t.slug }))
+		];
+		const orgChoice = await ctx.io.select('Where does this setup live?', orgChoices);
+		if (orgChoice !== '__personal__') {
+			pickedOrg = orgChoice;
+			skipVisibilityPrompt = true;
+		}
+	}
+
 	// Build choice lists for interactive prompts
 	const agentChoices = AGENTS.map((a) => ({ label: a.displayName, value: a.slug }));
 	const categoryChoices: { label: string; value: string }[] = [
@@ -116,7 +164,9 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 
 	// Prompt for setup metadata (agents pre-filled from detection)
 	ctx.io.print('\nSetup metadata:\n');
-	const metadata = await ctx.io.promptMetadata(autoDetectedAgents, agentChoices, categoryChoices);
+	const metadata = await ctx.io.promptMetadata(autoDetectedAgents, agentChoices, categoryChoices, {
+		skipVisibilityPrompt
+	});
 
 	// Derive and validate the slug from the name
 	const display = metadata.name.trim();
@@ -146,7 +196,9 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 		...(category !== undefined && { category }),
 		...(allAgents.length > 0 && { agents: allAgents }),
 		...(metadata.tags.length > 0 && { tags: metadata.tags }),
-		visibility: metadata.visibility,
+		...(pickedOrg
+			? { org: pickedOrg, visibility: 'private' }
+			: { visibility: metadata.visibility }),
 		files: filesToInclude.map((f) => ({
 			path: f.path,
 			componentType: f.componentType,

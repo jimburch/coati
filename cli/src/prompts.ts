@@ -285,11 +285,14 @@ export interface SetupMetadata {
 
 /** Interactively collect setup metadata from the user.
  *  `prefilledAgents` pre-checks agents in the checklist from auto-detection.
- *  `agentChoices` and `categoryChoices` let init.ts supply the option lists. */
+ *  `agentChoices` and `categoryChoices` let init.ts supply the option lists.
+ *  Pass `opts.skipVisibilityPrompt` to omit the visibility question (e.g. when
+ *  a team was picked, which forces private visibility). */
 export async function promptMetadata(
 	prefilledAgents: string[] = [],
 	agentChoices: { label: string; value: string }[] = [],
-	categoryChoices: { label: string; value: string }[] = []
+	categoryChoices: { label: string; value: string }[] = [],
+	opts: { skipVisibilityPrompt?: boolean } = {}
 ): Promise<SetupMetadata> {
 	const name = await input('Setup name');
 	const description = await input('Description');
@@ -327,10 +330,13 @@ export async function promptMetadata(
 		.map((t) => t.trim())
 		.filter(Boolean);
 
-	const visibility = await select<'public' | 'private'>('Visibility', [
-		{ label: 'Public', value: 'public' },
-		{ label: 'Private', value: 'private' }
-	]);
+	let visibility: 'public' | 'private' = 'public';
+	if (!opts.skipVisibilityPrompt) {
+		visibility = await select<'public' | 'private'>('Visibility', [
+			{ label: 'Public', value: 'public' },
+			{ label: 'Private', value: 'private' }
+		]);
+	}
 
 	return { name, description, category, agents, tags, visibility };
 }
