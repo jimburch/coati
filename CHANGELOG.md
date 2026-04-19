@@ -1,3 +1,15 @@
+# [1.10.0](https://github.com/jimburch/coati/compare/v1.9.0...v1.10.0) (2026-04-19)
+
+
+### Bug Fixes
+
+* **ci:** drop [skip ci] from cli bump commits so PR checks run ([8c8506f](https://github.com/jimburch/coati/commit/8c8506f6314cf80584dd26a3f50f99b56b3e0144))
+
+
+### Features
+
+* **cli:** skip identical files during clone instead of prompting ([7e505a0](https://github.com/jimburch/coati/commit/7e505a07dbb3b362450779414b54e51a0932146b))
+
 # [1.9.0](https://github.com/jimburch/coati/compare/v1.8.0...v1.9.0) (2026-04-18)
 
 
