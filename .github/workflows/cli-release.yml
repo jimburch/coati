@@ -122,7 +122,7 @@ jobs:
           # correct cli/package.json. Pushing the tag does not require a PR.
           git checkout -b "$BRANCH"
           git add cli/package.json
-          git commit -m "chore(cli): bump version to ${VERSION} [skip ci]"
+          git commit -m "chore(cli): bump version to ${VERSION}"
           git tag "cli-v${VERSION}"
           git push origin "$BRANCH"
           git push origin "cli-v${VERSION}"
