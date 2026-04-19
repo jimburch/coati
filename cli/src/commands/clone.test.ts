@@ -45,9 +45,43 @@ const WRITE_RESULT = {
 	written: 2,
 	skipped: 0,
 	backedUp: 0,
+	unchanged: 0,
 	files: [
 		{ target: path.join(process.cwd(), 'CLAUDE.md'), outcome: 'written' as const },
 		{ target: path.join(os.homedir(), '.claude/settings.json'), outcome: 'written' as const }
+	]
+};
+
+const ALL_UNCHANGED_RESULT = {
+	written: 0,
+	skipped: 0,
+	backedUp: 0,
+	unchanged: 2,
+	files: [
+		{ target: path.join(process.cwd(), 'CLAUDE.md'), outcome: 'unchanged' as const },
+		{ target: path.join(os.homedir(), '.claude/settings.json'), outcome: 'unchanged' as const }
+	]
+};
+
+const MIXED_RESULT = {
+	written: 1,
+	skipped: 0,
+	backedUp: 0,
+	unchanged: 1,
+	files: [
+		{ target: path.join(process.cwd(), 'CLAUDE.md'), outcome: 'unchanged' as const },
+		{ target: path.join(os.homedir(), '.claude/settings.json'), outcome: 'written' as const }
+	]
+};
+
+const ALL_SKIPPED_RESULT = {
+	written: 0,
+	skipped: 2,
+	backedUp: 0,
+	unchanged: 0,
+	files: [
+		{ target: path.join(process.cwd(), 'CLAUDE.md'), outcome: 'skipped' as const },
+		{ target: path.join(os.homedir(), '.claude/settings.json'), outcome: 'skipped' as const }
 	]
 };
 
@@ -802,5 +836,99 @@ describe('clone — team routing (three-part)', () => {
 			expect.anything(),
 			expect.objectContaining({ projectDir: expectedPath })
 		);
+	});
+});
+
+// ── identity-skip: all-unchanged success message ──────────────────────────────
+
+describe('clone — all files unchanged', () => {
+	it('prints an "already up to date" success message and no "all files skipped" warning', async () => {
+		vi.mocked(ctx.fs.writeSetupFiles).mockResolvedValue(ALL_UNCHANGED_RESULT);
+
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' });
+
+		const successCalls = vi.mocked(ctx.io.success).mock.calls.map((c) => c[0]);
+		expect(successCalls.some((m) => /up to date/i.test(m))).toBe(true);
+
+		const warningCalls = vi.mocked(ctx.io.warning).mock.calls.map((c) => c[0]);
+		expect(warningCalls.some((m) => /all files were skipped/i.test(m))).toBe(false);
+	});
+
+	it('includes "N unchanged" in the parts list', async () => {
+		vi.mocked(ctx.fs.writeSetupFiles).mockResolvedValue(ALL_UNCHANGED_RESULT);
+
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' });
+
+		const printCalls = vi.mocked(ctx.io.print).mock.calls.map((c) => c[0]);
+		expect(printCalls.some((m) => /2 unchanged/.test(m))).toBe(true);
+	});
+
+	it('renders the "=" icon for each unchanged file in the per-file list', async () => {
+		vi.mocked(ctx.fs.writeSetupFiles).mockResolvedValue(ALL_UNCHANGED_RESULT);
+
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' });
+
+		const printCalls = vi.mocked(ctx.io.print).mock.calls.map((c) => c[0]);
+		const unchangedLines = printCalls.filter((m) => /^\s*=\s/.test(m));
+		expect(unchangedLines).toHaveLength(2);
+	});
+});
+
+describe('clone — mixed unchanged + written', () => {
+	it('summary includes both "N written" and "N unchanged"', async () => {
+		vi.mocked(ctx.fs.writeSetupFiles).mockResolvedValue(MIXED_RESULT);
+
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' });
+
+		const printCalls = vi.mocked(ctx.io.print).mock.calls.map((c) => c[0]);
+		expect(printCalls.some((m) => m.includes('1 written') && m.includes('1 unchanged'))).toBe(true);
+	});
+});
+
+describe('clone — all files skipped still warns', () => {
+	it('fires "all files were skipped" warning when nothing written and nothing unchanged', async () => {
+		vi.mocked(ctx.fs.writeSetupFiles).mockResolvedValue(ALL_SKIPPED_RESULT);
+
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' });
+
+		const warningCalls = vi.mocked(ctx.io.warning).mock.calls.map((c) => c[0]);
+		expect(warningCalls.some((m) => /all files were skipped/i.test(m))).toBe(true);
+	});
+});
+
+describe('clone — --json emits unchanged field', () => {
+	it('includes unchanged top-level count and per-file outcome', async () => {
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
+		vi.mocked(ctx.fs.writeSetupFiles).mockResolvedValue(ALL_UNCHANGED_RESULT);
+
+		const program = makeProgram();
+		await program.parseAsync(['clone', 'alice/my-setup', '--json'], { from: 'user' });
+
+		expect(ctx.io.json).toHaveBeenCalledWith(
+			expect.objectContaining({
+				unchanged: 2,
+				files: expect.arrayContaining([expect.objectContaining({ outcome: 'unchanged' })])
+			})
+		);
+	});
+});
+
+describe('clone — directory-at-target abort', () => {
+	it('surfaces writeSetupFiles directory error and exits 1', async () => {
+		vi.mocked(ctx.fs.writeSetupFiles).mockRejectedValue(
+			new Error('Cannot write file — a directory already exists at /tmp/proj/CLAUDE.md')
+		);
+		const spy = exitSpy();
+		const program = makeProgram();
+		await expect(program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' })).rejects.toThrow(
+			'process.exit'
+		);
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('directory already exists'));
+		expect(spy).toHaveBeenCalledWith(1);
 	});
 });

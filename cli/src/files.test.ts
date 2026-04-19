@@ -269,6 +269,188 @@ describe('writeSetupFiles — multiple files', () => {
 	});
 });
 
+// ── writeSetupFiles: identity skip ────────────────────────────────────────────
+
+describe('writeSetupFiles — identical targets', () => {
+	it('reports identical files as unchanged, never prompts, never writes', async () => {
+		const filePath = path.join(tmpDir, 'same.md');
+		fs.writeFileSync(filePath, '# Hello', 'utf-8');
+		const mtimeBefore = fs.statSync(filePath).mtimeMs;
+
+		// Give the filesystem a tick so any rewrite would produce a distinct mtime.
+		await new Promise((r) => setTimeout(r, 10));
+
+		const result = await writeSetupFiles([makeFile({ path: 'same.md', content: '# Hello' })], {
+			projectDir: tmpDir,
+			placement: 'project'
+		});
+
+		expect(mockResolveConflicts).not.toHaveBeenCalled();
+		expect(result.unchanged).toBe(1);
+		expect(result.written).toBe(0);
+		expect(result.files[0]!.outcome).toBe('unchanged');
+		expect(fs.statSync(filePath).mtimeMs).toBe(mtimeBefore);
+	});
+
+	it('does not include identical files in the conflict set passed to resolveConflicts', async () => {
+		const same = path.join(tmpDir, 'same.md');
+		const diff = path.join(tmpDir, 'diff.md');
+		fs.writeFileSync(same, '# Hello', 'utf-8');
+		fs.writeFileSync(diff, '# Old', 'utf-8');
+		mockResolveConflicts.mockResolvedValue(new Map([[diff, 'overwrite']]));
+
+		await writeSetupFiles(
+			[
+				makeFile({ path: 'same.md', content: '# Hello' }),
+				makeFile({ path: 'diff.md', content: '# New' })
+			],
+			{ projectDir: tmpDir, placement: 'project' }
+		);
+
+		expect(mockResolveConflicts).toHaveBeenCalledTimes(1);
+		const [conflicts] = mockResolveConflicts.mock.calls[0]!;
+		expect(conflicts).toHaveLength(1);
+		expect(conflicts[0]!.absolutePath).toBe(diff);
+	});
+
+	it('counts unchanged files in mixed results', async () => {
+		const same = path.join(tmpDir, 'same.md');
+		fs.writeFileSync(same, 'unchanged-content', 'utf-8');
+
+		const result = await writeSetupFiles(
+			[
+				makeFile({ path: 'same.md', content: 'unchanged-content' }),
+				makeFile({ path: 'new.md', content: 'fresh' })
+			],
+			{ projectDir: tmpDir, placement: 'project' }
+		);
+
+		expect(result.unchanged).toBe(1);
+		expect(result.written).toBe(1);
+		expect(result.skipped).toBe(0);
+		expect(result.backedUp).toBe(0);
+	});
+});
+
+describe('writeSetupFiles — force does not rewrite identical files', () => {
+	it('still reports unchanged under --force when bytes match', async () => {
+		const filePath = path.join(tmpDir, 'same.md');
+		fs.writeFileSync(filePath, 'same', 'utf-8');
+		const mtimeBefore = fs.statSync(filePath).mtimeMs;
+		await new Promise((r) => setTimeout(r, 10));
+
+		const result = await writeSetupFiles([makeFile({ path: 'same.md', content: 'same' })], {
+			projectDir: tmpDir,
+			placement: 'project',
+			force: true
+		});
+
+		expect(result.unchanged).toBe(1);
+		expect(result.written).toBe(0);
+		expect(result.files[0]!.outcome).toBe('unchanged');
+		expect(fs.statSync(filePath).mtimeMs).toBe(mtimeBefore);
+	});
+});
+
+describe('writeSetupFiles — JSON mode identity skip', () => {
+	it('emits unchanged outcome for identical files (never skipped)', async () => {
+		const filePath = path.join(tmpDir, 'same.md');
+		fs.writeFileSync(filePath, 'same', 'utf-8');
+
+		const result = await writeSetupFiles([makeFile({ path: 'same.md', content: 'same' })], {
+			projectDir: tmpDir,
+			placement: 'project',
+			isJson: true
+		});
+
+		expect(result.unchanged).toBe(1);
+		expect(result.skipped).toBe(0);
+		expect(result.files[0]!.outcome).toBe('unchanged');
+	});
+});
+
+describe('writeSetupFiles — dry-run classifies without writing', () => {
+	it('reports unchanged for identical targets under --dry-run', async () => {
+		const filePath = path.join(tmpDir, 'same.md');
+		fs.writeFileSync(filePath, 'same', 'utf-8');
+		const mtimeBefore = fs.statSync(filePath).mtimeMs;
+		await new Promise((r) => setTimeout(r, 10));
+
+		const result = await writeSetupFiles([makeFile({ path: 'same.md', content: 'same' })], {
+			projectDir: tmpDir,
+			placement: 'project',
+			dryRun: true
+		});
+
+		expect(result.unchanged).toBe(1);
+		expect(result.written).toBe(0);
+		expect(result.files[0]!.outcome).toBe('unchanged');
+		expect(fs.statSync(filePath).mtimeMs).toBe(mtimeBefore);
+	});
+
+	it('reports written for absent targets under --dry-run (no disk write)', async () => {
+		const result = await writeSetupFiles([makeFile({ path: 'new.md', content: 'fresh' })], {
+			projectDir: tmpDir,
+			placement: 'project',
+			dryRun: true
+		});
+
+		expect(result.written).toBe(1);
+		expect(result.unchanged).toBe(0);
+		expect(fs.existsSync(path.join(tmpDir, 'new.md'))).toBe(false);
+	});
+});
+
+describe('writeSetupFiles — directory at target path', () => {
+	it('throws a descriptive error naming the offending path', async () => {
+		const dirTarget = path.join(tmpDir, 'blocks-file');
+		fs.mkdirSync(dirTarget);
+
+		await expect(
+			writeSetupFiles([makeFile({ path: 'blocks-file', content: 'x' })], {
+				projectDir: tmpDir,
+				placement: 'project'
+			})
+		).rejects.toThrow(/blocks-file/);
+	});
+
+	it('aborts before writing any other files when one target is a directory', async () => {
+		const dirTarget = path.join(tmpDir, 'blocks');
+		fs.mkdirSync(dirTarget);
+
+		await expect(
+			writeSetupFiles(
+				[
+					makeFile({ path: 'first.md', content: 'one' }),
+					makeFile({ path: 'blocks', content: 'two' })
+				],
+				{ projectDir: tmpDir, placement: 'project' }
+			)
+		).rejects.toThrow();
+
+		expect(fs.existsSync(path.join(tmpDir, 'first.md'))).toBe(false);
+	});
+});
+
+describe('writeSetupFiles — unreadable target falls through to conflict prompt', () => {
+	it('treats a broken symlink as a conflict, not an abort', async () => {
+		const brokenLink = path.join(tmpDir, 'broken');
+		fs.symlinkSync(path.join(tmpDir, 'does-not-exist'), brokenLink);
+		mockResolveConflicts.mockResolvedValue(new Map([[brokenLink, 'skip']]));
+
+		const result = await writeSetupFiles([makeFile({ path: 'broken', content: 'x' })], {
+			projectDir: tmpDir,
+			placement: 'project'
+		});
+
+		expect(mockResolveConflicts).toHaveBeenCalledTimes(1);
+		const [conflicts] = mockResolveConflicts.mock.calls[0]!;
+		expect(conflicts).toHaveLength(1);
+		expect(conflicts[0]!.absolutePath).toBe(brokenLink);
+		expect(result.skipped).toBe(1);
+	});
+});
+
 // ── writeSetupFiles: global placement path expansion ─────────────────────────
 
 describe('writeSetupFiles — global placement', () => {

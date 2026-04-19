@@ -1,6 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { classifyTarget, type TargetClassification } from './classify-target.js';
 import { type ManifestPlacement } from './manifest.js';
 import { resolveConflicts, type ConflictFile, type ConflictResolution } from './prompts.js';
 
@@ -22,7 +23,7 @@ export interface WriteOptions {
 	isJson?: boolean;
 }
 
-export type WriteOutcome = 'written' | 'skipped' | 'backed-up';
+export type WriteOutcome = 'written' | 'skipped' | 'backed-up' | 'unchanged';
 
 export interface FileWriteResult {
 	target: string;
@@ -34,6 +35,7 @@ export interface WriteResult {
 	written: number;
 	skipped: number;
 	backedUp: number;
+	unchanged: number;
 	files: FileWriteResult[];
 }
 
@@ -71,22 +73,37 @@ export async function writeSetupFiles(
 ): Promise<WriteResult> {
 	const placement = options.placement ?? 'project';
 
-	// Phase 1: resolve paths and detect conflicts
-	const resolved = files.map((file) => {
+	// Phase 1: classify every target. A `is-directory` classification aborts the
+	// entire operation before touching disk.
+	const classified: {
+		file: FileToWrite;
+		absolutePath: string;
+		classification: TargetClassification;
+	}[] = files.map((file) => {
 		const absolutePath = resolveTargetPath(file.path, placement, options);
-		return { file, absolutePath, exists: !options.dryRun && fs.existsSync(absolutePath) };
+		return { file, absolutePath, classification: classifyTarget(absolutePath, file.content) };
 	});
 
-	// Phase 2: batch-resolve conflicts
+	const directoryBlocker = classified.find((c) => c.classification.kind === 'is-directory');
+	if (directoryBlocker) {
+		throw new Error(
+			`Cannot write file — a directory already exists at ${directoryBlocker.absolutePath}`
+		);
+	}
+
+	// Phase 2: batch-resolve conflicts. Identical files are never part of the
+	// conflict set; `different` and `unreadable` are.
 	let resolutions = new Map<string, ConflictResolution>();
 
 	if (!options.dryRun && !options.force && !options.isJson) {
-		const conflicts: ConflictFile[] = resolved
-			.filter((r) => r.exists)
-			.map((r) => ({
-				relativePath: r.file.path,
-				absolutePath: r.absolutePath,
-				incomingContent: r.file.content
+		const conflicts: ConflictFile[] = classified
+			.filter(
+				(c) => c.classification.kind === 'different' || c.classification.kind === 'unreadable'
+			)
+			.map((c) => ({
+				relativePath: c.file.path,
+				absolutePath: c.absolutePath,
+				incomingContent: c.file.content
 			}));
 
 		if (conflicts.length > 0) {
@@ -94,10 +111,15 @@ export async function writeSetupFiles(
 		}
 	}
 
-	// Phase 3: write files using resolutions
+	// Phase 3: apply resolutions and write.
 	const results: FileWriteResult[] = [];
 
-	for (const { file, absolutePath, exists } of resolved) {
+	for (const { file, absolutePath, classification } of classified) {
+		if (classification.kind === 'identical') {
+			results.push({ target: absolutePath, outcome: 'unchanged' });
+			continue;
+		}
+
 		if (options.dryRun) {
 			results.push({ target: absolutePath, outcome: 'written' });
 			continue;
@@ -107,7 +129,9 @@ export async function writeSetupFiles(
 		let outcome: WriteOutcome = 'written';
 		let backupPath: string | undefined;
 
-		if (exists) {
+		const isConflict = classification.kind === 'different' || classification.kind === 'unreadable';
+
+		if (isConflict) {
 			let resolution: ConflictResolution;
 
 			if (options.force) {
@@ -156,6 +180,7 @@ export async function writeSetupFiles(
 	const written = results.filter((r) => r.outcome === 'written').length;
 	const skipped = results.filter((r) => r.outcome === 'skipped').length;
 	const backedUp = results.filter((r) => r.outcome === 'backed-up').length;
+	const unchanged = results.filter((r) => r.outcome === 'unchanged').length;
 
-	return { written, skipped, backedUp, files: results };
+	return { written, skipped, backedUp, unchanged, files: results };
 }

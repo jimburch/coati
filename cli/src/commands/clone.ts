@@ -333,6 +333,7 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 					written: writeResult.written,
 					skipped: writeResult.skipped,
 					backedUp: writeResult.backedUp,
+					unchanged: writeResult.unchanged,
 					files: writeResult.files,
 					postInstall: postInstallResult
 				});
@@ -342,14 +343,19 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 				if (opts.dryRun) {
 					ctx.io.success(`Dry run complete: ${writeResult.files.length} file(s) would be written.`);
 				} else {
-					if (writeResult.written > 0 || writeResult.backedUp > 0) {
+					const allUnchanged =
+						writeResult.unchanged === writeResult.files.length && writeResult.files.length > 0;
+					if (allUnchanged) {
+						ctx.io.success(`${label} is already up to date.`);
+					} else if (writeResult.written > 0 || writeResult.backedUp > 0) {
 						ctx.io.success(`Cloned ${label} successfully.`);
-					} else if (writeResult.skipped === writeResult.files.length) {
+					} else if (writeResult.written === 0 && writeResult.unchanged === 0) {
 						ctx.io.warning('All files were skipped — nothing was written.');
 					}
 
 					const parts: string[] = [];
 					if (writeResult.written > 0) parts.push(`${writeResult.written} written`);
+					if (writeResult.unchanged > 0) parts.push(`${writeResult.unchanged} unchanged`);
 					if (writeResult.backedUp > 0) parts.push(`${writeResult.backedUp} backed up`);
 					if (writeResult.skipped > 0) parts.push(`${writeResult.skipped} skipped`);
 					if (parts.length > 0) ctx.io.print(`  ${parts.join(', ')}`);
@@ -357,7 +363,14 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 
 				ctx.io.print('');
 				for (const f of writeResult.files) {
-					const icon = f.outcome === 'written' ? '✓' : f.outcome === 'backed-up' ? '↻' : '-';
+					const icon =
+						f.outcome === 'written'
+							? '✓'
+							: f.outcome === 'backed-up'
+								? '↻'
+								: f.outcome === 'unchanged'
+									? '='
+									: '-';
 					const displayPath = f.target.startsWith(projectDir + path.sep)
 						? f.target.slice(projectDir.length + 1)
 						: f.target;
