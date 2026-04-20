@@ -1,8 +1,8 @@
-import { and, desc, eq, gte, inArray, lt, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '$lib/server/db';
-import { activities, comments, follows, setups, teams, users } from '$lib/server/db/schema';
+import { activities, comments, setups, teams, users } from '$lib/server/db/schema';
 
 const actorUser = alias(users, 'actor');
 const setupOwnerUser = alias(users, 'setup_owner');
@@ -36,17 +36,12 @@ export type FeedItem = {
 	teamName: string | null;
 	teamSlug: string | null;
 	teamAvatarUrl: string | null;
+	// New: blended activity feed fields. Undefined = legacy behavior.
+	isPopular?: boolean;
+	isOwnActivity?: boolean;
+	aggregatedActors?: { username: string; avatarUrl: string }[];
+	aggregatedCount?: number;
 };
-
-const FEED_ACTION_TYPES = [
-	'created_setup',
-	'commented',
-	'followed_user',
-	'created_team',
-	'joined_team',
-	'left_team',
-	'invited_to_team'
-] as const satisfies readonly FeedItem['actionType'][];
 
 const PROFILE_ACTION_TYPES = [
 	'created_setup',
@@ -128,22 +123,6 @@ async function queryFeed(
 	return { items: feedItems, nextCursor };
 }
 
-export async function getHomeFeed(
-	userId: string,
-	cursor?: Date,
-	limit = 20
-): Promise<{ items: FeedItem[]; nextCursor: string | null }> {
-	// Subquery: UUIDs of users the current user follows
-	const followingSubquery = db
-		.select({ id: follows.followingId })
-		.from(follows)
-		.where(eq(follows.followerId, userId));
-
-	const filter = and(inArray(activities.userId, followingSubquery), ne(activities.userId, userId));
-
-	return queryFeed(filter, FEED_ACTION_TYPES, cursor, limit, userId);
-}
-
 export async function getProfileFeed(
 	userId: string,
 	cursor?: Date,
@@ -152,66 +131,4 @@ export async function getProfileFeed(
 	const filter = eq(activities.userId, userId);
 
 	return queryFeed(filter, PROFILE_ACTION_TYPES, cursor, limit);
-}
-
-export type SetupActivityEntry = {
-	setupId: string;
-	setupName: string;
-	setupSlug: string;
-	actionType: 'starred_setup' | 'cloned_setup';
-	count: number;
-	actorUsernames: string[];
-};
-
-export async function getActivityOnUserSetups(
-	userId: string,
-	sinceDays = 7
-): Promise<SetupActivityEntry[]> {
-	const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000);
-
-	const rows = await db
-		.select({
-			setupId: activities.setupId,
-			setupName: setups.name,
-			setupSlug: setups.slug,
-			actionType: activities.actionType,
-			actorUsername: actorUser.username
-		})
-		.from(activities)
-		.innerJoin(setups, eq(activities.setupId, setups.id))
-		.innerJoin(actorUser, eq(activities.userId, actorUser.id))
-		.where(
-			and(
-				eq(setups.userId, userId),
-				ne(activities.userId, userId),
-				inArray(activities.actionType, ['starred_setup', 'cloned_setup']),
-				gte(activities.createdAt, since)
-			)
-		)
-		.orderBy(desc(activities.createdAt))
-		.limit(500);
-
-	const map = new Map<string, SetupActivityEntry>();
-
-	for (const row of rows) {
-		if (!row.setupId) continue;
-		const key = `${row.setupId}:${row.actionType}`;
-		if (!map.has(key)) {
-			map.set(key, {
-				setupId: row.setupId,
-				setupName: row.setupName ?? '',
-				setupSlug: row.setupSlug ?? '',
-				actionType: row.actionType as 'starred_setup' | 'cloned_setup',
-				count: 0,
-				actorUsernames: []
-			});
-		}
-		const entry = map.get(key)!;
-		entry.count++;
-		if (row.actionType === 'starred_setup' && entry.actorUsernames.length < 3) {
-			entry.actorUsernames.push(row.actorUsername);
-		}
-	}
-
-	return [...map.values()];
 }

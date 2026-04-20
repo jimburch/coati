@@ -69,6 +69,21 @@ export interface SeedResult {
 	followsInserted: number;
 	commentsInserted: number;
 	activitiesInserted: number;
+	teamsInserted: number;
+	teamMembershipsInserted: number;
+}
+
+export interface GeneratedTeam {
+	name: string;
+	slug: string;
+	description: string;
+	ownerId: string;
+}
+
+export interface GeneratedTeamMembership {
+	teamId: string;
+	userId: string;
+	role: 'admin' | 'member';
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -110,6 +125,23 @@ export const GITHUB_USERNAMES = [
 	'jakearchibald',
 	'marcosvega91'
 ];
+
+/**
+ * Resolve the final GitHub-username list for seeding.
+ * If SEED_OWNER_LOGIN is set (via env), prepend it so the dev user gets a real
+ * seeded profile, follows/followers, and activity on re-seed. Deduplicates
+ * case-insensitively.
+ */
+export function resolveSeedUsernames(
+	baseUsernames: readonly string[],
+	ownerLogin: string | undefined
+): string[] {
+	if (!ownerLogin || ownerLogin.trim() === '') return [...baseUsernames];
+	const normalized = ownerLogin.trim();
+	const lower = normalized.toLowerCase();
+	const deduped = baseUsernames.filter((u) => u.toLowerCase() !== lower);
+	return [normalized, ...deduped];
+}
 
 export const TAG_NAMES = [
 	// Agents
@@ -2824,6 +2856,85 @@ export function generateCommentGroups(
 	return groups;
 }
 
+/**
+ * Generate 3–5 seed teams with deterministic names/slugs. Each team's owner is
+ * picked from `seedUsers`. If `ownerUserId` is provided and present in
+ * `seedUsers`, it's used as the owner of the FIRST team (so the dev user is
+ * always the admin of at least one team).
+ */
+export function generateTeams(
+	seedUsers: Array<{ id: string }>,
+	ownerUserId?: string
+): GeneratedTeam[] {
+	if (seedUsers.length === 0) return [];
+	const TEAM_DATA: Array<Pick<GeneratedTeam, 'name' | 'slug' | 'description'>> = [
+		{
+			name: 'Acme Devtools',
+			slug: 'acme-devtools',
+			description: 'Internal AI tooling for Acme Corp.'
+		},
+		{
+			name: 'Open Source Collective',
+			slug: 'oss-collective',
+			description: 'Community-maintained setups.'
+		},
+		{
+			name: 'Platform Engineering',
+			slug: 'platform-eng',
+			description: 'Runtime + deployment workflows.'
+		},
+		{
+			name: 'Dev Experience',
+			slug: 'dev-experience',
+			description: 'DX-focused AI setups and agents.'
+		}
+	];
+	const teams: GeneratedTeam[] = [];
+	const firstOwnerId =
+		(ownerUserId && seedUsers.some((u) => u.id === ownerUserId) ? ownerUserId : null) ??
+		seedUsers[0].id;
+	for (let i = 0; i < TEAM_DATA.length; i++) {
+		const data = TEAM_DATA[i];
+		const ownerId = i === 0 ? firstOwnerId : seedUsers[(i * 2) % seedUsers.length].id;
+		teams.push({ name: data.name, slug: data.slug, description: data.description, ownerId });
+	}
+	return teams;
+}
+
+/**
+ * For each team, pick 2–5 additional members (excluding the owner). The owner
+ * is also emitted as a membership row with role='admin'. If `ownerUserId` is
+ * provided and present in seedUsers, it is included as a member of teams[0]
+ * (via the firstOwnerId path in generateTeams) and ALSO as a member of
+ * teams[1] (so the dev user sees follower+non-owner team membership too).
+ */
+export function generateTeamMemberships(
+	seedTeams: Array<{ id: string; ownerId: string; slug?: string }>,
+	seedUsers: Array<{ id: string }>,
+	ownerUserId?: string
+): GeneratedTeamMembership[] {
+	const memberships: GeneratedTeamMembership[] = [];
+	for (let ti = 0; ti < seedTeams.length; ti++) {
+		const team = seedTeams[ti];
+		memberships.push({ teamId: team.id, userId: team.ownerId, role: 'admin' });
+		const addedInThisTeam = new Set<string>([team.ownerId]);
+		const targetCount = 2 + (ti % 4); // 2–5 additional members
+		for (let j = 0; j < targetCount; j++) {
+			const candidate = seedUsers[(ti * 3 + j + 1) % seedUsers.length];
+			if (addedInThisTeam.has(candidate.id)) continue;
+			addedInThisTeam.add(candidate.id);
+			memberships.push({ teamId: team.id, userId: candidate.id, role: 'member' });
+		}
+		// Explicit dev-user inclusion on team[1] if provided and not already a member
+		if (ti === 1 && ownerUserId && seedUsers.some((u) => u.id === ownerUserId)) {
+			if (!addedInThisTeam.has(ownerUserId)) {
+				memberships.push({ teamId: team.id, userId: ownerUserId, role: 'member' });
+			}
+		}
+	}
+	return memberships;
+}
+
 /** Returns a deterministic past timestamp spread over the last rangeDays days. */
 function seedTimestamp(index: number, baseDateMs: number, rangeDays = 30): Date {
 	const rangeMs = rangeDays * 24 * 60 * 60 * 1000;
@@ -2878,12 +2989,13 @@ export async function seed(
 
 	// 3. Fetch GitHub profiles
 	console.log('\n→ Fetching GitHub profiles...');
-	const profiles = await fetchGitHubProfiles(
-		GITHUB_USERNAMES,
-		githubToken,
-		fetcher,
-		options?.delayMs
-	);
+	const ownerLogin = process.env.SEED_OWNER_LOGIN;
+	const usernames = resolveSeedUsernames(GITHUB_USERNAMES, ownerLogin);
+	const profiles = await fetchGitHubProfiles(usernames, githubToken, fetcher, options?.delayMs);
+
+	if (ownerLogin && ownerLogin.trim() !== '') {
+		console.log(`  ✓ Including dev-owner profile: @${ownerLogin}`);
+	}
 
 	if (profiles.length < 5) {
 		throw new Error(
@@ -2992,6 +3104,60 @@ export async function seed(
 
 	const insertedSetups = await db.select().from(schema.setups);
 	console.log(`  ✓ Inserted ${insertedSetups.length} setups with ${totalFiles} files`);
+
+	// 7.5. Teams + team memberships
+	console.log('\n→ Inserting teams + team memberships...');
+
+	// Resolve the dev owner's user ID if SEED_OWNER_LOGIN is set
+	const ownerUserRow = ownerLogin
+		? insertedUsers.find((u) => u.username.toLowerCase() === ownerLogin.toLowerCase())
+		: undefined;
+	const ownerUserId = ownerUserRow?.id;
+
+	const teamDataRows = generateTeams(insertedUsers, ownerUserId);
+	const insertedTeamsRaw = teamDataRows.length
+		? await db
+				.insert(schema.teams)
+				.values(
+					teamDataRows.map((t) => ({
+						name: t.name,
+						slug: t.slug,
+						description: t.description,
+						ownerId: t.ownerId,
+						membersCount: 0 // set below after memberships are inserted
+					}))
+				)
+				.returning()
+		: [];
+
+	const teamMembershipRows = generateTeamMemberships(
+		insertedTeamsRaw.map((t) => ({ id: t.id, ownerId: t.ownerId })),
+		insertedUsers,
+		ownerUserId
+	);
+	if (teamMembershipRows.length) {
+		await db.insert(schema.teamMembers).values(
+			teamMembershipRows.map((m) => ({
+				teamId: m.teamId,
+				userId: m.userId,
+				role: m.role
+			}))
+		);
+		// Update membersCount on each team
+		const membersCountByTeam = new Map<string, number>();
+		for (const m of teamMembershipRows) {
+			membersCountByTeam.set(m.teamId, (membersCountByTeam.get(m.teamId) ?? 0) + 1);
+		}
+		for (const team of insertedTeamsRaw) {
+			await db
+				.update(schema.teams)
+				.set({ membersCount: membersCountByTeam.get(team.id) ?? 1 })
+				.where(sql`id = ${team.id}`);
+		}
+	}
+	console.log(
+		`  ✓ Inserted ${insertedTeamsRaw.length} teams with ${teamMembershipRows.length} memberships`
+	);
 
 	// 8. Social graph: stars, follows, comments, activities
 	console.log('\n→ Inserting social graph...');
@@ -3124,7 +3290,27 @@ export async function seed(
 		});
 	}
 
-	// 8f. Insert all activities
+	// 8f. created_team activities (one per team by its owner)
+	for (const team of insertedTeamsRaw) {
+		activityRows.push({
+			userId: team.ownerId,
+			teamId: team.id,
+			actionType: 'created_team',
+			createdAt: seedTimestamp(activityIdx++, baseDateMs, 14)
+		});
+	}
+
+	// 8g. joined_team activities (one per membership, including the admin/owner)
+	for (const membership of teamMembershipRows) {
+		activityRows.push({
+			userId: membership.userId,
+			teamId: membership.teamId,
+			actionType: 'joined_team',
+			createdAt: seedTimestamp(activityIdx++, baseDateMs, 14)
+		});
+	}
+
+	// 8h. Insert all activities
 	if (activityRows.length > 0) {
 		await db.insert(schema.activities).values(activityRows);
 	}
@@ -3139,19 +3325,23 @@ export async function seed(
 		starsInserted: starDataRows.length,
 		followsInserted: followDataRows.length,
 		commentsInserted: totalComments,
-		activitiesInserted: activityRows.length
+		activitiesInserted: activityRows.length,
+		teamsInserted: insertedTeamsRaw.length,
+		teamMembershipsInserted: teamMembershipRows.length
 	};
 
 	console.log('\n✅ Seed complete!');
-	console.log(`   Users:      ${result.usersInserted}`);
-	console.log(`   Agents:     ${result.agentsInserted}`);
-	console.log(`   Tags:       ${result.tagsInserted}`);
-	console.log(`   Setups:     ${result.setupsInserted}`);
-	console.log(`   Files:      ${result.filesInserted}`);
-	console.log(`   Stars:      ${result.starsInserted}`);
-	console.log(`   Follows:    ${result.followsInserted}`);
-	console.log(`   Comments:   ${result.commentsInserted}`);
-	console.log(`   Activities: ${result.activitiesInserted}`);
+	console.log(`   Users:            ${result.usersInserted}`);
+	console.log(`   Agents:           ${result.agentsInserted}`);
+	console.log(`   Tags:             ${result.tagsInserted}`);
+	console.log(`   Setups:           ${result.setupsInserted}`);
+	console.log(`   Files:            ${result.filesInserted}`);
+	console.log(`   Stars:            ${result.starsInserted}`);
+	console.log(`   Follows:          ${result.followsInserted}`);
+	console.log(`   Comments:         ${result.commentsInserted}`);
+	console.log(`   Activities:       ${result.activitiesInserted}`);
+	console.log(`   Teams:            ${result.teamsInserted}`);
+	console.log(`   Team memberships: ${result.teamMembershipsInserted}`);
 
 	return result;
 }

@@ -28,6 +28,9 @@ import {
 	generateCommentGroups,
 	fetchGitHubProfile,
 	fetchGitHubProfiles,
+	resolveSeedUsernames,
+	generateTeams,
+	generateTeamMemberships,
 	seed
 } from '../../../scripts/seed-dev';
 import type { GitHubProfile } from '../../../scripts/seed-dev';
@@ -887,6 +890,108 @@ describe('SeedResult social fields', () => {
 		expect(result.followsInserted).toBeGreaterThanOrEqual(0);
 		expect(result.commentsInserted).toBeGreaterThanOrEqual(0);
 		expect(result.activitiesInserted).toBeGreaterThanOrEqual(0);
+	});
+});
+
+// ─── resolveSeedUsernames ─────────────────────────────────────────────────────
+
+describe('resolveSeedUsernames', () => {
+	it('returns base list unchanged when ownerLogin is undefined', () => {
+		const result = resolveSeedUsernames(['alice', 'bob'], undefined);
+		expect(result).toEqual(['alice', 'bob']);
+	});
+	it('returns base list unchanged when ownerLogin is empty/whitespace', () => {
+		expect(resolveSeedUsernames(['alice'], '')).toEqual(['alice']);
+		expect(resolveSeedUsernames(['alice'], '   ')).toEqual(['alice']);
+	});
+	it('prepends ownerLogin when not already present', () => {
+		const result = resolveSeedUsernames(['alice', 'bob'], 'carol');
+		expect(result).toEqual(['carol', 'alice', 'bob']);
+	});
+	it('de-duplicates case-insensitively and preserves the ownerLogin casing', () => {
+		const result = resolveSeedUsernames(['Alice', 'bob'], 'alice');
+		expect(result).toEqual(['alice', 'bob']);
+	});
+});
+
+// ─── generateTeams ────────────────────────────────────────────────────────────
+
+describe('generateTeams', () => {
+	const users = Array.from({ length: 8 }, (_, i) => ({ id: `user-${i}` }));
+	it('generates up to 4 deterministic teams', () => {
+		const teams = generateTeams(users);
+		expect(teams.length).toBeGreaterThanOrEqual(3);
+		expect(teams.length).toBeLessThanOrEqual(5);
+	});
+	it('returns empty array when seedUsers is empty', () => {
+		expect(generateTeams([])).toEqual([]);
+	});
+	it('assigns ownerId from seedUsers for every team', () => {
+		const teams = generateTeams(users);
+		const userIds = new Set(users.map((u) => u.id));
+		for (const t of teams) expect(userIds.has(t.ownerId)).toBe(true);
+	});
+	it('makes ownerUserId the owner of the first team when provided', () => {
+		const teams = generateTeams(users, 'user-5');
+		expect(teams[0].ownerId).toBe('user-5');
+	});
+	it('falls back to seedUsers[0] when ownerUserId is not present in seedUsers', () => {
+		const teams = generateTeams(users, 'not-a-real-id');
+		expect(teams[0].ownerId).toBe('user-0');
+	});
+	it('generates unique slugs', () => {
+		const teams = generateTeams(users);
+		const slugs = new Set(teams.map((t) => t.slug));
+		expect(slugs.size).toBe(teams.length);
+	});
+});
+
+// ─── generateTeamMemberships ──────────────────────────────────────────────────
+
+describe('generateTeamMemberships', () => {
+	const users = Array.from({ length: 10 }, (_, i) => ({ id: `user-${i}` }));
+	const teams = [
+		{ id: 'team-0', ownerId: 'user-0' },
+		{ id: 'team-1', ownerId: 'user-1' },
+		{ id: 'team-2', ownerId: 'user-2' }
+	];
+	it('includes the owner as an admin of their team', () => {
+		const ms = generateTeamMemberships(teams, users);
+		for (const t of teams) {
+			const owner = ms.find((m) => m.teamId === t.id && m.userId === t.ownerId);
+			expect(owner).toBeDefined();
+			expect(owner!.role).toBe('admin');
+		}
+	});
+	it('gives each team 2–5 non-owner members (plus the owner)', () => {
+		const ms = generateTeamMemberships(teams, users);
+		for (const t of teams) {
+			const nonOwners = ms.filter((m) => m.teamId === t.id && m.role === 'member');
+			expect(nonOwners.length).toBeGreaterThanOrEqual(2);
+			expect(nonOwners.length).toBeLessThanOrEqual(5);
+		}
+	});
+	it('never adds a user twice to the same team', () => {
+		const ms = generateTeamMemberships(teams, users);
+		const seen = new Set<string>();
+		for (const m of ms) {
+			const key = `${m.teamId}:${m.userId}`;
+			expect(seen.has(key)).toBe(false);
+			seen.add(key);
+		}
+	});
+	it('includes ownerUserId as a member of team[1] when it is not already', () => {
+		const ms = generateTeamMemberships(teams, users, 'user-5');
+		const inSecondTeam = ms.find((m) => m.teamId === 'team-1' && m.userId === 'user-5');
+		expect(inSecondTeam).toBeDefined();
+	});
+	it('does not duplicate ownerUserId on team[1] when already present as owner-picked member', () => {
+		// team[1]'s owner is user-1 → user-1 is already the admin; asking for user-1 as ownerUserId shouldn't add a duplicate
+		const ms = generateTeamMemberships(teams, users, 'user-1');
+		const countOfUser1InTeam1 = ms.filter(
+			(m) => m.teamId === 'team-1' && m.userId === 'user-1'
+		).length;
+		expect(countOfUser1InTeam1).toBe(1);
 	});
 });
 

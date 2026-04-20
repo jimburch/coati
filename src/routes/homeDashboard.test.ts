@@ -7,7 +7,7 @@ const mockGetTrendingSetups = vi.hoisted(() => vi.fn());
 const mockGetUserAggregateStats = vi.hoisted(() => vi.fn());
 const mockGetUserSetups = vi.hoisted(() => vi.fn());
 const mockGetUserSetupAgents = vi.hoisted(() => vi.fn());
-const mockGetActivityOnUserSetups = vi.hoisted(() => vi.fn());
+const mockGetBlendedActivityFeed = vi.hoisted(() => vi.fn());
 const mockGetForYouSetups = vi.hoisted(() => vi.fn());
 const mockGetSetupsFromFollowedUsers = vi.hoisted(() => vi.fn());
 const mockGetUserTeams = vi.hoisted(() => vi.fn());
@@ -27,8 +27,8 @@ vi.mock('$lib/server/queries/users', () => ({
 	getUserSetupAgents: mockGetUserSetupAgents
 }));
 
-vi.mock('$lib/server/queries/activities', () => ({
-	getActivityOnUserSetups: mockGetActivityOnUserSetups
+vi.mock('$lib/server/queries/activityFeed', () => ({
+	getBlendedActivityFeed: mockGetBlendedActivityFeed
 }));
 
 vi.mock('$lib/server/queries/teams', () => ({
@@ -65,7 +65,7 @@ describe('home dashboard server load', () => {
 		});
 		mockGetUserSetups.mockResolvedValue([]);
 		mockGetUserSetupAgents.mockResolvedValue([]);
-		mockGetActivityOnUserSetups.mockResolvedValue([]);
+		mockGetBlendedActivityFeed.mockResolvedValue({ items: [], nextCursor: null });
 		mockGetForYouSetups.mockResolvedValue([]);
 		mockGetSetupsFromFollowedUsers.mockResolvedValue([]);
 		mockGetUserTeams.mockResolvedValue([]);

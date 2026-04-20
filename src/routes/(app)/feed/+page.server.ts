@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
-import { getHomeFeed } from '$lib/server/queries/activities';
+import { getBlendedActivityFeed } from '$lib/server/queries/activityFeed';
 
 export const load: PageServerLoad = async ({ locals }) => {
-	const feed = await getHomeFeed(locals.user!.id, undefined, 20);
+	const feed = await getBlendedActivityFeed(locals.user!.id, undefined, 20);
 	return { feed };
 };
