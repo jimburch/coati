@@ -1,28 +1,15 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
-// These tests require an authenticated session. Unauthenticated visitors see
-// the marketing landing page at /; each test detects that state and skips.
+// Runs under desktop-auth / mobile-auth projects (see playwright.config.ts).
+// The seeded session cookie is loaded via storageState, so `/` renders the
+// authenticated dashboard instead of the marketing landing page.
 
 const HOME = '/';
-
-function isAuthRedirect(url: string): boolean {
-	return url.includes('/auth/login') || url.includes('github.com/login');
-}
-
-async function isUnauthenticated(page: Page): Promise<boolean> {
-	if (isAuthRedirect(page.url())) return true;
-	// Marketing landing renders a "Sign in with GitHub" CTA instead of the dashboard
-	return (await page.getByRole('link', { name: 'Sign in with GitHub' }).count()) > 0;
-}
 
 test('authenticated home page renders core sections (profile, tabs, quick actions, stats, activity)', async ({
 	page
 }) => {
 	await page.goto(HOME);
-	if (await isUnauthenticated(page)) {
-		test.skip();
-		return;
-	}
 
 	await expect(page.getByTestId('profile-card')).toBeVisible();
 	await expect(page.getByTestId('discovery-tabs')).toBeVisible();
@@ -32,7 +19,6 @@ test('authenticated home page renders core sections (profile, tabs, quick action
 	const panel = page.getByTestId('activity-panel');
 	await expect(panel).toBeVisible();
 
-	// See-all link is only rendered when there are feed items
 	const seeAll = panel.getByTestId('see-all-link');
 	if ((await seeAll.count()) > 0) {
 		await expect(seeAll).toHaveAttribute('href', '/feed');
@@ -41,10 +27,6 @@ test('authenticated home page renders core sections (profile, tabs, quick action
 
 test('user with setups: YourSetupsList and optional AgentChips render', async ({ page }) => {
 	await page.goto(HOME);
-	if (await isUnauthenticated(page)) {
-		test.skip();
-		return;
-	}
 	if ((await page.getByTestId('your-setups-list').count()) === 0) {
 		test.skip();
 		return;
@@ -61,10 +43,6 @@ test('user with setups: YourSetupsList and optional AgentChips render', async ({
 
 test('zero-state user: stats grid shown, setups list and agent chips absent', async ({ page }) => {
 	await page.goto(HOME);
-	if (await isUnauthenticated(page)) {
-		test.skip();
-		return;
-	}
 	if ((await page.getByTestId('your-setups-list').count()) > 0) {
 		test.skip();
 		return;
@@ -76,7 +54,6 @@ test('zero-state user: stats grid shown, setups list and agent chips absent', as
 	await expect(page.getByTestId('activity-panel')).toBeVisible();
 
 	await page.goto(`${HOME}?tab=following`);
-	if (await isUnauthenticated(page)) return;
 	await expect(page.getByTestId('discovery-tabs')).toBeVisible();
 	await expect(page.getByText('Follow people to see their setups here.')).toBeVisible();
 });
@@ -85,10 +62,6 @@ test('tab switching: Trending/Following/For You update URL and remain active on 
 	page
 }) => {
 	await page.goto(HOME);
-	if (await isUnauthenticated(page)) {
-		test.skip();
-		return;
-	}
 	await expect(page.getByTestId('discovery-tabs')).toBeVisible();
 
 	await page.getByRole('link', { name: 'Trending' }).click();
@@ -100,7 +73,6 @@ test('tab switching: Trending/Following/For You update URL and remain active on 
 	await page.getByRole('link', { name: 'For You' }).click();
 	await expect(page).toHaveURL(/[?&]tab=for-you/);
 
-	// Reload-with-tab-param keeps the right tab active
 	await page.goto(`${HOME}?tab=trending`);
 	await expect(page.getByRole('link', { name: 'Trending' })).toHaveAttribute(
 		'aria-current',
@@ -117,10 +89,6 @@ test('mobile: sections stack in order profile → discovery → quick actions', 
 }) => {
 	test.skip(!isMobile, 'mobile-only test');
 	await page.goto(HOME);
-	if (await isUnauthenticated(page)) {
-		test.skip();
-		return;
-	}
 
 	const profile = page.getByTestId('profile-card');
 	const discovery = page.getByTestId('discovery-tabs');
@@ -144,10 +112,6 @@ test('desktop: two-column layout places discovery tabs to the right of profile c
 }) => {
 	test.skip(isMobile, 'desktop-only test');
 	await page.goto(HOME);
-	if (await isUnauthenticated(page)) {
-		test.skip();
-		return;
-	}
 
 	const profileBox = await page.getByTestId('profile-card').boundingBox();
 	const discoveryBox = await page.getByTestId('discovery-tabs').boundingBox();

@@ -30,6 +30,7 @@ coverage
 # Playwright
 test-results
 screenshots
+playwright/.auth
 
 # Serena
 .serena/cache
