@@ -1,3 +1,13 @@
+## [1.10.1](https://github.com/jimburch/coati/compare/v1.10.0...v1.10.1) (2026-04-20)
+
+
+### Bug Fixes
+
+* **api:** add GET /api/v1/users/[username] endpoint to resolve CLI verifyToken 404 ([340e3ea](https://github.com/jimburch/coati/commit/340e3ea5e7eeb53463c25ddbd3cf1ce29ab8cf18))
+* **test:** auto-migrate test DB before integration tests ([ed815aa](https://github.com/jimburch/coati/commit/ed815aa775aec9ea1eafedeaa6032ff3708f794e))
+* **ui:** footer shows current version ([5f15ba7](https://github.com/jimburch/coati/commit/5f15ba79681783d05ee8d1fe445c34d65f94c9d4))
+* **ui:** improve home page activity feed ([e4432ae](https://github.com/jimburch/coati/commit/e4432ae5914621f436e23a9d10e96004ce3ef8be))
+
 # [1.10.0](https://github.com/jimburch/coati/compare/v1.9.0...v1.10.0) (2026-04-19)
 
 
