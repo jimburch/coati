@@ -125,14 +125,17 @@ afterEach(() => {
 // ── authentication ────────────────────────────────────────────────────────────
 
 describe('authentication', () => {
-	it('errors and exits with code 1 when not logged in', async () => {
+	it('errors and exits with code 1 when not logged in (JSON mode)', async () => {
 		vi.mocked(ctx.auth.isLoggedIn).mockReturnValue(false);
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
 		const program = makeProgram();
 		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
 			throw new Error('process.exit');
 		});
 
-		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
+		await expect(program.parseAsync(['node', 'coati', 'publish', '--json'])).rejects.toThrow(
+			'process.exit'
+		);
 		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('coati login'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
@@ -245,28 +248,33 @@ describe('create new setup (no id in manifest)', () => {
 	});
 
 	it('places id after $schema and before name in written manifest', async () => {
-		mockReadManifest.mockReturnValue({ ...MOCK_MANIFEST, $schema: 'https://example.com/schema' });
+		mockReadManifest.mockReturnValue({
+			...MOCK_MANIFEST,
+			$schema: 'https://example.com/schema',
+			visibility: 'public'
+		});
 		const program = makeProgram();
 		await program.parseAsync(['node', 'coati', 'publish']);
 
-		const [, writtenManifest] = mockWriteManifest.mock.calls[0] as [
-			string,
-			Record<string, unknown>
-		];
-		const keys = Object.keys(writtenManifest);
+		const idCall = mockWriteManifest.mock.calls.find(
+			([, m]) => (m as Record<string, unknown>).id === 'setup-123'
+		);
+		expect(idCall).toBeDefined();
+		const keys = Object.keys(idCall![1] as Record<string, unknown>);
 		expect(keys.indexOf('$schema')).toBeLessThan(keys.indexOf('id'));
 		expect(keys.indexOf('id')).toBeLessThan(keys.indexOf('name'));
 	});
 
 	it('places id before name when no $schema field', async () => {
+		mockReadManifest.mockReturnValue({ ...MOCK_MANIFEST, visibility: 'public' });
 		const program = makeProgram();
 		await program.parseAsync(['node', 'coati', 'publish']);
 
-		const [, writtenManifest] = mockWriteManifest.mock.calls[0] as [
-			string,
-			Record<string, unknown>
-		];
-		const keys = Object.keys(writtenManifest);
+		const idCall = mockWriteManifest.mock.calls.find(
+			([, m]) => (m as Record<string, unknown>).id === 'setup-123'
+		);
+		expect(idCall).toBeDefined();
+		const keys = Object.keys(idCall![1] as Record<string, unknown>);
 		expect(keys.indexOf('id')).toBeLessThan(keys.indexOf('name'));
 	});
 
@@ -327,6 +335,8 @@ describe('update existing setup (has id in manifest)', () => {
 	});
 
 	it('does not write id back to coati.json on update', async () => {
+		// Provide visibility so the visibility-prompt path doesn't rewrite the manifest.
+		mockReadManifest.mockReturnValue({ ...MOCK_MANIFEST_WITH_ID, visibility: 'public' });
 		const program = makeProgram();
 		await program.parseAsync(['node', 'coati', 'publish']);
 
@@ -750,14 +760,17 @@ describe('error handling', () => {
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 
-	it('shows re-authentication hint on 401 error', async () => {
+	it('shows re-authentication hint on 401 error (JSON mode)', async () => {
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
 		vi.mocked(ctx.api.post).mockRejectedValue(new ApiError('Unauthorized', 'UNAUTHORIZED', 401));
 		const program = makeProgram();
 		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
 			throw new Error('process.exit');
 		});
 
-		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
+		await expect(program.parseAsync(['node', 'coati', 'publish', '--json'])).rejects.toThrow(
+			'process.exit'
+		);
 		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('coati login'));
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
@@ -788,14 +801,17 @@ describe('error handling', () => {
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 
-	it('shows authentication failed message on expired/invalid token (401)', async () => {
+	it('shows authentication failed message on expired/invalid token (401) in JSON mode', async () => {
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
 		vi.mocked(ctx.api.post).mockRejectedValue(new ApiError('Unauthorized', 'UNAUTHORIZED', 401));
 		const program = makeProgram();
 		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
 			throw new Error('process.exit');
 		});
 
-		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
+		await expect(program.parseAsync(['node', 'coati', 'publish', '--json'])).rejects.toThrow(
+			'process.exit'
+		);
 		expect(ctx.io.error).toHaveBeenCalledWith(
 			'Authentication failed. Run `coati login` to re-authenticate.'
 		);

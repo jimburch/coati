@@ -44,119 +44,55 @@ describe('validateManifest', () => {
 		expect(validateManifest(42).valid).toBe(false);
 	});
 
-	it('requires name', () => {
-		const result = validateManifest({ ...VALID_MANIFEST, name: '' });
-		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.field === 'name')).toBe(true);
+	it('rejects top-level field constraints (name, version, description, files, license, category, minToolVersion)', () => {
+		const cases: Array<[Partial<Manifest> & Record<string, unknown>, string]> = [
+			[{ name: '' }, 'name'],
+			[{ name: 'a'.repeat(101) }, 'name'],
+			[{ name: 'My Setup!' }, 'name'],
+			[{ version: 'v1.0' }, 'version'],
+			[{ description: undefined } as Partial<Manifest>, 'description'],
+			[{ description: 'x'.repeat(301) }, 'description'],
+			[{ files: [] }, 'files'],
+			[{ license: 'L'.repeat(51) }, 'license'],
+			[{ minToolVersion: '1'.repeat(21) }, 'minToolVersion'],
+			[{ category: 'robotics' }, 'category']
+		];
+		for (const [override, field] of cases) {
+			const result = validateManifest({ ...VALID_MANIFEST, ...override });
+			expect(result.valid, `expected invalid for field=${field}`).toBe(false);
+			expect(
+				result.errors.some((e) => e.field === field),
+				`missing error for ${field}`
+			).toBe(true);
+		}
 	});
 
-	it('rejects name exceeding 100 chars', () => {
-		const result = validateManifest({ ...VALID_MANIFEST, name: 'a'.repeat(101) });
-		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.field === 'name')).toBe(true);
+	it('rejects invalid file entries (missing path, legacy source field, bad componentType)', () => {
+		const cases: Array<[unknown[], string]> = [
+			[[{}], 'files[0].path'],
+			[[{ source: 'foo.md', target: '~/.foo', placement: 'global' }], 'files[0].path'],
+			[[{ path: 'foo', componentType: 'widget' }], 'files[0].componentType']
+		];
+		for (const [files, field] of cases) {
+			const result = validateManifest({ ...VALID_MANIFEST, files });
+			expect(result.valid).toBe(false);
+			expect(
+				result.errors.some((e) => e.field === field),
+				`missing error for ${field}`
+			).toBe(true);
+		}
 	});
 
-	it('rejects name with invalid slug format', () => {
-		const result = validateManifest({ ...VALID_MANIFEST, name: 'My Setup!' });
-		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.field === 'name')).toBe(true);
-	});
-
-	it('requires version in semver format', () => {
-		const result = validateManifest({ ...VALID_MANIFEST, version: 'v1.0' });
-		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.field === 'version')).toBe(true);
-	});
-
-	it('requires description', () => {
-		const result = validateManifest({ ...VALID_MANIFEST, description: undefined });
-		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.field === 'description')).toBe(true);
-	});
-
-	it('rejects description exceeding 300 chars', () => {
-		const result = validateManifest({ ...VALID_MANIFEST, description: 'x'.repeat(301) });
-		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.field === 'description')).toBe(true);
-	});
-
-	it('accepts manifest without placement field', () => {
-		const result = validateManifest(VALID_MANIFEST);
-		expect(result.valid).toBe(true);
-	});
-
-	it('accepts manifest with placement field (legacy — ignored)', () => {
-		const result = validateManifest({ ...VALID_MANIFEST, placement: 'global' });
-		expect(result.valid).toBe(true);
-	});
-
-	it('accepts manifest with any placement value (field is stripped/ignored)', () => {
-		const result = validateManifest({ ...VALID_MANIFEST, placement: 'project' });
-		expect(result.valid).toBe(true);
-	});
-
-	it('requires at least one file', () => {
-		const result = validateManifest({ ...VALID_MANIFEST, files: [] });
-		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.field === 'files')).toBe(true);
-	});
-
-	it('rejects file entry missing path', () => {
-		const result = validateManifest({
-			...VALID_MANIFEST,
-			files: [{}]
-		});
-		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.field === 'files[0].path')).toBe(true);
-	});
-
-	it('rejects file entry with old source field (no path)', () => {
-		const result = validateManifest({
-			...VALID_MANIFEST,
-			files: [{ source: 'foo.md', target: '~/.foo', placement: 'global' }]
-		});
-		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.field === 'files[0].path')).toBe(true);
-	});
-
-	it('rejects file entry with invalid componentType', () => {
-		const result = validateManifest({
-			...VALID_MANIFEST,
-			files: [{ path: 'foo', componentType: 'widget' }]
-		});
-		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.field === 'files[0].componentType')).toBe(true);
-	});
-
-	it('accepts a valid componentType', () => {
-		const result = validateManifest({
-			...VALID_MANIFEST,
-			files: [{ path: 'foo', componentType: 'skill' }]
-		});
-		expect(result.valid).toBe(true);
-	});
-
-	it('rejects unknown category', () => {
-		const result = validateManifest({ ...VALID_MANIFEST, category: 'robotics' });
-		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.field === 'category')).toBe(true);
-	});
-
-	it('accepts known category', () => {
-		const result = validateManifest({ ...VALID_MANIFEST, category: 'devops' });
-		expect(result.valid).toBe(true);
-	});
-
-	it('rejects license exceeding 50 chars', () => {
-		const result = validateManifest({ ...VALID_MANIFEST, license: 'L'.repeat(51) });
-		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.field === 'license')).toBe(true);
-	});
-
-	it('rejects minToolVersion exceeding 20 chars', () => {
-		const result = validateManifest({ ...VALID_MANIFEST, minToolVersion: '1'.repeat(21) });
-		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.field === 'minToolVersion')).toBe(true);
+	it('accepts optional fields (componentType, category, legacy placement)', () => {
+		expect(
+			validateManifest({
+				...VALID_MANIFEST,
+				files: [{ path: 'foo', componentType: 'skill' }]
+			}).valid
+		).toBe(true);
+		expect(validateManifest({ ...VALID_MANIFEST, category: 'devops' }).valid).toBe(true);
+		expect(validateManifest({ ...VALID_MANIFEST, placement: 'global' }).valid).toBe(true);
+		expect(validateManifest({ ...VALID_MANIFEST, placement: 'project' }).valid).toBe(true);
 	});
 });
 
@@ -235,29 +171,20 @@ describe('writeManifest + readManifest roundtrip', () => {
 });
 
 describe('validateManifest — clone-tracking fields', () => {
-	it('accepts optional source field', () => {
-		const result = validateManifest({ ...VALID_MANIFEST, source: 'alice/my-setup' });
-		expect(result.valid).toBe(true);
-	});
-
-	it('accepts optional clonedAt field', () => {
-		const result = validateManifest({ ...VALID_MANIFEST, clonedAt: '2026-03-30T12:00:00.000Z' });
-		expect(result.valid).toBe(true);
-	});
-
-	it('accepts optional revision field', () => {
-		const result = validateManifest({ ...VALID_MANIFEST, revision: '1.0.0' });
-		expect(result.valid).toBe(true);
-	});
-
-	it('accepts all three tracking fields together', () => {
-		const result = validateManifest({
-			...VALID_MANIFEST,
-			source: 'alice/my-setup',
-			clonedAt: '2026-03-30T12:00:00.000Z',
-			revision: '1.0.0'
-		});
-		expect(result.valid).toBe(true);
+	it('accepts optional source, clonedAt, and revision fields (individually and combined)', () => {
+		expect(validateManifest({ ...VALID_MANIFEST, source: 'alice/my-setup' }).valid).toBe(true);
+		expect(
+			validateManifest({ ...VALID_MANIFEST, clonedAt: '2026-03-30T12:00:00.000Z' }).valid
+		).toBe(true);
+		expect(validateManifest({ ...VALID_MANIFEST, revision: '1.0.0' }).valid).toBe(true);
+		expect(
+			validateManifest({
+				...VALID_MANIFEST,
+				source: 'alice/my-setup',
+				clonedAt: '2026-03-30T12:00:00.000Z',
+				revision: '1.0.0'
+			}).valid
+		).toBe(true);
 	});
 
 	it('preserves tracking fields through writeManifest/readManifest roundtrip', () => {

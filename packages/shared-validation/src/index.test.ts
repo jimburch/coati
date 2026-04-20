@@ -10,42 +10,30 @@ import {
 	postInstallSchema
 } from './index.js';
 
-describe('PLACEMENT_VALUES', () => {
-	it('contains expected values', () => {
-		expect(PLACEMENT_VALUES).toContain('global');
-		expect(PLACEMENT_VALUES).toContain('project');
-		expect(PLACEMENT_VALUES).not.toContain('relative');
+describe('exported constant value sets', () => {
+	it('PLACEMENT, COMPONENT_TYPE, and CATEGORY values match their public contracts', () => {
+		expect(PLACEMENT_VALUES).toEqual(expect.arrayContaining(['global', 'project']));
 		expect(PLACEMENT_VALUES).toHaveLength(2);
-	});
-});
 
-describe('COMPONENT_TYPE_VALUES', () => {
-	it('contains expected values', () => {
-		const expected = [
-			'instruction',
-			'command',
-			'skill',
-			'mcp_server',
-			'hook',
-			'config',
-			'policy',
-			'agent_def',
-			'ignore',
-			'setup_script'
-		];
-		for (const v of expected) {
-			expect(COMPONENT_TYPE_VALUES).toContain(v);
-		}
+		expect(COMPONENT_TYPE_VALUES).toEqual(
+			expect.arrayContaining([
+				'instruction',
+				'command',
+				'skill',
+				'mcp_server',
+				'hook',
+				'config',
+				'policy',
+				'agent_def',
+				'ignore',
+				'setup_script'
+			])
+		);
 		expect(COMPONENT_TYPE_VALUES).toHaveLength(10);
-	});
-});
 
-describe('CATEGORY_VALUES', () => {
-	it('contains expected values', () => {
-		const expected = ['web-dev', 'mobile', 'data-science', 'devops', 'systems', 'general'];
-		for (const v of expected) {
-			expect(CATEGORY_VALUES).toContain(v);
-		}
+		expect(CATEGORY_VALUES).toEqual(
+			expect.arrayContaining(['web-dev', 'mobile', 'data-science', 'devops', 'systems', 'general'])
+		);
 		expect(CATEGORY_VALUES).toHaveLength(6);
 	});
 });

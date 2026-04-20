@@ -23,51 +23,22 @@ function makeAgent(slug: string, displayName: string = slug): AgentLike {
 	return { id: slug, slug, displayName };
 }
 
-// ─── getFolder ────────────────────────────────────────────────────────────────
+// ─── getFolder / getFilename ──────────────────────────────────────────────────
 
-describe('getFolder', () => {
-	it('returns null for a root-level file with no directory', () => {
-		expect(getFolder('file.sh')).toBeNull();
-	});
-
-	it('returns folder with trailing slash for a one-level nested file', () => {
-		expect(getFolder('hooks/pre-commit.sh')).toBe('hooks/');
-	});
-
-	it('returns full directory path (with trailing slash) for a deeply nested file', () => {
-		expect(getFolder('some/deep/path/file.sh')).toBe('some/deep/path/');
-	});
-
-	it('handles a single-character folder name', () => {
-		expect(getFolder('a/b.sh')).toBe('a/');
-	});
-
-	it('handles dotfiles in folders', () => {
-		expect(getFolder('.claude/settings.json')).toBe('.claude/');
-	});
-});
-
-// ─── getFilename ──────────────────────────────────────────────────────────────
-
-describe('getFilename', () => {
-	it('returns the full path for a root-level file', () => {
-		expect(getFilename('file.sh')).toBe('file.sh');
-	});
-
-	it('returns just the filename for a one-level nested file', () => {
-		expect(getFilename('hooks/pre-commit.sh')).toBe('pre-commit.sh');
-	});
-
-	it('returns just the filename for a deeply nested file', () => {
-		expect(getFilename('some/deep/path/file.sh')).toBe('file.sh');
-	});
-
-	it('handles dotfiles', () => {
-		expect(getFilename('.claude/settings.json')).toBe('settings.json');
-	});
-
-	it('preserves dotfile names at root', () => {
-		expect(getFilename('.gitignore')).toBe('.gitignore');
+describe('getFolder and getFilename', () => {
+	it('splits paths into folder (with trailing slash, or null) and filename', () => {
+		const cases: Array<[string, string | null, string]> = [
+			['file.sh', null, 'file.sh'],
+			['hooks/pre-commit.sh', 'hooks/', 'pre-commit.sh'],
+			['some/deep/path/file.sh', 'some/deep/path/', 'file.sh'],
+			['a/b.sh', 'a/', 'b.sh'],
+			['.claude/settings.json', '.claude/', 'settings.json'],
+			['.gitignore', null, '.gitignore']
+		];
+		for (const [path, folder, filename] of cases) {
+			expect(getFolder(path), `getFolder(${path})`).toBe(folder);
+			expect(getFilename(path), `getFilename(${path})`).toBe(filename);
+		}
 	});
 });
 
@@ -243,23 +214,11 @@ describe('groupFilesByAgent', () => {
 // ─── shouldStartExpanded ──────────────────────────────────────────────────────
 
 describe('shouldStartExpanded', () => {
-	it('returns true for 0 files', () => {
+	it('is true for ≤10 files (including 0), false above the threshold', () => {
 		expect(shouldStartExpanded(0)).toBe(true);
-	});
-
-	it('returns true when total files is less than 10', () => {
 		expect(shouldStartExpanded(5)).toBe(true);
-	});
-
-	it('returns true when total files is exactly 10', () => {
 		expect(shouldStartExpanded(10)).toBe(true);
-	});
-
-	it('returns false when total files is 11', () => {
 		expect(shouldStartExpanded(11)).toBe(false);
-	});
-
-	it('returns false for large file counts', () => {
 		expect(shouldStartExpanded(50)).toBe(false);
 	});
 });
@@ -267,26 +226,11 @@ describe('shouldStartExpanded', () => {
 // ─── allFilesAgentless ────────────────────────────────────────────────────────
 
 describe('allFilesAgentless', () => {
-	it('returns false for an empty array', () => {
+	it('is true only when the list is non-empty and every file has no agent', () => {
 		expect(allFilesAgentless([])).toBe(false);
-	});
-
-	it('returns true when every file has no agent', () => {
-		const files = [makeFile('a.sh', null), makeFile('b.sh', null)];
-		expect(allFilesAgentless(files)).toBe(true);
-	});
-
-	it('returns false when any file has an agent', () => {
-		const files = [makeFile('a.sh', null), makeFile('b.sh', 'claude')];
-		expect(allFilesAgentless(files)).toBe(false);
-	});
-
-	it('returns false when all files have an agent', () => {
-		const files = [makeFile('a.sh', 'claude'), makeFile('b.sh', 'claude')];
-		expect(allFilesAgentless(files)).toBe(false);
-	});
-
-	it('returns true for a single agent-less file', () => {
 		expect(allFilesAgentless([makeFile('solo.sh', null)])).toBe(true);
+		expect(allFilesAgentless([makeFile('a.sh', null), makeFile('b.sh', null)])).toBe(true);
+		expect(allFilesAgentless([makeFile('a.sh', null), makeFile('b.sh', 'claude')])).toBe(false);
+		expect(allFilesAgentless([makeFile('a.sh', 'claude'), makeFile('b.sh', 'claude')])).toBe(false);
 	});
 });

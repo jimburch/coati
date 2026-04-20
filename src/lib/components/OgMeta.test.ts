@@ -10,39 +10,11 @@ describe('OgMeta prop defaults and URL resolution', () => {
 		return url.startsWith('http') ? url : `${siteUrl}${url}`;
 	}
 
-	it('resolves a relative url to absolute using site url', () => {
-		const result = resolveUrl('/explore', PUBLIC_SITE_URL);
-		expect(result).toBe('https://coati.dev/explore');
-	});
-
-	it('leaves an already-absolute url unchanged', () => {
-		const result = resolveUrl('https://coati.dev/u/alice', PUBLIC_SITE_URL);
-		expect(result).toBe('https://coati.dev/u/alice');
-	});
-
-	it('resolves og-image path to absolute url', () => {
-		const image = '/og-image.png';
-		const result = resolveUrl(image, PUBLIC_SITE_URL);
-		expect(result).toBe('https://coati.dev/og-image.png');
-	});
-
-	it('default image path constructs from PUBLIC_SITE_URL', () => {
-		const defaultImage = `${PUBLIC_SITE_URL}/og-image.png`;
-		expect(defaultImage).toBe('https://coati.dev/og-image.png');
-	});
-
-	it('default type is website', () => {
-		const type = 'website';
-		expect(type).toBe('website');
-	});
-
-	it('default twitterCard is summary', () => {
-		const twitterCard = 'summary';
-		expect(twitterCard).toBe('summary');
-	});
-
-	it('siteName constant is Coati', () => {
-		const siteName = 'Coati';
-		expect(siteName).toBe('Coati');
+	it('resolves relative paths against the site url and leaves absolute urls alone', () => {
+		expect(resolveUrl('/explore', PUBLIC_SITE_URL)).toBe('https://coati.dev/explore');
+		expect(resolveUrl('/og-image.png', PUBLIC_SITE_URL)).toBe('https://coati.dev/og-image.png');
+		expect(resolveUrl('https://coati.dev/u/alice', PUBLIC_SITE_URL)).toBe(
+			'https://coati.dev/u/alice'
+		);
 	});
 });
