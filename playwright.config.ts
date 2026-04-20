@@ -1,7 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-	webServer: { command: 'pnpm build && pnpm preview', port: 4173 },
+	webServer: {
+		command: 'pnpm build && pnpm preview',
+		port: 4173,
+		env: { DISABLE_RATE_LIMIT: 'true' }
+	},
 	testMatch: '**/*.e2e.{ts,js}',
 	projects: [
 		{

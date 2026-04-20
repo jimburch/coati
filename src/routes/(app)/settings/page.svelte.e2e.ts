@@ -1,17 +1,25 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const SETTINGS_URL = '/settings';
-const LOGIN_URL = '/auth/login/github';
+
+// The (app) layout has ssr: false, so the server-side redirect for unauthenticated
+// users triggers a client-side fetch + navigation chain that runs AFTER
+// page.goto returns. Wait for the network to go idle so the chain resolves
+// before we check the URL.
+async function gotoSettingsAndCheckAuth(page: Page): Promise<boolean> {
+	await page.goto(SETTINGS_URL);
+	await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+	const url = page.url();
+	return url.endsWith('/settings') && !url.includes('/auth/');
+}
 
 test('unauthenticated user is redirected to login', async ({ page }) => {
 	await page.goto(SETTINGS_URL);
-	await expect(page).toHaveURL(new RegExp(LOGIN_URL.replace(/\//g, '/')));
+	await expect(page).toHaveURL(/auth\/login\/github|github\.com\/login/);
 });
 
 test('profile form renders with expected fields', async ({ page }) => {
-	// This test requires an authenticated session; skip if redirected to login
-	await page.goto(SETTINGS_URL);
-	if (page.url().includes('login')) {
+	if (!(await gotoSettingsAndCheckAuth(page))) {
 		test.skip();
 		return;
 	}
@@ -24,8 +32,7 @@ test('profile form renders with expected fields', async ({ page }) => {
 });
 
 test('account section displays expected elements', async ({ page }) => {
-	await page.goto(SETTINGS_URL);
-	if (page.url().includes('login')) {
+	if (!(await gotoSettingsAndCheckAuth(page))) {
 		test.skip();
 		return;
 	}
@@ -37,8 +44,7 @@ test('account section displays expected elements', async ({ page }) => {
 });
 
 test('account avatar shows "managed via GitHub" note', async ({ page }) => {
-	await page.goto(SETTINGS_URL);
-	if (page.url().includes('login')) {
+	if (!(await gotoSettingsAndCheckAuth(page))) {
 		test.skip();
 		return;
 	}
@@ -47,8 +53,7 @@ test('account avatar shows "managed via GitHub" note', async ({ page }) => {
 });
 
 test('GitHub username links to GitHub profile', async ({ page }) => {
-	await page.goto(SETTINGS_URL);
-	if (page.url().includes('login')) {
+	if (!(await gotoSettingsAndCheckAuth(page))) {
 		test.skip();
 		return;
 	}
@@ -62,8 +67,7 @@ test('GitHub username links to GitHub profile', async ({ page }) => {
 });
 
 test('save button shows saving state while submitting', async ({ page }) => {
-	await page.goto(SETTINGS_URL);
-	if (page.url().includes('login')) {
+	if (!(await gotoSettingsAndCheckAuth(page))) {
 		test.skip();
 		return;
 	}
@@ -77,8 +81,7 @@ test('save button shows saving state while submitting', async ({ page }) => {
 });
 
 test('validation error displays for invalid website URL', async ({ page }) => {
-	await page.goto(SETTINGS_URL);
-	if (page.url().includes('login')) {
+	if (!(await gotoSettingsAndCheckAuth(page))) {
 		test.skip();
 		return;
 	}
@@ -89,8 +92,7 @@ test('validation error displays for invalid website URL', async ({ page }) => {
 });
 
 test('successful save shows success message', async ({ page }) => {
-	await page.goto(SETTINGS_URL);
-	if (page.url().includes('login')) {
+	if (!(await gotoSettingsAndCheckAuth(page))) {
 		test.skip();
 		return;
 	}
@@ -104,10 +106,8 @@ test('successful save shows success message', async ({ page }) => {
 test('desktop: settings page renders at 1280x720', async ({ page, isMobile }) => {
 	test.skip(isMobile, 'desktop-only');
 	await page.setViewportSize({ width: 1280, height: 720 });
-	await page.goto(SETTINGS_URL);
-	if (page.url().includes('login')) {
-		// Redirected — just verify the redirect works
-		await expect(page).toHaveURL(new RegExp(LOGIN_URL.replace(/\//g, '/')));
+	if (!(await gotoSettingsAndCheckAuth(page))) {
+		await expect(page).toHaveURL(/auth\/login\/github|github\.com\/login/);
 		return;
 	}
 	await expect(page.getByTestId('profile-section')).toBeVisible();
@@ -116,9 +116,8 @@ test('desktop: settings page renders at 1280x720', async ({ page, isMobile }) =>
 
 test('mobile: settings page renders at 430x932', async ({ page, isMobile }) => {
 	test.skip(!isMobile, 'mobile-only');
-	await page.goto(SETTINGS_URL);
-	if (page.url().includes('login')) {
-		await expect(page).toHaveURL(new RegExp(LOGIN_URL.replace(/\//g, '/')));
+	if (!(await gotoSettingsAndCheckAuth(page))) {
+		await expect(page).toHaveURL(/auth\/login\/github|github\.com\/login/);
 		return;
 	}
 	await expect(page.getByTestId('profile-section')).toBeVisible();

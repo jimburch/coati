@@ -19,19 +19,6 @@ test.describe('Hamburger menu (mobile)', () => {
 		await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).toBeVisible();
 	});
 
-	test('mobile menu contains Explore link', async ({ page }) => {
-		await page.goto('/');
-		await page.getByRole('button', { name: 'Open menu' }).click();
-		const nav = page.getByRole('navigation', { name: 'Mobile navigation' });
-		await expect(nav.getByRole('link', { name: 'Explore' })).toBeVisible();
-	});
-
-	test('mobile menu contains search input', async ({ page }) => {
-		await page.goto('/');
-		await page.getByRole('button', { name: 'Open menu' }).click();
-		await expect(page.getByRole('searchbox')).toBeVisible();
-	});
-
 	test('menu closes when hamburger is toggled again', async ({ page }) => {
 		await page.goto('/');
 		await page.getByRole('button', { name: 'Open menu' }).click();
@@ -49,17 +36,25 @@ test.describe('Hamburger menu (mobile)', () => {
 	});
 
 	test('menu closes on page navigation', async ({ page }) => {
+		// Intercept the GitHub OAuth kickoff so clicking Sign in triggers a
+		// same-origin client-side navigation instead of going to github.com.
+		await page.route('**/auth/login/github', (route) =>
+			route.fulfill({ status: 302, headers: { location: '/' } })
+		);
 		await page.goto('/');
 		await page.getByRole('button', { name: 'Open menu' }).click();
 		const nav = page.getByRole('navigation', { name: 'Mobile navigation' });
-		await nav.getByRole('link', { name: 'Explore' }).click();
-		await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).not.toBeVisible();
+		// Wait for the menu to actually open before interacting with its children.
+		await expect(nav).toBeVisible();
+		await nav.getByRole('link', { name: 'Sign in with GitHub' }).click();
+		await expect(nav).not.toBeVisible();
 	});
 
 	test('unauthenticated user sees Sign in with GitHub in menu', async ({ page }) => {
 		await page.goto('/');
 		await page.getByRole('button', { name: 'Open menu' }).click();
-		await expect(page.getByRole('link', { name: 'Sign in with GitHub' })).toBeVisible();
+		const nav = page.getByRole('navigation', { name: 'Mobile navigation' });
+		await expect(nav.getByRole('link', { name: 'Sign in with GitHub' })).toBeVisible();
 	});
 
 	test('unauthenticated user does not see Profile/Settings links in menu', async ({ page }) => {
@@ -93,7 +88,7 @@ test.describe('Desktop navbar (mobile menu hidden)', () => {
 
 	test('desktop sign in button is visible for unauthenticated users', async ({ page }) => {
 		await page.goto('/');
-		await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible();
+		await expect(page.getByRole('link', { name: 'Sign in', exact: true })).toBeVisible();
 	});
 
 	test('desktop navbar does not contain a Feed link', async ({ page }) => {

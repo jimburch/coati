@@ -66,11 +66,8 @@ test('mobile: progress bar appears during client-side navigation', async ({ page
 	test.skip(!isMobile, 'mobile-only');
 	await page.goto('/');
 
-	// Open hamburger menu on mobile to access the Explore link
-	await page.getByRole('button', { name: /menu/i }).click();
-	await page.getByRole('link', { name: 'Explore' }).first().click();
-
-	// Immediately route-delay for subsequent clicks — here we just assert
-	// the page navigates correctly (mobile nav may complete before assertion window)
+	// The mobile hamburger menu has no Explore link; use the hero CTA which
+	// triggers a client-side navigation to /explore.
+	await page.getByRole('link', { name: 'Explore Setups' }).first().click();
 	await page.waitForURL(/\/explore/);
 });

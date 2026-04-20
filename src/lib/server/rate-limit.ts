@@ -36,6 +36,10 @@ const STATIC_PREFIXES = ['/_app/', '/favicon'];
 export async function checkRateLimit(
 	event: RequestEvent
 ): Promise<{ limited: boolean; retryAfter: number }> {
+	if (process.env.DISABLE_RATE_LIMIT === 'true') {
+		return { limited: false, retryAfter: 0 };
+	}
+
 	const pathname = event.url.pathname;
 
 	if (STATIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
