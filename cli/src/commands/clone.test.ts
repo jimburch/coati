@@ -932,3 +932,36 @@ describe('clone — directory-at-target abort', () => {
 		expect(spy).toHaveBeenCalledWith(1);
 	});
 });
+
+describe('clone — path containment', () => {
+	it('surfaces unsafe-path rejection and exits 1 without recording the clone', async () => {
+		vi.mocked(ctx.fs.writeSetupFiles).mockRejectedValue(
+			new Error(
+				'Refusing to write unsafe path(s) outside the install root:\n  ../../.ssh/authorized_keys'
+			)
+		);
+		const spy = exitSpy();
+		const program = makeProgram();
+		await expect(program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' })).rejects.toThrow(
+			'process.exit'
+		);
+		expect(ctx.io.error).toHaveBeenCalledWith(
+			expect.stringContaining('../../.ssh/authorized_keys')
+		);
+		expect(ctx.api.post).not.toHaveBeenCalled();
+		expect(spy).toHaveBeenCalledWith(1);
+	});
+
+	it('surfaces symlink refusal and exits 1', async () => {
+		vi.mocked(ctx.fs.writeSetupFiles).mockRejectedValue(
+			new Error('Refusing to overwrite existing symlink(s):\n  /tmp/proj/config.json')
+		);
+		const spy = exitSpy();
+		const program = makeProgram();
+		await expect(program.parseAsync(['clone', 'alice/my-setup'], { from: 'user' })).rejects.toThrow(
+			'process.exit'
+		);
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('symlink'));
+		expect(spy).toHaveBeenCalledWith(1);
+	});
+});

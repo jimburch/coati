@@ -28,11 +28,11 @@ A thin vertical slice that extracts the shared `isSafeRelativePath` predicate an
 
 ### Acceptance criteria
 
-- [ ] `isSafeRelativePath` is exported from the shared validation package and covered by unit tests for all documented rules (non-empty, absolute, `..` segments, null byte, leading separators).
-- [ ] The server-side file-ingestion Zod schema refines `path` through `isSafeRelativePath`.
-- [ ] An integration test asserts that a publish request containing an unsafe path returns 400 with a message that identifies the offending path, and that no rows are written to the file-content table.
-- [ ] Valid existing setups continue to publish without regression.
-- [ ] Lint, typecheck, and unit test suite all green.
+- [x] `isSafeRelativePath` is exported from the shared validation package and covered by unit tests for all documented rules (non-empty, absolute, `..` segments, null byte, leading separators).
+- [x] The server-side file-ingestion Zod schema refines `path` through `isSafeRelativePath`.
+- [x] An integration test asserts that a publish request containing an unsafe path returns 400 with a message that identifies the offending path, and that no rows are written to the file-content table.
+- [x] Valid existing setups continue to publish without regression.
+- [x] Lint, typecheck, and unit test suite all green.
 
 ---
 
@@ -46,12 +46,12 @@ The CLI consumes the shared `isSafeRelativePath` predicate and enforces it on ev
 
 ### Acceptance criteria
 
-- [ ] The CLI clone command runs every received file's `path` through `isSafeRelativePath` before any filesystem operation.
-- [ ] On any violation, the clone exits non-zero, prints a single consolidated error listing every bad path, and writes zero files.
-- [ ] After `path.resolve` / `path.join`, the CLI asserts the result begins with the intended root + path separator and throws otherwise.
-- [ ] Before writing, the CLI refuses to overwrite an existing symlink at the target.
-- [ ] Integration tests (using a mocked API and a temp directory) cover: unsafe-path rejection, pre-existing-symlink refusal, normal clone continues to succeed, global-placement rejection of `..` escapes.
-- [ ] Existing clone behavior for valid setups is unchanged.
+- [x] The CLI clone command runs every received file's `path` through `isSafeRelativePath` before any filesystem operation.
+- [x] On any violation, the clone exits non-zero, prints a single consolidated error listing every bad path, and writes zero files.
+- [x] After `path.resolve` / `path.join`, the CLI asserts the result begins with the intended root + path separator and throws otherwise.
+- [x] Before writing, the CLI refuses to overwrite an existing symlink at the target.
+- [x] Integration tests (using a mocked API and a temp directory) cover: unsafe-path rejection, pre-existing-symlink refusal, normal clone continues to succeed, global-placement rejection of `..` escapes.
+- [x] Existing clone behavior for valid setups is unchanged.
 
 ---
 

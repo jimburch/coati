@@ -1,6 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { isSafeRelativePath } from '@coati/validation';
 import { classifyTarget, type TargetClassification } from './classify-target.js';
 import { type ManifestPlacement } from './manifest.js';
 import { resolveConflicts, type ConflictFile, type ConflictResolution } from './prompts.js';
@@ -73,6 +74,15 @@ export async function writeSetupFiles(
 ): Promise<WriteResult> {
 	const placement = options.placement ?? 'project';
 
+	// Phase 0: reject any unsafe paths before touching disk. A single consolidated
+	// error lists every rejected path so the user sees all violations at once.
+	const unsafePaths = files.map((f) => f.path).filter((p) => !isSafeRelativePath(p));
+	if (unsafePaths.length > 0) {
+		throw new Error(
+			`Refusing to write unsafe path(s) outside the install root:\n  ${unsafePaths.join('\n  ')}`
+		);
+	}
+
 	// Phase 1: classify every target. A `is-directory` classification aborts the
 	// entire operation before touching disk.
 	const classified: {
@@ -83,6 +93,32 @@ export async function writeSetupFiles(
 		const absolutePath = resolveTargetPath(file.path, placement, options);
 		return { file, absolutePath, classification: classifyTarget(absolutePath, file.content) };
 	});
+
+	// Post-resolve containment check (belt-and-suspenders vs. Phase 0 path check).
+	const root = placement === 'global' ? os.homedir() : (options.projectDir ?? process.cwd());
+	const rootWithSep = root.endsWith(path.sep) ? root : root + path.sep;
+	const escaped = classified.find(
+		(c) => c.absolutePath !== root && !c.absolutePath.startsWith(rootWithSep)
+	);
+	if (escaped) {
+		throw new Error(
+			`Refusing to write outside the install root: ${escaped.file.path} → ${escaped.absolutePath}`
+		);
+	}
+
+	// Symlink refusal: never overwrite a pre-existing symlink. A malicious setup
+	// could exploit a symlink in the cwd to redirect a write to a sensitive file.
+	const symlinkTargets = classified.filter(({ absolutePath }) => {
+		try {
+			return fs.lstatSync(absolutePath).isSymbolicLink();
+		} catch {
+			return false;
+		}
+	});
+	if (symlinkTargets.length > 0) {
+		const list = symlinkTargets.map((c) => `  ${c.absolutePath}`).join('\n');
+		throw new Error(`Refusing to overwrite existing symlink(s):\n${list}`);
+	}
 
 	const directoryBlocker = classified.find((c) => c.classification.kind === 'is-directory');
 	if (directoryBlocker) {
