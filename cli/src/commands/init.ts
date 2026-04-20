@@ -117,6 +117,18 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 		}
 		filesToInclude = [];
 	} else {
+		// Warn about empty files — these will be rejected by publish.
+		const emptyPaths = [...new Set(detected.filter((f) => f.isEmpty).map((f) => f.path))];
+		if (emptyPaths.length > 0 && !ctx.io.isJson()) {
+			ctx.io.warning(
+				`${emptyPaths.length} detected file${emptyPaths.length === 1 ? ' is' : 's are'} empty and cannot be published:`
+			);
+			for (const p of emptyPaths) {
+				ctx.io.print(`  ${p}`);
+			}
+			ctx.io.print('Add content or leave them unselected below.');
+		}
+
 		if (!ctx.io.isJson()) {
 			// Show detected files grouped by agent with colored type badges
 			const formatted = formatFileList(detected);

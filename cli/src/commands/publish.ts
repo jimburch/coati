@@ -247,6 +247,7 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 
 			// Read file contents from disk
 			const filesPayload: PublishFileContent[] = [];
+			const emptyFilePaths: string[] = [];
 
 			for (const file of manifest.files) {
 				const filePath = path.join(cwd, file.path);
@@ -258,6 +259,9 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 					process.exit(1);
 					return;
 				}
+				if (content.length === 0) {
+					emptyFilePaths.push(file.path);
+				}
 				filesPayload.push({
 					path: file.path,
 					componentType: file.componentType ?? 'instruction',
@@ -265,6 +269,18 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 					...(file.agent ? { agent: file.agent } : {}),
 					content
 				});
+			}
+
+			if (emptyFilePaths.length > 0) {
+				ctx.io.error(
+					`Cannot publish: ${emptyFilePaths.length} file${emptyFilePaths.length === 1 ? ' is' : 's are'} empty.`
+				);
+				for (const p of emptyFilePaths) {
+					ctx.io.print(`  ${p}`);
+				}
+				ctx.io.print('Add content or remove these entries from coati.json before publishing.');
+				process.exit(1);
+				return;
 			}
 
 			// Build payload using pure buildPublishPayload function

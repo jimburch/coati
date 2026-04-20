@@ -86,6 +86,26 @@ describe('detectFiles — skipped directories', () => {
 	});
 });
 
+// ─── isEmpty flag ─────────────────────────────────────────────────────────────
+
+describe('detectFiles — isEmpty flag', () => {
+	it('marks a zero-byte recognized file as isEmpty=true', () => {
+		mkfile('CLAUDE.md', '');
+		const files = detectFiles(tmpDir);
+		const f = find(files, 'CLAUDE.md');
+		expect(f).toBeDefined();
+		expect(f!.isEmpty).toBe(true);
+	});
+
+	it('marks a non-empty recognized file as isEmpty=false', () => {
+		mkfile('CLAUDE.md', '# hi');
+		const files = detectFiles(tmpDir);
+		const f = find(files, 'CLAUDE.md');
+		expect(f).toBeDefined();
+		expect(f!.isEmpty).toBe(false);
+	});
+});
+
 // ─── Claude Code ─────────────────────────────────────────────────────────────
 
 describe('detectFiles — claude-code', () => {

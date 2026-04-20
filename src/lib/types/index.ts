@@ -104,7 +104,7 @@ export const createSetupFileSchema = z.object({
 	componentType: componentTypeSchema.default('instruction'),
 	description: z.string().optional(),
 	agent: z.string().max(100).optional(),
-	content: z.string().min(1).max(102400, 'File exceeds 100KB limit')
+	content: z.string().min(1, 'File content cannot be empty').max(102400, 'File exceeds 100KB limit')
 });
 
 // Cross-reference: cli/src/validation.ts must stay in sync with this schema

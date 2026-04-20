@@ -7,13 +7,15 @@ const CLAUDE_FILES: DetectedFile[] = [
 		path: 'CLAUDE.md',
 		componentType: 'instruction',
 		tool: 'claude-code',
-		description: 'Claude instruction file'
+		description: 'Claude instruction file',
+		isEmpty: false
 	},
 	{
 		path: '.claude/settings.json',
 		componentType: 'config',
 		tool: 'claude-code',
-		description: 'Claude settings'
+		description: 'Claude settings',
+		isEmpty: false
 	}
 ];
 
@@ -23,13 +25,15 @@ const MULTI_AGENT_FILES: DetectedFile[] = [
 		path: '.cursor/rules/main.mdc',
 		componentType: 'instruction',
 		tool: 'cursor',
-		description: 'Cursor rule'
+		description: 'Cursor rule',
+		isEmpty: false
 	},
 	{
 		path: 'README.md',
 		componentType: 'instruction',
 		tool: '',
-		description: 'Shared README'
+		description: 'Shared README',
+		isEmpty: false
 	}
 ];
 
@@ -75,5 +79,17 @@ describe('formatFileList', () => {
 	it('returns empty string for empty input', () => {
 		const output = formatFileList([]);
 		expect(output).toBe('');
+	});
+
+	it('marks empty files with an (empty) tag', () => {
+		const files: DetectedFile[] = [
+			{ ...CLAUDE_FILES[0], isEmpty: true },
+			{ ...CLAUDE_FILES[1], isEmpty: false }
+		];
+		const output = stripAnsi(formatFileList(files));
+		const claudeLine = output.split('\n').find((l) => l.includes('CLAUDE.md'))!;
+		const settingsLine = output.split('\n').find((l) => l.includes('.claude/settings.json'))!;
+		expect(claudeLine).toContain('(empty)');
+		expect(settingsLine).not.toContain('(empty)');
 	});
 });

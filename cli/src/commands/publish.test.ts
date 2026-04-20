@@ -679,6 +679,48 @@ describe('publish — clone-tracking fields', () => {
 
 // ── error handling ────────────────────────────────────────────────────────────
 
+describe('empty file validation', () => {
+	it('blocks publish when any file content is empty and does not call the API', async () => {
+		mockReadFileSync.mockReturnValue('');
+		const program = makeProgram();
+		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+			throw new Error('process.exit');
+		});
+
+		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('empty'));
+		expect(ctx.io.print).toHaveBeenCalledWith(expect.stringContaining('.claude/commands/foo.md'));
+		expect(exitSpy).toHaveBeenCalledWith(1);
+		expect(ctx.api.post).not.toHaveBeenCalled();
+		expect(ctx.api.patch).not.toHaveBeenCalled();
+	});
+
+	it('lists every empty file when multiple are empty', async () => {
+		mockReadManifest.mockReturnValue({
+			...MOCK_MANIFEST,
+			files: [
+				{ path: '.claude/commands/foo.md', componentType: 'command' },
+				{ path: '.claude/commands/bar.md', componentType: 'command' },
+				{ path: 'CLAUDE.md', componentType: 'instruction' }
+			]
+		});
+		mockReadFileSync
+			.mockReturnValueOnce('')
+			.mockReturnValueOnce('non-empty')
+			.mockReturnValueOnce('');
+		const program = makeProgram();
+		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+			throw new Error('process.exit');
+		});
+
+		await expect(program.parseAsync(['node', 'coati', 'publish'])).rejects.toThrow('process.exit');
+		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('2 files are empty'));
+		expect(ctx.io.print).toHaveBeenCalledWith(expect.stringContaining('.claude/commands/foo.md'));
+		expect(ctx.io.print).toHaveBeenCalledWith(expect.stringContaining('CLAUDE.md'));
+		expect(exitSpy).toHaveBeenCalledWith(1);
+	});
+});
+
 describe('error handling', () => {
 	it('errors and exits when a referenced file cannot be read', async () => {
 		mockReadFileSync.mockImplementation(() => {
