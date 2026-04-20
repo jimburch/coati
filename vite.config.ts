@@ -34,7 +34,7 @@ export default defineConfig({
 					name: 'server',
 					environment: 'node',
 					setupFiles: ['dotenv/config'],
-					globalSetup: ['./scripts/migrate-test-db.ts'],
+					...(process.env.CI ? {} : { globalSetup: ['./scripts/migrate-test-db.ts'] }),
 					include: ['src/**/*.{test,spec}.{js,ts}'],
 					exclude: [
 						'src/**/*.svelte.{test,spec}.{js,ts}',
