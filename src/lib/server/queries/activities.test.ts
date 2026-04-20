@@ -64,7 +64,7 @@ vi.mock('$lib/server/db', () => {
 	return { db: chain };
 });
 
-import { getHomeFeed, getProfileFeed } from './activities';
+import { getProfileFeed } from './activities';
 
 function makeRow(overrides: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
 	return {
@@ -89,138 +89,6 @@ function makeRow(overrides: Partial<Record<string, unknown>> = {}): Record<strin
 		...overrides
 	};
 }
-
-describe('getHomeFeed', () => {
-	beforeEach(() => {
-		state.rows = [];
-		capturedSql.queries = [];
-		vi.clearAllMocks();
-	});
-
-	it('returns items and null nextCursor when rows are at or below limit', async () => {
-		state.rows = [makeRow({ id: 'act-1' }), makeRow({ id: 'act-2' })];
-
-		const result = await getHomeFeed('user-1', undefined, 5);
-
-		expect(result.items).toHaveLength(2);
-		expect(result.nextCursor).toBeNull();
-	});
-
-	it('trims items to limit and sets nextCursor when rows exceed limit', async () => {
-		const cursor1 = new Date('2026-01-10T12:00:00Z');
-		const cursor2 = new Date('2026-01-10T11:00:00Z');
-		// Return limit+1 rows (3 rows for limit=2)
-		state.rows = [
-			makeRow({ id: 'act-1', createdAt: cursor1 }),
-			makeRow({ id: 'act-2', createdAt: cursor2 }),
-			makeRow({ id: 'act-3', createdAt: new Date('2026-01-10T10:00:00Z') })
-		];
-
-		const result = await getHomeFeed('user-1', undefined, 2);
-
-		expect(result.items).toHaveLength(2);
-		expect(result.items[0].id).toBe('act-1');
-		expect(result.items[1].id).toBe('act-2');
-		expect(result.nextCursor).toBe(cursor2.toISOString());
-	});
-
-	it('returns null nextCursor when result is exactly limit rows', async () => {
-		state.rows = [makeRow({ id: 'act-1' }), makeRow({ id: 'act-2' })];
-
-		const result = await getHomeFeed('user-1', undefined, 2);
-
-		expect(result.items).toHaveLength(2);
-		expect(result.nextCursor).toBeNull();
-	});
-
-	it('returns empty items and null nextCursor when no rows', async () => {
-		state.rows = [];
-
-		const result = await getHomeFeed('user-1', undefined, 20);
-
-		expect(result.items).toHaveLength(0);
-		expect(result.nextCursor).toBeNull();
-	});
-
-	it('preserves actionType on returned items', async () => {
-		state.rows = [makeRow({ actionType: 'commented' })];
-
-		const result = await getHomeFeed('user-1', undefined, 5);
-
-		expect(result.items[0].actionType).toBe('commented');
-	});
-
-	it('applies team_members visibility filter in feed', async () => {
-		state.rows = [];
-
-		await getHomeFeed('user-123', undefined, 20);
-
-		const hasTeamMembersCondition = capturedSql.queries.some((q) => q.includes('team_members'));
-		expect(hasTeamMembersCondition).toBe(true);
-	});
-
-	it('applies public-only visibility filter for null setupId activities', async () => {
-		state.rows = [];
-
-		await getHomeFeed('user-123', undefined, 20);
-
-		const hasNullSetupIdCondition = capturedSql.queries.some((q) => q.includes('IS NULL'));
-		expect(hasNullSetupIdCondition).toBe(true);
-	});
-
-	it('returns created_team actionType on team activity rows', async () => {
-		state.rows = [
-			makeRow({
-				actionType: 'created_team',
-				setupId: null,
-				teamId: 'team-1',
-				teamName: 'My Team',
-				teamSlug: 'my-team'
-			})
-		];
-
-		const result = await getHomeFeed('user-1', undefined, 5);
-
-		expect(result.items[0].actionType).toBe('created_team');
-		expect(result.items[0].teamId).toBe('team-1');
-		expect(result.items[0].teamName).toBe('My Team');
-		expect(result.items[0].teamSlug).toBe('my-team');
-	});
-
-	it('returns joined_team actionType on join activity rows', async () => {
-		state.rows = [makeRow({ actionType: 'joined_team', setupId: null, teamId: 'team-1' })];
-
-		const result = await getHomeFeed('user-1', undefined, 5);
-
-		expect(result.items[0].actionType).toBe('joined_team');
-	});
-
-	it('returns left_team actionType on departure activity rows', async () => {
-		state.rows = [makeRow({ actionType: 'left_team', setupId: null, teamId: 'team-1' })];
-
-		const result = await getHomeFeed('user-1', undefined, 5);
-
-		expect(result.items[0].actionType).toBe('left_team');
-	});
-
-	it('returns invited_to_team actionType on invite activity rows', async () => {
-		state.rows = [
-			makeRow({
-				actionType: 'invited_to_team',
-				setupId: null,
-				teamId: 'team-1',
-				targetUserId: 'user-2',
-				targetUsername: 'bob'
-			})
-		];
-
-		const result = await getHomeFeed('user-1', undefined, 5);
-
-		expect(result.items[0].actionType).toBe('invited_to_team');
-		expect(result.items[0].targetUserId).toBe('user-2');
-		expect(result.items[0].targetUsername).toBe('bob');
-	});
-});
 
 describe('getProfileFeed', () => {
 	beforeEach(() => {

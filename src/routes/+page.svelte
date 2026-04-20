@@ -8,7 +8,7 @@
 	import YourTeamsList from '$lib/components/YourTeamsList.svelte';
 	import QuickActions from '$lib/components/QuickActions.svelte';
 	import DiscoveryTabs from '$lib/components/DiscoveryTabs.svelte';
-	import YourActivityPanel from '$lib/components/YourActivityPanel.svelte';
+	import ActivityPanel from '$lib/components/ActivityPanel.svelte';
 	import { Upload, Search, Download } from '@lucide/svelte';
 
 	const { data } = $props();
@@ -81,11 +81,9 @@
 					/>
 				</div>
 
-				{#if data.yourActivity.length > 0}
-					<div class="order-8" data-testid="your-activity-panel">
-						<YourActivityPanel activity={data.yourActivity} username={data.user.username} />
-					</div>
-				{/if}
+				<div class="order-8" data-testid="activity-panel-slot">
+					<ActivityPanel items={data.activityFeed} />
+				</div>
 
 				{#if data.featuredSetups.length > 0}
 					<section class="order-7" data-testid="featured-setups">

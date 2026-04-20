@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types';
 import { requireApiAuth } from '$lib/server/guards';
 import { success, error } from '$lib/server/responses';
-import { getHomeFeed } from '$lib/server/queries/activities';
+import { getBlendedActivityFeed } from '$lib/server/queries/activityFeed';
 
 export const GET: RequestHandler = async (event) => {
 	const authResult = requireApiAuth(event);
@@ -18,6 +18,6 @@ export const GET: RequestHandler = async (event) => {
 		cursor = parsed;
 	}
 
-	const feed = await getHomeFeed(user.id, cursor, 20);
+	const feed = await getBlendedActivityFeed(user.id, cursor, 20);
 	return success(feed);
 };

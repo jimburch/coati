@@ -99,15 +99,27 @@ test('happy path: agent chips shown when user has agents', async ({ page }) => {
 	}
 });
 
-test('happy path: activity panel shown when user has recent activity', async ({ page }) => {
+test('happy path: activity panel visible when authenticated', async ({ page }) => {
 	await page.goto(HOME);
 	if (isAuthRedirect(page.url())) {
 		test.skip();
 		return;
 	}
-	const panel = page.getByTestId('your-activity-panel');
-	if ((await panel.count()) > 0) {
-		await expect(panel).toBeVisible();
+	await expect(page.getByTestId('activity-panel')).toBeVisible();
+});
+
+test('happy path: activity panel shows See all link when there are items', async ({ page }) => {
+	await page.goto(HOME);
+	if (isAuthRedirect(page.url())) {
+		test.skip();
+		return;
+	}
+	const panel = page.getByTestId('activity-panel');
+	await expect(panel).toBeVisible();
+	const seeAll = panel.getByTestId('see-all-link');
+	// See-all is only rendered when there are items (not in the zero empty state)
+	if ((await seeAll.count()) > 0) {
+		await expect(seeAll).toHaveAttribute('href', '/feed');
 	}
 });
 
@@ -153,7 +165,7 @@ test('zero-state: AgentChips absent when user has no setups', async ({ page }) =
 	await expect(page.getByTestId('agent-chips')).not.toBeVisible();
 });
 
-test('zero-state: YourActivityPanel absent when user has no activity', async ({ page }) => {
+test('zero-state: activity panel renders zero empty state when no activity', async ({ page }) => {
 	await page.goto(HOME);
 	if (isAuthRedirect(page.url())) {
 		test.skip();
@@ -163,8 +175,8 @@ test('zero-state: YourActivityPanel absent when user has no activity', async ({ 
 		test.skip();
 		return;
 	}
-	// Zero-state user has no setups and therefore no activity on those setups
-	await expect(page.getByTestId('your-activity-panel')).not.toBeVisible();
+	// Panel must be present; content could be zero empty-state, popular items, or follow CTA
+	await expect(page.getByTestId('activity-panel')).toBeVisible();
 });
 
 test('zero-state: Following tab shows empty state', async ({ page }) => {
@@ -359,7 +371,7 @@ test('mobile: Featured Setups appears above YourActivityPanel', async ({ page, i
 	}
 
 	const featured = page.getByTestId('featured-setups');
-	const activity = page.getByTestId('your-activity-panel');
+	const activity = page.getByTestId('activity-panel');
 	if ((await featured.count()) === 0 || (await activity.count()) === 0) {
 		// One of the conditional sections is absent
 		test.skip();

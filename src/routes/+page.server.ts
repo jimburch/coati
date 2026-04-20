@@ -13,7 +13,8 @@ import {
 	getUserSetupAgents
 } from '$lib/server/queries/users';
 import { getUserTeams } from '$lib/server/queries/teams';
-import { getActivityOnUserSetups, type SetupActivityEntry } from '$lib/server/queries/activities';
+import { getBlendedActivityFeed } from '$lib/server/queries/activityFeed';
+import type { FeedItem } from '$lib/server/queries/activities';
 
 type DashboardSetup = {
 	id: string;
@@ -47,7 +48,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			userAgents,
 			userTeams,
 			trending,
-			yourActivity,
+			blendedActivity,
 			forYou,
 			following
 		] = await Promise.all([
@@ -57,7 +58,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			getUserSetupAgents(viewerId),
 			getUserTeams(viewerId),
 			getTrendingSetups(6, viewerId),
-			getActivityOnUserSetups(viewerId),
+			getBlendedActivityFeed(viewerId, undefined, 8),
 			getForYouSetups(viewerId, 6),
 			getSetupsFromFollowedUsers(viewerId, 6)
 		]);
@@ -93,7 +94,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		return {
 			user: locals.user,
 			featuredSetups: featured.map(toCard),
-			yourActivity,
+			activityFeed: blendedActivity.items,
 			trendingSetups: trending.map(
 				(s): DashboardSetup => ({
 					id: s.id,
@@ -190,6 +191,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		}[],
 		userAgents: [] as { id: string; slug: string; displayName: string }[],
 		userTeams: [] as { id: string; name: string; slug: string; avatarUrl: string | null }[],
-		yourActivity: [] as SetupActivityEntry[]
+		activityFeed: [] as FeedItem[]
 	};
 };
