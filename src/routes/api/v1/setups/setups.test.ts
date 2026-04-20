@@ -354,3 +354,43 @@ describe('POST /api/v1/setups — forced-private when teamId is present', () => 
 		);
 	});
 });
+
+describe('POST /api/v1/setups — rejects unsafe file paths', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it('returns 400 and does not persist when any file path escapes the setup root', async () => {
+		const { POST } = await import('./+server');
+		const res = await POST(
+			makePostEvent({
+				name: 'My Setup',
+				slug: 'my-setup',
+				description: 'desc',
+				files: [
+					{ path: 'README.md', content: 'safe' },
+					{ path: '../../.ssh/authorized_keys', content: 'pwn' }
+				]
+			})
+		);
+		expect(res.status).toBe(400);
+		const body = await res.json();
+		expect(body.code).toBe('VALIDATION_ERROR');
+		expect(body.error).toContain('../../.ssh/authorized_keys');
+		expect(mockCreateSetup).not.toHaveBeenCalled();
+	});
+
+	it('returns 400 and does not persist for an absolute file path', async () => {
+		const { POST } = await import('./+server');
+		const res = await POST(
+			makePostEvent({
+				name: 'My Setup',
+				slug: 'my-setup',
+				description: 'desc',
+				files: [{ path: '/etc/passwd', content: 'pwn' }]
+			})
+		);
+		expect(res.status).toBe(400);
+		expect(mockCreateSetup).not.toHaveBeenCalled();
+	});
+});

@@ -81,7 +81,8 @@ import {
 	componentTypeSchema,
 	categorySchema,
 	postInstallSchema,
-	SLUG_NAME_REGEX
+	SLUG_NAME_REGEX,
+	isSafeRelativePath
 } from '@coati/validation';
 
 export const apiSuccessSchema = <T extends z.ZodType>(dataSchema: T) =>
@@ -100,7 +101,17 @@ export const createSetupSchema = z.object({
 });
 
 export const createSetupFileSchema = z.object({
-	path: z.string().min(1),
+	path: z
+		.string()
+		.min(1)
+		.superRefine((val, ctx) => {
+			if (!isSafeRelativePath(val)) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					message: `Unsafe file path: ${val}`
+				});
+			}
+		}),
 	componentType: componentTypeSchema.default('instruction'),
 	description: z.string().optional(),
 	agent: z.string().max(100).optional(),

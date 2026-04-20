@@ -86,6 +86,36 @@ describe('File size limit schemas', () => {
 		expect(createSetupFileSchema.safeParse(makeFile('a'.repeat(102401))).success).toBe(false);
 	});
 
+	it('createSetupFileSchema rejects unsafe paths and names the offending path', () => {
+		const result = createSetupFileSchema.safeParse({
+			path: '../etc/passwd',
+			content: 'x'
+		});
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			const joined = result.error.issues.map((i) => i.message).join(' | ');
+			expect(joined).toContain('../etc/passwd');
+		}
+	});
+
+	it('createSetupFileSchema rejects an absolute path and names it', () => {
+		const result = createSetupFileSchema.safeParse({
+			path: '/etc/passwd',
+			content: 'x'
+		});
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			const joined = result.error.issues.map((i) => i.message).join(' | ');
+			expect(joined).toContain('/etc/passwd');
+		}
+	});
+
+	it('createSetupFileSchema accepts a normal nested path', () => {
+		expect(createSetupFileSchema.safeParse({ path: 'dir/foo.md', content: 'x' }).success).toBe(
+			true
+		);
+	});
+
 	it('createSetupWithFilesSchema enforces 50-file and 1MB total limits', () => {
 		// Accepts baseline, 50 files, and exactly-1MB total
 		expect(
