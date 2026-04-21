@@ -29,11 +29,20 @@ import {
 	setupFiles,
 	setupAgents,
 	setupTags,
+	setupSlugRedirects,
 	tags,
 	teams,
 	activities
 } from '$lib/server/db/schema';
-import { createSetup, updateSetup, deleteSetup, deleteSetupForce } from './setups';
+import {
+	createSetup,
+	updateSetup,
+	deleteSetup,
+	deleteSetupForce,
+	getSetupByIdWithOwner,
+	updateSetupByIdWithSlugRedirects,
+	recordClone
+} from './setups';
 import {
 	createTestUser,
 	createTestAgent,
@@ -286,5 +295,239 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		const secondDelete = await deleteSetupForce(created.id, owner.id);
 		expect(secondDelete).toBe(0);
 		expect(await getSetupsCount(owner.id)).toBe(afterCreate - 1);
+	});
+
+	it('getSetupByIdWithOwner returns the setup joined with owner username, or null when not found', async () => {
+		const owner = await createTestUser();
+		createdUserIds.push(owner.id);
+
+		const created = await createSetup(owner.id, {
+			name: 'Owned Setup',
+			slug: `owned-${Date.now()}`,
+			description: 'desc'
+		});
+
+		const row = await getSetupByIdWithOwner(created.id);
+		expect(row).not.toBeNull();
+		expect(row!.id).toBe(created.id);
+		expect(row!.ownerUsername).toBe(owner.username);
+		expect(row!.visibility).toBeTruthy();
+
+		// Non-existent id → null
+		const missing = await getSetupByIdWithOwner('00000000-0000-0000-0000-000000000000');
+		expect(missing).toBeNull();
+	});
+
+	it('updateSetupByIdWithSlugRedirects updates scalar fields without creating a redirect when name is unchanged', async () => {
+		const owner = await createTestUser();
+		createdUserIds.push(owner.id);
+
+		const created = await createSetup(owner.id, {
+			name: 'Stable Name',
+			slug: `stable-${Date.now()}`,
+			description: 'old desc'
+		});
+
+		await updateSetupByIdWithSlugRedirects(
+			created.id,
+			{ description: 'new desc', readme: '# new', license: 'MIT' },
+			{ userId: owner.id, currentSlug: created.slug }
+		);
+
+		const [row] = await db
+			.select({
+				description: setups.description,
+				readme: setups.readme,
+				license: setups.license,
+				slug: setups.slug
+			})
+			.from(setups)
+			.where(eq(setups.id, created.id));
+		expect(row.description).toBe('new desc');
+		expect(row.readme).toBe('# new');
+		expect(row.license).toBe('MIT');
+		expect(row.slug).toBe(created.slug);
+
+		const redirects = await db
+			.select()
+			.from(setupSlugRedirects)
+			.where(eq(setupSlugRedirects.setupId, created.id));
+		expect(redirects).toHaveLength(0);
+	});
+
+	it('updateSetupByIdWithSlugRedirects regenerates slug from new name and inserts a redirect from the old slug', async () => {
+		const owner = await createTestUser();
+		createdUserIds.push(owner.id);
+
+		const created = await createSetup(owner.id, {
+			name: 'Original Name',
+			slug: `original-${Date.now()}`,
+			description: 'desc'
+		});
+		const originalSlug = created.slug;
+
+		await updateSetupByIdWithSlugRedirects(
+			created.id,
+			{ name: 'Brand New Name' },
+			{ userId: owner.id, currentSlug: originalSlug }
+		);
+
+		const [row] = await db
+			.select({ name: setups.name, slug: setups.slug })
+			.from(setups)
+			.where(eq(setups.id, created.id));
+		expect(row.name).toBe('Brand New Name');
+		expect(row.slug).toBe('brand-new-name');
+
+		const redirects = await db
+			.select()
+			.from(setupSlugRedirects)
+			.where(eq(setupSlugRedirects.setupId, created.id));
+		expect(redirects).toHaveLength(1);
+		expect(redirects[0].oldSlug).toBe(originalSlug);
+		expect(redirects[0].userId).toBe(owner.id);
+	});
+
+	it('updateSetupByIdWithSlugRedirects skips redirect insertion when the normalized slug is unchanged', async () => {
+		const owner = await createTestUser();
+		createdUserIds.push(owner.id);
+
+		const stamp = Date.now();
+		const created = await createSetup(owner.id, {
+			name: 'Hello World',
+			slug: `hello-world-${stamp}`,
+			description: 'desc'
+		});
+
+		// slugFromName('Hello World') === 'hello-world'. The stored slug includes a timestamp
+		// suffix, so the new slug IS different here — choose a name that normalizes to the
+		// exact stored slug to hit the slugChanged === false branch.
+		await updateSetupByIdWithSlugRedirects(
+			created.id,
+			{ name: `hello world ${stamp}` },
+			{ userId: owner.id, currentSlug: created.slug }
+		);
+
+		const [row] = await db
+			.select({ name: setups.name, slug: setups.slug })
+			.from(setups)
+			.where(eq(setups.id, created.id));
+		expect(row.slug).toBe(created.slug);
+		expect(row.name).toBe(`hello world ${stamp}`);
+
+		const redirects = await db
+			.select()
+			.from(setupSlugRedirects)
+			.where(eq(setupSlugRedirects.setupId, created.id));
+		expect(redirects).toHaveLength(0);
+	});
+
+	it('updateSetupByIdWithSlugRedirects replaces files, refreshes setupAgents from file slugs, and regenerates the readme', async () => {
+		const owner = await createTestUser();
+		const oldAgent = await createTestAgent();
+		const newAgent = await createTestAgent();
+		createdUserIds.push(owner.id);
+		createdAgentIds.push(oldAgent.id, newAgent.id);
+
+		const created = await createSetup(owner.id, {
+			name: 'File Update',
+			slug: `file-update-${Date.now()}`,
+			description: 'a nice description',
+			files: [
+				{ path: 'old.md', componentType: 'instruction', content: 'old', agent: oldAgent.slug }
+			]
+		});
+
+		await updateSetupByIdWithSlugRedirects(
+			created.id,
+			{
+				files: [
+					{ path: 'new.md', componentType: 'instruction', content: 'new', agent: newAgent.slug },
+					{ path: 'plain.md', componentType: 'instruction', content: 'plain' }
+				]
+			},
+			{ userId: owner.id, currentSlug: created.slug }
+		);
+
+		const files = await db.select().from(setupFiles).where(eq(setupFiles.setupId, created.id));
+		expect(files.map((f) => f.path).sort()).toEqual(['new.md', 'plain.md']);
+
+		const agentRows = await db
+			.select()
+			.from(setupAgents)
+			.where(eq(setupAgents.setupId, created.id));
+		expect(agentRows.map((r) => r.agentId)).toEqual([newAgent.id]);
+
+		// Readme should have been regenerated — it should reference the new file paths now
+		const [row] = await db
+			.select({ readme: setups.readme })
+			.from(setups)
+			.where(eq(setups.id, created.id));
+		expect(row.readme).toContain('new.md');
+		expect(row.readme).toContain('plain.md');
+		expect(row.readme).not.toContain('old.md');
+	});
+
+	it('updateSetupByIdWithSlugRedirects handles slug change and file replacement in a single call', async () => {
+		const owner = await createTestUser();
+		createdUserIds.push(owner.id);
+
+		const created = await createSetup(owner.id, {
+			name: 'Combined',
+			slug: `combined-${Date.now()}`,
+			description: 'desc',
+			files: [{ path: 'one.md', componentType: 'instruction', content: 'one' }]
+		});
+		const originalSlug = created.slug;
+
+		await updateSetupByIdWithSlugRedirects(
+			created.id,
+			{
+				name: 'Renamed Combined',
+				files: [{ path: 'two.md', componentType: 'instruction', content: 'two' }]
+			},
+			{ userId: owner.id, currentSlug: originalSlug }
+		);
+
+		const [row] = await db
+			.select({ slug: setups.slug })
+			.from(setups)
+			.where(eq(setups.id, created.id));
+		expect(row.slug).toBe('renamed-combined');
+
+		const files = await db.select().from(setupFiles).where(eq(setupFiles.setupId, created.id));
+		expect(files.map((f) => f.path)).toEqual(['two.md']);
+
+		const redirects = await db
+			.select()
+			.from(setupSlugRedirects)
+			.where(eq(setupSlugRedirects.setupId, created.id));
+		expect(redirects.map((r) => r.oldSlug)).toEqual([originalSlug]);
+	});
+
+	it('recordClone increments the setup clonesCount', async () => {
+		const owner = await createTestUser();
+		createdUserIds.push(owner.id);
+
+		const created = await createSetup(owner.id, {
+			name: 'Clone Me',
+			slug: `clone-me-${Date.now()}`,
+			description: 'desc'
+		});
+
+		const [before] = await db
+			.select({ clonesCount: setups.clonesCount })
+			.from(setups)
+			.where(eq(setups.id, created.id));
+
+		await recordClone(created.id);
+		await recordClone(created.id);
+
+		const [after] = await db
+			.select({ clonesCount: setups.clonesCount })
+			.from(setups)
+			.where(eq(setups.id, created.id));
+
+		expect(after.clonesCount).toBe(before.clonesCount + 2);
 	});
 });

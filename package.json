@@ -15,7 +15,7 @@
 		"ci:checks": "pnpm check && pnpm lint && pnpm test:unit",
 		"test:unit": "vitest",
 		"test": "pnpm run test:unit && pnpm run test:e2e",
-		"test:coverage": "vitest run --coverage",
+		"test:coverage": "tsx scripts/coverage.ts",
 		"test:e2e": "playwright test",
 		"db:up": "docker compose up -d",
 		"db:down": "docker compose down",
