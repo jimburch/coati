@@ -1,3 +1,10 @@
+## [1.10.3](https://github.com/jimburch/coati/compare/v1.10.2...v1.10.3) (2026-04-21)
+
+
+### Bug Fixes
+
+* **docker:** fix dockerfile ci ([dbe7a19](https://github.com/jimburch/coati/commit/dbe7a1991f089955579be8feb681c00107b99031))
+
 ## [1.10.2](https://github.com/jimburch/coati/compare/v1.10.1...v1.10.2) (2026-04-21)
 
 
