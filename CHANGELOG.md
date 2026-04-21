@@ -1,3 +1,15 @@
+## [1.10.2](https://github.com/jimburch/coati/compare/v1.10.1...v1.10.2) (2026-04-21)
+
+
+### Bug Fixes
+
+* **api:** server-side path containment ([f34280d](https://github.com/jimburch/coati/commit/f34280dab1858df371118347c0e0535e422d9c83))
+* **auth:** open redirect fix ([a0af80e](https://github.com/jimburch/coati/commit/a0af80e79cf5b01a554a7fc4598689d93e7a8ac8))
+* **cli:** CLI-side path containment and symlink refusal ([88fdb6f](https://github.com/jimburch/coati/commit/88fdb6f7a897b18da741f1aeffadeeec0afbb2c3))
+* **cli:** clone identifier slug validation and URL encoding ([01ad6a9](https://github.com/jimburch/coati/commit/01ad6a908fe4cb53afea54fef2244e6a3e599f6f))
+* **cli:** validate empty file content before publish and warn in init ([a4f8fd1](https://github.com/jimburch/coati/commit/a4f8fd1043ddb30779786eee20b9d4c2fd4ad3bd))
+* **docker:** non-root runtime container ([2ccb3c0](https://github.com/jimburch/coati/commit/2ccb3c0045a9b0cf234020720256983611ddcfa8))
+
 ## [1.10.1](https://github.com/jimburch/coati/compare/v1.10.0...v1.10.1) (2026-04-20)
 
 
