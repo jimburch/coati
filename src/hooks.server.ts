@@ -129,8 +129,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 	});
 };
 
-export const handleError: HandleServerError = ({ error, event }) => {
-	console.error(`[handleError] ${event.request.method} ${event.url.pathname}`, error);
+export const handleError: HandleServerError = ({ error, event, status }) => {
+	console.error(`[handleError] ${status} ${event.request.method} ${event.url.pathname}`, error);
+
+	// Skip Sentry for client-caused errors (4xx). These are overwhelmingly bot scans
+	// for .env/.git/wp-admin/etc., broken external links, and user typos — not bugs.
+	if (status < 500) {
+		return { message: 'An unexpected error occurred' };
+	}
 
 	// Build sanitized headers — strip Authorization and Cookie to avoid leaking credentials
 	const sanitizedHeaders: Record<string, string> = {};

@@ -422,4 +422,31 @@ describe('handleError', () => {
 		expect(headers['content-type']).toBe('application/json');
 		expect(headers['accept']).toBe('text/html');
 	});
+
+	it('does not capture 404s to Sentry (bot scans for .env etc. are noise, not bugs)', () => {
+		const error = new Error('Not found: /api/v1/.env');
+		const event = makeErrorEvent({
+			href: 'https://coati.sh/api/v1/.env',
+			method: 'GET'
+		});
+
+		const result = handleError({
+			error,
+			event,
+			status: 404,
+			message: 'Not Found'
+		} as never);
+
+		expect(result).toEqual({ message: 'An unexpected error occurred' });
+		expect(vi.mocked(SentrySdk.captureException)).not.toHaveBeenCalled();
+	});
+
+	it('does not capture other 4xx errors to Sentry', () => {
+		const error = new Error('Bad Request');
+		const event = makeErrorEvent();
+
+		handleError({ error, event, status: 400, message: 'Bad Request' } as never);
+
+		expect(vi.mocked(SentrySdk.captureException)).not.toHaveBeenCalled();
+	});
 });
