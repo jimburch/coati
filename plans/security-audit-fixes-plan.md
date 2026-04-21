@@ -101,9 +101,9 @@ Add a dedicated non-root `app` user and group to the Dockerfile runtime stage, c
 
 ### Acceptance criteria
 
-- [ ] Dockerfile runtime stage defines an `app` user/group, chowns `/app`, and sets `USER app`.
-- [ ] `docker build` succeeds with no warnings about permissions or missing files.
+- [x] Dockerfile runtime stage defines an `app` user/group, chowns `/app`, and sets `USER app`.
+- [x] `docker build` succeeds with no warnings about permissions or missing files.
 - [ ] A full Coolify deploy to a non-production environment completes successfully and the app serves traffic end-to-end.
-- [ ] `docker exec <container> whoami` returns `app`.
-- [ ] Migrations run successfully at startup from the non-root user.
+- [x] `docker exec <container> whoami` returns `app`.
+- [x] Migrations run successfully at startup from the non-root user.
 - [ ] Any Coolify-specific adjustments required are documented in `plans/security-audit-fixes.md` under "Further Notes".
