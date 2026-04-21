@@ -51,31 +51,31 @@ RUN apk add --no-cache curl \
 WORKDIR /app
 
 # Copy built app
-COPY --from=builder /app/build ./build
-COPY --from=builder /app/package.json ./
+COPY --from=builder --chown=app:app /app/build ./build
+COPY --from=builder --chown=app:app /app/package.json ./
 
 # Copy node_modules (full, includes drizzle-kit for migrations)
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder --chown=app:app /app/node_modules ./node_modules
 
 # Copy workspace packages (needed for workspace:* resolution)
-COPY --from=builder /app/packages ./packages
+COPY --from=builder --chown=app:app /app/packages ./packages
 
 # Copy drizzle migrations and config
-COPY --from=builder /app/drizzle ./drizzle
-COPY --from=builder /app/drizzle.config.ts ./
+COPY --from=builder --chown=app:app /app/drizzle ./drizzle
+COPY --from=builder --chown=app:app /app/drizzle.config.ts ./
 
 # Copy scripts (entrypoint + seed)
-COPY scripts/docker-entrypoint.sh ./docker-entrypoint.sh
+COPY --chown=app:app scripts/docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x docker-entrypoint.sh
 
 # Copy seed script and its dependencies (for `docker exec` seeding)
-COPY scripts/seed-dev.ts ./scripts/seed-dev.ts
-COPY scripts/reset-db.ts ./scripts/reset-db.ts
+COPY --chown=app:app scripts/seed-dev.ts ./scripts/seed-dev.ts
+COPY --chown=app:app scripts/reset-db.ts ./scripts/reset-db.ts
 # One-time migration journal reconciliation (see docs/MIGRATION-JOURNAL-FIX.md)
-COPY scripts/reconcile-migration-tracking.mjs ./scripts/reconcile-migration-tracking.mjs
-COPY --from=builder /app/src/lib/server/db/schema.ts ./src/lib/server/db/schema.ts
-COPY --from=builder /app/tsconfig.json ./tsconfig.json
-COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --chown=app:app scripts/reconcile-migration-tracking.mjs ./scripts/reconcile-migration-tracking.mjs
+COPY --from=builder --chown=app:app /app/src/lib/server/db/schema.ts ./src/lib/server/db/schema.ts
+COPY --from=builder --chown=app:app /app/tsconfig.json ./tsconfig.json
+COPY --from=builder --chown=app:app /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
 ENV NODE_ENV=production
 ENV PORT=3000
@@ -88,8 +88,6 @@ EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:${PORT:-3000}/api/v1/health || exit 1
-
-RUN chown -R app:app /app
 
 USER app
 
