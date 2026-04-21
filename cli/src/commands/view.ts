@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { AGENTS_BY_SLUG } from '@coati/agents-registry';
 import { type CommandContext, ApiError } from '../context.js';
 import type { ManifestPlacement } from '../manifest.js';
+import { setupsPath } from '../api-paths.js';
 
 interface SetupFileRecord {
 	id: string;
@@ -52,7 +53,7 @@ export function registerView(program: Command, ctx: CommandContext): void {
 
 			let setup: SetupDetail;
 			try {
-				setup = await ctx.api.get<SetupDetail>(`/setups/${owner}/${slug}`);
+				setup = await ctx.api.get<SetupDetail>(setupsPath(owner, slug));
 			} catch (err_) {
 				if (err_ instanceof ApiError && err_.status === 404) {
 					ctx.io.error(`Setup "${owner}/${slug}" not found.`);
@@ -66,7 +67,7 @@ export function registerView(program: Command, ctx: CommandContext): void {
 
 			let files: SetupFileRecord[];
 			try {
-				files = await ctx.api.get<SetupFileRecord[]>(`/setups/${owner}/${slug}/files`);
+				files = await ctx.api.get<SetupFileRecord[]>(`${setupsPath(owner, slug)}/files`);
 			} catch (err_) {
 				if (err_ instanceof Error) {
 					ctx.io.error(`Failed to fetch setup files: ${err_.message}`);

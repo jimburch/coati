@@ -6,6 +6,7 @@ import { ApiError } from '../context.js';
 import { detectInstalledAgents } from '../agent-detection.js';
 import { MANIFEST_FILENAME } from '../manifest.js';
 import { parseCloneIdentifier } from '../parse-clone-identifier.js';
+import { setupsPath, teamSetupsPath } from '../api-paths.js';
 import type { CommandContext } from '../context.js';
 
 interface SetupMeta {
@@ -92,8 +93,8 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 				? `org/${parsed.teamSlug}/${parsed.setupSlug}`
 				: `${parsed.owner}/${parsed.slug}`;
 			const metaPath = isTeam
-				? `/teams/${parsed.teamSlug}/setups/${parsed.setupSlug}`
-				: `/setups/${parsed.owner}/${parsed.slug}`;
+				? teamSetupsPath(parsed.teamSlug, parsed.setupSlug)
+				: setupsPath(parsed.owner, parsed.slug);
 			const filesPath = `${metaPath}/files`;
 			const clonePath = `${metaPath}/clone`;
 

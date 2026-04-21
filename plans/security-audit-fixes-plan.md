@@ -83,11 +83,11 @@ Strict slug regex enforcement in the CLI identifier parser: each segment must ma
 
 ### Acceptance criteria
 
-- [ ] The identifier parser rejects segments that contain uppercase letters, leading dashes, empty strings, or any character outside `[a-z0-9-]`.
-- [ ] Unit tests cover: `user/setup` accepted, `USER/setup` rejected, `user/weird?slug` rejected, `-leading/setup` rejected, empty segments rejected.
-- [ ] The CLI HTTP client interpolates URL path segments via `encodeURIComponent`.
-- [ ] Existing valid clone flows unchanged.
-- [ ] Lint, typecheck, and unit test suite all green.
+- [x] The identifier parser rejects segments that contain uppercase letters, leading dashes, empty strings, or any character outside `[a-z0-9-]`.
+- [x] Unit tests cover: `user/setup` accepted, `USER/setup` rejected, `user/weird?slug` rejected, `-leading/setup` rejected, empty segments rejected.
+- [x] The CLI HTTP client interpolates URL path segments via `encodeURIComponent`.
+- [x] Existing valid clone flows unchanged.
+- [x] Lint, typecheck, and unit test suite all green.
 
 ---
 

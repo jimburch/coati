@@ -72,4 +72,29 @@ describe('parseCloneIdentifier — rejects', () => {
 		);
 		expect(() => parseCloneIdentifier('https://coati.sh/a/b/c/d')).toThrow(/extra path segments/);
 	});
+
+	it('rejects segments with uppercase letters', () => {
+		expect(() => parseCloneIdentifier('USER/setup')).toThrow(/invalid/i);
+		expect(() => parseCloneIdentifier('alice/My-Setup')).toThrow(/invalid/i);
+		expect(() => parseCloneIdentifier('org/ACME/shared')).toThrow(/invalid/i);
+	});
+
+	it('rejects segments with a leading dash', () => {
+		expect(() => parseCloneIdentifier('-leading/setup')).toThrow(/invalid/i);
+		expect(() => parseCloneIdentifier('alice/-leading')).toThrow(/invalid/i);
+		expect(() => parseCloneIdentifier('org/-team/setup')).toThrow(/invalid/i);
+	});
+
+	it('rejects segments with non-alphanumeric characters', () => {
+		expect(() => parseCloneIdentifier('alice/weird?slug')).toThrow(/invalid/i);
+		expect(() => parseCloneIdentifier('alice/weird.slug')).toThrow(/invalid/i);
+		expect(() => parseCloneIdentifier('alice/weird#slug')).toThrow(/invalid/i);
+		expect(() => parseCloneIdentifier('alice/..')).toThrow(/invalid/i);
+	});
+
+	it('rejects URLs whose segments fail charset validation', () => {
+		expect(() => parseCloneIdentifier('https://coati.sh/USER/setup')).toThrow(/invalid/i);
+		expect(() => parseCloneIdentifier('https://coati.sh/org/ACME/shared')).toThrow(/invalid/i);
+		expect(() => parseCloneIdentifier('https://coati.sh/alice/weird%20slug')).toThrow(/invalid/i);
+	});
 });
