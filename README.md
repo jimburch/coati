@@ -6,7 +6,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Playwright](https://img.shields.io/badge/Playwright-e2e-2EAD33?logo=playwright&logoColor=white)](https://playwright.dev/)
-[![Coverage](https://img.shields.io/badge/coverage-47%25-yellowgreen)](./README.md)
+[![Coverage](https://img.shields.io/badge/coverage-88%25-green)](./README.md)
 [![License: ISC](https://img.shields.io/badge/license-ISC-blue.svg)](./LICENSE)
 [![Buy Me a Coffee](https://img.shields.io/badge/support-buy%20me%20a%20coffee-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/jimburch)
 
