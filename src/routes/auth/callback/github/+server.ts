@@ -8,6 +8,7 @@ import {
 } from '$lib/server/auth';
 import { error } from '$lib/server/responses';
 import { updateLastLoginAt } from '$lib/server/queries/users';
+import { isSafeInternalRedirect } from '@coati/validation';
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
 	const code = url.searchParams.get('code');
@@ -44,5 +45,5 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 	const redirectTo = cookies.get('oauth_redirect');
 	cookies.delete('oauth_redirect', { path: '/' });
 
-	return redirect(302, redirectTo ?? '/');
+	return redirect(302, isSafeInternalRedirect(redirectTo) ? (redirectTo as string) : '/');
 };

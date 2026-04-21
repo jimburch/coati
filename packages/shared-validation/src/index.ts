@@ -56,6 +56,18 @@ export const postInstallSchema = z.array(z.string());
  * and CLI-side clone validation — no layer is allowed to accept a path this
  * function rejects.
  */
+/**
+ * Returns true if `value` is a safe same-origin redirect target — exactly one
+ * leading `/` followed by a non-separator character. Blocks protocol-relative
+ * URLs (`//evil.com`), backslash escapes (`/\evil.com`), absolute URLs, and
+ * non-string values. Canonical for both the OAuth login handler (write-time)
+ * and the OAuth callback handler (read-time).
+ */
+export function isSafeInternalRedirect(value: unknown): boolean {
+	if (typeof value !== 'string') return false;
+	return /^\/(?![/\\])/.test(value);
+}
+
 export function isSafeRelativePath(pathStr: string): boolean {
 	if (typeof pathStr !== 'string' || pathStr.length === 0) return false;
 	if (pathStr.includes('\0')) return false;

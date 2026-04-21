@@ -65,11 +65,11 @@ Extract `isSafeInternalRedirect` into the shared validation package. The web log
 
 ### Acceptance criteria
 
-- [ ] `isSafeInternalRedirect` is exported from the shared validation package with unit tests for `/foo`, `/`, `//evil.com`, `/\evil.com`, absolute URLs, empty string, and `null`/`undefined`.
-- [ ] The login handler sets the `oauth_redirect` cookie only when the value passes `isSafeInternalRedirect`.
-- [ ] The callback handler re-validates the cookie value and falls back to `/` if invalid.
-- [ ] An end-to-end test exercises the login flow with `?redirect=//evil.com` and asserts the post-auth response redirects to `/`, not to an external origin.
-- [ ] Valid internal redirects like `/explore` continue to work end-to-end.
+- [x] `isSafeInternalRedirect` is exported from the shared validation package with unit tests for `/foo`, `/`, `//evil.com`, `/\evil.com`, absolute URLs, empty string, and `null`/`undefined`.
+- [x] The login handler sets the `oauth_redirect` cookie only when the value passes `isSafeInternalRedirect`.
+- [x] The callback handler re-validates the cookie value and falls back to `/` if invalid.
+- [x] An end-to-end test exercises the login flow with `?redirect=//evil.com` and asserts the post-auth response redirects to `/`, not to an external origin.
+- [x] Valid internal redirects like `/explore` continue to work end-to-end.
 
 ---
 
