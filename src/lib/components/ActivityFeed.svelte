@@ -57,7 +57,12 @@
 			// Deserialize dates (they arrive as strings from JSON)
 			const hydrated = deserializeFeedItems(newItems);
 
-			allItems = [...allItems, ...hydrated];
+			// Svelte's keyed-each crashes on duplicate keys. Blended (score-sorted) first pages
+			// and chronological follow-up pages can edge-case into overlap, so dedupe by id.
+			const existingIds = new Set(allItems.map((i) => i.id));
+			const fresh = hydrated.filter((i) => !existingIds.has(i.id));
+
+			allItems = [...allItems, ...fresh];
 			cursor = nextCursor;
 			hasMore = nextCursor !== null;
 		} catch {

@@ -463,8 +463,12 @@ export async function getBlendedActivityFeed(
 	});
 
 	const hasMore = aggregated.length > limit;
+	// Items are score-sorted, so the last item isn't necessarily the oldest. Use the minimum
+	// createdAt across the page so the follow-up chronological query can't overlap page 1.
 	const nextCursor =
-		hasMore && items.length > 0 ? items[items.length - 1].createdAt.toISOString() : null;
+		hasMore && items.length > 0
+			? new Date(Math.min(...items.map((i) => i.createdAt.getTime()))).toISOString()
+			: null;
 
 	return { items, nextCursor };
 }
