@@ -1,6 +1,16 @@
+import { SLUG_NAME_REGEX } from '@coati/validation';
+
 export type CloneIdentifier =
 	| { kind: 'personal'; owner: string; slug: string }
 	| { kind: 'team'; teamSlug: string; setupSlug: string };
+
+function assertValidSlug(segment: string, label: string): void {
+	if (!SLUG_NAME_REGEX.test(segment)) {
+		throw new Error(
+			`Invalid ${label} "${segment}": must contain only lowercase letters, digits, and hyphens (e.g. my-setup)`
+		);
+	}
+}
 
 export function parseCloneIdentifier(input: string): CloneIdentifier {
 	if (input.startsWith('http://') || input.startsWith('https://')) {
@@ -20,11 +30,19 @@ export function parseCloneIdentifier(input: string): CloneIdentifier {
 		const segments = url.pathname.split('/').filter(Boolean);
 
 		if (segments.length === 2) {
-			return { kind: 'personal', owner: segments[0]!, slug: segments[1]! };
+			const owner = segments[0]!;
+			const slug = segments[1]!;
+			assertValidSlug(owner, 'owner');
+			assertValidSlug(slug, 'slug');
+			return { kind: 'personal', owner, slug };
 		}
 
 		if (segments.length === 3 && segments[0] === 'org') {
-			return { kind: 'team', teamSlug: segments[1]!, setupSlug: segments[2]! };
+			const teamSlug = segments[1]!;
+			const setupSlug = segments[2]!;
+			assertValidSlug(teamSlug, 'team slug');
+			assertValidSlug(setupSlug, 'slug');
+			return { kind: 'team', teamSlug, setupSlug };
 		}
 
 		if (segments.length > 2) {
@@ -53,7 +71,11 @@ export function parseCloneIdentifier(input: string): CloneIdentifier {
 	}
 
 	if (segments.length === 2) {
-		return { kind: 'personal', owner: segments[0]!, slug: segments[1]! };
+		const owner = segments[0]!;
+		const slug = segments[1]!;
+		assertValidSlug(owner, 'owner');
+		assertValidSlug(slug, 'slug');
+		return { kind: 'personal', owner, slug };
 	}
 
 	if (segments.length === 3) {
@@ -62,7 +84,11 @@ export function parseCloneIdentifier(input: string): CloneIdentifier {
 				'Invalid format: extra path segments detected. Expected: owner/slug or org/team/setup (e.g. org/acme/my-setup)'
 			);
 		}
-		return { kind: 'team', teamSlug: segments[1]!, setupSlug: segments[2]! };
+		const teamSlug = segments[1]!;
+		const setupSlug = segments[2]!;
+		assertValidSlug(teamSlug, 'team slug');
+		assertValidSlug(setupSlug, 'slug');
+		return { kind: 'team', teamSlug, setupSlug };
 	}
 
 	if (segments.length > 3) {

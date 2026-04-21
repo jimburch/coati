@@ -28,518 +28,242 @@ function findAll(files: DetectedFile[], filePath: string): DetectedFile[] {
 	return files.filter((f) => f.path === filePath);
 }
 
-// ─── Empty / false positives ──────────────────────────────────────────────────
+type ExpectEntry = { path: string; tool: string; componentType: string };
 
-describe('detectFiles — empty directory', () => {
-	it('returns an empty array when no known files are present', () => {
-		expect(detectFiles(tmpDir)).toEqual([]);
-	});
+function assertDetected(files: DetectedFile[], expected: ExpectEntry[]): void {
+	for (const e of expected) {
+		const match = files.find((f) => f.path === e.path && f.tool === e.tool);
+		expect(match, `expected ${e.tool} detection for ${e.path}`).toBeDefined();
+		expect(match!.componentType, `${e.path} componentType`).toBe(e.componentType);
+	}
+}
 
-	it('ignores unknown files', () => {
+// ─── Empty / false positives / skipped dirs ──────────────────────────────────
+
+describe('detectFiles — filters', () => {
+	it('returns empty for unknown files and respects skipped directories', () => {
+		// unknown files at root + arbitrary .md/.json anywhere
 		mkfile('README.md');
 		mkfile('src/index.ts');
 		mkfile('package.json');
-		expect(detectFiles(tmpDir)).toHaveLength(0);
-	});
-
-	it('does not detect arbitrary .md files at root', () => {
 		mkfile('CONTRIBUTING.md');
 		mkfile('CHANGELOG.md');
-		mkfile('TODO.md');
-		expect(detectFiles(tmpDir)).toHaveLength(0);
-	});
-
-	it('does not detect arbitrary .json files', () => {
 		mkfile('config.json');
 		mkfile('settings.json');
-		mkfile('package.json');
-		expect(detectFiles(tmpDir)).toHaveLength(0);
-	});
-});
-
-// ─── Skipped directories ──────────────────────────────────────────────────────
-
-describe('detectFiles — skipped directories', () => {
-	it('skips node_modules', () => {
+		// files under every skipped directory must be ignored
 		mkfile('node_modules/.claude/commands/foo.md', '# foo');
-		expect(detectFiles(tmpDir)).toHaveLength(0);
-	});
-
-	it('skips .git directory', () => {
-		mkfile('.git/CLAUDE.md', '# not a real one');
-		expect(detectFiles(tmpDir)).toHaveLength(0);
-	});
-
-	it('skips dist directory', () => {
+		mkfile('.git/CLAUDE.md', '# not real');
 		mkfile('dist/.mcp.json', '{}');
-		expect(detectFiles(tmpDir)).toHaveLength(0);
-	});
-
-	it('skips build directory', () => {
 		mkfile('build/CLAUDE.md', '# not real');
-		expect(detectFiles(tmpDir)).toHaveLength(0);
+		mkfile('.svelte-kit/CLAUDE.md', '# not real');
+
+		expect(detectFiles(tmpDir)).toEqual([]);
 	});
 
-	it('skips .svelte-kit directory', () => {
-		mkfile('.svelte-kit/CLAUDE.md', '# not real');
-		expect(detectFiles(tmpDir)).toHaveLength(0);
+	it('returns empty for an empty directory', () => {
+		expect(detectFiles(tmpDir)).toEqual([]);
 	});
 });
 
-// ─── Claude Code ─────────────────────────────────────────────────────────────
+// ─── isEmpty flag ─────────────────────────────────────────────────────────────
+
+describe('detectFiles — isEmpty flag', () => {
+	it('reflects file size (zero → true, non-zero → false)', () => {
+		mkfile('CLAUDE.md', '');
+		expect(find(detectFiles(tmpDir), 'CLAUDE.md')!.isEmpty).toBe(true);
+
+		// fresh dir
+		fs.rmSync(tmpDir, { recursive: true, force: true });
+		tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'coati-detector-test-'));
+		mkfile('CLAUDE.md', '# hi');
+		expect(find(detectFiles(tmpDir), 'CLAUDE.md')!.isEmpty).toBe(false);
+	});
+});
+
+// ─── Per-agent detection (one comprehensive test per agent) ──────────────────
 
 describe('detectFiles — claude-code', () => {
-	it('detects CLAUDE.md as project instruction', () => {
-		mkfile('CLAUDE.md', '# project instructions');
-		const files = detectFiles(tmpDir);
-		const f = find(files, 'CLAUDE.md');
-		expect(f).toBeDefined();
-		expect(f!.path).toBe('CLAUDE.md');
-		expect(f!.componentType).toBe('instruction');
-		expect(f!.tool).toBe('claude-code');
-	});
-
-	it('detects .claude/settings.json as instruction', () => {
+	it('detects all known claude-code paths with the right componentType', () => {
+		mkfile('CLAUDE.md', '# project');
 		mkfile('.claude/settings.json', '{}');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.claude/settings.json');
-		expect(f).toBeDefined();
-		expect(f!.path).toBe('.claude/settings.json');
-		expect(f!.componentType).toBe('instruction');
-		expect(f!.tool).toBe('claude-code');
-	});
-
-	it('detects .claude/CLAUDE.md as instruction', () => {
-		mkfile('.claude/CLAUDE.md', '# global instructions');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.claude/CLAUDE.md');
-		expect(f).toBeDefined();
-		expect(f!.path).toBe('.claude/CLAUDE.md');
-		expect(f!.componentType).toBe('instruction');
-		expect(f!.tool).toBe('claude-code');
-	});
-
-	it('detects .claude/commands/*.md as commands', () => {
-		mkfile('.claude/commands/review.md', '# review command');
-		mkfile('.claude/commands/deploy.md', '# deploy command');
-		const files = detectFiles(tmpDir);
-
-		const review = find(files, '.claude/commands/review.md');
-		expect(review).toBeDefined();
-		expect(review!.path).toBe('.claude/commands/review.md');
-		expect(review!.componentType).toBe('command');
-		expect(review!.tool).toBe('claude-code');
-
-		const deploy = find(files, '.claude/commands/deploy.md');
-		expect(deploy).toBeDefined();
-		expect(deploy!.path).toBe('.claude/commands/deploy.md');
-	});
-
-	it('detects nested commands preserving subdirectory structure', () => {
+		mkfile('.claude/CLAUDE.md', '# global');
+		mkfile('.claude/commands/review.md', '# review');
+		mkfile('.claude/commands/deploy.md', '# deploy');
 		mkfile('.claude/commands/sub/helper.md', '# helper');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.claude/commands/sub/helper.md');
-		expect(f).toBeDefined();
-		expect(f!.path).toBe('.claude/commands/sub/helper.md');
-		expect(f!.componentType).toBe('command');
-	});
-
-	it('does not detect non-.md files in .claude/commands/', () => {
-		mkfile('.claude/commands/script.sh', '#!/bin/bash');
-		expect(detectFiles(tmpDir)).toHaveLength(0);
-	});
-
-	it('detects .claude/skills/*.md as skills', () => {
 		mkfile('.claude/skills/test-helper.md', '# skill');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.claude/skills/test-helper.md');
-		expect(f).toBeDefined();
-		expect(f!.path).toBe('.claude/skills/test-helper.md');
-		expect(f!.componentType).toBe('skill');
-		expect(f!.tool).toBe('claude-code');
-	});
-
-	it('detects .claude/hooks/ files as hooks', () => {
 		mkfile('.claude/hooks/pre-commit.sh', '#!/bin/bash');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.claude/hooks/pre-commit.sh');
-		expect(f).toBeDefined();
-		expect(f!.path).toBe('.claude/hooks/pre-commit.sh');
-		expect(f!.componentType).toBe('hook');
-		expect(f!.tool).toBe('claude-code');
-	});
-
-	it('detects hooks with any extension', () => {
 		mkfile('.claude/hooks/post-tool-use.py', '# hook');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.claude/hooks/post-tool-use.py');
-		expect(f).toBeDefined();
-		expect(f!.componentType).toBe('hook');
-	});
-
-	it('detects .mcp.json as project mcp_server for claude-code', () => {
 		mkfile('.mcp.json', '{}');
+		// decoys
+		mkfile('.claude/commands/script.sh', '#!/bin/bash');
+
 		const files = detectFiles(tmpDir);
-		const matches = findAll(files, '.mcp.json');
-		const claudeMatch = matches.find((f) => f.tool === 'claude-code');
-		expect(claudeMatch).toBeDefined();
-		expect(claudeMatch!.path).toBe('.mcp.json');
-		expect(claudeMatch!.componentType).toBe('mcp_server');
+		assertDetected(files, [
+			{ path: 'CLAUDE.md', tool: 'claude-code', componentType: 'instruction' },
+			{ path: '.claude/settings.json', tool: 'claude-code', componentType: 'instruction' },
+			{ path: '.claude/CLAUDE.md', tool: 'claude-code', componentType: 'instruction' },
+			{ path: '.claude/commands/review.md', tool: 'claude-code', componentType: 'command' },
+			{ path: '.claude/commands/deploy.md', tool: 'claude-code', componentType: 'command' },
+			{ path: '.claude/commands/sub/helper.md', tool: 'claude-code', componentType: 'command' },
+			{ path: '.claude/skills/test-helper.md', tool: 'claude-code', componentType: 'skill' },
+			{ path: '.claude/hooks/pre-commit.sh', tool: 'claude-code', componentType: 'hook' },
+			{ path: '.claude/hooks/post-tool-use.py', tool: 'claude-code', componentType: 'hook' },
+			{ path: '.mcp.json', tool: 'claude-code', componentType: 'mcp_server' }
+		]);
+		// decoy: non-.md scripts in commands/ are not detected
+		expect(find(files, '.claude/commands/script.sh')).toBeUndefined();
 	});
 });
-
-// ─── Codex ───────────────────────────────────────────────────────────────────
 
 describe('detectFiles — codex', () => {
-	it('detects AGENTS.md as project instruction', () => {
+	it('detects all known codex paths', () => {
 		mkfile('AGENTS.md', '# agents');
-		const files = detectFiles(tmpDir);
-		const f = find(files, 'AGENTS.md');
-		expect(f).toBeDefined();
-		expect(f!.path).toBe('AGENTS.md');
-		expect(f!.componentType).toBe('instruction');
-		expect(f!.tool).toBe('codex');
-	});
-
-	it('detects .codex/config.toml', () => {
 		mkfile('.codex/config.toml', '');
-		const files = detectFiles(tmpDir);
-		const matches = findAll(files, '.codex/config.toml');
-		const match = matches.find((f) => f.tool === 'codex');
-		expect(match).toBeDefined();
-		expect(match!.path).toBe('.codex/config.toml');
-	});
-
-	it('detects .codex/agents/*.toml as project instructions', () => {
 		mkfile('.codex/agents/my-agent.toml', '');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.codex/agents/my-agent.toml');
-		expect(f).toBeDefined();
-		expect(f!.tool).toBe('codex');
-		expect(f!.componentType).toBe('instruction');
-	});
-
-	it('detects .agents/skills/*.md as project skills', () => {
 		mkfile('.agents/skills/my-skill.md', '');
+
 		const files = detectFiles(tmpDir);
-		const f = find(files, '.agents/skills/my-skill.md');
-		expect(f).toBeDefined();
-		expect(f!.tool).toBe('codex');
-		expect(f!.componentType).toBe('skill');
+		assertDetected(files, [
+			{ path: 'AGENTS.md', tool: 'codex', componentType: 'instruction' },
+			{ path: '.codex/agents/my-agent.toml', tool: 'codex', componentType: 'instruction' },
+			{ path: '.agents/skills/my-skill.md', tool: 'codex', componentType: 'skill' }
+		]);
+		// .codex/config.toml is detected as codex; exact componentType is not asserted here
+		expect(findAll(files, '.codex/config.toml').some((f) => f.tool === 'codex')).toBe(true);
 	});
 });
-
-// ─── GitHub Copilot ───────────────────────────────────────────────────────────
 
 describe('detectFiles — copilot', () => {
-	it('detects .github/copilot-instructions.md as project instruction', () => {
+	it('detects all known copilot paths and ignores arbitrary .github files', () => {
 		mkfile('.github/copilot-instructions.md', '# copilot');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.github/copilot-instructions.md');
-		expect(f).toBeDefined();
-		expect(f!.path).toBe('.github/copilot-instructions.md');
-		expect(f!.componentType).toBe('instruction');
-		expect(f!.tool).toBe('copilot');
-	});
-
-	it('detects .github/copilot/instructions.md as project instruction', () => {
 		mkfile('.github/copilot/instructions.md', '# instructions');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.github/copilot/instructions.md');
-		expect(f).toBeDefined();
-		expect(f!.tool).toBe('copilot');
-		expect(f!.componentType).toBe('instruction');
-	});
-
-	it('detects .github/copilot/mcp.json as project mcp_server', () => {
 		mkfile('.github/copilot/mcp.json', '{}');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.github/copilot/mcp.json');
-		expect(f).toBeDefined();
-		expect(f!.tool).toBe('copilot');
-		expect(f!.componentType).toBe('mcp_server');
-	});
-
-	it('detects .github/copilot/agents.json as project instruction', () => {
 		mkfile('.github/copilot/agents.json', '{}');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.github/copilot/agents.json');
-		expect(f).toBeDefined();
-		expect(f!.tool).toBe('copilot');
-	});
-
-	it('detects .github/copilot/setup.sh as hook', () => {
 		mkfile('.github/copilot/setup.sh', '#!/bin/bash');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.github/copilot/setup.sh');
-		expect(f).toBeDefined();
-		expect(f!.tool).toBe('copilot');
-		expect(f!.componentType).toBe('hook');
-	});
-
-	it('detects .github/copilot/prompts/*.md as commands', () => {
 		mkfile('.github/copilot/prompts/my-prompt.md', '# prompt');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.github/copilot/prompts/my-prompt.md');
-		expect(f).toBeDefined();
-		expect(f!.tool).toBe('copilot');
-		expect(f!.componentType).toBe('command');
-	});
-
-	it('detects .vscode/settings.json as copilot instruction', () => {
 		mkfile('.vscode/settings.json', '{}');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.vscode/settings.json');
-		expect(f).toBeDefined();
-		expect(f!.tool).toBe('copilot');
-		expect(f!.componentType).toBe('instruction');
-	});
-
-	it('does not detect arbitrary .github files', () => {
+		// decoys
 		mkfile('.github/workflows/ci.yml', '');
 		mkfile('.github/PULL_REQUEST_TEMPLATE.md', '');
-		expect(detectFiles(tmpDir)).toHaveLength(0);
+
+		const files = detectFiles(tmpDir);
+		assertDetected(files, [
+			{ path: '.github/copilot-instructions.md', tool: 'copilot', componentType: 'instruction' },
+			{ path: '.github/copilot/instructions.md', tool: 'copilot', componentType: 'instruction' },
+			{ path: '.github/copilot/mcp.json', tool: 'copilot', componentType: 'mcp_server' },
+			{ path: '.github/copilot/setup.sh', tool: 'copilot', componentType: 'hook' },
+			{ path: '.github/copilot/prompts/my-prompt.md', tool: 'copilot', componentType: 'command' },
+			{ path: '.vscode/settings.json', tool: 'copilot', componentType: 'instruction' }
+		]);
+		// agents.json is copilot-tagged (componentType not asserted)
+		expect(find(files, '.github/copilot/agents.json')?.tool).toBe('copilot');
+		// decoys
+		expect(find(files, '.github/workflows/ci.yml')).toBeUndefined();
+		expect(find(files, '.github/PULL_REQUEST_TEMPLATE.md')).toBeUndefined();
 	});
 });
-
-// ─── Cursor ───────────────────────────────────────────────────────────────────
 
 describe('detectFiles — cursor', () => {
-	it('detects .cursorrules as legacy project instruction', () => {
+	it('detects all known cursor paths', () => {
 		mkfile('.cursorrules', 'always write tests');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.cursorrules');
-		expect(f).toBeDefined();
-		expect(f!.path).toBe('.cursorrules');
-		expect(f!.componentType).toBe('instruction');
-		expect(f!.tool).toBe('cursor');
-	});
-
-	it('detects .cursorignore as project instruction', () => {
 		mkfile('.cursorignore', 'node_modules/');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.cursorignore');
-		expect(f).toBeDefined();
-		expect(f!.tool).toBe('cursor');
-	});
-
-	it('detects .cursorindexingignore as project instruction', () => {
 		mkfile('.cursorindexingignore', '*.log');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.cursorindexingignore');
-		expect(f).toBeDefined();
-		expect(f!.tool).toBe('cursor');
-	});
-
-	it('detects .cursor/rules/*.mdc', () => {
 		mkfile('.cursor/rules/my-rule.mdc', '# rule');
-		const files = detectFiles(tmpDir);
-		const matches = findAll(files, '.cursor/rules/my-rule.mdc');
-		expect(matches.length).toBeGreaterThanOrEqual(1);
-		const cursorMatch = matches.find((f) => f.tool === 'cursor');
-		expect(cursorMatch).toBeDefined();
-		expect(cursorMatch!.componentType).toBe('instruction');
-	});
-
-	it('detects .cursor/rules/*.md', () => {
 		mkfile('.cursor/rules/coding-style.md', '# style');
-		const files = detectFiles(tmpDir);
-		const matches = findAll(files, '.cursor/rules/coding-style.md');
-		expect(matches.length).toBeGreaterThanOrEqual(1);
-		const cursorMatch = matches.find((f) => f.tool === 'cursor');
-		expect(cursorMatch).toBeDefined();
-		expect(cursorMatch!.componentType).toBe('instruction');
-	});
-
-	it('detects .cursor/mcp.json as project mcp_server', () => {
 		mkfile('.cursor/mcp.json', '{}');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.cursor/mcp.json');
-		expect(f).toBeDefined();
-		expect(f!.tool).toBe('cursor');
-		expect(f!.componentType).toBe('mcp_server');
-	});
-
-	it('detects .cursor/hooks.json as hook', () => {
 		mkfile('.cursor/hooks.json', '{}');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.cursor/hooks.json');
-		expect(f).toBeDefined();
-		expect(f!.tool).toBe('cursor');
-		expect(f!.componentType).toBe('hook');
-	});
-
-	it('detects .cursor/commands/*.md as commands', () => {
 		mkfile('.cursor/commands/refactor.md', '# refactor');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.cursor/commands/refactor.md');
-		expect(f).toBeDefined();
-		expect(f!.tool).toBe('cursor');
-		expect(f!.componentType).toBe('command');
-	});
-
-	it('detects .cursor/skills/*.md as skills', () => {
 		mkfile('.cursor/skills/my-skill.md', '# skill');
+
 		const files = detectFiles(tmpDir);
-		const f = find(files, '.cursor/skills/my-skill.md');
-		expect(f).toBeDefined();
-		expect(f!.tool).toBe('cursor');
-		expect(f!.componentType).toBe('skill');
+		assertDetected(files, [
+			{ path: '.cursorrules', tool: 'cursor', componentType: 'instruction' },
+			{ path: '.cursor/mcp.json', tool: 'cursor', componentType: 'mcp_server' },
+			{ path: '.cursor/hooks.json', tool: 'cursor', componentType: 'hook' },
+			{ path: '.cursor/commands/refactor.md', tool: 'cursor', componentType: 'command' },
+			{ path: '.cursor/skills/my-skill.md', tool: 'cursor', componentType: 'skill' }
+		]);
+		// .cursorignore / .cursorindexingignore tagged as cursor
+		expect(find(files, '.cursorignore')?.tool).toBe('cursor');
+		expect(find(files, '.cursorindexingignore')?.tool).toBe('cursor');
+		// .mdc and .md rules both detected as cursor instruction
+		for (const p of ['.cursor/rules/my-rule.mdc', '.cursor/rules/coding-style.md']) {
+			const match = findAll(files, p).find((f) => f.tool === 'cursor');
+			expect(match, `missing cursor match for ${p}`).toBeDefined();
+			expect(match!.componentType).toBe('instruction');
+		}
 	});
 });
-
-// ─── Gemini ───────────────────────────────────────────────────────────────────
 
 describe('detectFiles — gemini', () => {
-	it('detects GEMINI.md as project instruction', () => {
-		mkfile('GEMINI.md', '# gemini instructions');
-		const files = detectFiles(tmpDir);
-		const f = find(files, 'GEMINI.md');
-		expect(f).toBeDefined();
-		expect(f!.path).toBe('GEMINI.md');
-		expect(f!.componentType).toBe('instruction');
-		expect(f!.tool).toBe('gemini');
-	});
-
-	it('detects .geminiignore as project instruction', () => {
+	it('detects all known gemini paths', () => {
+		mkfile('GEMINI.md', '# gemini');
 		mkfile('.geminiignore', '*.log');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.geminiignore');
-		expect(f).toBeDefined();
-		expect(f!.tool).toBe('gemini');
-	});
-
-	it('detects .gemini/settings.json', () => {
 		mkfile('.gemini/settings.json', '{}');
-		const files = detectFiles(tmpDir);
-		const matches = findAll(files, '.gemini/settings.json');
-		const match = matches.find((f) => f.tool === 'gemini');
-		expect(match).toBeDefined();
-		expect(match!.path).toBe('.gemini/settings.json');
-	});
-
-	it('detects .gemini/commands/*.toml as commands', () => {
 		mkfile('.gemini/commands/build.toml', '');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.gemini/commands/build.toml');
-		expect(f).toBeDefined();
-		expect(f!.tool).toBe('gemini');
-		expect(f!.componentType).toBe('command');
-	});
-
-	it('detects .gemini/skills/*.md as skills', () => {
 		mkfile('.gemini/skills/analyze.md', '');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.gemini/skills/analyze.md');
-		expect(f).toBeDefined();
-		expect(f!.tool).toBe('gemini');
-		expect(f!.componentType).toBe('skill');
-	});
-
-	it('detects .gemini/policies/*.toml as instructions', () => {
 		mkfile('.gemini/policies/security.toml', '');
+
 		const files = detectFiles(tmpDir);
-		const f = find(files, '.gemini/policies/security.toml');
-		expect(f).toBeDefined();
-		expect(f!.tool).toBe('gemini');
-		expect(f!.componentType).toBe('instruction');
+		assertDetected(files, [
+			{ path: 'GEMINI.md', tool: 'gemini', componentType: 'instruction' },
+			{ path: '.gemini/commands/build.toml', tool: 'gemini', componentType: 'command' },
+			{ path: '.gemini/skills/analyze.md', tool: 'gemini', componentType: 'skill' },
+			{ path: '.gemini/policies/security.toml', tool: 'gemini', componentType: 'instruction' }
+		]);
+		expect(find(files, '.geminiignore')?.tool).toBe('gemini');
+		expect(findAll(files, '.gemini/settings.json').some((f) => f.tool === 'gemini')).toBe(true);
 	});
 });
-
-// ─── OpenCode ─────────────────────────────────────────────────────────────────
 
 describe('detectFiles — opencode', () => {
-	it('detects opencode.md as project instruction', () => {
+	it('detects all known opencode paths', () => {
 		mkfile('opencode.md', '# opencode');
-		const files = detectFiles(tmpDir);
-		const f = find(files, 'opencode.md');
-		expect(f).toBeDefined();
-		expect(f!.path).toBe('opencode.md');
-		expect(f!.componentType).toBe('instruction');
-		expect(f!.tool).toBe('opencode');
-	});
-
-	it('detects .opencode.json as project instruction', () => {
 		mkfile('.opencode.json', '{}');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.opencode.json');
-		expect(f).toBeDefined();
-		expect(f!.tool).toBe('opencode');
-		expect(f!.componentType).toBe('instruction');
-	});
-
-	it('detects .opencode/commands/*.md as commands', () => {
 		mkfile('.opencode/commands/deploy.md', '# deploy');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.opencode/commands/deploy.md');
-		expect(f).toBeDefined();
-		expect(f!.tool).toBe('opencode');
-		expect(f!.componentType).toBe('command');
+
+		assertDetected(detectFiles(tmpDir), [
+			{ path: 'opencode.md', tool: 'opencode', componentType: 'instruction' },
+			{ path: '.opencode.json', tool: 'opencode', componentType: 'instruction' },
+			{ path: '.opencode/commands/deploy.md', tool: 'opencode', componentType: 'command' }
+		]);
 	});
 });
 
-// ─── Multi-agent detection ────────────────────────────────────────────────────
+// ─── Multi-agent invariants ──────────────────────────────────────────────────
 
 describe('detectFiles — multi-agent projects', () => {
-	it('detects files from all six agents in a single project', () => {
-		// claude-code
+	it('detects files from all six agents and excludes unrelated files in the same project', () => {
 		mkfile('CLAUDE.md', '# claude');
 		mkfile('.claude/commands/review.md', '# review');
-		// codex
 		mkfile('AGENTS.md', '# agents');
-		// copilot
 		mkfile('.github/copilot-instructions.md', '# copilot');
-		// cursor
 		mkfile('.cursorrules', 'rules');
-		// gemini
 		mkfile('GEMINI.md', '# gemini');
-		// opencode
 		mkfile('opencode.md', '# opencode');
-		// unrelated files
 		mkfile('README.md', '# readme');
 		mkfile('src/index.ts', '');
 
 		const files = detectFiles(tmpDir);
 		const agents = new Set(files.map((f) => f.tool));
-		expect(agents).toContain('claude-code');
-		expect(agents).toContain('codex');
-		expect(agents).toContain('copilot');
-		expect(agents).toContain('cursor');
-		expect(agents).toContain('gemini');
-		expect(agents).toContain('opencode');
+		for (const a of ['claude-code', 'codex', 'copilot', 'cursor', 'gemini', 'opencode']) {
+			expect(agents).toContain(a);
+		}
+		expect(find(files, 'README.md')).toBeUndefined();
+		expect(find(files, 'src/index.ts')).toBeUndefined();
 	});
 
-	it('does not include README.md or src/index.ts in a mixed project', () => {
-		mkfile('CLAUDE.md', '# claude');
-		mkfile('README.md', '# readme');
-		mkfile('src/index.ts', '');
-		const files = detectFiles(tmpDir);
-		expect(files.find((f) => f.path === 'README.md')).toBeUndefined();
-		expect(files.find((f) => f.path === 'src/index.ts')).toBeUndefined();
-	});
-
-	it('.mcp.json is tagged as claude-code (not a generic mcp agent)', () => {
-		mkfile('.mcp.json', '{}');
-		const files = detectFiles(tmpDir);
-		const entry = find(files, '.mcp.json');
-		expect(entry).toBeDefined();
-		expect(entry!.tool).toBe('claude-code');
-	});
-
-	it('each (path, agent) pair produces at most one entry', () => {
+	it('produces at most one entry per (path, agent) pair and allows same path under different agents', () => {
 		mkfile('.claude/settings.json', '{}');
-		const files = detectFiles(tmpDir);
-		const claudeEntries = files.filter(
-			(f) => f.path === '.claude/settings.json' && f.tool === 'claude-code'
-		);
-		// globalGlobs win; should produce exactly one entry for claude-code
-		expect(claudeEntries).toHaveLength(1);
-	});
-
-	it('claude-code and cursor each detect their own skill files independently', () => {
 		mkfile('.claude/skills/my-skill.md', '# skill');
 		mkfile('.cursor/skills/my-skill.md', '# skill');
 		const files = detectFiles(tmpDir);
+
+		const claudeSettings = files.filter(
+			(f) => f.path === '.claude/settings.json' && f.tool === 'claude-code'
+		);
+		expect(claudeSettings).toHaveLength(1);
+
 		const claudeSkill = files.find(
 			(f) => f.path === '.claude/skills/my-skill.md' && f.tool === 'claude-code'
 		);
@@ -553,81 +277,55 @@ describe('detectFiles — multi-agent projects', () => {
 
 // ─── Edge cases ───────────────────────────────────────────────────────────────
 
-describe('detectFiles — large directory with deep irrelevant trees', () => {
-	it('detects all agent configs alongside 50+ level deep irrelevant trees', () => {
-		// Agent config files in known locations
+describe('detectFiles — edge cases', () => {
+	it('detects real configs alongside 50+ level deep irrelevant trees and decoys', () => {
 		mkfile('CLAUDE.md', '# claude instructions');
 		mkfile('.claude/commands/review.md', '# review');
 		mkfile('AGENTS.md', '# agents');
 		mkfile('.cursor/rules/style.mdc', '# cursor rules');
 
-		// Build a 52-level deep irrelevant directory path
-		const levels = 52;
-		const deepSegments = Array.from({ length: levels }, (_, i) => `d${i}`);
+		const deepSegments = Array.from({ length: 52 }, (_, i) => `d${i}`);
 		const deepPath = `fake-deep/${deepSegments.join('/')}`;
-
-		// Place decoy files deep inside — they should NOT be detected
-		mkfile(`${deepPath}/CLAUDE.md`, '# decoy - should not be detected');
-		mkfile(`${deepPath}/AGENTS.md`, '# decoy - should not be detected');
-
-		// Another irrelevant tree
+		mkfile(`${deepPath}/CLAUDE.md`, '# decoy');
+		mkfile(`${deepPath}/AGENTS.md`, '# decoy');
 		mkfile('Library/Application Support/deep/path/CLAUDE.md', '# decoy');
 
 		const files = detectFiles(tmpDir);
-
-		// All real agent configs are detected
 		expect(find(files, 'CLAUDE.md')).toBeDefined();
 		expect(find(files, '.claude/commands/review.md')).toBeDefined();
 		expect(find(files, 'AGENTS.md')).toBeDefined();
-
-		// Decoy files in irrelevant trees are NOT detected
 		const paths = files.map((f) => f.path);
 		expect(paths.some((p) => p.startsWith('fake-deep/'))).toBe(false);
 		expect(paths.some((p) => p.startsWith('Library/'))).toBe(false);
 	});
-});
 
-describe('detectFiles — symlink loop', () => {
 	it('completes without hanging when a symlink loop exists inside a scan target', () => {
 		mkfile('.claude/commands/review.md', '# review');
-
-		// Create a symlink loop: .claude/loop -> .claude (circular reference)
 		const claudeDir = path.join(tmpDir, '.claude');
 		fs.symlinkSync(claudeDir, path.join(claudeDir, 'loop'));
 
-		// Should complete without hanging or throwing
 		let files: DetectedFile[] = [];
 		expect(() => {
 			files = detectFiles(tmpDir);
 		}).not.toThrow();
-
-		// Real file should still be detected
 		expect(find(files, '.claude/commands/review.md')).toBeDefined();
 	});
-});
 
-describe('detectFiles — permission error', () => {
 	it.skipIf(process.getuid?.() === 0)(
 		'skips unreadable directories and still returns results from accessible ones',
 		() => {
 			mkfile('CLAUDE.md', '# claude');
 			mkfile('.cursor/rules/style.mdc', '# cursor rules');
-
-			// Create a known scan-target directory with no read permissions
 			const restrictedDir = path.join(tmpDir, '.gemini');
 			fs.mkdirSync(restrictedDir, { recursive: true });
 			fs.chmodSync(restrictedDir, 0o000);
 
 			try {
-				// Scanner must not throw
 				expect(() => detectFiles(tmpDir)).not.toThrow();
-
-				// Files from accessible locations are still returned
 				const files = detectFiles(tmpDir);
 				expect(find(files, 'CLAUDE.md')).toBeDefined();
 				expect(findAll(files, '.cursor/rules/style.mdc').length).toBeGreaterThanOrEqual(1);
 			} finally {
-				// Restore permissions so afterEach cleanup can delete the directory
 				fs.chmodSync(restrictedDir, 0o755);
 			}
 		}
@@ -637,25 +335,17 @@ describe('detectFiles — permission error', () => {
 // ─── Description field ────────────────────────────────────────────────────────
 
 describe('detectFiles — description field', () => {
-	it('includes a description for detected files', () => {
+	it('includes a non-empty description and tags commands/skills correctly', () => {
 		mkfile('CLAUDE.md', '');
-		const files = detectFiles(tmpDir);
-		const f = find(files, 'CLAUDE.md');
-		expect(f!.description).toBeTruthy();
-		expect(typeof f!.description).toBe('string');
-	});
-
-	it('description mentions the agent name for commands', () => {
 		mkfile('.claude/commands/review.md', '');
-		const files = detectFiles(tmpDir);
-		const f = find(files, '.claude/commands/review.md');
-		expect(f!.description).toMatch(/command/i);
-	});
-
-	it('description mentions the agent name for skills', () => {
 		mkfile('.claude/skills/helper.md', '');
 		const files = detectFiles(tmpDir);
-		const f = find(files, '.claude/skills/helper.md');
-		expect(f!.description).toMatch(/skill/i);
+
+		const claudeMd = find(files, 'CLAUDE.md')!;
+		expect(claudeMd.description).toBeTruthy();
+		expect(typeof claudeMd.description).toBe('string');
+
+		expect(find(files, '.claude/commands/review.md')!.description).toMatch(/command/i);
+		expect(find(files, '.claude/skills/helper.md')!.description).toMatch(/skill/i);
 	});
 });

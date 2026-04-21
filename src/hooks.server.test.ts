@@ -85,15 +85,17 @@ function makeGateEvent(
 	};
 }
 
-describe('hooks.server handle', () => {
+describe('hooks.server handle — authentication', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockPublicBetaMode = '';
-		// Default: not rate limited
 		mockCheckRateLimit.mockResolvedValue({ limited: false, retryAfter: 0 });
 	});
 
-	it('sets user and session to null when no token present', async () => {
+	const user = { id: 'u1', username: 'test' };
+	const session = { id: 'sess-1', expiresAt: new Date() };
+
+	it('no token → nulls locals and skips validateSessionToken', async () => {
 		const { event } = makeEvent();
 		const resolve = makeResolve();
 		mockGetSessionToken.mockReturnValue(undefined);
@@ -109,210 +111,130 @@ describe('hooks.server handle', () => {
 		);
 	});
 
-	it('authenticates via cookie token', async () => {
-		const { event } = makeEvent();
-		const resolve = makeResolve();
-		const user = { id: 'u1', username: 'test' };
-		const session = { id: 'sess-1', expiresAt: new Date() };
-
+	it('cookie auth: validates, populates locals, refreshes cookie — and takes precedence over Bearer', async () => {
+		// Cookie-only
+		const cookieOnly = makeEvent();
 		mockGetSessionToken.mockReturnValue('cookie-token');
 		mockValidateSessionToken.mockResolvedValue({ user, session });
-
-		await handle({ event, resolve } as never);
-
+		await handle({ event: cookieOnly.event, resolve: makeResolve() } as never);
 		expect(mockValidateSessionToken).toHaveBeenCalledWith('cookie-token');
-		expect(event.locals.user).toBe(user);
-		expect(event.locals.session).toBe(session);
+		expect(cookieOnly.event.locals.user).toBe(user);
+		expect(cookieOnly.event.locals.session).toBe(session);
+		expect(mockSetSessionCookie).toHaveBeenCalledWith(cookieOnly.event.cookies, 'cookie-token');
+
+		// Cookie wins over Bearer when both are present
+		vi.clearAllMocks();
+		const both = makeEvent({ bearerToken: 'cli-token' });
+		mockGetSessionToken.mockReturnValue('cookie-token');
+		mockValidateSessionToken.mockResolvedValue({ user, session });
+		await handle({ event: both.event, resolve: makeResolve() } as never);
+		expect(mockValidateSessionToken).toHaveBeenCalledWith('cookie-token');
 	});
 
-	it('authenticates via Bearer token when no cookie', async () => {
+	it('bearer auth (no cookie): validates and populates locals but does NOT set a cookie', async () => {
 		const { event } = makeEvent({ bearerToken: 'cli-token' });
-		const resolve = makeResolve();
-		const user = { id: 'u1', username: 'test' };
-		const session = { id: 'sess-1', expiresAt: new Date() };
-
 		mockGetSessionToken.mockReturnValue(undefined);
 		mockValidateSessionToken.mockResolvedValue({ user, session });
 
-		await handle({ event, resolve } as never);
+		await handle({ event, resolve: makeResolve() } as never);
 
 		expect(mockValidateSessionToken).toHaveBeenCalledWith('cli-token');
 		expect(event.locals.user).toBe(user);
 		expect(event.locals.session).toBe(session);
-	});
-
-	it('cookie takes precedence over Bearer token', async () => {
-		const { event } = makeEvent({ bearerToken: 'cli-token' });
-		const resolve = makeResolve();
-		const user = { id: 'u1', username: 'test' };
-		const session = { id: 'sess-1', expiresAt: new Date() };
-
-		mockGetSessionToken.mockReturnValue('cookie-token');
-		mockValidateSessionToken.mockResolvedValue({ user, session });
-
-		await handle({ event, resolve } as never);
-
-		expect(mockValidateSessionToken).toHaveBeenCalledWith('cookie-token');
-	});
-
-	it('clears cookie and nulls locals when cookie token is invalid', async () => {
-		const { event } = makeEvent();
-		const resolve = makeResolve();
-
-		mockGetSessionToken.mockReturnValue('bad-cookie-token');
-		mockValidateSessionToken.mockResolvedValue(null);
-
-		await handle({ event, resolve } as never);
-
-		expect(mockDeleteSessionCookie).toHaveBeenCalledWith(event.cookies);
-		expect(event.locals.user).toBeNull();
-		expect(event.locals.session).toBeNull();
-	});
-
-	it('does not clear cookie when Bearer token is invalid', async () => {
-		const { event } = makeEvent({ bearerToken: 'bad-cli-token' });
-		const resolve = makeResolve();
-
-		mockGetSessionToken.mockReturnValue(undefined);
-		mockValidateSessionToken.mockResolvedValue(null);
-
-		await handle({ event, resolve } as never);
-
-		expect(mockDeleteSessionCookie).not.toHaveBeenCalled();
-		expect(event.locals.user).toBeNull();
-		expect(event.locals.session).toBeNull();
-	});
-
-	it('refreshes cookie on valid cookie-based session', async () => {
-		const { event } = makeEvent();
-		const resolve = makeResolve();
-		const user = { id: 'u1', username: 'test' };
-		const session = { id: 'sess-1', expiresAt: new Date() };
-
-		mockGetSessionToken.mockReturnValue('cookie-token');
-		mockValidateSessionToken.mockResolvedValue({ user, session });
-
-		await handle({ event, resolve } as never);
-
-		expect(mockSetSessionCookie).toHaveBeenCalledWith(event.cookies, 'cookie-token');
-	});
-
-	it('does not refresh cookie for Bearer-only auth', async () => {
-		const { event } = makeEvent({ bearerToken: 'cli-token' });
-		const resolve = makeResolve();
-		const user = { id: 'u1', username: 'test' };
-		const session = { id: 'sess-1', expiresAt: new Date() };
-
-		mockGetSessionToken.mockReturnValue(undefined);
-		mockValidateSessionToken.mockResolvedValue({ user, session });
-
-		await handle({ event, resolve } as never);
-
 		expect(mockSetSessionCookie).not.toHaveBeenCalled();
 	});
 
-	describe('rate limiting', () => {
-		it('returns 429 when checkRateLimit reports limited: true', async () => {
-			const { event } = makeEvent();
-			const resolve = makeResolve();
-			mockGetSessionToken.mockReturnValue(undefined);
-			mockCheckRateLimit.mockResolvedValue({ limited: true, retryAfter: 30 });
+	it('invalid tokens: clear cookie on bad cookie token, do NOT clear on bad Bearer', async () => {
+		// Bad cookie → clears cookie
+		const bad = makeEvent();
+		mockGetSessionToken.mockReturnValue('bad-cookie-token');
+		mockValidateSessionToken.mockResolvedValue(null);
+		await handle({ event: bad.event, resolve: makeResolve() } as never);
+		expect(mockDeleteSessionCookie).toHaveBeenCalledWith(bad.event.cookies);
+		expect(bad.event.locals.user).toBeNull();
+		expect(bad.event.locals.session).toBeNull();
 
-			const response = await handle({ event, resolve } as never);
+		// Bad Bearer → leaves cookie alone
+		vi.clearAllMocks();
+		const badBearer = makeEvent({ bearerToken: 'bad-cli-token' });
+		mockGetSessionToken.mockReturnValue(undefined);
+		mockValidateSessionToken.mockResolvedValue(null);
+		await handle({ event: badBearer.event, resolve: makeResolve() } as never);
+		expect(mockDeleteSessionCookie).not.toHaveBeenCalled();
+		expect(badBearer.event.locals.user).toBeNull();
+		expect(badBearer.event.locals.session).toBeNull();
+	});
+});
 
-			expect(response.status).toBe(429);
-			expect(resolve).not.toHaveBeenCalled();
-			const body = await response.json();
-			expect(body).toEqual({ error: 'Too many requests', code: 'RATE_LIMITED' });
-		});
-
-		it('calls resolve normally when checkRateLimit reports limited: false', async () => {
-			const { event } = makeEvent();
-			const resolve = makeResolve();
-			mockGetSessionToken.mockReturnValue(undefined);
-			mockCheckRateLimit.mockResolvedValue({ limited: false, retryAfter: 0 });
-
-			const response = await handle({ event, resolve } as never);
-
-			expect(resolve).toHaveBeenCalledWith(
-				event,
-				expect.objectContaining({ transformPageChunk: expect.any(Function) })
-			);
-			expect(response.status).toBe(200);
-		});
-
-		it('sets Retry-After header to retryAfter value from checkRateLimit', async () => {
-			const { event } = makeEvent();
-			const resolve = makeResolve();
-			mockGetSessionToken.mockReturnValue(undefined);
-			mockCheckRateLimit.mockResolvedValue({ limited: true, retryAfter: 42 });
-
-			const response = await handle({ event, resolve } as never);
-
-			expect(response.headers.get('Retry-After')).toBe('42');
-		});
-
-		it('calls checkRateLimit after auth resolution', async () => {
-			const { event } = makeEvent();
-			const resolve = makeResolve();
-			const user = { id: 'u1', username: 'test' };
-			const session = { id: 'sess-1', expiresAt: new Date() };
-
-			mockGetSessionToken.mockReturnValue('cookie-token');
-			mockValidateSessionToken.mockResolvedValue({ user, session });
-			mockCheckRateLimit.mockResolvedValue({ limited: false, retryAfter: 0 });
-
-			await handle({ event, resolve } as never);
-
-			// checkRateLimit is called with event that already has locals.user set
-			expect(mockCheckRateLimit).toHaveBeenCalledWith(event);
-			expect(event.locals.user).toBe(user);
-		});
+describe('hooks.server handle — rate limiting & beta gate', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockPublicBetaMode = '';
+		mockCheckRateLimit.mockResolvedValue({ limited: false, retryAfter: 0 });
 	});
 
-	describe('handle uses betaGate', () => {
-		it('allows unauthenticated user on public route when beta mode enabled', async () => {
-			mockPublicBetaMode = 'true';
-			const { event } = makeEvent();
-			const resolve = makeResolve();
-			mockGetSessionToken.mockReturnValue(undefined);
-			(event as Record<string, unknown>).url = { pathname: '/explore' };
+	it('limited: returns 429 with JSON body, Retry-After header, and never calls resolve', async () => {
+		const { event } = makeEvent();
+		const resolve = makeResolve();
+		mockGetSessionToken.mockReturnValue(undefined);
+		mockCheckRateLimit.mockResolvedValue({ limited: true, retryAfter: 42 });
 
-			const response = await handle({ event, resolve } as never);
+		const response = await handle({ event, resolve } as never);
 
-			expect(resolve).toHaveBeenCalledWith(
-				event,
-				expect.objectContaining({ transformPageChunk: expect.any(Function) })
-			);
-			expect(response.status).toBe(200);
-		});
+		expect(response.status).toBe(429);
+		expect(response.headers.get('Retry-After')).toBe('42');
+		expect(await response.json()).toEqual({ error: 'Too many requests', code: 'RATE_LIMITED' });
+		expect(resolve).not.toHaveBeenCalled();
+	});
+
+	it('not limited: resolves normally with status 200, and checkRateLimit runs after auth', async () => {
+		const { event } = makeEvent();
+		const resolve = makeResolve();
+		const user = { id: 'u1', username: 'test' };
+		const session = { id: 'sess-1', expiresAt: new Date() };
+		mockGetSessionToken.mockReturnValue('cookie-token');
+		mockValidateSessionToken.mockResolvedValue({ user, session });
+		mockCheckRateLimit.mockResolvedValue({ limited: false, retryAfter: 0 });
+
+		const response = await handle({ event, resolve } as never);
+
+		expect(response.status).toBe(200);
+		expect(resolve).toHaveBeenCalledWith(
+			event,
+			expect.objectContaining({ transformPageChunk: expect.any(Function) })
+		);
+		// checkRateLimit sees the event after auth populated locals.user
+		expect(mockCheckRateLimit).toHaveBeenCalledWith(event);
+		expect(event.locals.user).toBe(user);
+	});
+
+	it('beta gate: allows unauthenticated user on a public route when beta mode is enabled', async () => {
+		mockPublicBetaMode = 'true';
+		const { event } = makeEvent();
+		const resolve = makeResolve();
+		mockGetSessionToken.mockReturnValue(undefined);
+		(event as Record<string, unknown>).url = { pathname: '/explore' };
+
+		const response = await handle({ event, resolve } as never);
+
+		expect(response.status).toBe(200);
+		expect(resolve).toHaveBeenCalledWith(
+			event,
+			expect.objectContaining({ transformPageChunk: expect.any(Function) })
+		);
 	});
 });
 
 describe('getThemeFromCookie', () => {
-	it('returns "dark" when no theme cookie is set', () => {
-		const cookies = { get: vi.fn().mockReturnValue(undefined) };
-		expect(getThemeFromCookie(cookies as never)).toBe('dark');
-	});
-
-	it('returns "dark" when theme cookie is "dark"', () => {
-		const cookies = { get: vi.fn().mockReturnValue('dark') };
-		expect(getThemeFromCookie(cookies as never)).toBe('dark');
-	});
-
-	it('returns "light" when theme cookie is "light"', () => {
-		const cookies = { get: vi.fn().mockReturnValue('light') };
-		expect(getThemeFromCookie(cookies as never)).toBe('light');
-	});
-
-	it('returns "system" when theme cookie is "system"', () => {
-		const cookies = { get: vi.fn().mockReturnValue('system') };
-		expect(getThemeFromCookie(cookies as never)).toBe('system');
-	});
-
-	it('returns "dark" for invalid cookie values', () => {
-		const cookies = { get: vi.fn().mockReturnValue('invalid') };
-		expect(getThemeFromCookie(cookies as never)).toBe('dark');
+	it('maps the theme cookie value to a valid theme, defaulting to "dark"', () => {
+		const expectTheme = (value: string | undefined, expected: string) => {
+			expect(getThemeFromCookie({ get: vi.fn().mockReturnValue(value) } as never)).toBe(expected);
+		};
+		expectTheme(undefined, 'dark');
+		expectTheme('dark', 'dark');
+		expectTheme('light', 'light');
+		expectTheme('system', 'system');
+		expectTheme('invalid', 'dark');
 	});
 });
 
@@ -324,72 +246,59 @@ describe('handle surface detection', () => {
 		mockGetSessionToken.mockReturnValue(undefined);
 	});
 
-	it('sets surface to "web" and cliVersion to null when no user-agent is present', async () => {
-		const { event } = makeEvent();
-		const resolve = makeResolve();
+	it('sets surface/cliVersion from user-agent (web by default, cli with version parsed from @coati/cli)', async () => {
+		// No UA → web
+		const noUa = makeEvent();
+		await handle({ event: noUa.event, resolve: makeResolve() } as never);
+		expect(noUa.event.locals.surface).toBe('web');
+		expect(noUa.event.locals.cliVersion).toBeNull();
 
-		await handle({ event, resolve } as never);
-
-		expect(event.locals.surface).toBe('web');
-		expect(event.locals.cliVersion).toBeNull();
-	});
-
-	it('sets surface to "web" and cliVersion to null for a browser user-agent', async () => {
-		const { event } = makeEvent({
+		// Browser UA → web
+		const browser = makeEvent({
 			userAgent:
 				'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 		});
-		const resolve = makeResolve();
+		await handle({ event: browser.event, resolve: makeResolve() } as never);
+		expect(browser.event.locals.surface).toBe('web');
+		expect(browser.event.locals.cliVersion).toBeNull();
 
-		await handle({ event, resolve } as never);
-
-		expect(event.locals.surface).toBe('web');
-		expect(event.locals.cliVersion).toBeNull();
-	});
-
-	it('sets surface to "cli" and extracts cliVersion from @coati/cli user-agent', async () => {
-		const { event } = makeEvent({ userAgent: '@coati/cli/0.3.2' });
-		const resolve = makeResolve();
-
-		await handle({ event, resolve } as never);
-
-		expect(event.locals.surface).toBe('cli');
-		expect(event.locals.cliVersion).toBe('0.3.2');
+		// CLI UA → cli + version
+		const cli = makeEvent({ userAgent: '@coati/cli/0.3.2' });
+		await handle({ event: cli.event, resolve: makeResolve() } as never);
+		expect(cli.event.locals.surface).toBe('cli');
+		expect(cli.event.locals.cliVersion).toBe('0.3.2');
 	});
 });
 
 describe('betaGate', () => {
-	it('betaGate returns null when betaModeEnabled is false', () => {
-		const event = makeGateEvent('/explore', null);
-		expect(betaGate(event, false)).toBeNull();
+	it('allows traffic when beta mode is off, for API routes always, and for unauthenticated users on public pages', () => {
+		// Off: always null
+		expect(betaGate(makeGateEvent('/explore', null), false)).toBeNull();
+		// API routes pass even when beta mode is on
+		expect(betaGate(makeGateEvent('/api/v1/setups', null), true)).toBeNull();
+		// Unauthenticated on any non-API route
+		for (const path of [
+			'/explore',
+			'/',
+			'/auth/login/github',
+			'/waitlist',
+			'/someuser/some-setup'
+		]) {
+			expect(betaGate(makeGateEvent(path, null), true)).toBeNull();
+		}
 	});
 
-	it('betaGate returns null for API routes even when beta mode enabled', () => {
-		const event = makeGateEvent('/api/v1/setups', null);
-		expect(betaGate(event, true)).toBeNull();
-	});
-
-	it('betaGate allows unauthenticated user on any non-API route', () => {
-		expect(betaGate(makeGateEvent('/explore', null), true)).toBeNull();
-		expect(betaGate(makeGateEvent('/', null), true)).toBeNull();
-		expect(betaGate(makeGateEvent('/auth/login/github', null), true)).toBeNull();
-		expect(betaGate(makeGateEvent('/waitlist', null), true)).toBeNull();
-		expect(betaGate(makeGateEvent('/someuser/some-setup', null), true)).toBeNull();
-	});
-
-	it('betaGate redirects non-approved user on gated (app) routes to waitlist', () => {
+	it('redirects non-approved users to /waitlist on gated app routes, passes them on public routes', () => {
 		for (const path of ['/new', '/settings', '/feed', '/admin', '/admin/beta']) {
 			const response = betaGate(
 				makeGateEvent(path, { isBetaApproved: false, isAdmin: false }),
 				true
 			);
-			expect(response).not.toBeNull();
+			expect(response, `expected redirect for ${path}`).not.toBeNull();
 			expect(response?.status).toBe(302);
 			expect(response?.headers.get('Location')).toBe('/waitlist');
 		}
-	});
 
-	it('betaGate allows non-approved user on public routes', () => {
 		for (const path of ['/explore', '/', '/waitlist', '/someuser', '/someuser/some-setup']) {
 			expect(
 				betaGate(makeGateEvent(path, { isBetaApproved: false, isAdmin: false }), true)
@@ -397,22 +306,17 @@ describe('betaGate', () => {
 		}
 	});
 
-	it('betaGate allows approved authenticated user on gated routes', () => {
-		expect(
-			betaGate(makeGateEvent('/new', { isBetaApproved: true, isAdmin: false }), true)
-		).toBeNull();
-		expect(
-			betaGate(makeGateEvent('/settings', { isBetaApproved: true, isAdmin: false }), true)
-		).toBeNull();
-	});
-
-	it('betaGate allows admin user through regardless of isBetaApproved', () => {
-		expect(
-			betaGate(makeGateEvent('/new', { isBetaApproved: false, isAdmin: true }), true)
-		).toBeNull();
-		expect(
-			betaGate(makeGateEvent('/admin', { isBetaApproved: false, isAdmin: true }), true)
-		).toBeNull();
+	it('allows approved users and admins (regardless of isBetaApproved) through gated routes', () => {
+		for (const path of ['/new', '/settings']) {
+			expect(
+				betaGate(makeGateEvent(path, { isBetaApproved: true, isAdmin: false }), true)
+			).toBeNull();
+		}
+		for (const path of ['/new', '/admin']) {
+			expect(
+				betaGate(makeGateEvent(path, { isBetaApproved: false, isAdmin: true }), true)
+			).toBeNull();
+		}
 	});
 });
 
@@ -424,39 +328,22 @@ describe('handle Sentry integration', () => {
 		mockGetSessionToken.mockReturnValue(undefined);
 	});
 
-	it('calls setSentryUser with id and username when user is authenticated', async () => {
-		const { event } = makeEvent();
-		const resolve = makeResolve();
+	it('tags Sentry context on every request, and only calls setSentryUser when authenticated', async () => {
+		// Authenticated: setSentryUser is called
+		const authed = makeEvent();
 		const user = { id: 'u1', username: 'alice' };
 		const session = { id: 'sess-1', expiresAt: new Date() };
-
 		mockGetSessionToken.mockReturnValue('cookie-token');
 		mockValidateSessionToken.mockResolvedValue({ user, session });
-
-		await handle({ event, resolve } as never);
-
+		await handle({ event: authed.event, resolve: makeResolve() } as never);
 		expect(vi.mocked(setSentryUser)).toHaveBeenCalledWith({ id: 'u1', username: 'alice' });
-	});
 
-	it('does not call setSentryUser when user is not authenticated', async () => {
-		const { event } = makeEvent();
-		const resolve = makeResolve();
-
+		// Anonymous CLI request: no setSentryUser, but request_meta context is tagged
+		vi.clearAllMocks();
 		mockGetSessionToken.mockReturnValue(undefined);
-
-		await handle({ event, resolve } as never);
-
+		const anon = makeEvent({ userAgent: '@coati/cli/1.2.3' });
+		await handle({ event: anon.event, resolve: makeResolve() } as never);
 		expect(vi.mocked(setSentryUser)).not.toHaveBeenCalled();
-	});
-
-	it('tags Sentry context with surface and cli_version on every request', async () => {
-		const { event } = makeEvent({ userAgent: '@coati/cli/1.2.3' });
-		const resolve = makeResolve();
-
-		mockGetSessionToken.mockReturnValue(undefined);
-
-		await handle({ event, resolve } as never);
-
 		expect(vi.mocked(SentrySdk.setContext)).toHaveBeenCalledWith('request_meta', {
 			surface: 'cli',
 			cli_version: '1.2.3'
@@ -488,21 +375,31 @@ describe('handleError', () => {
 		vi.clearAllMocks();
 	});
 
-	it('calls Sentry.captureException with the error', () => {
-		const error = new Error('boom');
-		const event = makeErrorEvent();
-		handleError({ error, event, status: 500, message: 'boom' } as never);
-		expect(vi.mocked(SentrySdk.captureException)).toHaveBeenCalledWith(error, expect.any(Object));
-	});
-
-	it('attaches URL, method, and route params to extra context', () => {
-		const error = new Error('oops');
+	it('captures to Sentry with URL/method/routeParams, strips Authorization/Cookie, and returns a safe message', () => {
+		const error = new Error('unauthorized');
 		const event = makeErrorEvent({
 			href: 'http://localhost/api/v1/setups/123',
 			method: 'POST',
-			params: { id: '123' }
+			params: { id: '123' },
+			headers: {
+				Authorization: 'Bearer secret-token',
+				Cookie: 'session=abc123',
+				'content-type': 'application/json',
+				accept: 'text/html'
+			}
 		});
-		handleError({ error, event, status: 500, message: 'oops' } as never);
+
+		const result = handleError({
+			error,
+			event,
+			status: 500,
+			message: 'unauthorized'
+		} as never);
+
+		// Safe message back to the client (no error leak)
+		expect(result).toEqual({ message: 'An unexpected error occurred' });
+
+		// Sentry called with the original error + extra context
 		expect(vi.mocked(SentrySdk.captureException)).toHaveBeenCalledWith(
 			error,
 			expect.objectContaining({
@@ -513,47 +410,16 @@ describe('handleError', () => {
 				})
 			})
 		);
-	});
 
-	it('strips Authorization header from extra context', () => {
-		const error = new Error('unauthorized');
-		const event = makeErrorEvent({
-			headers: {
-				Authorization: 'Bearer secret-token',
-				'content-type': 'application/json'
-			}
-		});
-		handleError({ error, event, status: 500, message: 'unauthorized' } as never);
+		// Sensitive headers are stripped, innocuous headers preserved
 		const call = vi.mocked(SentrySdk.captureException).mock.calls[0];
 		const extra = (call[1] as { extra: Record<string, unknown> }).extra;
-		expect(extra.headers).not.toHaveProperty('authorization');
-		expect(extra.headers).not.toHaveProperty('Authorization');
-		expect((extra.headers as Record<string, string>)['content-type']).toBe('application/json');
-	});
-
-	it('strips Cookie header from extra context', () => {
-		const error = new Error('err');
-		const event = makeErrorEvent({
-			headers: {
-				Cookie: 'session=abc123',
-				accept: 'text/html'
-			}
-		});
-		handleError({ error, event, status: 500, message: 'err' } as never);
-		const call = vi.mocked(SentrySdk.captureException).mock.calls[0];
-		const extra = (call[1] as { extra: Record<string, unknown> }).extra;
-		expect(extra.headers).not.toHaveProperty('cookie');
-		expect(extra.headers).not.toHaveProperty('Cookie');
-		expect((extra.headers as Record<string, string>)['accept']).toBe('text/html');
-	});
-
-	it('returns a safe message object', () => {
-		const result = handleError({
-			error: new Error('x'),
-			event: makeErrorEvent(),
-			status: 500,
-			message: 'x'
-		} as never);
-		expect(result).toEqual({ message: 'An unexpected error occurred' });
+		const headers = extra.headers as Record<string, string>;
+		expect(headers).not.toHaveProperty('authorization');
+		expect(headers).not.toHaveProperty('Authorization');
+		expect(headers).not.toHaveProperty('cookie');
+		expect(headers).not.toHaveProperty('Cookie');
+		expect(headers['content-type']).toBe('application/json');
+		expect(headers['accept']).toBe('text/html');
 	});
 });

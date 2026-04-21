@@ -77,7 +77,8 @@ export function formatFileList(files: DetectedFile[]): string {
 
 		for (const f of agentFiles) {
 			const badge = typeBadge(f.componentType, maxLabelLen);
-			lines.push(`  ${badge}  ${f.path}`);
+			const emptyTag = f.isEmpty ? ' ' + pc.yellow('(empty)') : '';
+			lines.push(`  ${badge}  ${f.path}${emptyTag}`);
 		}
 
 		lines.push('');

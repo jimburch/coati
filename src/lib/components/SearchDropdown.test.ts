@@ -47,123 +47,57 @@ function resolveEnterAction(
 }
 
 describe('shouldFetch', () => {
-	it('returns false for empty string', () => {
+	it('requires at least 2 non-whitespace characters', () => {
 		expect(shouldFetch('')).toBe(false);
-	});
-
-	it('returns false for single character', () => {
 		expect(shouldFetch('a')).toBe(false);
-	});
-
-	it('returns false for whitespace-only', () => {
 		expect(shouldFetch('  ')).toBe(false);
-	});
-
-	it('returns false for one real character with spaces', () => {
 		expect(shouldFetch(' a ')).toBe(false);
-	});
-
-	it('returns true for two characters', () => {
 		expect(shouldFetch('ab')).toBe(true);
-	});
-
-	it('returns true for two characters with surrounding whitespace', () => {
 		expect(shouldFetch('  ab  ')).toBe(true);
-	});
-
-	it('returns true for longer query', () => {
 		expect(shouldFetch('claude code')).toBe(true);
 	});
 });
 
-describe('buildExploreUrl', () => {
-	it('returns /explore for empty string', () => {
+describe('URL builders', () => {
+	it('buildExploreUrl: trims, URL-encodes, and falls back to /explore for empty query', () => {
 		expect(buildExploreUrl('')).toBe('/explore');
-	});
-
-	it('returns /explore for whitespace-only', () => {
 		expect(buildExploreUrl('   ')).toBe('/explore');
-	});
-
-	it('returns /explore?q=<query> for a simple query', () => {
 		expect(buildExploreUrl('claude')).toBe('/explore?q=claude');
-	});
-
-	it('encodes spaces in the query', () => {
-		expect(buildExploreUrl('claude code')).toBe('/explore?q=claude%20code');
-	});
-
-	it('trims whitespace before building URL', () => {
 		expect(buildExploreUrl('  claude  ')).toBe('/explore?q=claude');
-	});
-
-	it('encodes special characters', () => {
+		expect(buildExploreUrl('claude code')).toBe('/explore?q=claude%20code');
 		expect(buildExploreUrl('hello & world')).toBe('/explore?q=hello%20%26%20world');
 	});
-});
 
-describe('buildResultUrl', () => {
-	it('builds /username/slug URL', () => {
+	it('buildResultUrl: /<username>/<slug>', () => {
 		expect(buildResultUrl('alice', 'my-setup')).toBe('/alice/my-setup');
-	});
-
-	it('handles different usernames and slugs', () => {
 		expect(buildResultUrl('bob-dev', 'claude-hooks')).toBe('/bob-dev/claude-hooks');
 	});
 });
 
 describe('sliceResults', () => {
-	it('returns all items when fewer than max', () => {
-		const items = [1, 2, 3];
-		expect(sliceResults(items, 5)).toEqual([1, 2, 3]);
-	});
-
-	it('returns exactly max items when more are available', () => {
-		const items = [1, 2, 3, 4, 5, 6, 7];
-		expect(sliceResults(items, 5)).toEqual([1, 2, 3, 4, 5]);
-	});
-
-	it('returns empty array when input is empty', () => {
+	it('limits to max items, handling empty input and zero max', () => {
+		expect(sliceResults([1, 2, 3], 5)).toEqual([1, 2, 3]);
+		expect(sliceResults([1, 2, 3, 4, 5, 6, 7], 5)).toEqual([1, 2, 3, 4, 5]);
 		expect(sliceResults([], 5)).toEqual([]);
-	});
-
-	it('returns empty array when max is 0', () => {
 		expect(sliceResults([1, 2, 3], 0)).toEqual([]);
 	});
 });
 
-describe('getNextIndex', () => {
-	it('returns -1 when total is 0', () => {
+describe('keyboard navigation (getNextIndex / getPrevIndex)', () => {
+	it('getNextIndex: returns -1 for empty list, advances otherwise, clamps at last item', () => {
 		expect(getNextIndex(-1, 0)).toBe(-1);
-	});
-
-	it('moves from -1 (no highlight) to 0 on first arrow down', () => {
 		expect(getNextIndex(-1, 3)).toBe(0);
-	});
-
-	it('increments index', () => {
 		expect(getNextIndex(0, 3)).toBe(1);
 		expect(getNextIndex(1, 3)).toBe(2);
-	});
-
-	it('stops at last item (does not wrap)', () => {
 		expect(getNextIndex(2, 3)).toBe(2);
 		expect(getNextIndex(4, 5)).toBe(4);
 	});
-});
 
-describe('getPrevIndex', () => {
-	it('returns -1 when current is -1 (no highlight)', () => {
+	it('getPrevIndex: decrements, returns -1 from 0 (no highlight), stays -1 below 0', () => {
 		expect(getPrevIndex(-1)).toBe(-1);
-	});
-
-	it('returns -1 when current is 0 (moves to no highlight)', () => {
 		expect(getPrevIndex(0)).toBe(-1);
-	});
-
-	it('decrements index', () => {
-		expect(getPrevIndex(2)).toBe(1);
 		expect(getPrevIndex(1)).toBe(0);
+		expect(getPrevIndex(2)).toBe(1);
 	});
 });
 
@@ -173,28 +107,26 @@ describe('resolveEnterAction', () => {
 		{ ownerUsername: 'bob', slug: 'other-setup' }
 	];
 
-	it('navigates to explore when no highlight (-1)', () => {
-		const result = resolveEnterAction(-1, items, 'claude');
-		expect(result).toEqual({ type: 'explore', url: '/explore?q=claude' });
-	});
-
-	it('navigates to explore when items is empty', () => {
-		const result = resolveEnterAction(-1, [], 'claude');
-		expect(result).toEqual({ type: 'explore', url: '/explore?q=claude' });
-	});
-
-	it('navigates to result when first item is highlighted', () => {
-		const result = resolveEnterAction(0, items, 'alice');
-		expect(result).toEqual({ type: 'result', url: '/alice/my-setup' });
-	});
-
-	it('navigates to correct result for second item', () => {
-		const result = resolveEnterAction(1, items, 'alice');
-		expect(result).toEqual({ type: 'result', url: '/bob/other-setup' });
-	});
-
-	it('falls back to explore when highlightedIndex is out of bounds', () => {
-		const result = resolveEnterAction(5, items, 'query');
-		expect(result).toEqual({ type: 'explore', url: '/explore?q=query' });
+	it('routes to a result when a valid item is highlighted, otherwise to explore', () => {
+		expect(resolveEnterAction(0, items, 'alice')).toEqual({
+			type: 'result',
+			url: '/alice/my-setup'
+		});
+		expect(resolveEnterAction(1, items, 'alice')).toEqual({
+			type: 'result',
+			url: '/bob/other-setup'
+		});
+		expect(resolveEnterAction(-1, items, 'claude')).toEqual({
+			type: 'explore',
+			url: '/explore?q=claude'
+		});
+		expect(resolveEnterAction(-1, [], 'claude')).toEqual({
+			type: 'explore',
+			url: '/explore?q=claude'
+		});
+		expect(resolveEnterAction(5, items, 'query')).toEqual({
+			type: 'explore',
+			url: '/explore?q=query'
+		});
 	});
 });

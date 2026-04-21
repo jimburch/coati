@@ -2,6 +2,7 @@ import { redirect, type RequestHandler } from '@sveltejs/kit';
 import { dev } from '$app/environment';
 import { github } from '$lib/server/auth';
 import { generateState } from 'arctic';
+import { isSafeInternalRedirect } from '@coati/validation';
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
 	const state = generateState();
@@ -17,8 +18,8 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 	});
 
 	const redirectTo = url.searchParams.get('redirect');
-	if (redirectTo && redirectTo.startsWith('/')) {
-		cookies.set('oauth_redirect', redirectTo, {
+	if (isSafeInternalRedirect(redirectTo)) {
+		cookies.set('oauth_redirect', redirectTo as string, {
 			httpOnly: true,
 			secure: !dev,
 			sameSite: 'lax',

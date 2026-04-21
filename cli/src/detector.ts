@@ -9,6 +9,8 @@ export interface DetectedFile {
 	/** Agent slug from @coati/agents-registry (e.g. 'claude-code', 'cursor'). */
 	tool: string;
 	description: string;
+	/** True when the file has zero bytes on disk — surfaces as a warning in init. */
+	isEmpty: boolean;
 }
 
 /** Directories to skip during scanning (safety net). */
@@ -151,6 +153,19 @@ export function detectFiles(dir: string): DetectedFile[] {
 	allFiles.push(...collectDirFiles(dir, dirPrefixes));
 
 	const detected: DetectedFile[] = [];
+	const emptyCache = new Map<string, boolean>();
+	const isEmptyOnDisk = (relativePath: string): boolean => {
+		const cached = emptyCache.get(relativePath);
+		if (cached !== undefined) return cached;
+		let empty = false;
+		try {
+			empty = fs.statSync(path.join(dir, relativePath)).size === 0;
+		} catch {
+			empty = false;
+		}
+		emptyCache.set(relativePath, empty);
+		return empty;
+	};
 
 	for (const relativePath of allFiles) {
 		// Track which (path, agentSlug) pairs have already been emitted so that
@@ -171,7 +186,8 @@ export function detectFiles(dir: string): DetectedFile[] {
 							path: relativePath,
 							componentType: ct,
 							tool: agent.slug,
-							description: makeDescription(relativePath, ct, agent.displayName)
+							description: makeDescription(relativePath, ct, agent.displayName),
+							isEmpty: isEmptyOnDisk(relativePath)
 						});
 					}
 					break; // first matching glob wins within an agent's globalGlobs
@@ -188,7 +204,8 @@ export function detectFiles(dir: string): DetectedFile[] {
 							path: relativePath,
 							componentType: ct,
 							tool: agent.slug,
-							description: makeDescription(relativePath, ct, agent.displayName)
+							description: makeDescription(relativePath, ct, agent.displayName),
+							isEmpty: isEmptyOnDisk(relativePath)
 						});
 						break; // first matching glob wins within an agent's projectGlobs
 					}

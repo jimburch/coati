@@ -92,356 +92,170 @@ describe('setupRepo.getDetail', () => {
 		mockCanViewSetup.mockResolvedValue(true);
 	});
 
-	it('returns null when setup not found', async () => {
+	it('returns null when setup is missing or access is denied', async () => {
 		mockGetSetupByOwnerSlug.mockResolvedValue(null);
-		const result = await setupRepo.getDetail('alice', 'missing-setup');
-		expect(result).toBeNull();
-	});
+		expect(await setupRepo.getDetail('alice', 'missing-setup')).toBeNull();
 
-	it('returns SetupDetail with files, tags, agents, isStarred=false when no viewerId', async () => {
-		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
-
-		const result = await setupRepo.getDetail('alice', 'my-setup');
-
-		expect(result).not.toBeNull();
-		expect(result!.id).toBe('setup-1');
-		expect(result!.files).toEqual(MOCK_FILES);
-		expect(result!.tags).toEqual(MOCK_TAGS);
-		expect(result!.agents).toEqual(MOCK_AGENTS);
-		expect(result!.isStarred).toBe(false);
-	});
-
-	it('does not call isSetupStarredByUser when no viewerId', async () => {
-		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
-		await setupRepo.getDetail('alice', 'my-setup');
-		expect(mockIsSetupStarredByUser).not.toHaveBeenCalled();
-	});
-
-	it('calls isSetupStarredByUser with setup id and viewerId when viewerId provided', async () => {
-		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
-		mockIsSetupStarredByUser.mockResolvedValue(true);
-
-		const result = await setupRepo.getDetail('alice', 'my-setup', 'viewer-123');
-
-		expect(mockIsSetupStarredByUser).toHaveBeenCalledWith('setup-1', 'viewer-123');
-		expect(result!.isStarred).toBe(true);
-	});
-
-	it('resolves files, tags, agents, and star in parallel', async () => {
-		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
-		const callOrder: string[] = [];
-		mockGetSetupFiles.mockImplementation(async () => {
-			callOrder.push('files');
-			return MOCK_FILES;
-		});
-		mockGetSetupTags.mockImplementation(async () => {
-			callOrder.push('tags');
-			return MOCK_TAGS;
-		});
-		mockGetSetupAgents.mockImplementation(async () => {
-			callOrder.push('agents');
-			return MOCK_AGENTS;
-		});
-
-		await setupRepo.getDetail('alice', 'my-setup');
-
-		// All three should be called (order may vary, but all called)
-		expect(callOrder).toContain('files');
-		expect(callOrder).toContain('tags');
-		expect(callOrder).toContain('agents');
-	});
-
-	it('calls getSetupByOwnerSlug with correct params', async () => {
-		mockGetSetupByOwnerSlug.mockResolvedValue(null);
-
-		await setupRepo.getDetail('bob', 'cool-setup');
-
-		expect(mockGetSetupByOwnerSlug).toHaveBeenCalledWith('bob', 'cool-setup');
-	});
-
-	it('preserves all setup fields in returned detail', async () => {
-		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
-
-		const result = await setupRepo.getDetail('alice', 'my-setup');
-
-		expect(result!.name).toBe(MOCK_SETUP.name);
-		expect(result!.ownerUsername).toBe(MOCK_SETUP.ownerUsername);
-		expect(result!.starsCount).toBe(MOCK_SETUP.starsCount);
-	});
-
-	it('returns null when canViewSetup returns false', async () => {
 		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
 		mockCanViewSetup.mockResolvedValue(false);
-
-		const result = await setupRepo.getDetail('alice', 'my-setup', 'other-user');
-
-		expect(result).toBeNull();
-	});
-
-	it('calls canViewSetup with setup and viewerId', async () => {
-		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
-
-		await setupRepo.getDetail('alice', 'my-setup', 'viewer-123');
-
-		expect(mockCanViewSetup).toHaveBeenCalledWith(MOCK_SETUP, 'viewer-123');
-	});
-
-	it('does not fetch files/tags/agents when access denied', async () => {
-		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
-		mockCanViewSetup.mockResolvedValue(false);
-
-		await setupRepo.getDetail('alice', 'my-setup', 'other-user');
-
+		expect(await setupRepo.getDetail('alice', 'my-setup', 'other-user')).toBeNull();
+		// and no follow-on work is done when denied
 		expect(mockGetSetupFiles).not.toHaveBeenCalled();
 		expect(mockGetSetupTags).not.toHaveBeenCalled();
 		expect(mockGetSetupAgents).not.toHaveBeenCalled();
 	});
-});
 
-describe('setupRepo.getById', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-		mockCanViewSetup.mockResolvedValue(true);
-	});
-
-	it('returns setup when found by id and access allowed', async () => {
-		mockGetSetupById.mockResolvedValue(MOCK_SETUP);
-
-		const result = await setupRepo.getById('setup-1');
-
-		expect(result).toEqual(MOCK_SETUP);
-		expect(mockGetSetupById).toHaveBeenCalledWith('setup-1');
-	});
-
-	it('returns null when setup not found', async () => {
-		mockGetSetupById.mockResolvedValue(null);
-
-		const result = await setupRepo.getById('nonexistent');
-
-		expect(result).toBeNull();
-	});
-
-	it('returns null when access denied', async () => {
-		mockGetSetupById.mockResolvedValue(MOCK_SETUP);
-		mockCanViewSetup.mockResolvedValue(false);
-
-		const result = await setupRepo.getById('setup-1', 'other-user');
-
-		expect(result).toBeNull();
-	});
-});
-
-describe('setupRepo.getAllAgents', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	it('delegates to getAllAgents from setups', async () => {
-		const mockAgents = [{ id: 'a1', slug: 'claude-code', displayName: 'Claude Code' }];
-		mockGetAllAgents.mockResolvedValue(mockAgents);
-
-		const result = await setupRepo.getAllAgents();
-
-		expect(result).toEqual(mockAgents);
-		expect(mockGetAllAgents).toHaveBeenCalled();
-	});
-});
-
-describe('setupRepo.getAllTags', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	it('delegates to getAllTags from setups', async () => {
-		const mockTags = [{ id: 't1', name: 'typescript' }];
-		mockGetAllTags.mockResolvedValue(mockTags);
-
-		const result = await setupRepo.getAllTags();
-
-		expect(result).toEqual(mockTags);
-		expect(mockGetAllTags).toHaveBeenCalled();
-	});
-});
-
-describe('setupRepo.getByOwnerSlug', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-		mockCanViewSetup.mockResolvedValue(true);
-	});
-
-	it('returns setup when found and access allowed', async () => {
+	it('assembles SetupDetail (files, tags, agents, isStarred) when access is allowed', async () => {
 		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
-		const result = await setupRepo.getByOwnerSlug('alice', 'my-setup');
-		expect(result).toEqual(MOCK_SETUP);
+		mockIsSetupStarredByUser.mockResolvedValue(true);
+
+		// Without viewerId: no star lookup, isStarred defaults to false
+		const anon = await setupRepo.getDetail('alice', 'my-setup');
+		expect(anon).not.toBeNull();
+		expect(anon!.id).toBe('setup-1');
+		expect(anon!.name).toBe(MOCK_SETUP.name);
+		expect(anon!.ownerUsername).toBe(MOCK_SETUP.ownerUsername);
+		expect(anon!.starsCount).toBe(MOCK_SETUP.starsCount);
+		expect(anon!.files).toEqual(MOCK_FILES);
+		expect(anon!.tags).toEqual(MOCK_TAGS);
+		expect(anon!.agents).toEqual(MOCK_AGENTS);
+		expect(anon!.isStarred).toBe(false);
+		expect(mockIsSetupStarredByUser).not.toHaveBeenCalled();
 		expect(mockGetSetupByOwnerSlug).toHaveBeenCalledWith('alice', 'my-setup');
+
+		// With viewerId: star + canViewSetup are consulted
+		vi.clearAllMocks();
+		mockGetSetupFiles.mockResolvedValue(MOCK_FILES);
+		mockGetSetupTags.mockResolvedValue(MOCK_TAGS);
+		mockGetSetupAgents.mockResolvedValue(MOCK_AGENTS);
+		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
+		mockIsSetupStarredByUser.mockResolvedValue(true);
+		mockCanViewSetup.mockResolvedValue(true);
+		const viewed = await setupRepo.getDetail('alice', 'my-setup', 'viewer-123');
+		expect(mockIsSetupStarredByUser).toHaveBeenCalledWith('setup-1', 'viewer-123');
+		expect(mockCanViewSetup).toHaveBeenCalledWith(MOCK_SETUP, 'viewer-123');
+		expect(viewed!.isStarred).toBe(true);
+	});
+});
+
+describe('setupRepo — delegating methods', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockCanViewSetup.mockResolvedValue(true);
 	});
 
-	it('returns null when not found', async () => {
+	it('getById + getByOwnerSlug: return data on hit, null on miss or denial', async () => {
+		// getById hit
+		mockGetSetupById.mockResolvedValue(MOCK_SETUP);
+		expect(await setupRepo.getById('setup-1')).toEqual(MOCK_SETUP);
+		expect(mockGetSetupById).toHaveBeenCalledWith('setup-1');
+
+		// getById miss
+		mockGetSetupById.mockResolvedValue(null);
+		expect(await setupRepo.getById('nonexistent')).toBeNull();
+
+		// getById denial
+		mockGetSetupById.mockResolvedValue(MOCK_SETUP);
+		mockCanViewSetup.mockResolvedValue(false);
+		expect(await setupRepo.getById('setup-1', 'other-user')).toBeNull();
+
+		// getByOwnerSlug hit
+		mockCanViewSetup.mockResolvedValue(true);
+		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
+		expect(await setupRepo.getByOwnerSlug('alice', 'my-setup')).toEqual(MOCK_SETUP);
+		expect(mockGetSetupByOwnerSlug).toHaveBeenCalledWith('alice', 'my-setup');
+
+		// getByOwnerSlug miss
 		mockGetSetupByOwnerSlug.mockResolvedValue(null);
-		const result = await setupRepo.getByOwnerSlug('alice', 'missing');
-		expect(result).toBeNull();
-	});
+		expect(await setupRepo.getByOwnerSlug('alice', 'missing')).toBeNull();
 
-	it('returns null when access denied', async () => {
+		// getByOwnerSlug denial + viewerId threading
 		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
 		mockCanViewSetup.mockResolvedValue(false);
-		const result = await setupRepo.getByOwnerSlug('alice', 'my-setup', 'other-user');
-		expect(result).toBeNull();
+		expect(await setupRepo.getByOwnerSlug('alice', 'my-setup', 'other-user')).toBeNull();
+		expect(mockCanViewSetup).toHaveBeenCalledWith(MOCK_SETUP, 'other-user');
 	});
 
-	it('passes viewerId to canViewSetup', async () => {
-		mockGetSetupByOwnerSlug.mockResolvedValue(MOCK_SETUP);
-		await setupRepo.getByOwnerSlug('alice', 'my-setup', 'viewer-123');
-		expect(mockCanViewSetup).toHaveBeenCalledWith(MOCK_SETUP, 'viewer-123');
-	});
-});
+	it('pass-through methods delegate to the underlying query with the right args', async () => {
+		mockGetAllAgents.mockResolvedValue([
+			{ id: 'a1', slug: 'claude-code', displayName: 'Claude Code' }
+		]);
+		expect(await setupRepo.getAllAgents()).toHaveLength(1);
+		expect(mockGetAllAgents).toHaveBeenCalled();
 
-describe('setupRepo.getFiles', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
+		mockGetAllTags.mockResolvedValue([{ id: 't1', name: 'typescript' }]);
+		expect(await setupRepo.getAllTags()).toHaveLength(1);
+		expect(mockGetAllTags).toHaveBeenCalled();
 
-	it('delegates to getSetupFiles with setupId', async () => {
 		mockGetSetupFiles.mockResolvedValue(MOCK_FILES);
-		const result = await setupRepo.getFiles('setup-1');
-		expect(result).toEqual(MOCK_FILES);
+		expect(await setupRepo.getFiles('setup-1')).toEqual(MOCK_FILES);
 		expect(mockGetSetupFiles).toHaveBeenCalledWith('setup-1');
-	});
-});
 
-describe('setupRepo.search', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	it('delegates to searchSetups with filters', async () => {
-		const mockResult = { items: [], total: 0, page: 1, pageSize: 12, totalPages: 0 };
-		mockSearchSetups.mockResolvedValue(mockResult);
-
+		const searchResult = { items: [], total: 0, page: 1, pageSize: 12, totalPages: 0 };
+		mockSearchSetups.mockResolvedValue(searchResult);
 		const filters = { q: 'test', sort: 'newest' as const, page: 1 };
-		const result = await setupRepo.search(filters);
-
-		expect(result).toEqual(mockResult);
+		expect(await setupRepo.search(filters)).toEqual(searchResult);
 		expect(mockSearchSetups).toHaveBeenCalledWith(filters);
-	});
-});
 
-describe('setupRepo.create', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	it('delegates to createSetup with userId and data', async () => {
-		mockCreateSetup.mockResolvedValue(MOCK_SETUP);
-		const data: Parameters<typeof setupRepo.create>[1] = {
+		const createData: Parameters<typeof setupRepo.create>[1] = {
 			name: 'My Setup',
 			slug: 'my-setup',
 			description: 'A setup',
 			files: []
 		};
-		const result = await setupRepo.create('user-1', data);
-		expect(result).toEqual(MOCK_SETUP);
-		expect(mockCreateSetup).toHaveBeenCalledWith('user-1', data);
-	});
-});
+		mockCreateSetup.mockResolvedValue(MOCK_SETUP);
+		expect(await setupRepo.create('user-1', createData)).toEqual(MOCK_SETUP);
+		expect(mockCreateSetup).toHaveBeenCalledWith('user-1', createData);
 
-describe('setupRepo.update', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	it('delegates to updateSetup with id and data', async () => {
 		mockUpdateSetup.mockResolvedValue(MOCK_SETUP);
-		const data = { name: 'Updated' };
-		const result = await setupRepo.update('setup-1', data);
-		expect(result).toEqual(MOCK_SETUP);
-		expect(mockUpdateSetup).toHaveBeenCalledWith('setup-1', data);
-	});
-});
+		expect(await setupRepo.update('setup-1', { name: 'Updated' })).toEqual(MOCK_SETUP);
+		expect(mockUpdateSetup).toHaveBeenCalledWith('setup-1', { name: 'Updated' });
 
-describe('setupRepo.remove', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	it('delegates to deleteSetup with id and userId', async () => {
 		mockDeleteSetup.mockResolvedValue(1);
-		const result = await setupRepo.remove('setup-1', 'user-1');
-		expect(result).toBe(1);
+		expect(await setupRepo.remove('setup-1', 'user-1')).toBe(1);
 		expect(mockDeleteSetup).toHaveBeenCalledWith('setup-1', 'user-1');
-	});
-});
 
-describe('setupRepo.setStar', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	it('calls setStar with desired=true when starring', async () => {
-		mockSetStar.mockResolvedValue({ starred: true, starsCount: 6 });
-		const result = await setupRepo.setStar('user-1', 'setup-1', true);
-		expect(result).toEqual({ starred: true, starsCount: 6 });
-		expect(mockSetStar).toHaveBeenCalledWith('user-1', 'setup-1', true);
-	});
-
-	it('calls setStar with desired=false when unstarring', async () => {
-		mockSetStar.mockResolvedValue({ starred: false, starsCount: 4 });
-		const result = await setupRepo.setStar('user-1', 'setup-1', false);
-		expect(result).toEqual({ starred: false, starsCount: 4 });
-		expect(mockSetStar).toHaveBeenCalledWith('user-1', 'setup-1', false);
-	});
-
-	it('is idempotent: double-star returns current state without error', async () => {
-		mockSetStar.mockResolvedValue({ starred: true, starsCount: 5 });
-		const result = await setupRepo.setStar('user-1', 'setup-1', true);
-		expect(result).toEqual({ starred: true, starsCount: 5 });
-	});
-});
-
-describe('setupRepo.recordClone', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	it('delegates to recordClone', async () => {
 		mockRecordClone.mockResolvedValue(undefined);
 		await setupRepo.recordClone('setup-1');
 		expect(mockRecordClone).toHaveBeenCalledWith('setup-1');
-	});
-});
 
-describe('setupRepo.getAllAgentsWithSetupCount', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	it('delegates to getAllAgentsWithSetupCount', async () => {
-		const mockData = [
+		const countsData = [
 			{ id: 'a1', slug: 'claude-code', displayName: 'Claude Code', setupsCount: 3 }
 		];
-		mockGetAllAgentsWithSetupCount.mockResolvedValue(mockData);
-		const result = await setupRepo.getAllAgentsWithSetupCount();
-		expect(result).toEqual(mockData);
-		expect(mockGetAllAgentsWithSetupCount).toHaveBeenCalled();
-	});
-});
-
-describe('setupRepo.getAgentBySlug', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
+		mockGetAllAgentsWithSetupCount.mockResolvedValue(countsData);
+		expect(await setupRepo.getAllAgentsWithSetupCount()).toEqual(countsData);
 	});
 
-	it('returns agent with setups when found', async () => {
-		const mockAgent = { id: 'a1', slug: 'claude-code', displayName: 'Claude Code', setups: [] };
-		mockGetAgentBySlugWithSetups.mockResolvedValue(mockAgent);
-		const result = await setupRepo.getAgentBySlug('claude-code');
-		expect(result).toEqual(mockAgent);
+	it('setStar: delegates for star/unstar and is idempotent on repeats', async () => {
+		mockSetStar.mockResolvedValue({ starred: true, starsCount: 6 });
+		expect(await setupRepo.setStar('user-1', 'setup-1', true)).toEqual({
+			starred: true,
+			starsCount: 6
+		});
+		expect(mockSetStar).toHaveBeenLastCalledWith('user-1', 'setup-1', true);
+
+		mockSetStar.mockResolvedValue({ starred: false, starsCount: 4 });
+		expect(await setupRepo.setStar('user-1', 'setup-1', false)).toEqual({
+			starred: false,
+			starsCount: 4
+		});
+		expect(mockSetStar).toHaveBeenLastCalledWith('user-1', 'setup-1', false);
+
+		// double-star: returns current state without error
+		mockSetStar.mockResolvedValue({ starred: true, starsCount: 5 });
+		expect(await setupRepo.setStar('user-1', 'setup-1', true)).toEqual({
+			starred: true,
+			starsCount: 5
+		});
+	});
+
+	it('getAgentBySlug: returns agent detail on hit, null on miss', async () => {
+		const agent = { id: 'a1', slug: 'claude-code', displayName: 'Claude Code', setups: [] };
+		mockGetAgentBySlugWithSetups.mockResolvedValue(agent);
+		expect(await setupRepo.getAgentBySlug('claude-code')).toEqual(agent);
 		expect(mockGetAgentBySlugWithSetups).toHaveBeenCalledWith('claude-code');
-	});
 
-	it('returns null when agent not found', async () => {
 		mockGetAgentBySlugWithSetups.mockResolvedValue(null);
-		const result = await setupRepo.getAgentBySlug('unknown');
-		expect(result).toBeNull();
+		expect(await setupRepo.getAgentBySlug('unknown')).toBeNull();
 	});
 });

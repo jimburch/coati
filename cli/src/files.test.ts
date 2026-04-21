@@ -432,26 +432,146 @@ describe('writeSetupFiles — directory at target path', () => {
 	});
 });
 
-describe('writeSetupFiles — unreadable target falls through to conflict prompt', () => {
-	it('treats a broken symlink as a conflict, not an abort', async () => {
-		const brokenLink = path.join(tmpDir, 'broken');
-		fs.symlinkSync(path.join(tmpDir, 'does-not-exist'), brokenLink);
-		mockResolveConflicts.mockResolvedValue(new Map([[brokenLink, 'skip']]));
+describe('writeSetupFiles — unreadable non-symlink target falls through to conflict prompt', () => {
+	it('treats a real unreadable file as a conflict (not a hard refusal)', async () => {
+		// Simulate an unreadable regular file by creating one with no read permissions.
+		const unreadable = path.join(tmpDir, 'locked.txt');
+		fs.writeFileSync(unreadable, 'secret');
+		fs.chmodSync(unreadable, 0o000);
+		mockResolveConflicts.mockResolvedValue(new Map([[unreadable, 'skip']]));
 
-		const result = await writeSetupFiles([makeFile({ path: 'broken', content: 'x' })], {
-			projectDir: tmpDir,
-			placement: 'project'
-		});
+		try {
+			const result = await writeSetupFiles([makeFile({ path: 'locked.txt', content: 'x' })], {
+				projectDir: tmpDir,
+				placement: 'project'
+			});
 
-		expect(mockResolveConflicts).toHaveBeenCalledTimes(1);
-		const [conflicts] = mockResolveConflicts.mock.calls[0]!;
-		expect(conflicts).toHaveLength(1);
-		expect(conflicts[0]!.absolutePath).toBe(brokenLink);
-		expect(result.skipped).toBe(1);
+			expect(mockResolveConflicts).toHaveBeenCalledTimes(1);
+			const [conflicts] = mockResolveConflicts.mock.calls[0]!;
+			expect(conflicts).toHaveLength(1);
+			expect(conflicts[0]!.absolutePath).toBe(unreadable);
+			expect(result.skipped).toBe(1);
+		} finally {
+			// Restore perms so tmpDir cleanup succeeds.
+			fs.chmodSync(unreadable, 0o644);
+		}
+	});
+});
+
+// ── writeSetupFiles: path containment ────────────────────────────────────────
+
+describe('writeSetupFiles — unsafe paths', () => {
+	it('rejects a path with .. segments and writes nothing', async () => {
+		await expect(
+			writeSetupFiles([makeFile({ path: '../../../evil.txt', content: 'pwn' })], {
+				projectDir: tmpDir,
+				placement: 'project'
+			})
+		).rejects.toThrow(/\.\.\/\.\.\/\.\.\/evil\.txt/);
+
+		expect(fs.readdirSync(tmpDir)).toEqual([]);
+	});
+
+	it('lists every rejected path in a single consolidated error', async () => {
+		const files = [
+			makeFile({ path: '../outside.txt', content: 'a' }),
+			makeFile({ path: '/abs/evil.txt', content: 'b' }),
+			makeFile({ path: 'nested/../../escape.txt', content: 'c' })
+		];
+
+		let caught: Error | undefined;
+		try {
+			await writeSetupFiles(files, { projectDir: tmpDir, placement: 'project' });
+		} catch (err) {
+			caught = err as Error;
+		}
+
+		expect(caught).toBeDefined();
+		expect(caught!.message).toContain('../outside.txt');
+		expect(caught!.message).toContain('/abs/evil.txt');
+		expect(caught!.message).toContain('nested/../../escape.txt');
+	});
+
+	it('writes zero files when any path is unsafe, even if other paths are safe', async () => {
+		await expect(
+			writeSetupFiles(
+				[
+					makeFile({ path: 'safe.md', content: 'ok' }),
+					makeFile({ path: '../escape.txt', content: 'bad' })
+				],
+				{ projectDir: tmpDir, placement: 'project' }
+			)
+		).rejects.toThrow();
+
+		expect(fs.existsSync(path.join(tmpDir, 'safe.md'))).toBe(false);
+	});
+});
+
+// ── writeSetupFiles: symlink refusal ─────────────────────────────────────────
+
+describe('writeSetupFiles — symlink targets', () => {
+	it('refuses to overwrite an existing symlink', async () => {
+		const sensitive = path.join(tmpDir, 'sensitive-target.txt');
+		fs.writeFileSync(sensitive, 'do not touch');
+		const linkPath = path.join(tmpDir, 'config.json');
+		fs.symlinkSync(sensitive, linkPath);
+
+		await expect(
+			writeSetupFiles([makeFile({ path: 'config.json', content: 'hacked' })], {
+				projectDir: tmpDir,
+				placement: 'project'
+			})
+		).rejects.toThrow(/symlink/i);
+
+		// Symlink untouched, target untouched
+		expect(fs.lstatSync(linkPath).isSymbolicLink()).toBe(true);
+		expect(fs.readFileSync(sensitive, 'utf-8')).toBe('do not touch');
+	});
+
+	it('refuses to overwrite a broken symlink (still a symlink)', async () => {
+		const linkPath = path.join(tmpDir, 'broken');
+		fs.symlinkSync(path.join(tmpDir, 'does-not-exist'), linkPath);
+
+		await expect(
+			writeSetupFiles([makeFile({ path: 'broken', content: 'x' })], {
+				projectDir: tmpDir,
+				placement: 'project'
+			})
+		).rejects.toThrow(/symlink/i);
+
+		expect(fs.lstatSync(linkPath).isSymbolicLink()).toBe(true);
+	});
+
+	it('error message names the offending path', async () => {
+		const linkPath = path.join(tmpDir, 'my-link.txt');
+		fs.symlinkSync('/tmp/elsewhere', linkPath);
+
+		await expect(
+			writeSetupFiles([makeFile({ path: 'my-link.txt', content: 'x' })], {
+				projectDir: tmpDir,
+				placement: 'project'
+			})
+		).rejects.toThrow(/my-link\.txt/);
 	});
 });
 
 // ── writeSetupFiles: global placement path expansion ─────────────────────────
+
+describe('writeSetupFiles — global placement containment', () => {
+	it('rejects a .. path under global placement', async () => {
+		await expect(
+			writeSetupFiles([makeFile({ path: '../../etc/passwd', content: 'pwn' })], {
+				placement: 'global'
+			})
+		).rejects.toThrow(/\.\.\/\.\.\/etc\/passwd/);
+	});
+
+	it('rejects an absolute path under global placement', async () => {
+		await expect(
+			writeSetupFiles([makeFile({ path: '/etc/passwd', content: 'pwn' })], { placement: 'global' })
+		).rejects.toThrow(/\/etc\/passwd/);
+	});
+});
 
 describe('writeSetupFiles — global placement', () => {
 	it('resolves global placement path to home-relative path', async () => {

@@ -19,46 +19,25 @@ function getPageNumbers(current: number, total: number): (number | '...')[] {
 }
 
 describe('Pagination getPageNumbers', () => {
-	it('shows all pages when total <= 7', () => {
+	it('renders the expected page/ellipsis pattern for each (current, total) combination', () => {
+		// Under the 7-page threshold: show all pages
+		expect(getPageNumbers(1, 1)).toEqual([1]);
 		expect(getPageNumbers(1, 5)).toEqual([1, 2, 3, 4, 5]);
 		expect(getPageNumbers(3, 7)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+
+		// Above threshold: ellipses appear based on current page position
+		expect(getPageNumbers(1, 10)).toEqual([1, 2, '...', 10]); // first page
+		expect(getPageNumbers(3, 10)).toEqual([1, 2, 3, 4, '...', 10]); // no start ellipsis
+		expect(getPageNumbers(5, 10)).toEqual([1, '...', 4, 5, 6, '...', 10]); // both
+		expect(getPageNumbers(8, 10)).toEqual([1, '...', 7, 8, 9, 10]); // no end ellipsis
+		expect(getPageNumbers(10, 10)).toEqual([1, '...', 9, 10]); // last page
 	});
 
-	it('returns single page for total = 1', () => {
-		expect(getPageNumbers(1, 1)).toEqual([1]);
-	});
-
-	it('shows ellipsis at end when on first page with many pages', () => {
-		expect(getPageNumbers(1, 10)).toEqual([1, 2, '...', 10]);
-	});
-
-	it('shows ellipsis at start when on last page', () => {
-		expect(getPageNumbers(10, 10)).toEqual([1, '...', 9, 10]);
-	});
-
-	it('shows both ellipses when in the middle', () => {
-		expect(getPageNumbers(5, 10)).toEqual([1, '...', 4, 5, 6, '...', 10]);
-	});
-
-	it('shows no start ellipsis when on page 3', () => {
-		expect(getPageNumbers(3, 10)).toEqual([1, 2, 3, 4, '...', 10]);
-	});
-
-	it('shows no end ellipsis when near the last page', () => {
-		expect(getPageNumbers(8, 10)).toEqual([1, '...', 7, 8, 9, 10]);
-	});
-
-	it('always includes first and last page', () => {
+	it('always includes first page, last page, and current page', () => {
 		for (let p = 1; p <= 20; p++) {
 			const pages = getPageNumbers(p, 20);
 			expect(pages[0]).toBe(1);
 			expect(pages[pages.length - 1]).toBe(20);
-		}
-	});
-
-	it('always includes the current page', () => {
-		for (let p = 1; p <= 20; p++) {
-			const pages = getPageNumbers(p, 20);
 			expect(pages).toContain(p);
 		}
 	});

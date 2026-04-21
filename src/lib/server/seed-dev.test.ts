@@ -1,14 +1,6 @@
 /**
  * Unit tests for the seed-dev script.
  *
- * Tests cover:
- * - Data generation correctness
- * - All component types represented
- * - Agent-specific file structures
- * - Edge cases (long desc, max tags, empty bio)
- * - GitHub API rate limiting handling
- * - Idempotency via truncate-then-insert pattern
- *
  * Integration tests (against a real DB on port 5433) require:
  *   TEST_DATABASE_URL=postgres://coati:coati@localhost:5433/coati_test
  */
@@ -66,248 +58,129 @@ function makeGitHubProfile(overrides: Partial<GitHubProfile> = {}): GitHubProfil
 	};
 }
 
-// ─── Constants Tests ──────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-describe('GITHUB_USERNAMES', () => {
-	it('contains at least 30 usernames', () => {
+describe('seed constants (GITHUB_USERNAMES, TAG_NAMES, COMMENT_BODIES_*)', () => {
+	it('GITHUB_USERNAMES: 30–45 unique entries, includes well-known devs', () => {
 		expect(GITHUB_USERNAMES.length).toBeGreaterThanOrEqual(30);
-	});
-
-	it('contains at most 45 usernames', () => {
 		expect(GITHUB_USERNAMES.length).toBeLessThanOrEqual(45);
-	});
-
-	it('includes well-known developers', () => {
 		const lowered = GITHUB_USERNAMES.map((u) => u.toLowerCase());
 		expect(lowered).toContain('torvalds');
 		expect(lowered).toContain('sindresorhus');
+		expect(new Set(lowered).size).toBe(lowered.length);
 	});
 
-	it('has no duplicates', () => {
-		const lowered = GITHUB_USERNAMES.map((u) => u.toLowerCase());
-		const unique = new Set(lowered);
-		expect(unique.size).toBe(lowered.length);
-	});
-});
-
-// ─── generateTagNames Tests ───────────────────────────────────────────────────
-
-describe('generateTagNames', () => {
-	it('returns TAG_NAMES array', () => {
-		expect(generateTagNames()).toEqual(TAG_NAMES);
-	});
-
-	it('returns at least 10 tags', () => {
-		expect(generateTagNames().length).toBeGreaterThanOrEqual(10);
-	});
-
-	it('returns URL-safe lowercase names', () => {
+	it('generateTagNames: returns ≥10 URL-safe tags including agent names', () => {
 		const tags = generateTagNames();
+		expect(tags).toEqual(TAG_NAMES);
+		expect(tags.length).toBeGreaterThanOrEqual(10);
 		for (const tag of tags) {
 			expect(tag).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
 		}
+		for (const slug of ['claude-code', 'cursor', 'copilot']) {
+			expect(tags).toContain(slug);
+		}
 	});
 
-	it('includes agent name tags', () => {
-		const tags = generateTagNames();
-		expect(tags).toContain('claude-code');
-		expect(tags).toContain('cursor');
-		expect(tags).toContain('copilot');
+	it('COMMENT_BODIES_*: each tier respects its length bucket and is non-empty', () => {
+		expect(COMMENT_BODIES_SHORT.length).toBeGreaterThan(0);
+		for (const body of COMMENT_BODIES_SHORT) expect(body.length).toBeLessThan(30);
+
+		expect(COMMENT_BODIES_MEDIUM.length).toBeGreaterThan(0);
+		for (const body of COMMENT_BODIES_MEDIUM) {
+			expect(body.length).toBeGreaterThanOrEqual(30);
+			expect(body.length).toBeLessThanOrEqual(150);
+		}
+
+		expect(COMMENT_BODIES_LONG.length).toBeGreaterThan(0);
+		for (const body of COMMENT_BODIES_LONG) expect(body.length).toBeGreaterThan(100);
+
+		expect(REPLY_BODIES.length).toBeGreaterThan(0);
 	});
 });
 
-// ─── generateSetups Tests ─────────────────────────────────────────────────────
+// ─── generateSetups ───────────────────────────────────────────────────────────
 
 describe('generateSetups', () => {
 	const users = makeUsers(10);
 	const tags = makeTags();
 	const agents = makeAgents();
 
-	it('generates between 90 and 150 setups for 35 users', () => {
+	it('generates a realistic setup fleet with correct shape and valid references', () => {
 		const manyUsers = makeUsers(35);
 		const setups = generateSetups(manyUsers, tags, agents);
+
+		// Size bucket (35 users → 90–150 setups)
 		expect(setups.length).toBeGreaterThanOrEqual(90);
 		expect(setups.length).toBeLessThanOrEqual(150);
-	});
 
-	it('each setup has a userId matching one of the input users', () => {
-		const setups = generateSetups(users, tags, agents);
-		const userIds = new Set(users.map((u) => u.id));
+		const userIds = new Set(manyUsers.map((u) => u.id));
+		const validTagNames = new Set(tags.map((t) => t.name));
+		const validSlugs = new Set(['claude-code', 'cursor', 'copilot', 'codex', 'gemini', 'opencode']);
+
+		const slugs = new Set<string>();
 		for (const setup of setups) {
 			expect(userIds.has(setup.userId)).toBe(true);
-		}
-	});
-
-	it('covers all component types across setups', () => {
-		const manyUsers = makeUsers(35);
-		const setups = generateSetups(manyUsers, tags, agents);
-		const allComponentTypes = new Set(setups.flatMap((s) => s.files.map((f) => f.componentType)));
-
-		expect(allComponentTypes.has('instruction')).toBe(true);
-		expect(allComponentTypes.has('command')).toBe(true);
-		expect(allComponentTypes.has('skill')).toBe(true);
-		expect(allComponentTypes.has('mcp_server')).toBe(true);
-		expect(allComponentTypes.has('hook')).toBe(true);
-		expect(allComponentTypes.has('config')).toBe(true);
-		expect(allComponentTypes.has('policy')).toBe(true);
-		expect(allComponentTypes.has('agent_def')).toBe(true);
-		expect(allComponentTypes.has('ignore')).toBe(true);
-		expect(allComponentTypes.has('setup_script')).toBe(true);
-	});
-
-	it('every setup has at least 2 files', () => {
-		const manyUsers = makeUsers(35);
-		const setups = generateSetups(manyUsers, tags, agents);
-		for (const setup of setups) {
 			expect(setup.files.length).toBeGreaterThanOrEqual(2);
-		}
-	});
-
-	it('every setup has at least one agent slug', () => {
-		const manyUsers = makeUsers(35);
-		const setups = generateSetups(manyUsers, tags, agents);
-		for (const setup of setups) {
 			expect(setup.agentSlugs.length).toBeGreaterThanOrEqual(1);
-		}
-	});
-
-	it('all license values are null', () => {
-		const manyUsers = makeUsers(35);
-		const setups = generateSetups(manyUsers, tags, agents);
-		for (const setup of setups) {
 			expect(setup.license).toBeNull();
-		}
-	});
-
-	it('file agent fields are valid slugs or undefined', () => {
-		const manyUsers = makeUsers(35);
-		const setups = generateSetups(manyUsers, tags, agents);
-		const validSlugs = new Set([
-			'claude-code',
-			'cursor',
-			'copilot',
-			'codex',
-			'gemini',
-			'opencode',
-			undefined
-		]);
-		for (const setup of setups) {
-			for (const file of setup.files) {
-				expect(validSlugs.has(file.agent)).toBe(true);
-			}
-		}
-	});
-
-	it('includes at least one setup with a very long description (edge case)', () => {
-		const manyUsers = makeUsers(35);
-		const setups = generateSetups(manyUsers, tags, agents);
-		const longDescSetup = setups.find((s) => s.description.length >= 200);
-		expect(longDescSetup).toBeDefined();
-	});
-
-	it('all descriptions are within the 300 char limit', () => {
-		const manyUsers = makeUsers(35);
-		const setups = generateSetups(manyUsers, tags, agents);
-		for (const setup of setups) {
 			expect(setup.description.length).toBeLessThanOrEqual(300);
-		}
-	});
-
-	it('includes at least one setup with maximum tags (edge case)', () => {
-		const manyUsers = makeUsers(35);
-		const setups = generateSetups(manyUsers, tags, agents);
-		const maxTagsSetup = setups.find((s) => s.tagNames.length >= 5);
-		expect(maxTagsSetup).toBeDefined();
-	});
-
-	it('at least one user has no setups (edge case)', () => {
-		const manyUsers = makeUsers(35);
-		const setups = generateSetups(manyUsers, tags, agents);
-		const usersWithSetups = new Set(setups.map((s) => s.userId));
-		const usersWithoutSetups = manyUsers.filter((u) => !usersWithSetups.has(u.id));
-		expect(usersWithoutSetups.length).toBeGreaterThanOrEqual(1);
-	});
-
-	it('includes varying engagement levels (trending + new)', () => {
-		const manyUsers = makeUsers(35);
-		const setups = generateSetups(manyUsers, tags, agents);
-		const hasHighStars = setups.some((s) => s.starsCount > 50);
-		const hasZeroStars = setups.some((s) => s.starsCount === 0);
-		expect(hasHighStars).toBe(true);
-		expect(hasZeroStars).toBe(true);
-	});
-
-	it('each setup has a unique slug', () => {
-		const manyUsers = makeUsers(35);
-		const setups = generateSetups(manyUsers, tags, agents);
-		const slugs = setups.map((s) => s.slug);
-		const unique = new Set(slugs);
-		expect(unique.size).toBe(slugs.length);
-	});
-
-	it('setup slugs are URL-safe', () => {
-		const setups = generateSetups(users, tags, agents);
-		for (const setup of setups) {
 			expect(setup.slug).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
-		}
-	});
-
-	it('each setup has at least one tag', () => {
-		const setups = generateSetups(users, tags, agents);
-		for (const setup of setups) {
 			expect(setup.tagNames.length).toBeGreaterThanOrEqual(1);
-		}
-	});
+			slugs.add(setup.slug);
 
-	it('all tag names reference valid tags from input', () => {
-		const setups = generateSetups(users, tags, agents);
-		const validTagNames = new Set(tags.map((t) => t.name));
-		for (const setup of setups) {
-			for (const tagName of setup.tagNames) {
-				expect(validTagNames.has(tagName)).toBe(true);
+			for (const tagName of setup.tagNames) expect(validTagNames.has(tagName)).toBe(true);
+			for (const slug of setup.agentSlugs) expect(validSlugs.has(slug)).toBe(true);
+			for (const file of setup.files) {
+				expect(new Set([...validSlugs, undefined]).has(file.agent)).toBe(true);
 			}
 		}
+		expect(slugs.size).toBe(setups.length);
 	});
 
-	it('agent slugs reference valid agent slugs', () => {
-		const setups = generateSetups(users, tags, agents);
-		const validSlugs = new Set(['claude-code', 'cursor', 'copilot', 'codex', 'gemini', 'opencode']);
-		for (const setup of setups) {
-			for (const slug of setup.agentSlugs) {
-				expect(validSlugs.has(slug)).toBe(true);
-			}
+	it('covers every componentType and every agent across the fleet', () => {
+		const manyUsers = makeUsers(35);
+		const setups = generateSetups(manyUsers, tags, agents);
+
+		const componentTypes: Set<string> = new Set(
+			setups.flatMap((s) => s.files.map((f) => f.componentType as string))
+		);
+		for (const ct of [
+			'instruction',
+			'command',
+			'skill',
+			'mcp_server',
+			'hook',
+			'config',
+			'policy',
+			'agent_def',
+			'ignore',
+			'setup_script'
+		]) {
+			expect(componentTypes.has(ct)).toBe(true);
 		}
+
+		const agentSlugs = new Set(setups.flatMap((s) => s.agentSlugs));
+		for (const slug of ['claude-code', 'cursor', 'copilot', 'codex', 'gemini', 'opencode']) {
+			expect(agentSlugs.has(slug)).toBe(true);
+		}
+
+		expect(setups.some((s) => s.agentSlugs.length > 1)).toBe(true);
 	});
 
-	it('generateSetups is deterministic (same inputs → same outputs)', () => {
-		const setups1 = generateSetups(users, tags, agents);
-		const setups2 = generateSetups(users, tags, agents);
-		expect(setups1.map((s) => s.slug)).toEqual(setups2.map((s) => s.slug));
-		expect(setups1.map((s) => s.name)).toEqual(setups2.map((s) => s.name));
-	});
-
-	it('includes setups for all 6 agents', () => {
+	it('includes realistic edge cases (long desc, max tags, orphan users, varied engagement, boilerplate/custom readmes)', () => {
 		const manyUsers = makeUsers(35);
 		const setups = generateSetups(manyUsers, tags, agents);
-		const allAgentSlugs = new Set(setups.flatMap((s) => s.agentSlugs));
-		expect(allAgentSlugs.has('claude-code')).toBe(true);
-		expect(allAgentSlugs.has('cursor')).toBe(true);
-		expect(allAgentSlugs.has('copilot')).toBe(true);
-		expect(allAgentSlugs.has('codex')).toBe(true);
-		expect(allAgentSlugs.has('gemini')).toBe(true);
-		expect(allAgentSlugs.has('opencode')).toBe(true);
-	});
 
-	it('includes multi-agent setups', () => {
-		const manyUsers = makeUsers(35);
-		const setups = generateSetups(manyUsers, tags, agents);
-		const multiAgent = setups.filter((s) => s.agentSlugs.length > 1);
-		expect(multiAgent.length).toBeGreaterThan(0);
-	});
+		expect(setups.find((s) => s.description.length >= 200)).toBeDefined();
+		expect(setups.find((s) => s.tagNames.length >= 5)).toBeDefined();
 
-	it('has a mix of boilerplate and custom readmes', () => {
-		const manyUsers = makeUsers(35);
-		const setups = generateSetups(manyUsers, tags, agents);
+		const usersWithSetups = new Set(setups.map((s) => s.userId));
+		expect(manyUsers.filter((u) => !usersWithSetups.has(u.id)).length).toBeGreaterThanOrEqual(1);
+
+		expect(setups.some((s) => s.starsCount > 50)).toBe(true);
+		expect(setups.some((s) => s.starsCount === 0)).toBe(true);
+
 		const boilerplate = setups.filter(
 			(s) => s.readme !== null && !s.readme.includes("## What's Included")
 		);
@@ -317,116 +190,99 @@ describe('generateSetups', () => {
 		expect(boilerplate.length).toBeGreaterThan(0);
 		expect(custom.length).toBeGreaterThan(0);
 	});
+
+	it('is deterministic (same inputs → same outputs)', () => {
+		const run1 = generateSetups(users, tags, agents);
+		const run2 = generateSetups(users, tags, agents);
+		expect(run1.length).toBe(run2.length);
+		for (let i = 0; i < run1.length; i++) {
+			expect(run1[i].slug).toBe(run2[i].slug);
+			expect(run1[i].name).toBe(run2[i].name);
+			expect(run1[i].description).toBe(run2[i].description);
+			expect(run1[i].files.length).toBe(run2[i].files.length);
+			expect(run1[i].tagNames).toEqual(run2[i].tagNames);
+		}
+		expect(generateTagNames()).toEqual(generateTagNames());
+	});
 });
 
-// ─── fetchGitHubProfile Tests ─────────────────────────────────────────────────
+// ─── fetchGitHubProfile / fetchGitHubProfiles ────────────────────────────────
 
 describe('fetchGitHubProfile', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
 
-	it('returns profile on successful fetch', async () => {
+	it('returns profile on 200, forwards auth token, returns null on failure/network error', async () => {
 		const profile = makeGitHubProfile();
-		const mockFetch = vi.fn().mockResolvedValue({
+
+		// 200 OK, no token
+		const okFetch = vi.fn().mockResolvedValue({
 			ok: true,
 			status: 200,
 			json: async () => profile,
 			headers: { get: () => null }
 		});
-
-		const result = await fetchGitHubProfile('testuser', undefined, mockFetch);
-		expect(result).toEqual(profile);
-		expect(mockFetch).toHaveBeenCalledWith(
+		expect(await fetchGitHubProfile('testuser', undefined, okFetch)).toEqual(profile);
+		expect(okFetch).toHaveBeenCalledWith(
 			'https://api.github.com/users/testuser',
 			expect.objectContaining({
 				headers: expect.objectContaining({ Accept: 'application/vnd.github.v3+json' })
 			})
 		);
-	});
 
-	it('includes Authorization header when token is provided', async () => {
-		const mockFetch = vi.fn().mockResolvedValue({
+		// Token propagates as Authorization header
+		const tokenFetch = vi.fn().mockResolvedValue({
 			ok: true,
 			status: 200,
-			json: async () => makeGitHubProfile(),
+			json: async () => profile,
 			headers: { get: () => null }
 		});
-
-		await fetchGitHubProfile('testuser', 'ghp_token123', mockFetch);
-		expect(mockFetch).toHaveBeenCalledWith(
+		await fetchGitHubProfile('testuser', 'ghp_token123', tokenFetch);
+		expect(tokenFetch).toHaveBeenCalledWith(
 			expect.any(String),
 			expect.objectContaining({
 				headers: expect.objectContaining({ Authorization: 'token ghp_token123' })
 			})
 		);
-	});
 
-	it('returns null on non-ok response', async () => {
-		const mockFetch = vi.fn().mockResolvedValue({
+		// Non-ok response (404) → null
+		const notFoundFetch = vi.fn().mockResolvedValue({
 			ok: false,
 			status: 404,
 			headers: { get: () => null }
 		});
+		expect(await fetchGitHubProfile('nonexistent', undefined, notFoundFetch)).toBeNull();
 
-		const result = await fetchGitHubProfile('nonexistent', undefined, mockFetch);
-		expect(result).toBeNull();
+		// Network error → null
+		const errorFetch = vi.fn().mockRejectedValue(new Error('Network error'));
+		expect(await fetchGitHubProfile('testuser', undefined, errorFetch)).toBeNull();
 	});
 
-	it('retries once on 429 rate limit response', async () => {
-		const profile = makeGitHubProfile();
-		const mockFetch = vi
-			.fn()
-			.mockResolvedValueOnce({
-				ok: false,
-				status: 429,
-				headers: { get: () => '1' } // Retry-After: 1s (keep test fast)
-			})
-			.mockResolvedValueOnce({
-				ok: true,
-				status: 200,
-				json: async () => profile,
-				headers: { get: () => null }
-			});
-
-		const result = await fetchGitHubProfile('testuser', undefined, mockFetch);
-		expect(result).toEqual(profile);
-		expect(mockFetch).toHaveBeenCalledTimes(2);
+	it('retries exactly once on rate-limit responses (429 or 403)', async () => {
+		for (const status of [429, 403]) {
+			const profile = makeGitHubProfile();
+			const mockFetch = vi
+				.fn()
+				.mockResolvedValueOnce({
+					ok: false,
+					status,
+					headers: { get: () => '1' } // Retry-After: 1s — keep test fast
+				})
+				.mockResolvedValueOnce({
+					ok: true,
+					status: 200,
+					json: async () => profile,
+					headers: { get: () => null }
+				});
+			expect(await fetchGitHubProfile('testuser', undefined, mockFetch)).toEqual(profile);
+			expect(mockFetch).toHaveBeenCalledTimes(2);
+		}
 	}, 10000);
-
-	it('retries once on 403 rate limit response', async () => {
-		const profile = makeGitHubProfile();
-		const mockFetch = vi
-			.fn()
-			.mockResolvedValueOnce({
-				ok: false,
-				status: 403,
-				headers: { get: () => '1' }
-			})
-			.mockResolvedValueOnce({
-				ok: true,
-				status: 200,
-				json: async () => profile,
-				headers: { get: () => null }
-			});
-
-		const result = await fetchGitHubProfile('testuser', undefined, mockFetch);
-		expect(result).toEqual(profile);
-		expect(mockFetch).toHaveBeenCalledTimes(2);
-	}, 10000);
-
-	it('returns null on network error', async () => {
-		const mockFetch = vi.fn().mockRejectedValue(new Error('Network error'));
-
-		const result = await fetchGitHubProfile('testuser', undefined, mockFetch);
-		expect(result).toBeNull();
-	});
 });
 
-// ─── fetchGitHubProfiles Tests ────────────────────────────────────────────────
-
 describe('fetchGitHubProfiles', () => {
-	it('collects all successfully fetched profiles', async () => {
+	it('collects successful profiles and skips failed ones', async () => {
 		const profile1 = makeGitHubProfile({ login: 'user1', id: 1 });
 		const profile2 = makeGitHubProfile({ login: 'user2', id: 2 });
 		const mockFetch = vi
@@ -443,21 +299,16 @@ describe('fetchGitHubProfiles', () => {
 				json: async () => profile2,
 				headers: { get: () => null }
 			});
+		const ok = await fetchGitHubProfiles(['user1', 'user2'], undefined, mockFetch, 0);
+		expect(ok).toHaveLength(2);
+		expect(ok.map((p) => p.login)).toEqual(['user1', 'user2']);
 
-		const result = await fetchGitHubProfiles(['user1', 'user2'], undefined, mockFetch, 0);
-		expect(result).toHaveLength(2);
-		expect(result[0].login).toBe('user1');
-		expect(result[1].login).toBe('user2');
-	});
-
-	it('skips usernames that fail to fetch', async () => {
-		const profile = makeGitHubProfile({ login: 'user1', id: 1 });
-		const mockFetch = vi
+		const mixedFetch = vi
 			.fn()
 			.mockResolvedValueOnce({
 				ok: true,
 				status: 200,
-				json: async () => profile,
+				json: async () => profile1,
 				headers: { get: () => null }
 			})
 			.mockResolvedValueOnce({
@@ -465,22 +316,19 @@ describe('fetchGitHubProfiles', () => {
 				status: 404,
 				headers: { get: () => null }
 			});
-
-		const result = await fetchGitHubProfiles(['user1', 'nonexistent'], undefined, mockFetch, 0);
-		expect(result).toHaveLength(1);
-		expect(result[0].login).toBe('user1');
+		const mixed = await fetchGitHubProfiles(['user1', 'nonexistent'], undefined, mixedFetch, 0);
+		expect(mixed).toHaveLength(1);
+		expect(mixed[0].login).toBe('user1');
 	});
 });
 
-// ─── seed() function Tests ────────────────────────────────────────────────────
+// ─── seed() ───────────────────────────────────────────────────────────────────
 
 describe('seed()', () => {
 	function makeMockDb() {
-		const executeCalls: string[] = [];
 		const insertedData: Record<string, unknown[]> = {};
 
-		// Capture what was inserted per table
-		const mockInsert = vi.fn((table: { _: { name: string } } | unknown) => {
+		const mockInsert = vi.fn((table: unknown) => {
 			const tableName = (table as { _?: { name?: string } })._?.name ?? 'unknown';
 			return {
 				values: vi.fn((rows: unknown | unknown[]) => {
@@ -497,10 +345,9 @@ describe('seed()', () => {
 			};
 		});
 
-		// Build mock select chain
 		const mockSelectData: Record<string, unknown[]> = {};
 		const mockSelect = vi.fn(() => ({
-			from: vi.fn((table: { _: { name: string } } | unknown) => {
+			from: vi.fn((table: unknown) => {
 				const tableName = (table as { _?: { name?: string } })._?.name ?? 'unknown';
 				return Promise.resolve(mockSelectData[tableName] ?? []);
 			})
@@ -514,45 +361,18 @@ describe('seed()', () => {
 
 		return {
 			mockDb: { execute: vi.fn(), insert: mockInsert, select: mockSelect, update: mockUpdate },
-			executeCalls,
 			insertedData,
 			mockSelectData
 		};
 	}
 
-	it('calls TRUNCATE before inserting data (idempotency)', async () => {
+	it('runs TRUNCATE first (idempotency) and throws when fewer than 5 profiles are fetched', async () => {
 		const { mockDb, mockSelectData } = makeMockDb();
-
-		// Pre-populate select results so seed doesn't crash
 		mockSelectData['agents'] = [{ id: 'a1', slug: 'claude-code' }];
 		mockSelectData['users'] = [{ id: 'u1', username: 'torvalds' }];
 		mockSelectData['tags'] = TAG_NAMES.slice(0, 3).map((n, i) => ({ id: `t${i}`, name: n }));
 		mockSelectData['setups'] = [];
 
-		const mockFetch = vi.fn().mockResolvedValue({
-			ok: false,
-			status: 404,
-			headers: { get: () => null }
-		});
-
-		// seed throws because <5 profiles fetched — that's expected here
-		await seed(mockDb as unknown as ReturnType<typeof import('drizzle-orm/postgres-js').drizzle>, {
-			fetcher: mockFetch,
-			delayMs: 0
-		}).catch(() => {
-			/* expected: <5 profiles */
-		});
-
-		// TRUNCATE must still have been called first (before the profile check)
-		expect(mockDb.execute).toHaveBeenCalled();
-		const firstCall = (mockDb.execute as ReturnType<typeof vi.fn>).mock.calls[0];
-		expect(firstCall).toBeDefined();
-	});
-
-	it('throws if fewer than 5 profiles are fetched', async () => {
-		const { mockDb } = makeMockDb();
-
-		// All fetches return 404 → 0 profiles → should throw
 		const failFetch = vi.fn().mockResolvedValue({
 			ok: false,
 			status: 404,
@@ -565,230 +385,14 @@ describe('seed()', () => {
 				delayMs: 0
 			})
 		).rejects.toThrow(/profiles fetched/);
-	});
-});
 
-// ─── Comment Body Constants Tests ────────────────────────────────────────────
-
-describe('COMMENT_BODIES_SHORT / MEDIUM / LONG / REPLY_BODIES', () => {
-	it('COMMENT_BODIES_SHORT contains short strings (under 30 chars)', () => {
-		expect(COMMENT_BODIES_SHORT.length).toBeGreaterThan(0);
-		for (const body of COMMENT_BODIES_SHORT) {
-			expect(body.length).toBeLessThan(30);
-		}
+		// TRUNCATE ran before the profile count check
+		expect(mockDb.execute).toHaveBeenCalled();
 	});
 
-	it('COMMENT_BODIES_MEDIUM contains medium strings (30–150 chars)', () => {
-		expect(COMMENT_BODIES_MEDIUM.length).toBeGreaterThan(0);
-		for (const body of COMMENT_BODIES_MEDIUM) {
-			expect(body.length).toBeGreaterThanOrEqual(30);
-			expect(body.length).toBeLessThanOrEqual(150);
-		}
-	});
-
-	it('COMMENT_BODIES_LONG contains long strings (over 100 chars)', () => {
-		expect(COMMENT_BODIES_LONG.length).toBeGreaterThan(0);
-		for (const body of COMMENT_BODIES_LONG) {
-			expect(body.length).toBeGreaterThan(100);
-		}
-	});
-
-	it('REPLY_BODIES contains short reply strings', () => {
-		expect(REPLY_BODIES.length).toBeGreaterThan(0);
-	});
-});
-
-// ─── generateStars Tests ──────────────────────────────────────────────────────
-
-describe('generateStars', () => {
-	it('returns empty array for setup with starsCount=0', () => {
-		const setups = [{ id: 's1', starsCount: 0 }];
-		const users = [{ id: 'u1' }, { id: 'u2' }];
-		expect(generateStars(setups, users)).toHaveLength(0);
-	});
-
-	it('creates star rows matching starsCount for each setup', () => {
-		const setups = [{ id: 's1', starsCount: 3 }];
-		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
-		const stars = generateStars(setups, users);
-		expect(stars).toHaveLength(3);
-		expect(stars.every((s) => s.setupId === 's1')).toBe(true);
-	});
-
-	it('caps stars at number of available users', () => {
-		const setups = [{ id: 's1', starsCount: 100 }];
-		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
-		const stars = generateStars(setups, users);
-		expect(stars).toHaveLength(5);
-	});
-
-	it('returns no duplicate (userId, setupId) pairs', () => {
-		const setups = [{ id: 's1', starsCount: 5 }];
-		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
-		const stars = generateStars(setups, users);
-		const unique = new Set(stars.map((s) => `${s.userId}:${s.setupId}`));
-		expect(unique.size).toBe(stars.length);
-	});
-
-	it('distributes stars across multiple setups with realistic variance', () => {
-		const setups = [
-			{ id: 's1', starsCount: 50 },
-			{ id: 's2', starsCount: 2 },
-			{ id: 's3', starsCount: 0 }
-		];
-		const users = Array.from({ length: 35 }, (_, i) => ({ id: `u${i}` }));
-		const stars = generateStars(setups, users);
-		const s1Stars = stars.filter((s) => s.setupId === 's1');
-		const s2Stars = stars.filter((s) => s.setupId === 's2');
-		const s3Stars = stars.filter((s) => s.setupId === 's3');
-		expect(s1Stars).toHaveLength(35); // capped at user count
-		expect(s2Stars).toHaveLength(2);
-		expect(s3Stars).toHaveLength(0);
-	});
-
-	it('returns objects with userId and setupId fields', () => {
-		const setups = [{ id: 's1', starsCount: 2 }];
-		const users = [{ id: 'u1' }, { id: 'u2' }];
-		const stars = generateStars(setups, users);
-		expect(stars[0]).toHaveProperty('userId');
-		expect(stars[0]).toHaveProperty('setupId');
-	});
-
-	it('is deterministic', () => {
-		const setups = [{ id: 's1', starsCount: 5 }];
-		const users = Array.from({ length: 10 }, (_, i) => ({ id: `u${i}` }));
-		const stars1 = generateStars(setups, users);
-		const stars2 = generateStars(setups, users);
-		expect(stars1).toEqual(stars2);
-	});
-});
-
-// ─── generateFollows Tests ────────────────────────────────────────────────────
-
-describe('generateFollows', () => {
-	it('returns no self-follows', () => {
-		const users = Array.from({ length: 10 }, (_, i) => ({ id: `u${i}` }));
-		const follows = generateFollows(users);
-		expect(follows.every((f) => f.followerId !== f.followingId)).toBe(true);
-	});
-
-	it('returns no duplicate follows', () => {
-		const users = Array.from({ length: 15 }, (_, i) => ({ id: `u${i}` }));
-		const follows = generateFollows(users);
-		const unique = new Set(follows.map((f) => `${f.followerId}:${f.followingId}`));
-		expect(unique.size).toBe(follows.length);
-	});
-
-	it('creates follow relationships between users', () => {
-		const users = Array.from({ length: 15 }, (_, i) => ({ id: `u${i}` }));
-		const follows = generateFollows(users);
-		expect(follows.length).toBeGreaterThan(0);
-	});
-
-	it('some users have followers (popular users)', () => {
-		const users = Array.from({ length: 15 }, (_, i) => ({ id: `u${i}` }));
-		const follows = generateFollows(users);
-		const followedUsers = new Set(follows.map((f) => f.followingId));
-		expect(followedUsers.size).toBeGreaterThan(0);
-	});
-
-	it('some users follow nobody (realistic distribution)', () => {
-		const users = Array.from({ length: 15 }, (_, i) => ({ id: `u${i}` }));
-		const follows = generateFollows(users);
-		const followingUsers = new Set(follows.map((f) => f.followerId));
-		const usersWithNoFollowing = users.filter((u) => !followingUsers.has(u.id));
-		expect(usersWithNoFollowing.length).toBeGreaterThan(0);
-	});
-
-	it('returns objects with followerId and followingId fields', () => {
-		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
-		const follows = generateFollows(users);
-		if (follows.length > 0) {
-			expect(follows[0]).toHaveProperty('followerId');
-			expect(follows[0]).toHaveProperty('followingId');
-		}
-	});
-
-	it('is deterministic', () => {
-		const users = Array.from({ length: 15 }, (_, i) => ({ id: `u${i}` }));
-		const follows1 = generateFollows(users);
-		const follows2 = generateFollows(users);
-		expect(follows1).toEqual(follows2);
-	});
-});
-
-// ─── generateCommentGroups Tests ──────────────────────────────────────────────
-
-describe('generateCommentGroups', () => {
-	it('returns comment groups with required fields', () => {
-		const setups = Array.from({ length: 5 }, (_, i) => ({ id: `s${i}` }));
-		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
-		const groups = generateCommentGroups(setups, users);
-		expect(groups.length).toBeGreaterThan(0);
-		for (const g of groups) {
-			expect(g).toHaveProperty('setupId');
-			expect(g).toHaveProperty('userId');
-			expect(g).toHaveProperty('body');
-			expect(g).toHaveProperty('replies');
-			expect(Array.isArray(g.replies)).toBe(true);
-		}
-	});
-
-	it('some setups have no comments (realistic distribution)', () => {
-		const setups = Array.from({ length: 20 }, (_, i) => ({ id: `s${i}` }));
-		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
-		const groups = generateCommentGroups(setups, users);
-		const setupsWithComments = new Set(groups.map((g) => g.setupId));
-		expect(setupsWithComments.size).toBeLessThan(setups.length);
-	});
-
-	it('some comment groups have replies', () => {
-		const setups = Array.from({ length: 20 }, (_, i) => ({ id: `s${i}` }));
-		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
-		const groups = generateCommentGroups(setups, users);
-		const withReplies = groups.filter((g) => g.replies.length > 0);
-		expect(withReplies.length).toBeGreaterThan(0);
-	});
-
-	it('comment bodies have varying lengths (short and long)', () => {
-		const setups = Array.from({ length: 40 }, (_, i) => ({ id: `s${i}` }));
-		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
-		const groups = generateCommentGroups(setups, users);
-		const shortComments = groups.filter((g) => g.body.length < 30);
-		const longComments = groups.filter((g) => g.body.length > 100);
-		expect(shortComments.length).toBeGreaterThan(0);
-		expect(longComments.length).toBeGreaterThan(0);
-	});
-
-	it('replies have userId and body fields', () => {
-		const setups = Array.from({ length: 20 }, (_, i) => ({ id: `s${i}` }));
-		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
-		const groups = generateCommentGroups(setups, users);
-		const groupWithReplies = groups.find((g) => g.replies.length > 0);
-		expect(groupWithReplies).toBeDefined();
-		if (groupWithReplies) {
-			expect(groupWithReplies.replies[0]).toHaveProperty('userId');
-			expect(groupWithReplies.replies[0]).toHaveProperty('body');
-		}
-	});
-
-	it('is deterministic', () => {
-		const setups = Array.from({ length: 10 }, (_, i) => ({ id: `s${i}` }));
-		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
-		const groups1 = generateCommentGroups(setups, users);
-		const groups2 = generateCommentGroups(setups, users);
-		expect(groups1.map((g) => g.body)).toEqual(groups2.map((g) => g.body));
-		expect(groups1.map((g) => g.setupId)).toEqual(groups2.map((g) => g.setupId));
-	});
-});
-
-// ─── SeedResult social fields Tests ───────────────────────────────────────────
-
-describe('SeedResult social fields', () => {
-	it('seed() result includes starsInserted, followsInserted, commentsInserted, activitiesInserted', async () => {
-		// Build a mock DB that supports a successful full seed run
-		const insertedData: Record<string, unknown[]> = {};
+	it('returns social counts (stars/follows/comments/activities) after a full run', async () => {
 		let commentInsertCount = 0;
+		const insertedData: Record<string, unknown[]> = {};
 
 		const mockInsert = vi.fn((table: unknown) => {
 			const tableName = (table as { _?: { name?: string } })._?.name ?? 'unknown';
@@ -811,7 +415,6 @@ describe('SeedResult social fields', () => {
 			};
 		});
 
-		// 5 mock profiles so seed doesn't throw
 		const mockUsers = Array.from({ length: 5 }, (_, i) => ({
 			id: `u${i}`,
 			username: `user${i}`,
@@ -864,7 +467,6 @@ describe('SeedResult social fields', () => {
 			location: null
 		}));
 
-		// Override the fetch to cycle through profiles
 		let fetchCallIdx = 0;
 		const cyclicFetch = vi.fn().mockImplementation(() => {
 			const profile = mockProfiles[fetchCallIdx % mockProfiles.length];
@@ -882,71 +484,159 @@ describe('SeedResult social fields', () => {
 			{ fetcher: cyclicFetch, delayMs: 0 }
 		);
 
-		expect(result).toHaveProperty('starsInserted');
-		expect(result).toHaveProperty('followsInserted');
-		expect(result).toHaveProperty('commentsInserted');
-		expect(result).toHaveProperty('activitiesInserted');
-		expect(result.starsInserted).toBeGreaterThanOrEqual(0);
-		expect(result.followsInserted).toBeGreaterThanOrEqual(0);
-		expect(result.commentsInserted).toBeGreaterThanOrEqual(0);
-		expect(result.activitiesInserted).toBeGreaterThanOrEqual(0);
+		const counts = result as unknown as Record<string, number>;
+		for (const field of [
+			'starsInserted',
+			'followsInserted',
+			'commentsInserted',
+			'activitiesInserted'
+		]) {
+			expect(result).toHaveProperty(field);
+			expect(counts[field]).toBeGreaterThanOrEqual(0);
+		}
 	});
 });
 
-// ─── resolveSeedUsernames ─────────────────────────────────────────────────────
+// ─── generateStars / generateFollows / generateCommentGroups ─────────────────
+
+describe('generateStars', () => {
+	it('caps at user count, avoids duplicate pairs, scales per-setup, and is deterministic', () => {
+		// Empty for starsCount=0
+		expect(generateStars([{ id: 's1', starsCount: 0 }], [{ id: 'u1' }, { id: 'u2' }])).toHaveLength(
+			0
+		);
+
+		// Matches starsCount and all rows reference the setup
+		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
+		const three = generateStars([{ id: 's1', starsCount: 3 }], users);
+		expect(three).toHaveLength(3);
+		expect(three.every((s) => s.setupId === 's1')).toBe(true);
+		expect(three[0]).toHaveProperty('userId');
+		expect(three[0]).toHaveProperty('setupId');
+
+		// Caps at user count
+		expect(generateStars([{ id: 's1', starsCount: 100 }], users)).toHaveLength(5);
+
+		// No duplicate (userId, setupId) pairs
+		const five = generateStars([{ id: 's1', starsCount: 5 }], users);
+		expect(new Set(five.map((s) => `${s.userId}:${s.setupId}`)).size).toBe(five.length);
+
+		// Cross-setup distribution with capping
+		const manyUsers = Array.from({ length: 35 }, (_, i) => ({ id: `u${i}` }));
+		const multi = generateStars(
+			[
+				{ id: 's1', starsCount: 50 },
+				{ id: 's2', starsCount: 2 },
+				{ id: 's3', starsCount: 0 }
+			],
+			manyUsers
+		);
+		expect(multi.filter((s) => s.setupId === 's1')).toHaveLength(35);
+		expect(multi.filter((s) => s.setupId === 's2')).toHaveLength(2);
+		expect(multi.filter((s) => s.setupId === 's3')).toHaveLength(0);
+
+		// Deterministic
+		const usersDet = Array.from({ length: 10 }, (_, i) => ({ id: `u${i}` }));
+		expect(generateStars([{ id: 's1', starsCount: 5 }], usersDet)).toEqual(
+			generateStars([{ id: 's1', starsCount: 5 }], usersDet)
+		);
+	});
+});
+
+describe('generateFollows', () => {
+	it('builds a realistic follower graph (no self-follows, no dupes, some orphan users, deterministic)', () => {
+		const users = Array.from({ length: 15 }, (_, i) => ({ id: `u${i}` }));
+		const follows = generateFollows(users);
+
+		expect(follows.length).toBeGreaterThan(0);
+		expect(follows.every((f) => f.followerId !== f.followingId)).toBe(true);
+
+		const pairs = follows.map((f) => `${f.followerId}:${f.followingId}`);
+		expect(new Set(pairs).size).toBe(pairs.length);
+
+		const followed = new Set(follows.map((f) => f.followingId));
+		expect(followed.size).toBeGreaterThan(0);
+
+		const following = new Set(follows.map((f) => f.followerId));
+		const orphans = users.filter((u) => !following.has(u.id));
+		expect(orphans.length).toBeGreaterThan(0);
+
+		// Shape
+		expect(follows[0]).toHaveProperty('followerId');
+		expect(follows[0]).toHaveProperty('followingId');
+
+		// Deterministic
+		expect(generateFollows(users)).toEqual(follows);
+	});
+});
+
+describe('generateCommentGroups', () => {
+	it('builds comment groups with replies, sparse setup coverage, and varied body lengths (deterministic)', () => {
+		const setups = Array.from({ length: 40 }, (_, i) => ({ id: `s${i}` }));
+		const users = Array.from({ length: 5 }, (_, i) => ({ id: `u${i}` }));
+		const groups = generateCommentGroups(setups, users);
+
+		expect(groups.length).toBeGreaterThan(0);
+		for (const g of groups) {
+			expect(g).toHaveProperty('setupId');
+			expect(g).toHaveProperty('userId');
+			expect(g).toHaveProperty('body');
+			expect(Array.isArray(g.replies)).toBe(true);
+		}
+
+		// Sparse: not every setup is commented on
+		expect(new Set(groups.map((g) => g.setupId)).size).toBeLessThan(setups.length);
+
+		// Varied body lengths
+		expect(groups.filter((g) => g.body.length < 30).length).toBeGreaterThan(0);
+		expect(groups.filter((g) => g.body.length > 100).length).toBeGreaterThan(0);
+
+		// At least one group has replies with the expected shape
+		const withReplies = groups.find((g) => g.replies.length > 0);
+		expect(withReplies).toBeDefined();
+		expect(withReplies!.replies[0]).toHaveProperty('userId');
+		expect(withReplies!.replies[0]).toHaveProperty('body');
+
+		// Deterministic
+		const rerun = generateCommentGroups(setups, users);
+		expect(rerun.map((g) => g.body)).toEqual(groups.map((g) => g.body));
+		expect(rerun.map((g) => g.setupId)).toEqual(groups.map((g) => g.setupId));
+	});
+});
+
+// ─── resolveSeedUsernames / generateTeams / generateTeamMemberships ──────────
 
 describe('resolveSeedUsernames', () => {
-	it('returns base list unchanged when ownerLogin is undefined', () => {
-		const result = resolveSeedUsernames(['alice', 'bob'], undefined);
-		expect(result).toEqual(['alice', 'bob']);
-	});
-	it('returns base list unchanged when ownerLogin is empty/whitespace', () => {
+	it('returns base unchanged for empty/whitespace/undefined owner; prepends otherwise; case-insensitive dedupe', () => {
+		expect(resolveSeedUsernames(['alice', 'bob'], undefined)).toEqual(['alice', 'bob']);
 		expect(resolveSeedUsernames(['alice'], '')).toEqual(['alice']);
 		expect(resolveSeedUsernames(['alice'], '   ')).toEqual(['alice']);
-	});
-	it('prepends ownerLogin when not already present', () => {
-		const result = resolveSeedUsernames(['alice', 'bob'], 'carol');
-		expect(result).toEqual(['carol', 'alice', 'bob']);
-	});
-	it('de-duplicates case-insensitively and preserves the ownerLogin casing', () => {
-		const result = resolveSeedUsernames(['Alice', 'bob'], 'alice');
-		expect(result).toEqual(['alice', 'bob']);
+		expect(resolveSeedUsernames(['alice', 'bob'], 'carol')).toEqual(['carol', 'alice', 'bob']);
+		expect(resolveSeedUsernames(['Alice', 'bob'], 'alice')).toEqual(['alice', 'bob']);
 	});
 });
-
-// ─── generateTeams ────────────────────────────────────────────────────────────
 
 describe('generateTeams', () => {
 	const users = Array.from({ length: 8 }, (_, i) => ({ id: `user-${i}` }));
-	it('generates up to 4 deterministic teams', () => {
+
+	it('generates 3–5 teams with valid ownerIds and unique slugs', () => {
 		const teams = generateTeams(users);
 		expect(teams.length).toBeGreaterThanOrEqual(3);
 		expect(teams.length).toBeLessThanOrEqual(5);
-	});
-	it('returns empty array when seedUsers is empty', () => {
-		expect(generateTeams([])).toEqual([]);
-	});
-	it('assigns ownerId from seedUsers for every team', () => {
-		const teams = generateTeams(users);
+
 		const userIds = new Set(users.map((u) => u.id));
 		for (const t of teams) expect(userIds.has(t.ownerId)).toBe(true);
+
+		expect(new Set(teams.map((t) => t.slug)).size).toBe(teams.length);
+
+		expect(generateTeams([])).toEqual([]);
 	});
-	it('makes ownerUserId the owner of the first team when provided', () => {
-		const teams = generateTeams(users, 'user-5');
-		expect(teams[0].ownerId).toBe('user-5');
-	});
-	it('falls back to seedUsers[0] when ownerUserId is not present in seedUsers', () => {
-		const teams = generateTeams(users, 'not-a-real-id');
-		expect(teams[0].ownerId).toBe('user-0');
-	});
-	it('generates unique slugs', () => {
-		const teams = generateTeams(users);
-		const slugs = new Set(teams.map((t) => t.slug));
-		expect(slugs.size).toBe(teams.length);
+
+	it('honors ownerUserId when present and falls back to seedUsers[0] otherwise', () => {
+		expect(generateTeams(users, 'user-5')[0].ownerId).toBe('user-5');
+		expect(generateTeams(users, 'not-a-real-id')[0].ownerId).toBe('user-0');
 	});
 });
-
-// ─── generateTeamMemberships ──────────────────────────────────────────────────
 
 describe('generateTeamMemberships', () => {
 	const users = Array.from({ length: 10 }, (_, i) => ({ id: `user-${i}` }));
@@ -955,68 +645,34 @@ describe('generateTeamMemberships', () => {
 		{ id: 'team-1', ownerId: 'user-1' },
 		{ id: 'team-2', ownerId: 'user-2' }
 	];
-	it('includes the owner as an admin of their team', () => {
-		const ms = generateTeamMemberships(teams, users);
+
+	it('each team gets its owner as admin plus 2–5 unique member rows', () => {
+		const memberships = generateTeamMemberships(teams, users);
+
 		for (const t of teams) {
-			const owner = ms.find((m) => m.teamId === t.id && m.userId === t.ownerId);
+			const owner = memberships.find((m) => m.teamId === t.id && m.userId === t.ownerId);
 			expect(owner).toBeDefined();
 			expect(owner!.role).toBe('admin');
-		}
-	});
-	it('gives each team 2–5 non-owner members (plus the owner)', () => {
-		const ms = generateTeamMemberships(teams, users);
-		for (const t of teams) {
-			const nonOwners = ms.filter((m) => m.teamId === t.id && m.role === 'member');
+
+			const nonOwners = memberships.filter((m) => m.teamId === t.id && m.role === 'member');
 			expect(nonOwners.length).toBeGreaterThanOrEqual(2);
 			expect(nonOwners.length).toBeLessThanOrEqual(5);
 		}
-	});
-	it('never adds a user twice to the same team', () => {
-		const ms = generateTeamMemberships(teams, users);
+
+		// Uniqueness across all rows
 		const seen = new Set<string>();
-		for (const m of ms) {
+		for (const m of memberships) {
 			const key = `${m.teamId}:${m.userId}`;
 			expect(seen.has(key)).toBe(false);
 			seen.add(key);
 		}
 	});
-	it('includes ownerUserId as a member of team[1] when it is not already', () => {
-		const ms = generateTeamMemberships(teams, users, 'user-5');
-		const inSecondTeam = ms.find((m) => m.teamId === 'team-1' && m.userId === 'user-5');
-		expect(inSecondTeam).toBeDefined();
-	});
-	it('does not duplicate ownerUserId on team[1] when already present as owner-picked member', () => {
-		// team[1]'s owner is user-1 → user-1 is already the admin; asking for user-1 as ownerUserId shouldn't add a duplicate
-		const ms = generateTeamMemberships(teams, users, 'user-1');
-		const countOfUser1InTeam1 = ms.filter(
-			(m) => m.teamId === 'team-1' && m.userId === 'user-1'
-		).length;
-		expect(countOfUser1InTeam1).toBe(1);
-	});
-});
 
-// ─── Idempotency Logic Test ───────────────────────────────────────────────────
+	it('adds ownerUserId to team[1] when missing, no-ops when already the admin', () => {
+		const added = generateTeamMemberships(teams, users, 'user-5');
+		expect(added.find((m) => m.teamId === 'team-1' && m.userId === 'user-5')).toBeDefined();
 
-describe('idempotency', () => {
-	it('generateSetups produces identical results for same inputs (no side effects)', () => {
-		const users = makeUsers(35);
-		const tags = makeTags();
-		const agents = makeAgents();
-
-		const run1 = generateSetups(users, tags, agents);
-		const run2 = generateSetups(users, tags, agents);
-
-		expect(run1.length).toBe(run2.length);
-		for (let i = 0; i < run1.length; i++) {
-			expect(run1[i].slug).toBe(run2[i].slug);
-			expect(run1[i].name).toBe(run2[i].name);
-			expect(run1[i].description).toBe(run2[i].description);
-			expect(run1[i].files.length).toBe(run2[i].files.length);
-			expect(run1[i].tagNames).toEqual(run2[i].tagNames);
-		}
-	});
-
-	it('generateTagNames is idempotent', () => {
-		expect(generateTagNames()).toEqual(generateTagNames());
+		const noDupe = generateTeamMemberships(teams, users, 'user-1');
+		expect(noDupe.filter((m) => m.teamId === 'team-1' && m.userId === 'user-1')).toHaveLength(1);
 	});
 });

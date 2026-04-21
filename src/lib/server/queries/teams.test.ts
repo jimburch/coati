@@ -4,77 +4,34 @@ import { createTeamSchema, updateTeamSchema, changeTeamMemberRoleSchema } from '
 // ── Schema tests (no DB needed) ───────────────────────────────────────────────
 
 describe('createTeamSchema', () => {
-	it('accepts valid input', () => {
-		const result = createTeamSchema.safeParse({
-			name: 'My Team',
-			slug: 'my-team',
-			description: 'A great team'
-		});
-		expect(result.success).toBe(true);
+	const base = { name: 'My Team', slug: 'my-team' };
+
+	it('accepts valid input with and without description', () => {
+		expect(createTeamSchema.safeParse({ ...base, description: 'A great team' }).success).toBe(true);
+		expect(createTeamSchema.safeParse(base).success).toBe(true);
 	});
 
-	it('accepts input without description', () => {
-		const result = createTeamSchema.safeParse({ name: 'My Team', slug: 'my-team' });
-		expect(result.success).toBe(true);
-	});
-
-	it('rejects empty name', () => {
-		const result = createTeamSchema.safeParse({ name: '', slug: 'my-team' });
-		expect(result.success).toBe(false);
-	});
-
-	it('rejects slug with invalid characters', () => {
-		const result = createTeamSchema.safeParse({ name: 'My Team', slug: 'My Team!' });
-		expect(result.success).toBe(false);
-	});
-
-	it('rejects slug with uppercase', () => {
-		const result = createTeamSchema.safeParse({ name: 'My Team', slug: 'MyTeam' });
-		expect(result.success).toBe(false);
-	});
-
-	it('rejects description over 300 chars', () => {
-		const result = createTeamSchema.safeParse({
-			name: 'My Team',
-			slug: 'my-team',
-			description: 'a'.repeat(301)
-		});
-		expect(result.success).toBe(false);
-	});
-
-	it('rejects name over 100 chars', () => {
-		const result = createTeamSchema.safeParse({
-			name: 'a'.repeat(101),
-			slug: 'my-team'
-		});
-		expect(result.success).toBe(false);
+	it('rejects invalid input (name, slug, description constraints)', () => {
+		expect(createTeamSchema.safeParse({ ...base, name: '' }).success).toBe(false);
+		expect(createTeamSchema.safeParse({ ...base, name: 'a'.repeat(101) }).success).toBe(false);
+		expect(createTeamSchema.safeParse({ ...base, slug: 'My Team!' }).success).toBe(false);
+		expect(createTeamSchema.safeParse({ ...base, slug: 'MyTeam' }).success).toBe(false);
+		expect(createTeamSchema.safeParse({ ...base, description: 'a'.repeat(301) }).success).toBe(
+			false
+		);
 	});
 });
 
 describe('updateTeamSchema', () => {
-	it('accepts partial updates', () => {
-		const result = updateTeamSchema.safeParse({ name: 'New Name' });
-		expect(result.success).toBe(true);
-	});
-
-	it('accepts null description to clear it', () => {
-		const result = updateTeamSchema.safeParse({ description: null });
-		expect(result.success).toBe(true);
-	});
-
-	it('accepts null avatarUrl to clear it', () => {
-		const result = updateTeamSchema.safeParse({ avatarUrl: null });
-		expect(result.success).toBe(true);
+	it('accepts partial updates, null clears, and empty object', () => {
+		expect(updateTeamSchema.safeParse({ name: 'New Name' }).success).toBe(true);
+		expect(updateTeamSchema.safeParse({ description: null }).success).toBe(true);
+		expect(updateTeamSchema.safeParse({ avatarUrl: null }).success).toBe(true);
+		expect(updateTeamSchema.safeParse({}).success).toBe(true);
 	});
 
 	it('rejects invalid avatarUrl', () => {
-		const result = updateTeamSchema.safeParse({ avatarUrl: 'not-a-url' });
-		expect(result.success).toBe(false);
-	});
-
-	it('accepts empty object (no-op update)', () => {
-		const result = updateTeamSchema.safeParse({});
-		expect(result.success).toBe(true);
+		expect(updateTeamSchema.safeParse({ avatarUrl: 'not-a-url' }).success).toBe(false);
 	});
 });
 
@@ -535,19 +492,13 @@ describe('leaveTeam', () => {
 });
 
 describe('changeTeamMemberRoleSchema', () => {
-	it('accepts admin role', () => {
+	it('accepts admin and member roles', () => {
 		expect(changeTeamMemberRoleSchema.safeParse({ role: 'admin' }).success).toBe(true);
-	});
-
-	it('accepts member role', () => {
 		expect(changeTeamMemberRoleSchema.safeParse({ role: 'member' }).success).toBe(true);
 	});
 
-	it('rejects invalid role', () => {
+	it('rejects invalid or missing role', () => {
 		expect(changeTeamMemberRoleSchema.safeParse({ role: 'superadmin' }).success).toBe(false);
-	});
-
-	it('rejects missing role', () => {
 		expect(changeTeamMemberRoleSchema.safeParse({}).success).toBe(false);
 	});
 });
@@ -722,15 +673,9 @@ describe('createInviteSchema', () => {
 		expect(createInviteSchema.safeParse({ username: 'alice' }).success).toBe(true);
 	});
 
-	it('rejects empty username', () => {
+	it('rejects invalid usernames (empty, too long, missing)', () => {
 		expect(createInviteSchema.safeParse({ username: '' }).success).toBe(false);
-	});
-
-	it('rejects username over 50 chars', () => {
 		expect(createInviteSchema.safeParse({ username: 'a'.repeat(51) }).success).toBe(false);
-	});
-
-	it('rejects missing username', () => {
 		expect(createInviteSchema.safeParse({}).success).toBe(false);
 	});
 });

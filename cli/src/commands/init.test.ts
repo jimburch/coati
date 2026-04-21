@@ -40,13 +40,15 @@ const DETECTED_FILES = [
 		path: 'CLAUDE.md',
 		componentType: 'instruction' as const,
 		tool: 'claude-code',
-		description: 'Claude instruction file'
+		description: 'Claude instruction file',
+		isEmpty: false
 	},
 	{
 		path: '.claude/settings.json',
 		componentType: 'config' as const,
 		tool: 'claude-code',
-		description: 'Claude settings'
+		description: 'Claude settings',
+		isEmpty: false
 	}
 ];
 
@@ -55,25 +57,29 @@ const MULTI_AGENT_FILES = [
 		path: 'CLAUDE.md',
 		componentType: 'instruction' as const,
 		tool: 'claude-code',
-		description: 'Claude instruction file'
+		description: 'Claude instruction file',
+		isEmpty: false
 	},
 	{
 		path: '.claude/settings.json',
 		componentType: 'config' as const,
 		tool: 'claude-code',
-		description: 'Claude settings'
+		description: 'Claude settings',
+		isEmpty: false
 	},
 	{
 		path: '.cursor/rules/main.mdc',
 		componentType: 'instruction' as const,
 		tool: 'cursor',
-		description: 'Cursor rule'
+		description: 'Cursor rule',
+		isEmpty: false
 	},
 	{
 		path: 'README.md',
 		componentType: 'instruction' as const,
 		tool: '',
-		description: 'Shared README'
+		description: 'Shared README',
+		isEmpty: false
 	}
 ];
 
@@ -294,6 +300,55 @@ describe('runInitFlow — normal flow', () => {
 		await runInitFlow(ctx, CWD);
 		const writtenManifest = mockWriteManifest.mock.calls[0]![1];
 		expect(writtenManifest).not.toHaveProperty('placement');
+	});
+});
+
+// ── empty file warning ────────────────────────────────────────────────────────
+
+describe('runInitFlow — empty file warning', () => {
+	it('warns listing each empty file when detected files include empty ones', async () => {
+		mockDetectFiles.mockReturnValue([
+			{ ...DETECTED_FILES[0], isEmpty: true },
+			{ ...DETECTED_FILES[1], isEmpty: false }
+		]);
+
+		await runInitFlow(ctx, CWD);
+
+		expect(ctx.io.warning).toHaveBeenCalledWith(
+			expect.stringContaining('1 detected file is empty')
+		);
+		expect(ctx.io.print).toHaveBeenCalledWith(expect.stringContaining('CLAUDE.md'));
+	});
+
+	it('does not warn when no detected files are empty', async () => {
+		await runInitFlow(ctx, CWD);
+
+		expect(ctx.io.warning).not.toHaveBeenCalledWith(expect.stringContaining('empty'));
+	});
+
+	it('deduplicates the same empty path reported by multiple agents', async () => {
+		mockDetectFiles.mockReturnValue([
+			{ ...DETECTED_FILES[0], tool: 'claude-code', isEmpty: true },
+			{ ...DETECTED_FILES[0], tool: 'cursor', isEmpty: true }
+		]);
+		vi.mocked(ctx.io.checklist).mockResolvedValue([DETECTED_FILES[0].path]);
+
+		await runInitFlow(ctx, CWD);
+
+		const warningCalls = vi
+			.mocked(ctx.io.warning)
+			.mock.calls.filter((c) => typeof c[0] === 'string' && c[0].includes('empty'));
+		expect(warningCalls).toHaveLength(1);
+		expect(warningCalls[0][0]).toContain('1 detected file is empty');
+	});
+
+	it('suppresses the warning in JSON mode', async () => {
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
+		mockDetectFiles.mockReturnValue([{ ...DETECTED_FILES[0], isEmpty: true }]);
+
+		await runInitFlow(ctx, CWD);
+
+		expect(ctx.io.warning).not.toHaveBeenCalledWith(expect.stringContaining('empty'));
 	});
 });
 

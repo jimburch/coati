@@ -44,7 +44,9 @@ RUN pnpm build
 # Stage 2: Runtime
 FROM node:22-alpine AS runtime
 
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl \
+  && addgroup -S app \
+  && adduser -S -G app -h /app app
 
 WORKDIR /app
 
@@ -86,5 +88,9 @@ EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:${PORT:-3000}/api/v1/health || exit 1
+
+RUN chown -R app:app /app
+
+USER app
 
 CMD ["./docker-entrypoint.sh"]
