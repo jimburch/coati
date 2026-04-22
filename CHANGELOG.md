@@ -1,3 +1,16 @@
+# [1.11.0](https://github.com/jimburch/coati/compare/v1.10.4...v1.11.0) (2026-04-22)
+
+
+### Bug Fixes
+
+* **cli:** fix duplicate files ([38725db](https://github.com/jimburch/coati/commit/38725dbb72e445b2d20e2798d8d88eb0a84b106b))
+* **setups:** .agents is shared folder/file type ([85ef724](https://github.com/jimburch/coati/commit/85ef724f9dfa4ff7347fe48d4513e252d49bb817))
+
+
+### Features
+
+* **setups:** add a readme/no defaults ([6e647b8](https://github.com/jimburch/coati/commit/6e647b8a1d28308035d8abef7178e5ba0b209a0c))
+
 ## [1.10.4](https://github.com/jimburch/coati/compare/v1.10.3...v1.10.4) (2026-04-22)
 
 
