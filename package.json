@@ -74,6 +74,7 @@
 		"clsx": "^2.1.1",
 		"drizzle-orm": "^0.45.1",
 		"isomorphic-dompurify": "^3.3.0",
+		"lru-cache": "^11.3.5",
 		"marked": "^17.0.4",
 		"mixpanel": "^0.18.0",
 		"mixpanel-browser": "^2.78.0",
