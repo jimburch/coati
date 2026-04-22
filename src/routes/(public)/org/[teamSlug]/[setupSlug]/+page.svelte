@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import OgMeta from '$lib/components/OgMeta.svelte';
 	import SetupFileList from '$lib/components/SetupFileList.svelte';
 	import CloneCommand from '$lib/components/CloneCommand.svelte';
+	import BadgeEmbed from '$lib/components/BadgeEmbed.svelte';
 	import ReadmeSection from '$lib/components/ReadmeSection.svelte';
 	import { Avatar, AvatarImage, AvatarFallback } from '$lib/components/ui/avatar';
 	import AgentIcon from '$lib/components/AgentIcon.svelte';
@@ -17,6 +19,8 @@
 	});
 
 	const filesBasePath = $derived(`/org/${team.slug}/${setup.slug}/files`);
+	const badgeUrl = $derived(`${page.url.origin}/org/${team.slug}/${setup.slug}/badge.svg`);
+	const setupUrl = $derived(`${page.url.origin}/org/${team.slug}/${setup.slug}`);
 </script>
 
 <svelte:head>
@@ -133,6 +137,9 @@
 				<div class="hidden lg:block">
 					<h3 class="mb-2 text-sm font-semibold text-muted-foreground">Clone</h3>
 					<CloneCommand username={setup.ownerUsername} slug={setup.slug} />
+					<div class="mt-2">
+						<BadgeEmbed {badgeUrl} {setupUrl} />
+					</div>
 				</div>
 
 				<!-- Tags -->

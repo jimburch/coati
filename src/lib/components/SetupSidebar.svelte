@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
 	import CloneCommand from '$lib/components/CloneCommand.svelte';
+	import BadgeEmbed from '$lib/components/BadgeEmbed.svelte';
 	import DeleteSetupDialog from '$lib/components/DeleteSetupDialog.svelte';
 	import { Button } from '$lib/components/ui/button';
 
@@ -33,6 +35,9 @@
 
 	const isFeatured = $derived(localFeatured !== null ? localFeatured : !!setup.featuredAt);
 	const showReport = $derived(isLoggedIn && !isOwner);
+
+	const badgeUrl = $derived(`${page.url.origin}/${ownerUsername}/${setup.slug}/badge.svg`);
+	const setupUrl = $derived(`${page.url.origin}/${ownerUsername}/${setup.slug}`);
 </script>
 
 <aside class="w-full shrink-0 lg:w-64" data-testid="sidebar">
@@ -41,6 +46,9 @@
 		<div class="hidden lg:block">
 			<h3 class="mb-2 text-sm font-semibold text-muted-foreground">Clone</h3>
 			<CloneCommand username={ownerUsername} slug={setup.slug} />
+			<div class="mt-2">
+				<BadgeEmbed {badgeUrl} {setupUrl} />
+			</div>
 		</div>
 
 		<!-- Tags -->
