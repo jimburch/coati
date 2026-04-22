@@ -1,0 +1,88 @@
+name: Bug report
+description: Report something that's broken or behaving unexpectedly
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please search [existing issues](https://github.com/jimburch/coati/issues?q=is%3Aissue) first to avoid duplicates.
+
+        For security issues, please **do not** open a public issue — email `jim@showit.com` instead.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the actual behavior you observed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: A minimal sequence of steps another person can follow.
+      placeholder: |
+        1. Run `coati clone ...`
+        2. Open ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where did this happen?
+      options:
+        - Web (coati.sh)
+        - Web (self-hosted)
+        - CLI
+        - API
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: 'Web: check footer or `/api/v1/health`. CLI: run `coati --version`.'
+      placeholder: e.g. 1.10.3
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node version (for CLI/self-host), browser (for web). Anything else relevant.
+      placeholder: |
+        OS: macOS 15.3
+        Node: 22.20.0
+        Browser: Chrome 140
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, errors, or screenshots
+      description: Paste any relevant error output, stack traces, or screenshots. Remove anything sensitive.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Anything else that might help us understand or reproduce the problem.
+    validations:
+      required: false
