@@ -2,7 +2,7 @@ import { initCliCrashReporting } from './observability.js';
 // Initialise crash reporting before any other code runs.
 initCliCrashReporting();
 
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -12,8 +12,6 @@ import { registerClone } from './commands/clone.js';
 import { registerConfig } from './commands/config.js';
 import { registerInit } from './commands/init.js';
 import { registerPublish } from './commands/publish.js';
-import { registerSearch } from './commands/search.js';
-import { registerView } from './commands/view.js';
 import { isNonProductionApi, getEffectiveApiBase } from './api.js';
 import { createContext } from './context.js';
 import { printBanner } from './banner.js';
@@ -34,11 +32,25 @@ const program = new Command();
 
 program
 	.name('coati')
-	.description('Coati CLI — clone, publish, and manage AI coding setups')
+	.description('Share, discover, and clone AI coding setups')
 	.version(pkg.version)
-	.option('--dev', `Use local dev server (${DEV_API_BASE})`)
-	.option('--staging', `Use test environment (${STAGING_API_BASE})`)
-	.option('--api-base <url>', 'Override API base URL');
+	.addOption(new Option('--dev', `Use local dev server (${DEV_API_BASE})`).hideHelp())
+	.addOption(new Option('--staging', `Use test environment (${STAGING_API_BASE})`).hideHelp())
+	.addOption(new Option('--api-base <url>', 'Override API base URL').hideHelp());
+
+program.addHelpText(
+	'after',
+	`
+Run \`coati <command> --help\` to see options for a specific command.
+
+Examples:
+  $ coati clone username/my-setup     Clone a setup into the current directory
+  $ coati init                        Create a coati.json for the current directory
+  $ coati publish                     Publish the current directory as a setup
+  $ coati login                       Sign in with your GitHub account
+
+Learn more: https://coati.sh`
+);
 
 const BANNER_COMMANDS = new Set(['init', 'clone']);
 
@@ -72,17 +84,15 @@ program.hook('postAction', async () => {
 	}
 });
 
-registerLogin(program, ctx);
-registerLogout(program, ctx);
 registerClone(program, ctx);
-registerConfig(program, ctx);
 registerInit(program, ctx);
 registerPublish(program, ctx);
-registerSearch(program, ctx);
-registerView(program, ctx);
+registerLogin(program, ctx);
+registerLogout(program, ctx);
+registerConfig(program, ctx);
 
 // Hide commands not yet ready for public use from --help output.
-const HIDDEN_COMMANDS = new Set(['search', 'view', 'help']);
+const HIDDEN_COMMANDS = new Set(['help', 'config']);
 program.configureHelp({
 	visibleCommands: (cmd) => {
 		return cmd.commands.filter((c) => !HIDDEN_COMMANDS.has(c.name()));
@@ -91,7 +101,7 @@ program.configureHelp({
 
 // Show banner and help when invoked with no arguments.
 if (process.argv.length <= 2) {
-	printBanner();
+	printBanner(pkg.version);
 	program.outputHelp();
 	process.exit(0);
 }
