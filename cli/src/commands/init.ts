@@ -10,7 +10,6 @@ import {
 } from '../manifest.js';
 import { formatFileList } from '../format.js';
 import type { CommandContext } from '../context.js';
-import { runLoginFlow } from './login.js';
 import type { TeamInfo } from '../publish-payload.js';
 
 const VALID_CATEGORIES: ManifestCategory[] = [
@@ -59,28 +58,29 @@ async function fetchTeams(ctx: CommandContext): Promise<TeamInfo[]> {
 	}
 }
 
+export interface InitFlowOptions {
+	showBanner?: boolean;
+	showPublishHint?: boolean;
+}
+
 /**
  * Run the init flow in the given directory.
  * Returns true if coati.json was successfully written, false if the user cancelled.
  * Throws on unrecoverable errors (e.g. invalid slug).
  */
-export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boolean> {
+export async function runInitFlow(
+	ctx: CommandContext,
+	cwd: string,
+	options: InitFlowOptions = {}
+): Promise<boolean> {
+	const { showBanner = true, showPublishHint = true } = options;
 	const manifestPath = path.join(cwd, MANIFEST_FILENAME);
+	const isAnonymous = !ctx.auth.isLoggedIn();
 
-	// Require authentication — offer login flow if not logged in
-	if (!ctx.auth.isLoggedIn()) {
-		if (ctx.io.isJson()) {
-			ctx.io.error('Not logged in. Run `coati login` to authenticate.');
-			process.exit(1);
-			return false;
-		}
-		ctx.io.warning('You are not logged in.');
-		const shouldLogin = await ctx.io.confirm('Would you like to log in now?', true);
-		if (!shouldLogin) {
-			ctx.io.print('Run `coati login` when you are ready to authenticate.');
-			return false;
-		}
-		await runLoginFlow(ctx);
+	if (showBanner && !ctx.io.isJson()) {
+		ctx.io.print(
+			'`coati init` only writes a local coati.json in this directory. Nothing is uploaded. Run `coati publish` when you are ready to share.\n'
+		);
 	}
 
 	// Edge case: coati.json already exists
@@ -147,25 +147,31 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 		// In JSON mode: filesToInclude remains as detected (all files)
 	}
 
-	// Fetch teams once and determine org/visibility from user choice
-	const teams = await fetchTeams(ctx);
+	// Fetch teams and determine org/visibility from user choice.
+	// Anonymous users skip this entirely — publish will prompt for these later.
 	let pickedOrg: string | undefined;
-	let visibility: 'public' | 'private' = 'public';
+	let visibility: 'public' | 'private' | undefined;
 
-	if (teams.length > 0 && !ctx.io.isJson()) {
-		const orgChoices: { label: string; value: string }[] = [
-			{ label: 'My profile', value: '__personal__' },
-			...teams.map((t) => ({ label: t.name, value: t.slug }))
-		];
-		const orgChoice = await ctx.io.select('Where does this setup live?', orgChoices);
-		if (orgChoice !== '__personal__') {
-			pickedOrg = orgChoice;
-			visibility = 'private';
-		} else {
+	if (!isAnonymous) {
+		const teams = await fetchTeams(ctx);
+
+		if (teams.length > 0 && !ctx.io.isJson()) {
+			const orgChoices: { label: string; value: string }[] = [
+				{ label: 'My profile', value: '__personal__' },
+				...teams.map((t) => ({ label: t.name, value: t.slug }))
+			];
+			const orgChoice = await ctx.io.select('Where does this setup live?', orgChoices);
+			if (orgChoice !== '__personal__') {
+				pickedOrg = orgChoice;
+				visibility = 'private';
+			} else {
+				visibility = await ctx.io.promptVisibility();
+			}
+		} else if (!ctx.io.isJson()) {
 			visibility = await ctx.io.promptVisibility();
+		} else {
+			visibility = 'public';
 		}
-	} else if (!ctx.io.isJson()) {
-		visibility = await ctx.io.promptVisibility();
 	}
 
 	// Build choice lists for interactive prompts
@@ -212,7 +218,7 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 		...(allAgents.length > 0 && { agents: allAgents }),
 		...(metadata.tags.length > 0 && { tags: metadata.tags }),
 		...(pickedOrg ? { org: pickedOrg } : {}),
-		visibility,
+		...(visibility !== undefined ? { visibility } : {}),
 		files: filesToInclude.map((f) => ({
 			path: f.path,
 			componentType: f.componentType,
@@ -230,6 +236,12 @@ export async function runInitFlow(ctx: CommandContext, cwd: string): Promise<boo
 
 	if (filesToInclude.length === 0) {
 		ctx.io.warning(`No files included. Edit ${MANIFEST_FILENAME} to add files before publishing.`);
+	}
+
+	if (isAnonymous && showPublishHint && !ctx.io.isJson()) {
+		ctx.io.print(
+			"\nRun `coati publish` to share this setup. You'll be prompted to log in when you do."
+		);
 	}
 
 	return true;

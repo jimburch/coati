@@ -123,59 +123,133 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-// ── authentication required ───────────────────────────────────────────────────
+// ── banner ────────────────────────────────────────────────────────────────────
 
-describe('runInitFlow — authentication required', () => {
-	beforeEach(() => {
-		vi.mocked(ctx.auth.isLoggedIn).mockReturnValue(false);
+const BANNER_FRAGMENT = 'Nothing is uploaded';
+
+describe('runInitFlow — banner', () => {
+	it('prints banner in text mode by default', async () => {
+		await runInitFlow(ctx, CWD);
+
+		const printed = vi.mocked(ctx.io.print).mock.calls.map((c) => String(c[0]));
+		expect(printed.some((s) => s.includes(BANNER_FRAGMENT))).toBe(true);
 	});
 
-	it('errors and exits in JSON mode when not logged in', async () => {
+	it('does not print banner in JSON mode', async () => {
 		vi.mocked(ctx.io.isJson).mockReturnValue(true);
-		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
-			throw new Error('process.exit');
-		});
 
-		await expect(runInitFlow(ctx, CWD)).rejects.toThrow('process.exit');
-		expect(ctx.io.error).toHaveBeenCalledWith(expect.stringContaining('coati login'));
-		expect(exitSpy).toHaveBeenCalledWith(1);
+		await runInitFlow(ctx, CWD);
+
+		const printed = vi.mocked(ctx.io.print).mock.calls.map((c) => String(c[0]));
+		expect(printed.some((s) => s.includes(BANNER_FRAGMENT))).toBe(false);
 	});
 
-	it('offers login flow when not logged in in text mode', async () => {
-		vi.mocked(ctx.io.isJson).mockReturnValue(false);
-		vi.mocked(ctx.io.confirm).mockResolvedValue(true);
-		mockRunLoginFlow.mockResolvedValue('alice');
-		// After login, treat as logged in
+	it('does not print banner when showBanner is false', async () => {
+		await runInitFlow(ctx, CWD, { showBanner: false });
+
+		const printed = vi.mocked(ctx.io.print).mock.calls.map((c) => String(c[0]));
+		expect(printed.some((s) => s.includes(BANNER_FRAGMENT))).toBe(false);
+	});
+
+	it('prints banner for anonymous users too', async () => {
 		vi.mocked(ctx.auth.isLoggedIn).mockReturnValue(false);
 
 		await runInitFlow(ctx, CWD);
 
-		expect(ctx.io.warning).toHaveBeenCalledWith(expect.stringContaining('not logged in'));
-		expect(ctx.io.confirm).toHaveBeenCalledWith(expect.stringContaining('log in'), true);
-		expect(mockRunLoginFlow).toHaveBeenCalledWith(ctx);
+		const printed = vi.mocked(ctx.io.print).mock.calls.map((c) => String(c[0]));
+		expect(printed.some((s) => s.includes(BANNER_FRAGMENT))).toBe(true);
+	});
+});
+
+// ── publish hint ──────────────────────────────────────────────────────────────
+
+const HINT_FRAGMENT = 'to share this setup';
+
+describe('runInitFlow — publish hint', () => {
+	it('prints publish hint for anonymous user in text mode', async () => {
+		vi.mocked(ctx.auth.isLoggedIn).mockReturnValue(false);
+
+		await runInitFlow(ctx, CWD);
+
+		const printed = vi.mocked(ctx.io.print).mock.calls.map((c) => String(c[0]));
+		expect(printed.some((s) => s.includes(HINT_FRAGMENT))).toBe(true);
 	});
 
-	it('returns false and does not write manifest when user declines login', async () => {
-		vi.mocked(ctx.io.confirm).mockResolvedValue(false);
+	it('does not print publish hint when logged in', async () => {
+		vi.mocked(ctx.auth.isLoggedIn).mockReturnValue(true);
 
-		const result = await runInitFlow(ctx, CWD);
+		await runInitFlow(ctx, CWD);
 
-		expect(result).toBe(false);
-		expect(mockRunLoginFlow).not.toHaveBeenCalled();
-		expect(mockWriteManifest).not.toHaveBeenCalled();
+		const printed = vi.mocked(ctx.io.print).mock.calls.map((c) => String(c[0]));
+		expect(printed.some((s) => s.includes(HINT_FRAGMENT))).toBe(false);
 	});
 
-	it('proceeds after successful login', async () => {
-		vi.mocked(ctx.io.confirm)
-			.mockResolvedValueOnce(true) // accept login
-			.mockResolvedValue(true); // any other confirms
-		mockRunLoginFlow.mockResolvedValue('alice');
+	it('does not print publish hint in JSON mode', async () => {
+		vi.mocked(ctx.auth.isLoggedIn).mockReturnValue(false);
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
 
+		await runInitFlow(ctx, CWD);
+
+		const printed = vi.mocked(ctx.io.print).mock.calls.map((c) => String(c[0]));
+		expect(printed.some((s) => s.includes(HINT_FRAGMENT))).toBe(false);
+	});
+
+	it('does not print publish hint when showPublishHint is false', async () => {
+		vi.mocked(ctx.auth.isLoggedIn).mockReturnValue(false);
+
+		await runInitFlow(ctx, CWD, { showPublishHint: false });
+
+		const printed = vi.mocked(ctx.io.print).mock.calls.map((c) => String(c[0]));
+		expect(printed.some((s) => s.includes(HINT_FRAGMENT))).toBe(false);
+	});
+});
+
+// ── anonymous (not logged in) ─────────────────────────────────────────────────
+
+describe('runInitFlow — anonymous user', () => {
+	beforeEach(() => {
+		vi.mocked(ctx.auth.isLoggedIn).mockReturnValue(false);
+	});
+
+	it('writes manifest without visibility or org and returns true', async () => {
 		const result = await runInitFlow(ctx, CWD);
 
-		expect(mockRunLoginFlow).toHaveBeenCalled();
 		expect(result).toBe(true);
-		expect(mockWriteManifest).toHaveBeenCalled();
+		expect(mockWriteManifest).toHaveBeenCalledTimes(1);
+		const written = mockWriteManifest.mock.calls[0]![1];
+		expect(written).not.toHaveProperty('visibility');
+		expect(written).not.toHaveProperty('org');
+	});
+
+	it('does not call runLoginFlow', async () => {
+		await runInitFlow(ctx, CWD);
+		expect(mockRunLoginFlow).not.toHaveBeenCalled();
+	});
+
+	it('does not fetch teams', async () => {
+		await runInitFlow(ctx, CWD);
+		expect(ctx.api.get).not.toHaveBeenCalled();
+	});
+
+	it('does not prompt for visibility', async () => {
+		await runInitFlow(ctx, CWD);
+		expect(ctx.io.promptVisibility).not.toHaveBeenCalled();
+	});
+
+	it('does not prompt for org placement', async () => {
+		await runInitFlow(ctx, CWD);
+		expect(ctx.io.select).not.toHaveBeenCalled();
+	});
+
+	it('works in JSON mode without error', async () => {
+		vi.mocked(ctx.io.isJson).mockReturnValue(true);
+
+		const result = await runInitFlow(ctx, CWD);
+
+		expect(result).toBe(true);
+		expect(ctx.io.error).not.toHaveBeenCalled();
+		const written = mockWriteManifest.mock.calls[0]![1];
+		expect(written).not.toHaveProperty('visibility');
 	});
 });
 
