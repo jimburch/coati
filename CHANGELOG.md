@@ -1,3 +1,12 @@
+## [1.10.4](https://github.com/jimburch/coati/compare/v1.10.3...v1.10.4) (2026-04-22)
+
+
+### Bug Fixes
+
+* **cli:** remove login requirement for init ([d6fcd7f](https://github.com/jimburch/coati/commit/d6fcd7faf2f94e0f4eca39b1c9298c4ef0bd83d4))
+* **feed:** prevent duplicate keys on load-more pagination ([1689a2b](https://github.com/jimburch/coati/commit/1689a2b24ae8f93f176ff18d6f41df8106c71431))
+* **observability:** stop reporting 4xx errors to Sentry ([2c964f5](https://github.com/jimburch/coati/commit/2c964f5d1c802d06b511b832fb0e9650dc182b78))
+
 ## [1.10.3](https://github.com/jimburch/coati/compare/v1.10.2...v1.10.3) (2026-04-21)
 
 
