@@ -54,7 +54,6 @@ export interface Manifest {
 	visibility?: ManifestVisibility;
 	/** Team slug — written by `coati init` / `coati publish` when publishing to a team. */
 	org?: string;
-	readme?: string;
 	files: ManifestFileEntry[];
 	/** Clone-tracking fields — written by `coati clone`, ignored during publish. */
 	source?: string;

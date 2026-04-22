@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { enhance, deserialize } from '$app/forms';
 	import { Button } from '$lib/components/ui/button';
+	import {
+		shouldRenderReadmeSection,
+		shouldShowAddReadmeCard,
+		isSaveDisabled
+	} from './readmeSectionView';
 
 	interface Props {
 		readmeHtml: string | null;
@@ -18,11 +23,24 @@
 	let previewing = $state(false);
 	let previewHtml = $state<string | null>(null);
 	let localReadmeHtml = $state<string | null>(null);
+	let localReadmeRaw = $state<string | null>(null);
+	let sourceHadReadme = $state(false);
 
 	const displayedReadmeHtml = $derived(localReadmeHtml !== null ? localReadmeHtml : readmeHtml);
+	const displayedReadmeRaw = $derived(localReadmeRaw !== null ? localReadmeRaw : readmeRaw);
+	const renderSection = $derived(
+		shouldRenderReadmeSection({ isOwner, readmeHtml: displayedReadmeHtml })
+	);
+	const showAddReadmeCard = $derived(
+		shouldShowAddReadmeCard({ isOwner, readmeHtml: displayedReadmeHtml })
+	);
+	const saveDisabled = $derived(
+		isSaveDisabled({ sourceHadReadme, textareaContent: editContent, saving })
+	);
 
 	function startEdit() {
-		editContent = readmeRaw ?? '';
+		editContent = displayedReadmeRaw ?? '';
+		sourceHadReadme = !!displayedReadmeRaw && displayedReadmeRaw.trim() !== '';
 		editTab = 'edit';
 		previewHtml = null;
 		editMode = true;
@@ -33,25 +51,33 @@
 	}
 </script>
 
-{#if !editMode}
+{#if !editMode && renderSection}
 	<!-- View mode -->
-	{#if isOwner}
-		<div class="mb-2 flex items-center justify-end">
-			<Button variant="outline" size="sm" onclick={startEdit} data-testid="edit-readme-btn">
-				Edit
+	{#if displayedReadmeHtml}
+		{#if isOwner}
+			<div class="mb-2 flex items-center justify-end">
+				<Button variant="outline" size="sm" onclick={startEdit} data-testid="edit-readme-btn">
+					Edit
+				</Button>
+			</div>
+		{/if}
+		<div
+			class="prose dark:prose-invert max-w-none [&_pre]:!bg-secondary [&_h1]:mt-0 [&_h1]:mb-3 [&_h2]:mt-6 [&_h2]:mb-2 [&_h3]:mt-5 [&_h3]:mb-2 [&_p]:my-2 [&_p]:leading-relaxed [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-0.5 [&_li>p]:my-0"
+		>
+			{@html displayedReadmeHtml}
+		</div>
+	{:else if showAddReadmeCard}
+		<div
+			class="rounded-lg border border-dashed border-border bg-card p-6 text-center lg:p-8"
+			data-testid="add-readme-card"
+		>
+			<p class="mb-3 text-sm text-muted-foreground">Help others understand what your setup does.</p>
+			<Button variant="outline" size="sm" onclick={startEdit} data-testid="add-readme-btn">
+				Add a README
 			</Button>
 		</div>
 	{/if}
-	{#if displayedReadmeHtml}
-		<div class="prose dark:prose-invert max-w-none [&_pre]:!bg-secondary">
-			{@html displayedReadmeHtml}
-		</div>
-	{:else}
-		<div class="rounded-lg border border-border bg-card p-6 text-center lg:p-8">
-			<p class="text-sm text-muted-foreground">No README found for this setup.</p>
-		</div>
-	{/if}
-{:else}
+{:else if editMode}
 	<!-- Edit mode -->
 	<div class="space-y-3" data-testid="readme-editor">
 		<!-- Tab bar -->
@@ -107,7 +133,9 @@
 				{#if previewing}
 					<p class="text-sm text-muted-foreground">Rendering preview...</p>
 				{:else if previewHtml}
-					<div class="prose dark:prose-invert max-w-none [&_pre]:!bg-secondary">
+					<div
+						class="prose dark:prose-invert max-w-none [&_pre]:!bg-secondary [&_h1]:mt-0 [&_h1]:mb-3 [&_h2]:mt-6 [&_h2]:mb-2 [&_h3]:mt-5 [&_h3]:mb-2 [&_p]:my-2 [&_p]:leading-relaxed [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-0.5 [&_li>p]:my-0"
+					>
 						{@html previewHtml}
 					</div>
 				{:else}
@@ -122,10 +150,15 @@
 			action="?/saveReadme"
 			use:enhance={() => {
 				saving = true;
+				const submittedContent = editContent;
 				return async ({ result, update }) => {
 					saving = false;
 					if (result.type === 'success' && result.data) {
-						localReadmeHtml = (result.data.readmeHtml as string | null) ?? null;
+						const nextHtml = (result.data.readmeHtml as string | null) ?? null;
+						// Empty-string override signals "locally cleared" (vs. null = no override);
+						// keeps displayedReadmeHtml in sync with the deletion instead of falling back to the prop.
+						localReadmeHtml = nextHtml === null ? '' : nextHtml;
+						localReadmeRaw = nextHtml === null ? '' : submittedContent;
 						const updatedAt = result.data.updatedAt
 							? new Date(result.data.updatedAt as string)
 							: null;
@@ -138,7 +171,7 @@
 		>
 			<input type="hidden" name="readme" value={editContent} />
 			<div class="flex gap-2">
-				<Button type="submit" size="sm" disabled={saving} data-testid="save-readme-btn">
+				<Button type="submit" size="sm" disabled={saveDisabled} data-testid="save-readme-btn">
 					{saving ? 'Saving…' : 'Save'}
 				</Button>
 				<Button

@@ -128,6 +128,24 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		expect(activityRows[0].actionType).toBe('created_setup');
 	});
 
+	it('createSetup leaves readme null when no readme is passed', async () => {
+		const owner = await createTestUser();
+		createdUserIds.push(owner.id);
+
+		const created = await createSetup(owner.id, {
+			name: 'No Readme',
+			slug: `no-readme-${Date.now()}`,
+			description: 'desc',
+			files: [{ path: 'CLAUDE.md', componentType: 'instruction', content: '# hi' }]
+		});
+
+		const [row] = await db
+			.select({ readme: setups.readme })
+			.from(setups)
+			.where(eq(setups.id, created.id));
+		expect(row.readme).toBeNull();
+	});
+
 	it('createSetup prefers explicit agentIds over inferring from file agent slugs', async () => {
 		const owner = await createTestUser();
 		const explicitAgent = await createTestAgent();
@@ -186,6 +204,32 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		} finally {
 			await db.delete(teams).where(eq(teams.id, team.id));
 		}
+	});
+
+	it('updateSetup with files does not touch the readme column', async () => {
+		const owner = await createTestUser();
+		createdUserIds.push(owner.id);
+
+		const created = await createSetup(owner.id, {
+			name: 'Preserve Readme',
+			slug: `preserve-${Date.now()}`,
+			description: 'desc',
+			files: [{ path: 'old.md', componentType: 'instruction', content: 'old' }]
+		});
+
+		// Seed a hand-written readme directly on the row
+		const ownerReadme = '# My carefully-written README\n\nWith real content.';
+		await db.update(setups).set({ readme: ownerReadme }).where(eq(setups.id, created.id));
+
+		await updateSetup(created.id, {
+			files: [{ path: 'new.md', componentType: 'instruction', content: 'new' }]
+		});
+
+		const [row] = await db
+			.select({ readme: setups.readme })
+			.from(setups)
+			.where(eq(setups.id, created.id));
+		expect(row.readme).toBe(ownerReadme);
 	});
 
 	it('updateSetup with files replaces setupFiles and refreshes setupAgents from new agent slugs', async () => {
@@ -422,7 +466,7 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		expect(redirects).toHaveLength(0);
 	});
 
-	it('updateSetupByIdWithSlugRedirects replaces files, refreshes setupAgents from file slugs, and regenerates the readme', async () => {
+	it('updateSetupByIdWithSlugRedirects replaces files and refreshes setupAgents from file slugs without touching the readme', async () => {
 		const owner = await createTestUser();
 		const oldAgent = await createTestAgent();
 		const newAgent = await createTestAgent();
@@ -437,6 +481,9 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 				{ path: 'old.md', componentType: 'instruction', content: 'old', agent: oldAgent.slug }
 			]
 		});
+
+		const ownerReadme = '# File Update\n\nOwner-authored content.';
+		await db.update(setups).set({ readme: ownerReadme }).where(eq(setups.id, created.id));
 
 		await updateSetupByIdWithSlugRedirects(
 			created.id,
@@ -458,14 +505,12 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 			.where(eq(setupAgents.setupId, created.id));
 		expect(agentRows.map((r) => r.agentId)).toEqual([newAgent.id]);
 
-		// Readme should have been regenerated — it should reference the new file paths now
+		// Readme is not touched by file updates — owner edits survive
 		const [row] = await db
 			.select({ readme: setups.readme })
 			.from(setups)
 			.where(eq(setups.id, created.id));
-		expect(row.readme).toContain('new.md');
-		expect(row.readme).toContain('plain.md');
-		expect(row.readme).not.toContain('old.md');
+		expect(row.readme).toBe(ownerReadme);
 	});
 
 	it('updateSetupByIdWithSlugRedirects handles slug change and file replacement in a single call', async () => {

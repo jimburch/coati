@@ -136,8 +136,7 @@ describe('writeManifest + readManifest roundtrip', () => {
 			license: 'MIT',
 			tags: ['typescript', 'mcp'],
 			agents: ['claude-code'],
-			postInstall: ['chmod +x script.sh'],
-			readme: 'README.md'
+			postInstall: ['chmod +x script.sh']
 		};
 		writeManifest(tmpDir, withOptionals);
 		const read = readManifest(tmpDir);

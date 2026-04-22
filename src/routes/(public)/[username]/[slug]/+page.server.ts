@@ -53,7 +53,8 @@ export const actions: Actions = {
 		}
 
 		const formData = await request.formData();
-		const readme = String(formData.get('readme') ?? '');
+		const readmeRaw = String(formData.get('readme') ?? '');
+		const readme = readmeRaw.trim() === '' ? null : readmeRaw;
 
 		const updated = await setupRepo.update(detail.id, { readme });
 		const readmeHtml = updated.readme ? await renderMarkdown(updated.readme) : null;

@@ -77,7 +77,6 @@ vi.mock('$lib/server/db', () => {
 });
 
 vi.mock('$lib/server/counters', () => ({ counters: {} }));
-vi.mock('$lib/utils/readme', () => ({ generateReadme: vi.fn(() => '# readme') }));
 
 import { getSetupsFromFollowedUsers } from './setups';
 
