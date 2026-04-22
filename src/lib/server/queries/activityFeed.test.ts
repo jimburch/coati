@@ -246,6 +246,28 @@ describe('getBlendedActivityFeed', () => {
 		expect(result.nextCursor).toBeNull();
 	});
 
+	it('uses the oldest createdAt across the page as nextCursor (not the score-sorted last item)', async () => {
+		// Build rows where a high-score recent item would sort last by score despite having a
+		// newer createdAt than earlier-sorted items. If the cursor used the last item's createdAt,
+		// the follow-up chronological page would re-fetch the older items and duplicate them.
+		const baseTime = new Date('2026-04-19T12:00:00Z').getTime();
+		const rows = Array.from({ length: 10 }, (_, i) =>
+			row({
+				id: `f${i}`,
+				userId: `user-${i}`,
+				createdAt: new Date(baseTime - i * 60 * 60 * 1000), // each 1h older
+				actorFollowersCount: 0
+			})
+		);
+		state.rowSets = [[], rows, [], []];
+		const result = await getBlendedActivityFeed('viewer-1', undefined, 5);
+		expect(result.items).toHaveLength(5);
+		const expectedMin = new Date(
+			Math.min(...result.items.map((i) => i.createdAt.getTime()))
+		).toISOString();
+		expect(result.nextCursor).toBe(expectedMin);
+	});
+
 	it('deduplicates repeated starred_setup rows by (user, setup) and shows actor once in aggregate', async () => {
 		const now = new Date('2026-04-19T12:00:00Z');
 		state.rowSets = [

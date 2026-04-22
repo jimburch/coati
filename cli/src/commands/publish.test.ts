@@ -171,6 +171,18 @@ describe('missing setup.json', () => {
 		expect(ctx.api.post).toHaveBeenCalled();
 	});
 
+	it('passes showBanner:false and showPublishHint:false to auto-run init', async () => {
+		mockRunInitFlow.mockResolvedValue(true);
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		expect(mockRunInitFlow).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.any(String),
+			expect.objectContaining({ showBanner: false, showPublishHint: false })
+		);
+	});
+
 	it('exits cleanly (code 0) when init is cancelled', async () => {
 		mockRunInitFlow.mockResolvedValue(false);
 		const program = makeProgram();

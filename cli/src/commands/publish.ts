@@ -201,7 +201,10 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 				ctx.io.info('No coati.json found. Running `coati init` to create one...\n');
 				let initialized: boolean;
 				try {
-					initialized = await runInitFlow(ctx, cwd);
+					initialized = await runInitFlow(ctx, cwd, {
+						showBanner: false,
+						showPublishHint: false
+					});
 				} catch (e) {
 					ctx.io.error(e instanceof Error ? e.message : 'Init failed.');
 					process.exit(1);
