@@ -297,6 +297,17 @@ describe('create new setup (no id in manifest)', () => {
 		expect(ctx.io.success).toHaveBeenCalledWith(expect.stringContaining('published'));
 		expect(ctx.io.print).toHaveBeenCalledWith(expect.stringContaining('alice/my-setup'));
 	});
+
+	it('prints embed snippet after successful publish', async () => {
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		expect(ctx.io.print).toHaveBeenCalledWith(
+			expect.stringContaining(
+				'[![Clone on Coati](https://coati.sh/alice/my-setup/badge.svg)](https://coati.sh/alice/my-setup)'
+			)
+		);
+	});
 });
 
 // ── Branch 2: has id, owns it → PATCH /setups/{id} ────────────────────────────
@@ -344,6 +355,17 @@ describe('update existing setup (has id in manifest)', () => {
 
 		expect(ctx.io.success).toHaveBeenCalledWith(expect.stringContaining('updated'));
 		expect(ctx.io.print).toHaveBeenCalledWith(expect.stringContaining('alice/my-setup'));
+	});
+
+	it('prints embed snippet after successful update', async () => {
+		const program = makeProgram();
+		await program.parseAsync(['node', 'coati', 'publish']);
+
+		expect(ctx.io.print).toHaveBeenCalledWith(
+			expect.stringContaining(
+				'[![Clone on Coati](https://coati.sh/alice/my-setup/badge.svg)](https://coati.sh/alice/my-setup)'
+			)
+		);
 	});
 
 	it('does not write id back to coati.json on update', async () => {

@@ -204,6 +204,55 @@ describe('generateSetups', () => {
 		}
 		expect(generateTagNames()).toEqual(generateTagNames());
 	});
+
+	it('every non-null README includes the Clone on Coati badge markdown', () => {
+		const manyUsers = makeUsers(35);
+		const setups = generateSetups(manyUsers, tags, agents);
+
+		const withReadme = setups.filter((s) => s.readme !== null);
+		expect(withReadme.length).toBeGreaterThan(0);
+
+		for (const setup of withReadme) {
+			expect(setup.readme).toContain('[![Clone on Coati]');
+			expect(setup.readme).toContain('https://coati.sh/');
+			expect(setup.readme).toContain('/badge.svg');
+		}
+	});
+
+	it('includes the four primary launch-reference setups with correct badge READMEs', () => {
+		const manyUsers = makeUsers(35);
+		const setups = generateSetups(manyUsers, tags, agents);
+
+		// Primary setups are assigned to user0 when no jimburch user is present
+		const primaryOwnerUsername = 'user0';
+		const primarySlugs = [
+			'fullstack-claude',
+			'minimalist',
+			'mcp-power-user',
+			'typescript-fullstack-starter'
+		];
+
+		for (const slug of primarySlugs) {
+			const found = setups.find((s) => s.slug === slug);
+			expect(found, `primary setup ${slug} missing from fleet`).toBeDefined();
+			expect(found!.readme).not.toBeNull();
+			expect(found!.readme).toContain('[![Clone on Coati]');
+			expect(found!.readme).toContain(`https://coati.sh/${primaryOwnerUsername}/${slug}/badge.svg`);
+		}
+	});
+
+	it('primary setup with jimburch uses jimburch in badge URL', () => {
+		const usersWithJimburch = [
+			...makeUsers(5),
+			{ id: 'jimburch-id', username: 'jimburch' },
+			{ id: 'last-user', username: 'lastuser' } // this one gets no setups
+		];
+		const setups = generateSetups(usersWithJimburch, tags, agents);
+
+		const fullstack = setups.find((s) => s.slug === 'fullstack-claude');
+		expect(fullstack).toBeDefined();
+		expect(fullstack!.readme).toContain('https://coati.sh/jimburch/fullstack-claude/badge.svg');
+	});
 });
 
 // ─── fetchGitHubProfile / fetchGitHubProfiles ────────────────────────────────

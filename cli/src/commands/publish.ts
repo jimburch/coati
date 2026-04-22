@@ -14,6 +14,7 @@ import {
 	type TeamInfo,
 	type PublishFileContent
 } from '../publish-payload.js';
+import { formatEmbedSnippet } from '../embed.js';
 
 interface PublishOptions {
 	json?: boolean;
@@ -404,6 +405,8 @@ export function registerPublish(program: Command, ctx: CommandContext): void {
 				ctx.io.print('');
 				ctx.io.success(`Setup ${isUpdate ? 'updated' : 'published'} successfully.`);
 				ctx.io.print(`  ${setupUrl}`);
+				ctx.io.print('');
+				ctx.io.print(formatEmbedSnippet(setupUrl));
 			}
 		});
 }

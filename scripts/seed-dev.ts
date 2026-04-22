@@ -123,7 +123,8 @@ export const GITHUB_USERNAMES = [
 	'jlongster',
 	'derickbailey',
 	'jakearchibald',
-	'marcosvega91'
+	'marcosvega91',
+	'jimburch'
 ];
 
 /**
@@ -1732,17 +1733,22 @@ function generateReadmeContent(
 	p: StackParams,
 	name: string,
 	description: string,
-	idx: number
+	idx: number,
+	username: string,
+	slug: string
 ): string | null {
+	const setupUrl = `https://coati.sh/${username}/${slug}`;
+	const badge = `[![Clone on Coati](${setupUrl}/badge.svg)](${setupUrl})`;
+
 	// 40% boilerplate
 	if (idx % 5 < 2) {
-		return `# ${name}\n\n${description}`;
+		return `# ${name}\n\n${description}\n\n${badge}\n`;
 	}
 
 	// 60% custom with varying depth
 	const depth = idx % 3; // 0 = short, 1 = medium, 2 = detailed
 
-	const lines = [`# ${name}`, '', description, ''];
+	const lines = [`# ${name}`, '', description, '', badge, ''];
 
 	if (depth >= 1) {
 		lines.push("## What's Included", '');
@@ -2607,6 +2613,300 @@ function pick<T>(arr: T[], count: number, offset: number): T[] {
 	return result;
 }
 
+/**
+ * Build the four primary launch-reference setups for the given owner user.
+ * These are always seeded with a badge in their README regardless of other logic.
+ */
+function buildPrimarySetups(
+	userId: string,
+	username: string
+): Array<GeneratedSetup & { userId: string }> {
+	const svelteParams = STACK_VARIATIONS[1]; // sveltekit typescript
+	const nextParams = STACK_VARIATIONS[0]; // next typescript
+	const expressParams = STACK_VARIATIONS[2]; // express typescript
+
+	const badge = (slug: string) => {
+		const setupUrl = `https://coati.sh/${username}/${slug}`;
+		return `[![Clone on Coati](${setupUrl}/badge.svg)](${setupUrl})`;
+	};
+
+	return [
+		{
+			userId,
+			name: 'Fullstack Claude',
+			slug: 'fullstack-claude',
+			description:
+				'Complete Claude Code setup for fullstack TypeScript development with SvelteKit, Drizzle ORM, and Lucia Auth. Includes instructions, commands, skills, and MCP servers.',
+			readme: [
+				'# Fullstack Claude',
+				'',
+				'Complete Claude Code setup for fullstack TypeScript development with SvelteKit, Drizzle ORM, and Lucia Auth.',
+				'',
+				badge('fullstack-claude'),
+				'',
+				"## What's Included",
+				'',
+				'- `CLAUDE.md` — project instructions covering SvelteKit conventions, Drizzle ORM patterns, and Lucia Auth',
+				'- `.claude/commands/` — dev, test, lint, and db-migrate commands',
+				'- `.claude/skills/tdd/` — red-green-refactor workflow',
+				'- `.mcp.json` — filesystem + PostgreSQL MCP servers pre-configured',
+				'- `.claude/hooks/pre-commit.sh` — lint + type-check before every commit',
+				'',
+				'## Usage',
+				'',
+				'```bash',
+				`coati clone ${username}/fullstack-claude`,
+				'```',
+				'',
+				'## Configuration',
+				'',
+				'After cloning, update the `DATABASE_URL` in `.mcp.json` to point at your local Postgres instance, then edit `CLAUDE.md` with your project name and any conventions specific to your codebase.',
+				''
+			].join('\n'),
+			category: 'web-dev' as const,
+			license: null,
+			starsCount: 128,
+			clonesCount: 47,
+			files: [
+				{
+					path: 'CLAUDE.md',
+					componentType: 'instruction' as const,
+					content: generateClaudeMd(svelteParams),
+					description: 'Project instructions and conventions',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/settings.json',
+					componentType: 'config' as const,
+					content: generateSettingsJson(svelteParams, 'claude-code'),
+					description: 'Claude Code permission settings',
+					agent: 'claude-code'
+				},
+				{
+					path: '.mcp.json',
+					componentType: 'mcp_server' as const,
+					content: generateMcpJson(svelteParams),
+					description: 'MCP server configuration',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/commands/dev.md',
+					componentType: 'command' as const,
+					content: generateCommandMd(svelteParams, 'dev'),
+					description: 'Start the dev server',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/skills/tdd/SKILL.md',
+					componentType: 'skill' as const,
+					content: generateSkillMd(svelteParams, 'tdd'),
+					description: 'TDD red-green-refactor workflow',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/hooks/pre-commit.sh',
+					componentType: 'hook' as const,
+					content: generateHookSh(svelteParams, 'pre-commit'),
+					description: 'Pre-commit lint and type check',
+					agent: 'claude-code'
+				}
+			],
+			tagNames: ['claude-code', 'typescript', 'sveltekit', 'tdd', 'web-dev'],
+			agentSlugs: ['claude-code']
+		},
+		{
+			userId,
+			name: 'Minimalist',
+			slug: 'minimalist',
+			description:
+				'Minimal Claude Code setup — just a CLAUDE.md with conventions and one TDD skill. No clutter.',
+			readme: [
+				'# Minimalist',
+				'',
+				'Minimal Claude Code setup — just a CLAUDE.md with conventions and one TDD skill. No clutter.',
+				'',
+				badge('minimalist'),
+				'',
+				"## What's Included",
+				'',
+				'- `CLAUDE.md` — concise project instructions',
+				'- `.claude/skills/tdd/SKILL.md` — TDD workflow',
+				'',
+				'## Philosophy',
+				'',
+				'Start minimal. Add files only when the need becomes obvious. A well-written CLAUDE.md outperforms a bloated setup every time.',
+				'',
+				'## Usage',
+				'',
+				'```bash',
+				`coati clone ${username}/minimalist`,
+				'```',
+				''
+			].join('\n'),
+			category: 'general' as const,
+			license: null,
+			starsCount: 84,
+			clonesCount: 31,
+			files: [
+				{
+					path: 'CLAUDE.md',
+					componentType: 'instruction' as const,
+					content: generateClaudeMd(nextParams),
+					description: 'Minimal project instructions',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/skills/tdd/SKILL.md',
+					componentType: 'skill' as const,
+					content: generateSkillMd(nextParams, 'tdd'),
+					description: 'TDD workflow',
+					agent: 'claude-code'
+				}
+			],
+			tagNames: ['claude-code', 'typescript'],
+			agentSlugs: ['claude-code']
+		},
+		{
+			userId,
+			name: 'MCP Power User',
+			slug: 'mcp-power-user',
+			description:
+				'MCP-heavy setup with filesystem, PostgreSQL, and web search servers configured. For teams that want Claude deeply integrated into their toolchain.',
+			readme: [
+				'# MCP Power User',
+				'',
+				'MCP-heavy setup with filesystem, PostgreSQL, and web search servers configured. For teams that want Claude deeply integrated into their toolchain.',
+				'',
+				badge('mcp-power-user'),
+				'',
+				"## What's Included",
+				'',
+				'- `.mcp.json` — filesystem, PostgreSQL, and web-search MCP servers',
+				'- `CLAUDE.md` — instructions optimized for MCP-assisted workflows',
+				'- `.claude/commands/` — dev and test commands',
+				'- `.claude/skills/api-design/SKILL.md` — API design patterns',
+				'',
+				'## Usage',
+				'',
+				'```bash',
+				`coati clone ${username}/mcp-power-user`,
+				'```',
+				'',
+				'## Configuration',
+				'',
+				'Edit `.mcp.json` to set your `DATABASE_URL` and any API keys needed by the web-search server.',
+				''
+			].join('\n'),
+			category: 'web-dev' as const,
+			license: null,
+			starsCount: 63,
+			clonesCount: 22,
+			files: [
+				{
+					path: 'CLAUDE.md',
+					componentType: 'instruction' as const,
+					content: generateClaudeMd(expressParams),
+					description: 'MCP-oriented project instructions',
+					agent: 'claude-code'
+				},
+				{
+					path: '.mcp.json',
+					componentType: 'mcp_server' as const,
+					content: generateMcpJson(expressParams),
+					description: 'MCP server configuration',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/commands/dev.md',
+					componentType: 'command' as const,
+					content: generateCommandMd(expressParams, 'dev'),
+					description: 'Start the dev server',
+					agent: 'claude-code'
+				},
+				{
+					path: '.claude/skills/api-design/SKILL.md',
+					componentType: 'skill' as const,
+					content: generateSkillMd(expressParams, 'api-design'),
+					description: 'API design patterns',
+					agent: 'claude-code'
+				}
+			],
+			tagNames: ['claude-code', 'typescript', 'mcp', 'api'],
+			agentSlugs: ['claude-code']
+		},
+		{
+			userId,
+			name: 'TypeScript Fullstack Starter',
+			slug: 'typescript-fullstack-starter',
+			description:
+				'TypeScript fullstack starter covering Next.js, Cursor, and Copilot in one unified setup. Great baseline for new projects.',
+			readme: [
+				'# TypeScript Fullstack Starter',
+				'',
+				'TypeScript fullstack starter covering Next.js, Cursor, and Copilot in one unified setup. Great baseline for new projects.',
+				'',
+				badge('typescript-fullstack-starter'),
+				'',
+				"## What's Included",
+				'',
+				'- `CLAUDE.md` — Next.js TypeScript conventions',
+				'- `.cursorrules` + `.cursor/rules/` — Cursor rules for components and testing',
+				'- `.github/copilot-instructions.md` — Copilot team instructions',
+				'- `.vscode/settings.json` — shared editor config',
+				'- `scripts/setup.sh` — one-command project setup',
+				'',
+				'## Usage',
+				'',
+				'```bash',
+				`coati clone ${username}/typescript-fullstack-starter`,
+				'```',
+				''
+			].join('\n'),
+			category: 'web-dev' as const,
+			license: null,
+			starsCount: 97,
+			clonesCount: 38,
+			files: [
+				{
+					path: 'CLAUDE.md',
+					componentType: 'instruction' as const,
+					content: generateClaudeMd(nextParams),
+					description: 'Next.js TypeScript instructions',
+					agent: 'claude-code'
+				},
+				{
+					path: '.cursorrules',
+					componentType: 'instruction' as const,
+					content: generateCursorrules(nextParams),
+					description: 'Cursor global rules',
+					agent: 'cursor'
+				},
+				{
+					path: '.github/copilot-instructions.md',
+					componentType: 'instruction' as const,
+					content: generateCopilotInstructions(nextParams, 'team'),
+					description: 'Copilot team instructions',
+					agent: 'copilot'
+				},
+				{
+					path: '.vscode/settings.json',
+					componentType: 'config' as const,
+					content: generateVscodeSettings(nextParams),
+					description: 'VS Code settings'
+				},
+				{
+					path: 'scripts/setup.sh',
+					componentType: 'setup_script' as const,
+					content: generateSetupScript(nextParams),
+					description: 'Project setup script'
+				}
+			],
+			tagNames: ['claude-code', 'cursor', 'copilot', 'typescript', 'nextjs', 'web-dev'],
+			agentSlugs: ['claude-code', 'cursor', 'copilot']
+		}
+	];
+}
+
 /** Generate all setup data for seeding. */
 export function generateSetups(
 	seedUsers: Array<{ id: string; username: string }>,
@@ -2632,12 +2932,21 @@ export function generateSetups(
 		}
 	}
 
+	// Add the four primary launch-reference setups for the jimburch user (or first user)
+	const primaryOwner =
+		usersWithSetups.find((u) => u.username.toLowerCase() === 'jimburch') ?? usersWithSetups[0];
+	if (primaryOwner) {
+		for (const ps of buildPrimarySetups(primaryOwner.id, primaryOwner.username)) {
+			generated.push(ps);
+		}
+	}
+
 	return generated;
 }
 
 function buildSetup(
 	userId: string,
-	_username: string,
+	username: string,
 	idx: number,
 	seedTags: Array<{ id: string; name: string }>,
 	templates: AgentTemplate[]
@@ -2704,7 +3013,7 @@ function buildSetup(
 	const files = template.generateFiles(params);
 
 	// Generate readme
-	const readme = generateReadmeContent(params, name, description, idx);
+	const readme = generateReadmeContent(params, name, description, idx, username, slug);
 
 	return {
 		userId,
