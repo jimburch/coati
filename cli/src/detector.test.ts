@@ -288,6 +288,19 @@ describe('detectFiles — multi-agent projects', () => {
 		expect(claudeSkill).toBeDefined();
 		expect(cursorSkill).toBeDefined();
 	});
+
+	it('does not duplicate root-level agent files (CLAUDE.md, .mcp.json, etc.)', () => {
+		mkfile('CLAUDE.md', '# claude');
+		mkfile('.mcp.json', '{}');
+		mkfile('AGENTS.md', '# agents');
+		mkfile('.cursorrules', 'rules');
+		mkfile('.claude/settings.json', '{}');
+		const files = detectFiles(tmpDir);
+
+		for (const p of ['CLAUDE.md', '.mcp.json', 'AGENTS.md', '.cursorrules']) {
+			expect(findAll(files, p), `${p} should be detected exactly once`).toHaveLength(1);
+		}
+	});
 });
 
 // ─── Edge cases ───────────────────────────────────────────────────────────────

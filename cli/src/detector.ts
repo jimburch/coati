@@ -85,7 +85,9 @@ function extractScanTargets(
 /**
  * Iterative BFS directory walker.
  *
- * At the top level (`baseDir`), only enters directories whose name is in `dirPrefixes`.
+ * At the top level (`baseDir`), only enters directories whose name is in `dirPrefixes`
+ * and ignores files entirely — root-level files are handled separately via existence
+ * checks in `detectFiles`, so emitting them here would duplicate every match.
  * Once inside a target directory, walks all subdirectories normally.
  * Skips symlinks, retains SKIP_DIRS as a safety net, and handles EACCES/EPERM gracefully.
  */
@@ -115,7 +117,7 @@ function collectDirFiles(baseDir: string, dirPrefixes: Set<string>): string[] {
 				// At the top level, only enter directories matching known prefixes
 				if (isTopLevel && !dirPrefixes.has(entry.name)) continue;
 				queue.push([fullPath, false]);
-			} else if (entry.isFile()) {
+			} else if (entry.isFile() && !isTopLevel) {
 				// Normalize to forward slashes for cross-platform pattern matching
 				results.push(path.relative(baseDir, fullPath).split(path.sep).join('/'));
 			}
