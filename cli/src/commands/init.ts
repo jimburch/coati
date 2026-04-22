@@ -1,5 +1,6 @@
 import path from 'path';
 import { Command } from 'commander';
+import pc from 'picocolors';
 import { AGENTS } from '@coati/agents-registry';
 import { detectFiles } from '../detector.js';
 import {
@@ -79,7 +80,11 @@ export async function runInitFlow(
 
 	if (showBanner && !ctx.io.isJson()) {
 		ctx.io.print(
-			'`coati init` only writes a local coati.json in this directory. Nothing is uploaded. Run `coati publish` when you are ready to share.\n'
+			pc.bold(
+				pc.cyan(
+					'`coati init` only writes a local coati.json in this directory. Nothing is uploaded.\nRun `coati publish` when you are ready to share.\n'
+				)
+			)
 		);
 	}
 
@@ -250,7 +255,7 @@ export async function runInitFlow(
 export function registerInit(program: Command, ctx: CommandContext): void {
 	program
 		.command('init')
-		.description('Scaffold a coati.json manifest in the current directory')
+		.description('Create a coati.json for the current directory')
 		.action(async () => {
 			try {
 				const ok = await runInitFlow(ctx, process.cwd());

@@ -119,7 +119,7 @@ export async function runLoginFlow(
 export function registerLogin(program: Command, ctx: CommandContext): void {
 	program
 		.command('login')
-		.description('Authenticate with Coati using GitHub Device Flow')
+		.description('Sign in to Coati with your GitHub account')
 		.option('--force', 'Re-authenticate even if already logged in')
 		.option('--no-browser', 'Do not auto-open the browser')
 		.option('--json', 'Output structured JSON')

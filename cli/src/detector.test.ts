@@ -28,12 +28,12 @@ function findAll(files: DetectedFile[], filePath: string): DetectedFile[] {
 	return files.filter((f) => f.path === filePath);
 }
 
-type ExpectEntry = { path: string; tool: string; componentType: string };
+type ExpectEntry = { path: string; tool: string | null; componentType: string };
 
 function assertDetected(files: DetectedFile[], expected: ExpectEntry[]): void {
 	for (const e of expected) {
 		const match = files.find((f) => f.path === e.path && f.tool === e.tool);
-		expect(match, `expected ${e.tool} detection for ${e.path}`).toBeDefined();
+		expect(match, `expected ${e.tool ?? 'shared'} detection for ${e.path}`).toBeDefined();
 		expect(match!.componentType, `${e.path} componentType`).toBe(e.componentType);
 	}
 }
@@ -120,16 +120,31 @@ describe('detectFiles — codex', () => {
 		mkfile('AGENTS.md', '# agents');
 		mkfile('.codex/config.toml', '');
 		mkfile('.codex/agents/my-agent.toml', '');
-		mkfile('.agents/skills/my-skill.md', '');
 
 		const files = detectFiles(tmpDir);
 		assertDetected(files, [
 			{ path: 'AGENTS.md', tool: 'codex', componentType: 'instruction' },
-			{ path: '.codex/agents/my-agent.toml', tool: 'codex', componentType: 'instruction' },
-			{ path: '.agents/skills/my-skill.md', tool: 'codex', componentType: 'skill' }
+			{ path: '.codex/agents/my-agent.toml', tool: 'codex', componentType: 'instruction' }
 		]);
 		// .codex/config.toml is detected as codex; exact componentType is not asserted here
 		expect(findAll(files, '.codex/config.toml').some((f) => f.tool === 'codex')).toBe(true);
+	});
+});
+
+describe('detectFiles — shared (.agents/skills)', () => {
+	it('tags .agents/skills/**/*.md as shared (tool=null), not codex', () => {
+		mkfile('.agents/skills/api-patterns/SKILL.md', '# api-patterns');
+		mkfile('.agents/skills/testing/SKILL.md', '# testing');
+		mkfile('.agents/skills/deep/nested/helper.md', '# nested');
+
+		const files = detectFiles(tmpDir);
+		assertDetected(files, [
+			{ path: '.agents/skills/api-patterns/SKILL.md', tool: null, componentType: 'skill' },
+			{ path: '.agents/skills/testing/SKILL.md', tool: null, componentType: 'skill' },
+			{ path: '.agents/skills/deep/nested/helper.md', tool: null, componentType: 'skill' }
+		]);
+		// no entry should be misattributed to codex
+		expect(files.every((f) => f.tool !== 'codex')).toBe(true);
 	});
 });
 
@@ -272,6 +287,19 @@ describe('detectFiles — multi-agent projects', () => {
 		);
 		expect(claudeSkill).toBeDefined();
 		expect(cursorSkill).toBeDefined();
+	});
+
+	it('does not duplicate root-level agent files (CLAUDE.md, .mcp.json, etc.)', () => {
+		mkfile('CLAUDE.md', '# claude');
+		mkfile('.mcp.json', '{}');
+		mkfile('AGENTS.md', '# agents');
+		mkfile('.cursorrules', 'rules');
+		mkfile('.claude/settings.json', '{}');
+		const files = detectFiles(tmpDir);
+
+		for (const p of ['CLAUDE.md', '.mcp.json', 'AGENTS.md', '.cursorrules']) {
+			expect(findAll(files, p), `${p} should be detected exactly once`).toHaveLength(1);
+		}
 	});
 });
 

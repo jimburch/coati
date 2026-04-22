@@ -103,6 +103,17 @@
 						{/if}
 					</a>
 				{/each}
+
+				<p class="mb-3 mt-6 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+					Reference
+				</p>
+				<a
+					href="/guide/cli"
+					class="flex items-center justify-between gap-2 rounded px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+				>
+					<span>CLI Reference</span>
+					<span aria-hidden="true">→</span>
+				</a>
 			</nav>
 		</aside>
 
@@ -217,6 +228,21 @@
 							>~/.coati/config.json</code
 						> and used automatically for future commands.
 					</p>
+					<a
+						href="/guide/cli"
+						class="group mt-4 flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/50 hover:bg-accent"
+					>
+						<div class="min-w-0">
+							<p class="text-sm font-medium text-foreground">CLI Reference</p>
+							<p class="text-xs text-muted-foreground">
+								Every command, option, and example — in one place.
+							</p>
+						</div>
+						<span
+							class="text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground"
+							aria-hidden="true">→</span
+						>
+					</a>
 				</div>
 			</section>
 
@@ -262,15 +288,76 @@
 				<h2 class="mb-4 text-2xl font-bold tracking-tight">Create Your Own Setup</h2>
 				<div class="space-y-4 text-muted-foreground">
 					<p>
-						Start from your existing project or an empty directory. The <code
-							class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
+						Got a working AI setup you're proud of — a <code
+							class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground">CLAUDE.md</code
+						>, custom slash commands, hooks, a
+						<code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
+							>.cursorrules</code
+						>
+						file,
+						<code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
+							>AGENTS.md</code
+						>? That's exactly where
+						<code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
 							>coati init</code
 						>
-						command scaffolds a
-						<code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
-							>coati.json</code
-						> manifest, which is the core of every setup:
+						belongs.
+						<strong class="text-foreground"
+							>Run it inside the project where your AI configs already live.</strong
+						> The CLI scans for known files, groups them by agent, and walks you through which to include.
 					</p>
+					<h3 class="mt-6 text-lg font-semibold text-foreground">
+						Not like <code
+							class="rounded bg-muted px-1 py-0.5 font-mono text-[0.7em] text-foreground"
+							>git init</code
+						>
+					</h3>
+					<p>
+						If you're coming from <code
+							class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground">git init</code
+						>, the mental model is different. Coati doesn't scaffold an empty project — it packages
+						what's already there. Run
+						<code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
+							>coati init</code
+						> in a scratch folder and there's nothing for the CLI to find.
+					</p>
+					<p>
+						The typical starting point is a real project you've been refining your AI workflow in
+						for weeks or months. Open your terminal there, and Coati reads what you've built.
+					</p>
+					<h3 class="mt-6 text-lg font-semibold text-foreground">
+						What goes in, and when it leaves your machine
+					</h3>
+					<ul class="ml-4 list-disc space-y-2">
+						<li>
+							<strong class="text-foreground">You pick the files.</strong> The
+							<code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
+								>init</code
+							> prompts walk agent-by-agent and ask which configs to include. Skip anything personal or
+							half-finished — it stays on disk and out of the manifest.
+						</li>
+						<li>
+							<strong class="text-foreground">Nothing uploads yet.</strong>
+							<code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
+								>init</code
+							>
+							only writes a local
+							<code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
+								>coati.json</code
+							>. No network call. Your code stays where it is.
+						</li>
+						<li>
+							<strong class="text-foreground">Publish when you're ready.</strong>
+							<code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
+								>coati publish</code
+							>
+							is the first time anything leaves your machine. Even then, you can mark the setup
+							<a
+								href="#private-setups"
+								class="text-foreground underline underline-offset-4 hover:text-primary">private</a
+							> — visible only to you, your collaborators, or your team.
+						</li>
+					</ul>
 				</div>
 				<div class="mt-4 space-y-4">
 					<CodeBlock code="npx @coati/sh@latest init" language="bash" label="Scaffold via npx" />
@@ -308,12 +395,11 @@
 						label="coati.json"
 					/>
 					<p class="text-muted-foreground">
-						Add any files you want to bundle: config files, slash commands, hooks, scripts, or
-						documentation. Then reference them in the <code
+						Edit this file to add or remove entries anytime before publishing. Every file in the <code
 							class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground">files</code
 						>
-						array. Files included in the array must have the correct path and be present in your directory
-						and match where they are on disk.
+						array must exist on disk at the listed path when you publish — keep the paths aligned with
+						where the files actually live.
 					</p>
 				</div>
 			</section>
@@ -333,9 +419,19 @@
 					<CodeBlock code="npx @coati/sh@latest publish" language="bash" label="Publish via npx" />
 					<CodeBlock code="coati publish" language="bash" label="Publish via global install" />
 					<p class="text-muted-foreground">
-						The CLI reads your manifest, uploads all listed files, and creates (or updates) your
-						setup on Coati. Your setup will be immediately visible on your profile and in the
-						Explore page.
+						The CLI reads your manifest, uploads the listed files, and creates (or updates) your
+						setup on Coati.
+					</p>
+					<p class="text-muted-foreground">
+						During publish, you'll choose whether the setup is <strong class="text-foreground"
+							>public</strong
+						>
+						(visible on Explore and your profile) or
+						<a
+							href="#private-setups"
+							class="text-foreground underline underline-offset-4 hover:text-primary">private</a
+						> (hidden from search, shareable with specific people or a team). Setups published to a team
+						default to private.
 					</p>
 					<p class="text-muted-foreground">
 						To update a published setup's files, edit them locally and run <code

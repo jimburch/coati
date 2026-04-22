@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
 	AGENTS,
 	AGENTS_BY_SLUG,
+	SHARED_GLOBS,
 	globToRegex,
 	matchesGlob,
 	getAgentForFile,
@@ -130,7 +131,6 @@ describe('getAgentForFile / getComponentTypeForFile', () => {
 		['AGENTS.md', 'codex'],
 		['.codex/config.toml', 'codex'],
 		['.codex/agents/reviewer.toml', 'codex'],
-		['.agents/skills/api-patterns/SKILL.md', 'codex'],
 		// copilot
 		['.github/copilot-instructions.md', 'copilot'],
 		['.github/copilot/instructions.md', 'copilot'],
@@ -184,6 +184,20 @@ describe('getAgentForFile / getComponentTypeForFile', () => {
 		expect(getAgentForFile('.claude\\commands\\review.md')?.slug).toBe('claude-code');
 	});
 
+	it('shared globs: .agents/skills/** has no agent but resolves a componentType', () => {
+		const sharedPaths = [
+			'.agents/skills/api-patterns/SKILL.md',
+			'.agents/skills/testing/SKILL.md',
+			'.agents/skills/deep/nested/SKILL.md'
+		];
+		for (const p of sharedPaths) {
+			expect(getAgentForFile(p), `no agent should claim ${p}`).toBeUndefined();
+			expect(getComponentTypeForFile(p), `componentType for ${p}`).toBe('skill');
+		}
+		// registry still exposes the pattern for detector consumption
+		expect(SHARED_GLOBS.some((m) => m.glob === '.agents/skills/**/*.md')).toBe(true);
+	});
+
 	it('every file under playground/ is recognized by getAgentForFile (no dead files)', () => {
 		const playgroundFiles = [
 			// claude-code
@@ -199,8 +213,6 @@ describe('getAgentForFile / getComponentTypeForFile', () => {
 			'.codex/config.toml',
 			'.codex/agents/reviewer.toml',
 			'.codex/agents/test-writer.toml',
-			'.agents/skills/api-patterns/SKILL.md',
-			'.agents/skills/testing/SKILL.md',
 			// copilot
 			'.github/copilot-instructions.md',
 			'.github/copilot/instructions.md',

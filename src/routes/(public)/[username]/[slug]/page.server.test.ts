@@ -149,8 +149,8 @@ describe('saveReadme action', () => {
 		});
 	});
 
-	it('handles empty readme gracefully', async () => {
-		const updatedSetup = { ...MOCK_SETUP, readme: '', updatedAt: new Date('2026-03-30') };
+	it('deletes the readme (persists null) when body is empty', async () => {
+		const updatedSetup = { ...MOCK_SETUP, readme: null, updatedAt: new Date('2026-03-30') };
 		mockGetDetail.mockResolvedValue(MOCK_SETUP);
 		mockUpdate.mockResolvedValue(updatedSetup);
 
@@ -162,7 +162,24 @@ describe('saveReadme action', () => {
 		);
 
 		const result = await actions.saveReadme(event);
-		expect(mockUpdate).toHaveBeenCalledWith('setup-id', { readme: '' });
+		expect(mockUpdate).toHaveBeenCalledWith('setup-id', { readme: null });
+		expect(result).toMatchObject({ readmeHtml: null });
+	});
+
+	it('deletes the readme (persists null) when body is whitespace-only', async () => {
+		const updatedSetup = { ...MOCK_SETUP, readme: null, updatedAt: new Date('2026-03-30') };
+		mockGetDetail.mockResolvedValue(MOCK_SETUP);
+		mockUpdate.mockResolvedValue(updatedSetup);
+
+		const { actions } = await import('./+page.server');
+		const event = makeActionEvent(
+			{ readme: '   \n\t  ' },
+			{ username: 'alice', slug: 'test-setup' },
+			{ id: 'owner-id', username: 'alice' }
+		);
+
+		const result = await actions.saveReadme(event);
+		expect(mockUpdate).toHaveBeenCalledWith('setup-id', { readme: null });
 		expect(result).toMatchObject({ readmeHtml: null });
 	});
 });

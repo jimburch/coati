@@ -53,10 +53,11 @@ function typeBadge(componentType: ManifestComponentType, width: number): string 
 export function formatFileList(files: DetectedFile[]): string {
 	if (files.length === 0) return '';
 
-	// Group by agent
+	// Group by agent (null/empty tool → Shared group)
+	const SHARED_KEY = '_shared';
 	const groups = new Map<string, DetectedFile[]>();
 	for (const f of files) {
-		const key = f.tool || '_unknown';
+		const key = f.tool || SHARED_KEY;
 		if (!groups.has(key)) groups.set(key, []);
 		groups.get(key)!.push(f);
 	}
@@ -68,7 +69,7 @@ export function formatFileList(files: DetectedFile[]): string {
 
 	for (const [agentSlug, agentFiles] of groups) {
 		const agent = AGENTS_BY_SLUG[agentSlug];
-		const name = agent?.displayName ?? agentSlug;
+		const name = agentSlug === SHARED_KEY ? 'Shared' : (agent?.displayName ?? agentSlug);
 		const count = agentFiles.length;
 		const header = `${pc.bold(name)}  ${pc.dim(`(${count} file${count === 1 ? '' : 's'})`)}`;
 

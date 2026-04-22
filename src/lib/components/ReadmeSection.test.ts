@@ -1,4 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
+import {
+	shouldRenderReadmeSection,
+	shouldShowAddReadmeCard,
+	isSaveDisabled
+} from './readmeSectionView';
 
 // Pure logic extracted from ReadmeSection.svelte for unit testing
 
@@ -77,6 +82,60 @@ describe('README display derivations', () => {
 	it('getActiveTabPanel: maps edit/preview tabs to their panels', () => {
 		expect(getActiveTabPanel('edit')).toBe('textarea');
 		expect(getActiveTabPanel('preview')).toBe('preview');
+	});
+});
+
+describe('README section visibility', () => {
+	it('shouldRenderReadmeSection: hides the section only for non-owner viewing a null README', () => {
+		expect(shouldRenderReadmeSection({ isOwner: false, readmeHtml: null })).toBe(false);
+		expect(shouldRenderReadmeSection({ isOwner: true, readmeHtml: null })).toBe(true);
+		expect(shouldRenderReadmeSection({ isOwner: false, readmeHtml: '<p>Hi</p>' })).toBe(true);
+		expect(shouldRenderReadmeSection({ isOwner: true, readmeHtml: '<p>Hi</p>' })).toBe(true);
+	});
+
+	it('shouldShowAddReadmeCard: shows the empty-state card only for owner viewing a null README', () => {
+		expect(shouldShowAddReadmeCard({ isOwner: true, readmeHtml: null })).toBe(true);
+		expect(shouldShowAddReadmeCard({ isOwner: false, readmeHtml: null })).toBe(false);
+		expect(shouldShowAddReadmeCard({ isOwner: true, readmeHtml: '<p>Hi</p>' })).toBe(false);
+		expect(shouldShowAddReadmeCard({ isOwner: false, readmeHtml: '<p>Hi</p>' })).toBe(false);
+	});
+});
+
+describe('isSaveDisabled (split save-button rule)', () => {
+	it('disables save on empty content when opened from the null state (Add-a-README)', () => {
+		expect(isSaveDisabled({ sourceHadReadme: false, textareaContent: '', saving: false })).toBe(
+			true
+		);
+		expect(
+			isSaveDisabled({ sourceHadReadme: false, textareaContent: '   \n\t', saving: false })
+		).toBe(true);
+	});
+
+	it('enables save once the user has typed non-whitespace into an empty editor', () => {
+		expect(isSaveDisabled({ sourceHadReadme: false, textareaContent: '# Hi', saving: false })).toBe(
+			false
+		);
+	});
+
+	it('always allows saving from an existing README, even when cleared (delete flow)', () => {
+		expect(isSaveDisabled({ sourceHadReadme: true, textareaContent: '', saving: false })).toBe(
+			false
+		);
+		expect(isSaveDisabled({ sourceHadReadme: true, textareaContent: '   ', saving: false })).toBe(
+			false
+		);
+		expect(
+			isSaveDisabled({ sourceHadReadme: true, textareaContent: '# edited', saving: false })
+		).toBe(false);
+	});
+
+	it('disables save while a save is in flight regardless of state', () => {
+		expect(isSaveDisabled({ sourceHadReadme: true, textareaContent: '# Hi', saving: true })).toBe(
+			true
+		);
+		expect(isSaveDisabled({ sourceHadReadme: false, textareaContent: '# Hi', saving: true })).toBe(
+			true
+		);
 	});
 });
 

@@ -145,7 +145,7 @@ export const updateSetupSchema = z
 		name: z.string().min(1).max(100).optional(),
 		slug: z.string().min(1).max(100).regex(SLUG_NAME_REGEX).optional(),
 		description: z.string().max(300).optional(),
-		readme: z.string().optional(),
+		readme: z.string().nullable().optional(),
 		display: z.string().trim().max(150).nullable().optional(),
 		category: categorySchema.nullable().optional(),
 		license: z.string().max(50).nullable().optional(),

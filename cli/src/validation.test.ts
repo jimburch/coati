@@ -115,11 +115,21 @@ describe('manifestSchema', () => {
 				minToolVersion: '1.0',
 				postInstall: ['chmod +x script.sh'],
 				prerequisites: ['node >= 18'],
-				readme: 'README.md',
 				agents: ['claude-code'],
 				tags: ['typescript', 'mcp']
 			}).success
 		).toBe(true);
+	});
+
+	it('silently drops a legacy `readme` field instead of failing validation', () => {
+		const result = manifestSchema.safeParse({
+			...VALID_MANIFEST,
+			readme: 'README.md'
+		});
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect('readme' in result.data).toBe(false);
+		}
 	});
 
 	it('handles the display field: optional, trimmed, max 150 chars', () => {

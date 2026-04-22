@@ -32,11 +32,6 @@
 		<div>
 			<div class="flex flex-wrap items-center gap-3">
 				<h1 class="text-xl font-bold lg:text-2xl">{agent.displayName}</h1>
-				{#if agent.official}
-					<span class="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-						Official
-					</span>
-				{/if}
 			</div>
 
 			{#if agent.website}

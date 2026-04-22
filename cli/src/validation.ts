@@ -49,7 +49,6 @@ export const manifestSchema = z.object({
 	minToolVersion: z.string().max(20, 'Must be a string of 20 characters or fewer').optional(),
 	postInstall: z.array(z.string()).optional(),
 	prerequisites: z.array(z.string()).optional(),
-	readme: z.string().optional(),
 	agents: z.array(z.string()).optional(),
 	tags: z.array(z.string()).optional(),
 	visibility: z.enum(['public', 'private']).optional(),

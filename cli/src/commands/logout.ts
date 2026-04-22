@@ -8,7 +8,7 @@ interface LogoutOptions {
 export function registerLogout(program: Command, ctx: CommandContext): void {
 	program
 		.command('logout')
-		.description('Remove stored credentials')
+		.description('Sign out and remove stored credentials')
 		.option('--json', 'Output structured JSON')
 		.action(async (options: LogoutOptions) => {
 			if (options.json) {

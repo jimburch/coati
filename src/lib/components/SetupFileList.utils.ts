@@ -176,9 +176,19 @@ export function groupFilesByAgent(files: SetupFileLike[], agents: AgentLike[]): 
 
 // ─── Collapse threshold ───────────────────────────────────────────────────────
 
-/** Returns true when all groups/sub-folders should start expanded. */
+/** Returns true when sub-folders should start expanded. */
 export function shouldStartExpanded(totalFiles: number): boolean {
 	return totalFiles <= 10;
+}
+
+/**
+ * Initial expand state for an agent group header.  Agent-specific groups
+ * always start expanded; the Shared group collapses only when there's more
+ * than one group on screen.
+ */
+export function initialGroupExpanded(groupKey: string, totalGroups: number): boolean {
+	if (groupKey === '__shared') return totalGroups === 1;
+	return true;
 }
 
 /** Returns true when every file in the list has no agent assigned. */

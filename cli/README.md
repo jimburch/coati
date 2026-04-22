@@ -218,10 +218,10 @@ DO_NOT_TRACK=1 coati clone owner/setup
 COATI_TELEMETRY=false coati publish
 ```
 
-**Persistent (saved to `~/.coati/config.json`):**
+**Persistent (edit `~/.coati/config.json`):**
 
-```bash
-coati config set telemetry false
+```json
+{ "telemetry": false }
 ```
 
 When crash reporting is disabled, errors are still shown in your terminal — they are just not sent to Sentry.
