@@ -103,43 +103,43 @@ The app will be running at [http://localhost:5173](http://localhost:5173).
 
 `.env.example` is the source of truth. The full list:
 
-| Variable                | Required     | Description                                                          |
-| ----------------------- | ------------ | -------------------------------------------------------------------- |
-| `DATABASE_URL`          | yes          | PostgreSQL connection string                                         |
-| `DATABASE_URL_TEST`     | dev/CI       | Test database connection string                                      |
-| `POSTGRES_USER`         | local Docker | Username for the Docker Postgres container                           |
-| `POSTGRES_PASSWORD`     | local Docker | Password for the Docker Postgres container                           |
-| `POSTGRES_DB`           | local Docker | Database name for the Docker Postgres container                      |
-| `GITHUB_CLIENT_ID`      | yes          | GitHub OAuth app client ID                                           |
-| `GITHUB_CLIENT_SECRET`  | yes          | GitHub OAuth app client secret                                       |
+| Variable                | Required     | Description                                                                 |
+| ----------------------- | ------------ | --------------------------------------------------------------------------- |
+| `DATABASE_URL`          | yes          | PostgreSQL connection string                                                |
+| `DATABASE_URL_TEST`     | dev/CI       | Test database connection string                                             |
+| `POSTGRES_USER`         | local Docker | Username for the Docker Postgres container                                  |
+| `POSTGRES_PASSWORD`     | local Docker | Password for the Docker Postgres container                                  |
+| `POSTGRES_DB`           | local Docker | Database name for the Docker Postgres container                             |
+| `GITHUB_CLIENT_ID`      | yes          | GitHub OAuth app client ID                                                  |
+| `GITHUB_CLIENT_SECRET`  | yes          | GitHub OAuth app client secret                                              |
 | `PUBLIC_SITE_URL`       | yes (prod)   | Canonical site URL used for OG tags and callbacks (e.g. `https://coati.sh`) |
-| `PUBLIC_ENV`            | prod         | `staging` or `production`; leave unset locally                       |
-| `PUBLIC_BETA_MODE`      | no           | Gate beta-only UI features                                           |
-| `PUBLIC_SENTRY_DSN`     | no           | Sentry DSN for error capture (omit to disable)                       |
-| `PUBLIC_APP_VERSION`    | no           | Injected at Docker build time from `package.json`                    |
-| `PUBLIC_MIXPANEL_TOKEN` | no           | Mixpanel project token (omit to disable analytics)                   |
+| `PUBLIC_ENV`            | prod         | `staging` or `production`; leave unset locally                              |
+| `PUBLIC_BETA_MODE`      | no           | Gate beta-only UI features                                                  |
+| `PUBLIC_SENTRY_DSN`     | no           | Sentry DSN for error capture (omit to disable)                              |
+| `PUBLIC_APP_VERSION`    | no           | Injected at Docker build time from `package.json`                           |
+| `PUBLIC_MIXPANEL_TOKEN` | no           | Mixpanel project token (omit to disable analytics)                          |
 
 ### Commands
 
-| Command                  | Description                                                |
-| ------------------------ | ---------------------------------------------------------- |
-| `pnpm dev`               | Start dev server on localhost:5173                         |
-| `pnpm build`             | Production build                                           |
-| `pnpm preview`           | Preview production build on :4173                          |
-| `pnpm check`             | TypeScript + svelte-check                                  |
-| `pnpm lint`              | Prettier check + ESLint                                    |
-| `pnpm format`            | Auto-format with Prettier                                  |
-| `pnpm test:unit`         | Vitest unit + component tests                              |
-| `pnpm test:coverage`     | Unit tests with coverage report                            |
-| `pnpm test:e2e`          | Playwright e2e tests (desktop + mobile)                    |
-| `pnpm test`              | Unit + e2e                                                 |
-| `pnpm ci:checks`         | Full CI pipeline: check + lint + test:unit                 |
-| `pnpm db:up`             | Start local PostgreSQL via Docker                          |
-| `pnpm db:down`           | Stop local PostgreSQL                                      |
-| `pnpm db:generate`       | Generate a new Drizzle migration from schema changes       |
-| `pnpm db:migrate`        | Apply pending migrations to the dev database               |
-| `pnpm db:migrate:test`   | Apply migrations to the test database                      |
-| `pnpm seed:dev`          | Seed the dev database with sample data                     |
+| Command                | Description                                          |
+| ---------------------- | ---------------------------------------------------- |
+| `pnpm dev`             | Start dev server on localhost:5173                   |
+| `pnpm build`           | Production build                                     |
+| `pnpm preview`         | Preview production build on :4173                    |
+| `pnpm check`           | TypeScript + svelte-check                            |
+| `pnpm lint`            | Prettier check + ESLint                              |
+| `pnpm format`          | Auto-format with Prettier                            |
+| `pnpm test:unit`       | Vitest unit + component tests                        |
+| `pnpm test:coverage`   | Unit tests with coverage report                      |
+| `pnpm test:e2e`        | Playwright e2e tests (desktop + mobile)              |
+| `pnpm test`            | Unit + e2e                                           |
+| `pnpm ci:checks`       | Full CI pipeline: check + lint + test:unit           |
+| `pnpm db:up`           | Start local PostgreSQL via Docker                    |
+| `pnpm db:down`         | Stop local PostgreSQL                                |
+| `pnpm db:generate`     | Generate a new Drizzle migration from schema changes |
+| `pnpm db:migrate`      | Apply pending migrations to the dev database         |
+| `pnpm db:migrate:test` | Apply migrations to the test database                |
+| `pnpm seed:dev`        | Seed the dev database with sample data               |
 
 ### Testing
 
@@ -199,24 +199,24 @@ All API routes live under `/api/v1/` and return consistent JSON:
 
 Selected endpoints (see `src/routes/api/v1/` for the complete list):
 
-| Endpoint                                         | Methods            | Description              |
-| ------------------------------------------------ | ------------------ | ------------------------ |
-| `/api/v1/setups`                                 | GET, POST          | List/search, create      |
-| `/api/v1/setups/[owner]/[slug]`                  | GET, PATCH, DELETE | Setup CRUD               |
-| `/api/v1/setups/[owner]/[slug]/files`            | GET                | Get files (for clone)    |
-| `/api/v1/setups/[owner]/[slug]/clone`            | POST               | Record clone + get files |
-| `/api/v1/setups/[owner]/[slug]/star`             | POST, DELETE       | Star / unstar            |
-| `/api/v1/setups/[owner]/[slug]/comments`         | GET, POST          | Comments                 |
-| `/api/v1/teams`                                  | GET, POST          | List/create teams        |
-| `/api/v1/teams/[slug]/members`                   | GET, POST          | Team membership          |
-| `/api/v1/teams/[slug]/invites`                   | GET, POST          | Team invites             |
-| `/api/v1/users/[username]`                       | GET                | User profile             |
-| `/api/v1/users/[username]/follow`                | POST, DELETE       | Follow / unfollow        |
-| `/api/v1/search`                                 | GET                | Global search            |
-| `/api/v1/feed`                                   | GET                | Activity feed            |
-| `/api/v1/auth/device`                            | POST               | CLI device auth start    |
-| `/api/v1/auth/device/poll`                       | POST               | CLI device auth poll     |
-| `/api/v1/health`                                 | GET                | Health check             |
+| Endpoint                                 | Methods            | Description              |
+| ---------------------------------------- | ------------------ | ------------------------ |
+| `/api/v1/setups`                         | GET, POST          | List/search, create      |
+| `/api/v1/setups/[owner]/[slug]`          | GET, PATCH, DELETE | Setup CRUD               |
+| `/api/v1/setups/[owner]/[slug]/files`    | GET                | Get files (for clone)    |
+| `/api/v1/setups/[owner]/[slug]/clone`    | POST               | Record clone + get files |
+| `/api/v1/setups/[owner]/[slug]/star`     | POST, DELETE       | Star / unstar            |
+| `/api/v1/setups/[owner]/[slug]/comments` | GET, POST          | Comments                 |
+| `/api/v1/teams`                          | GET, POST          | List/create teams        |
+| `/api/v1/teams/[slug]/members`           | GET, POST          | Team membership          |
+| `/api/v1/teams/[slug]/invites`           | GET, POST          | Team invites             |
+| `/api/v1/users/[username]`               | GET                | User profile             |
+| `/api/v1/users/[username]/follow`        | POST, DELETE       | Follow / unfollow        |
+| `/api/v1/search`                         | GET                | Global search            |
+| `/api/v1/feed`                           | GET                | Activity feed            |
+| `/api/v1/auth/device`                    | POST               | CLI device auth start    |
+| `/api/v1/auth/device/poll`               | POST               | CLI device auth poll     |
+| `/api/v1/health`                         | GET                | Health check             |
 
 ## Auth
 
