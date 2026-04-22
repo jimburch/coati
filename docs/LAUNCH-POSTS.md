@@ -357,7 +357,7 @@ Use this only in servers where you are already a regular. If you have not posted
 >
 > ### 3. READMEs carry more weight than file counts
 >
-> A setup without a README explaining the reasoning behind the configuration is a black box. The browse page surfaces README content, not file counts. The incentive is to explain *why* the setup is shaped the way it is, not to accumulate files.
+> A setup without a README explaining the reasoning behind the configuration is a black box. The browse page surfaces README content, not file counts. The incentive is to explain _why_ the setup is shaped the way it is, not to accumulate files.
 >
 > ## Stack
 >
@@ -417,44 +417,44 @@ The AI-tools space on Reddit is less one audience and more seven, each with a di
 
 ### Tier 1 — Primary targets (direct audience match)
 
-| Subreddit | Fit | Notes |
-| --- | --- | --- |
-| **r/ClaudeCode** | Perfect | This is the home audience. Lead here. |
-| **r/ClaudeAI** | Strong | Broader than CC but very tool-friendly. Post a day after r/ClaudeCode. |
-| **r/cursor** | Strong | Tailor the post to Cursor-specific capabilities. |
-| **r/ChatGPTCoding** | Strong | Emphasize multi-tool support. |
-| **r/GithubCopilot** | Good | Smaller, but high intent. |
-| **r/LLMDevs** | Good | Frame as a registry / package manager, not a "tool". |
-| **r/AI_Agents** | Good | Emphasize the manifest / packaging primitive. |
-| **r/PromptEngineering** | Moderate | Skills and CLAUDE.md angle lands here. |
-| **r/aipromptprogramming** | Moderate | Similar to above. |
-| **r/LocalLLaMA** | Moderate | Only if you have setups built around local/self-hosted models. They will downvote anything that feels API-only. |
+| Subreddit                 | Fit      | Notes                                                                                                           |
+| ------------------------- | -------- | --------------------------------------------------------------------------------------------------------------- |
+| **r/ClaudeCode**          | Perfect  | This is the home audience. Lead here.                                                                           |
+| **r/ClaudeAI**            | Strong   | Broader than CC but very tool-friendly. Post a day after r/ClaudeCode.                                          |
+| **r/cursor**              | Strong   | Tailor the post to Cursor-specific capabilities.                                                                |
+| **r/ChatGPTCoding**       | Strong   | Emphasize multi-tool support.                                                                                   |
+| **r/GithubCopilot**       | Good     | Smaller, but high intent.                                                                                       |
+| **r/LLMDevs**             | Good     | Frame as a registry / package manager, not a "tool".                                                            |
+| **r/AI_Agents**           | Good     | Emphasize the manifest / packaging primitive.                                                                   |
+| **r/PromptEngineering**   | Moderate | Skills and CLAUDE.md angle lands here.                                                                          |
+| **r/aipromptprogramming** | Moderate | Similar to above.                                                                                               |
+| **r/LocalLLaMA**          | Moderate | Only if you have setups built around local/self-hosted models. They will downvote anything that feels API-only. |
 
 ### Tier 2 — Broader developer audiences
 
-| Subreddit | Fit | Notes |
-| --- | --- | --- |
-| **r/programming** | Strong | Must be substantive, no hype. Read rules carefully — they ban self-promo in many forms. |
-| **r/webdev** | Good | Emphasize the full-stack SvelteKit build. |
-| **r/coding** | Moderate | Smaller, friendly. |
-| **r/devtools** | Strong | Exact fit. Post the HN writeup here. |
-| **r/SideProject** | Strong | Launch posts welcomed, but the community rewards substance. |
-| **r/commandline** | Good | Angle on the CLI specifically. |
-| **r/opensource** | Good | Angle on the project being open source and self-hostable. |
-| **r/selfhosted** | Moderate | Post only if you write specifically about running your own Coati instance. |
-| **r/coolgithubprojects** | Moderate | Low engagement but low friction. |
-| **r/InternetIsBeautiful** | Long shot | Only if the site itself has enough visual appeal to carry a non-technical audience. |
+| Subreddit                 | Fit       | Notes                                                                                   |
+| ------------------------- | --------- | --------------------------------------------------------------------------------------- |
+| **r/programming**         | Strong    | Must be substantive, no hype. Read rules carefully — they ban self-promo in many forms. |
+| **r/webdev**              | Good      | Emphasize the full-stack SvelteKit build.                                               |
+| **r/coding**              | Moderate  | Smaller, friendly.                                                                      |
+| **r/devtools**            | Strong    | Exact fit. Post the HN writeup here.                                                    |
+| **r/SideProject**         | Strong    | Launch posts welcomed, but the community rewards substance.                             |
+| **r/commandline**         | Good      | Angle on the CLI specifically.                                                          |
+| **r/opensource**          | Good      | Angle on the project being open source and self-hostable.                               |
+| **r/selfhosted**          | Moderate  | Post only if you write specifically about running your own Coati instance.              |
+| **r/coolgithubprojects**  | Moderate  | Low engagement but low friction.                                                        |
+| **r/InternetIsBeautiful** | Long shot | Only if the site itself has enough visual appeal to carry a non-technical audience.     |
 
 ### Tier 3 — Adjacent, post selectively
 
-| Subreddit | Fit | Notes |
-| --- | --- | --- |
-| **r/artificial** | Weak | Hobbyist audience, low technical depth. |
-| **r/OpenAI** | Weak | Off-tool. |
-| **r/MachineLearning** | Do not post | Research-only community. Launch posts get removed. |
-| **r/singularity** | Do not post | Reward function is hype. Coati is the wrong product for this crowd. |
-| **r/ChatGPT** | Do not post | General audience, not developers. |
-| **r/vibecoding** | Contrarian post only | Do not post a standard launch here. If you post at all, it should be a contrarian piece: "Coati is not for vibe-coded apps, here's why." Only do this if you want the discussion. |
+| Subreddit             | Fit                  | Notes                                                                                                                                                                             |
+| --------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **r/artificial**      | Weak                 | Hobbyist audience, low technical depth.                                                                                                                                           |
+| **r/OpenAI**          | Weak                 | Off-tool.                                                                                                                                                                         |
+| **r/MachineLearning** | Do not post          | Research-only community. Launch posts get removed.                                                                                                                                |
+| **r/singularity**     | Do not post          | Reward function is hype. Coati is the wrong product for this crowd.                                                                                                               |
+| **r/ChatGPT**         | Do not post          | General audience, not developers.                                                                                                                                                 |
+| **r/vibecoding**      | Contrarian post only | Do not post a standard launch here. If you post at all, it should be a contrarian piece: "Coati is not for vibe-coded apps, here's why." Only do this if you want the discussion. |
 
 ### Posting cadence
 
@@ -527,13 +527,13 @@ Every README that includes this badge is a permanent referral channel. Prioritiz
 
 ### HN day (primary launch)
 
-| Time | Action |
-| --- | --- |
-| 8:00 AM ET | Post Show HN |
-| 8:00–11:00 AM | Respond to every comment within minutes. Be technical, specific, honest. |
+| Time             | Action                                                                           |
+| ---------------- | -------------------------------------------------------------------------------- |
+| 8:00 AM ET       | Post Show HN                                                                     |
+| 8:00–11:00 AM    | Respond to every comment within minutes. Be technical, specific, honest.         |
 | 11:00 AM–2:00 PM | Continue monitoring, respond within 15 minutes. Share on Twitter that it's live. |
-| 2:00–6:00 PM | Post to r/ClaudeCode and r/cursor. Continue HN engagement. |
-| Evening | Wind down, but keep checking the HN thread every 30 minutes until bed. |
+| 2:00–6:00 PM     | Post to r/ClaudeCode and r/cursor. Continue HN engagement.                       |
+| Evening          | Wind down, but keep checking the HN thread every 30 minutes until bed.           |
 
 ### Reddit day 2
 
