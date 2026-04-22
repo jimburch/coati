@@ -19,7 +19,7 @@ This Code of Conduct applies to all project spaces — the repository, issues, p
 
 ## Reporting
 
-If you experience or witness behavior that violates this Code of Conduct, please report it by emailing `jim@showit.com`. Reports will be handled privately and in good faith. Maintainers are obligated to respect the privacy and security of the reporter.
+If you experience or witness behavior that violates this Code of Conduct, please report it by emailing `jrburch1@gmail.com`. Reports will be handled privately and in good faith. Maintainers are obligated to respect the privacy and security of the reporter.
 
 Maintainers who do not follow or enforce this Code of Conduct in good faith may face consequences determined by other project leadership.
 
