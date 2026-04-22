@@ -5,6 +5,7 @@
 	import {
 		groupFilesByAgent,
 		shouldStartExpanded,
+		initialGroupExpanded,
 		allFilesAgentless,
 		getFilename,
 		type AgentLike,
@@ -24,7 +25,7 @@
 	const resolvedBasePath = $derived(basePath ?? `/${username}/${slug}/files`);
 
 	const groups = $derived(groupFilesByAgent(files, agents));
-	const startExpanded = $derived(shouldStartExpanded(files.length));
+	const subfolderStartExpanded = $derived(shouldStartExpanded(files.length));
 	const agentless = $derived(allFilesAgentless(files));
 
 	// Per-group/folder expand state.  Keys:
@@ -34,7 +35,10 @@
 
 	function isExpanded(key: string): boolean {
 		const stored = expandedState.get(key);
-		return stored !== undefined ? stored : startExpanded;
+		if (stored !== undefined) return stored;
+		// Subfolder keys contain ":" — they follow the file-count threshold.
+		if (key.includes(':')) return subfolderStartExpanded;
+		return initialGroupExpanded(key, groups.length);
 	}
 
 	function toggle(key: string): void {

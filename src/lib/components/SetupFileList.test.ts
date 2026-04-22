@@ -5,6 +5,7 @@ import {
 	computeFileHierarchy,
 	groupFilesByAgent,
 	shouldStartExpanded,
+	initialGroupExpanded,
 	allFilesAgentless
 } from './SetupFileList.utils';
 import type { SetupFileLike, AgentLike } from './SetupFileList.utils';
@@ -220,6 +221,25 @@ describe('shouldStartExpanded', () => {
 		expect(shouldStartExpanded(10)).toBe(true);
 		expect(shouldStartExpanded(11)).toBe(false);
 		expect(shouldStartExpanded(50)).toBe(false);
+	});
+});
+
+// ─── initialGroupExpanded ─────────────────────────────────────────────────────
+
+describe('initialGroupExpanded', () => {
+	it('expands agent-specific groups regardless of group count', () => {
+		expect(initialGroupExpanded('claude-code', 1)).toBe(true);
+		expect(initialGroupExpanded('claude-code', 3)).toBe(true);
+		expect(initialGroupExpanded('cursor', 4)).toBe(true);
+	});
+
+	it('expands the Shared group when it is the only group', () => {
+		expect(initialGroupExpanded('__shared', 1)).toBe(true);
+	});
+
+	it('collapses the Shared group when other groups are present', () => {
+		expect(initialGroupExpanded('__shared', 2)).toBe(false);
+		expect(initialGroupExpanded('__shared', 4)).toBe(false);
 	});
 });
 
