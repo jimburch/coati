@@ -1,13 +1,23 @@
 import fs from 'fs';
 import path from 'path';
-import { AGENTS, matchesGlob, type AgentDefinition } from '@coati/agents-registry';
+import {
+	AGENTS,
+	SHARED_GLOBS,
+	matchesGlob,
+	type AgentDefinition,
+	type FilePatternMapping
+} from '@coati/agents-registry';
 import type { ManifestComponentType } from './manifest.js';
 
 export interface DetectedFile {
 	path: string;
 	componentType: ManifestComponentType;
-	/** Agent slug from @coati/agents-registry (e.g. 'claude-code', 'cursor'). */
-	tool: string;
+	/**
+	 * Agent slug from @coati/agents-registry (e.g. 'claude-code', 'cursor'),
+	 * or `null` for files matched by SHARED_GLOBS — cross-agent patterns that
+	 * should render in the "Shared" group in the UI.
+	 */
+	tool: string | null;
 	description: string;
 	/** True when the file has zero bytes on disk — surfaces as a warning in init. */
 	isEmpty: boolean;
@@ -28,36 +38,45 @@ const SKIP_DIRS = new Set([
 ]);
 
 /**
- * Extract scan targets from the AGENTS registry.
+ * Extract scan targets from the AGENTS registry and SHARED_GLOBS.
  *
  * Returns:
  * - `rootFileGlobs`: globs with no directory component (e.g. "CLAUDE.md", ".mcp.json")
  *   — these are checked via direct `fs.existsSync` rather than directory walking.
  * - `dirPrefixes`: the first path segment of every directory-based glob
- *   (e.g. ".claude", ".cursor", ".config") — only these dirs are entered at the top level.
+ *   (e.g. ".claude", ".cursor", ".agents") — only these dirs are entered at the top level.
  */
-function extractScanTargets(agents: AgentDefinition[]): {
+function extractScanTargets(
+	agents: AgentDefinition[],
+	sharedGlobs: FilePatternMapping[]
+): {
 	rootFileGlobs: string[];
 	dirPrefixes: Set<string>;
 } {
 	const rootFileGlobs: string[] = [];
 	const dirPrefixes = new Set<string>();
 
+	const addGlob = (glob: string): void => {
+		const slashIdx = glob.indexOf('/');
+		if (slashIdx === -1) {
+			if (!rootFileGlobs.includes(glob)) {
+				rootFileGlobs.push(glob);
+			}
+		} else {
+			dirPrefixes.add(glob.slice(0, slashIdx));
+		}
+	};
+
 	for (const agent of agents) {
 		for (const list of [agent.projectGlobs, agent.globalGlobs]) {
 			for (const { glob } of list) {
-				const slashIdx = glob.indexOf('/');
-				if (slashIdx === -1) {
-					// No directory component → root-level file pattern
-					if (!rootFileGlobs.includes(glob)) {
-						rootFileGlobs.push(glob);
-					}
-				} else {
-					// Has directory component → extract first path segment
-					dirPrefixes.add(glob.slice(0, slashIdx));
-				}
+				addGlob(glob);
 			}
 		}
+	}
+
+	for (const { glob } of sharedGlobs) {
+		addGlob(glob);
 	}
 
 	return { rootFileGlobs, dirPrefixes };
@@ -109,20 +128,21 @@ function collectDirFiles(baseDir: string, dirPrefixes: Set<string>): string[] {
 function makeDescription(
 	filePath: string,
 	componentType: ManifestComponentType,
-	agentName: string
+	agentName: string | null
 ): string {
 	const basename = path.basename(filePath, path.extname(filePath));
+	const label = agentName ?? 'Shared';
 	switch (componentType) {
 		case 'command':
-			return `${agentName} command: ${basename}`;
+			return `${label} command: ${basename}`;
 		case 'skill':
-			return `${agentName} skill: ${basename}`;
+			return `${label} skill: ${basename}`;
 		case 'hook':
-			return `${agentName} hook: ${path.basename(filePath)}`;
+			return `${label} hook: ${path.basename(filePath)}`;
 		case 'mcp_server':
-			return `${agentName} MCP server configuration`;
+			return `${label} MCP server configuration`;
 		default:
-			return `${agentName} ${componentType}`;
+			return `${label} ${componentType}`;
 	}
 }
 
@@ -139,7 +159,7 @@ function makeDescription(
  * the same agent's project globs (one entry per (file, agent) pair).
  */
 export function detectFiles(dir: string): DetectedFile[] {
-	const { rootFileGlobs, dirPrefixes } = extractScanTargets(AGENTS);
+	const { rootFileGlobs, dirPrefixes } = extractScanTargets(AGENTS, SHARED_GLOBS);
 
 	// ── 1. Root-level files: direct existence checks (no walking needed) ─────
 	const allFiles: string[] = [];
@@ -168,6 +188,25 @@ export function detectFiles(dir: string): DetectedFile[] {
 	};
 
 	for (const relativePath of allFiles) {
+		// Shared globs take precedence: a file matched here is cross-agent and
+		// must not be attributed to any single agent. Skip the agent loop entirely.
+		let matchedShared = false;
+		for (const mapping of SHARED_GLOBS) {
+			if (matchesGlob(relativePath, mapping.glob)) {
+				const ct = mapping.componentType as ManifestComponentType;
+				detected.push({
+					path: relativePath,
+					componentType: ct,
+					tool: null,
+					description: makeDescription(relativePath, ct, null),
+					isEmpty: isEmptyOnDisk(relativePath)
+				});
+				matchedShared = true;
+				break;
+			}
+		}
+		if (matchedShared) continue;
+
 		// Track which (path, agentSlug) pairs have already been emitted so that
 		// a file matching both globalGlobs and projectGlobs for the same agent
 		// only produces one entry.

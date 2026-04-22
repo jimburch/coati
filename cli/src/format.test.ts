@@ -31,7 +31,7 @@ const MULTI_AGENT_FILES: DetectedFile[] = [
 	{
 		path: 'README.md',
 		componentType: 'instruction',
-		tool: '',
+		tool: null,
 		description: 'Shared README',
 		isEmpty: false
 	}
@@ -65,9 +65,9 @@ describe('formatFileList', () => {
 		expect(output).toContain('Cursor');
 	});
 
-	it('uses _unknown as group header for files with empty tool', () => {
+	it('groups files with no agent under a Shared header', () => {
 		const output = stripAnsi(formatFileList(MULTI_AGENT_FILES));
-		expect(output).toContain('_unknown');
+		expect(output).toContain('Shared');
 		expect(output).toContain('README.md');
 	});
 

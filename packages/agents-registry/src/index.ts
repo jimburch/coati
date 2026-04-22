@@ -137,8 +137,7 @@ export const AGENTS: AgentDefinition[] = [
 		projectGlobs: [
 			{ glob: 'AGENTS.md', componentType: 'instruction' },
 			{ glob: '.codex/config.toml', componentType: 'instruction' },
-			{ glob: '.codex/agents/**/*.toml', componentType: 'instruction' },
-			{ glob: '.agents/skills/**/*.md', componentType: 'skill' }
+			{ glob: '.codex/agents/**/*.toml', componentType: 'instruction' }
 		],
 		globalGlobs: [{ glob: '.codex/config.toml', componentType: 'instruction' }],
 		detection: {
@@ -251,6 +250,18 @@ export const AGENTS_BY_SLUG: Readonly<Record<string, AgentDefinition>> = Object.
 	AGENTS.map((a) => [a.slug, a])
 );
 
+/**
+ * Glob patterns that are detected but not owned by any single agent — files
+ * matching these are treated as "shared" across agents (no agent assignment).
+ *
+ * Examples: `.agents/skills/**` is produced by Vercel's skills.sh tool and is
+ * consumable by any AI agent, so it belongs in the Shared group rather than
+ * being misattributed to Codex (or whichever agent happened to claim it first).
+ */
+export const SHARED_GLOBS: FilePatternMapping[] = [
+	{ glob: '.agents/skills/**/*.md', componentType: 'skill' }
+];
+
 // ─── Helper functions ─────────────────────────────────────────────────────────
 
 /**
@@ -273,10 +284,17 @@ export function getAgentForFile(filePath: string): AgentDefinition | undefined {
 
 /**
  * Given a project-relative file path, return the ComponentType inferred from
- * the matching agent's projectGlobs, or `undefined` if no pattern matches.
+ * the matching agent's projectGlobs or SHARED_GLOBS, or `undefined` if no
+ * pattern matches. Shared globs are checked first so that cross-agent paths
+ * aren't falsely attributed to whichever agent happens to match them.
  */
 export function getComponentTypeForFile(filePath: string): ComponentType | undefined {
 	const normalized = filePath.replace(/\\/g, '/');
+	for (const mapping of SHARED_GLOBS) {
+		if (matchesGlob(normalized, mapping.glob)) {
+			return mapping.componentType;
+		}
+	}
 	for (const agent of AGENTS) {
 		for (const mapping of agent.projectGlobs) {
 			if (matchesGlob(normalized, mapping.glob)) {
