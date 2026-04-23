@@ -1,0 +1,55 @@
+---
+description: Atlas UI project overview — tech stack, architecture, and distribution model.
+alwaysApply: true
+---
+
+# Atlas UI
+
+Atlas UI is a React component library shipping 60+ primitives and composites.
+It is consumed by every Atlas product (web, mobile-web, embedded SDK).
+
+## Stack
+
+- **React** 18.3 (peer dep; supports 18+)
+- **TypeScript** 5.6 (strict, `noUncheckedIndexedAccess: true`)
+- **Tailwind CSS** 4 with design tokens from `tokens.ts`
+- **Build tool:** Vite (library mode, ESM-only output)
+- **Primitives:** Radix UI for behavior, shadcn conventions for styling
+- **Testing:** Vitest + React Testing Library (unit), Playwright + axe (a11y)
+- **Storybook** 8 with the a11y, essentials, and interactions addons
+- **Chromatic** for visual regression
+
+## Directory layout
+
+```
+src/
+├── index.ts                 # Single barrel — all public exports
+├── components/
+│   ├── Button/
+│   │   ├── Button.tsx
+│   │   ├── Button.stories.tsx
+│   │   ├── Button.test.tsx
+│   │   └── index.ts         # Re-exports Button + ButtonProps
+│   ├── Dialog/
+│   └── …
+├── hooks/
+│   ├── useMediaQuery.ts
+│   └── …
+├── lib/
+│   ├── cn.ts                # tailwind-merge + clsx wrapper
+│   └── cva.ts               # class-variance-authority helpers
+└── tokens.ts                # Design tokens exported for consumers
+```
+
+## Release model
+
+- Semver. Breaking changes require a major bump and a migration note in CHANGELOG.md
+- Published to npm as `@atlas/ui`
+- Every change ships a story + test + (if visual) a Chromatic baseline
+
+## What this library does NOT do
+
+- No data fetching — components are presentational
+- No application state — Atlas apps handle their own state
+- No router dependencies — components work in any React app
+- No CSS-in-JS runtime — Tailwind utilities only

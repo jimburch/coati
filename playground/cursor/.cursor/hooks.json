@@ -3,16 +3,48 @@
 	"hooks": {
 		"afterFileEdit": [
 			{
-				"command": "npx eslint --fix ${file}",
+				"name": "eslint-fix",
 				"type": "command",
+				"command": "npx eslint --fix --cache ${file}",
+				"matcher": "**/*.{ts,tsx}",
 				"timeout": 10000
+			},
+			{
+				"name": "prettier-write",
+				"type": "command",
+				"command": "npx prettier --write --log-level=warn ${file}",
+				"matcher": "**/*.{ts,tsx,css,md,mdx,json}",
+				"timeout": 10000
+			},
+			{
+				"name": "chromatic-diff-hint",
+				"type": "command",
+				"command": "echo 'Story changed — run `pnpm chromatic` before opening a PR.'",
+				"matcher": "**/*.stories.tsx",
+				"timeout": 2000
 			}
 		],
 		"beforeShellExecution": [
 			{
-				"command": "echo 'Running: ${command}'",
+				"name": "log-shell",
 				"type": "command",
-				"timeout": 5000
+				"command": "echo '[cursor-shell] ${command}' >> .cursor/shell-audit.log",
+				"timeout": 2000
+			},
+			{
+				"name": "block-destructive",
+				"type": "command",
+				"command": "echo '${command}' | grep -Eq 'rm -rf|git push --force|pnpm publish' && exit 1 || exit 0",
+				"timeout": 2000
+			}
+		],
+		"afterShellExecution": [
+			{
+				"name": "rebuild-storybook-hint",
+				"type": "command",
+				"command": "echo 'Rebuild Storybook with `pnpm build-storybook` before the next Chromatic run.'",
+				"matcher": "pnpm add *",
+				"timeout": 2000
 			}
 		]
 	}

@@ -1,53 +1,56 @@
-# Code Review
+# /review — Review a Ledger PR
 
-Review the provided code for quality, security, and maintainability. Evaluate each area below and provide specific, actionable feedback.
+Review the staged diff (or the PR number provided as an argument) against the
+conventions in `.github/copilot-instructions.md`.
 
-## Checklist
+## Scope
 
-### Correctness
+1. Fetch the diff:
+   - If no argument, run `git diff --cached`.
+   - If a PR number, run `gh pr diff $1`.
+2. Identify the files changed and classify them:
+   - `src/server/api/routers/*` → apply the tRPC checklist
+   - `src/server/**/prisma*` or `prisma/schema.prisma` → apply the Prisma checklist
+   - `src/app/**/*.tsx` → apply the RSC/client boundary checklist
+   - `*.test.ts` → apply the testing checklist
 
-- Does the code do what it claims to do?
-- Are edge cases handled (null, undefined, empty arrays, zero-length strings)?
-- Are async operations properly awaited?
-- Are error paths handled — what happens when a dependency fails?
+## tRPC checklist
 
-### Type Safety
+- Every new procedure uses `protectedProcedure` or `workspaceProcedure` unless it is a public marketing query
+- Every mutation has Zod input validation
+- Every procedure that reads workspace-owned data filters by `workspaceId`
+- Error paths throw `TRPCError` with a specific code
+- The output is inferred — no `as` casts narrowing the return type
 
-- Are there any uses of `any` that should be narrowed?
-- Are function return types explicitly declared?
-- Are union types properly discriminated before access?
-- Could `readonly` be applied to immutable data structures?
+## Prisma checklist
 
-### Security
+- New fields are nullable OR have a default; no `NOT NULL` without default on existing tables
+- Every workspace-owned table has an index on `workspaceId`
+- No `$queryRawUnsafe` anywhere
+- Relations use `@relation(onDelete: ...)` explicitly
+- Migrations do not include destructive changes without a three-phase plan
 
-- Is user input validated before use (Zod schemas, bounds checks)?
-- Are SQL queries parameterized (no string interpolation in queries)?
-- Are secrets kept out of code and logs?
-- Are auth checks present on protected routes?
-- Is sensitive data excluded from API responses (passwords, tokens, internal IDs)?
+## RSC / client boundary checklist
 
-### Performance
+- `'use client'` is on the deepest component that actually needs it
+- Server-only imports (`~/server/*`, `~/lib/prisma`) are not reachable from a client component tree
+- No `async` Client Components
+- Server Components do not call `fetch('/api/trpc/...')` — use `createCaller()` instead
+- `useState`, `useEffect`, event handlers only in Client Components
 
-- Are there N+1 query patterns that should be batched?
-- Are large datasets paginated?
-- Are expensive computations cached where appropriate?
-- Could any synchronous file operations be replaced with async versions?
+## Testing checklist
 
-### Maintainability
+- New behavior has tests
+- Bug fixes have a regression test that fails on the old code
+- Test names read as sentences starting with "should"
+- Tests use `toEqual` over `toBe` for objects and arrays
 
-- Does naming clearly communicate intent?
-- Are functions small and single-purpose (under 30 lines preferred)?
-- Is there duplicated logic that should be extracted into a utility?
-- Are magic numbers replaced with named constants?
-- Is the code testable — are dependencies injectable?
+## Output
 
-## Output Format
+Produce a markdown report with findings grouped by severity:
 
-For each issue found, provide:
+- **🚨 Must fix** — security, data-loss, or broken behavior
+- **⚠️  Should fix** — convention violations, missing tests
+- **💡 Consider** — style, naming, future-proofing
 
-1. **Location**: File and line reference
-2. **Severity**: Critical / Warning / Suggestion
-3. **Issue**: What the problem is
-4. **Fix**: Concrete code change or approach to resolve it
-
-End with a summary: total issues by severity and an overall assessment (approve, request changes, or needs discussion).
+End with a one-line verdict: `APPROVE`, `REQUEST_CHANGES`, or `BLOCKED`.

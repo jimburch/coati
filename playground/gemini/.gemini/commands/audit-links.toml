@@ -1,0 +1,39 @@
+# /audit-links — Run the link checker and triage failures.
+
+description = "Build the site, run lychee against dist/, and triage broken links into actionable fixes."
+
+[arguments]
+scope = { required = false, description = "'all' (default), 'internal', or 'external'" }
+
+[prompt]
+template = """
+Run the link checker and produce a triage report.
+
+## Steps
+
+1. Build the site: `pnpm build` (generates dist/ and Pagefind index)
+2. Run lychee with the scope filter:
+   - `all` → `lychee dist`
+   - `internal` → `lychee --exclude-all-private dist` with `--offline`
+   - `external` → `lychee --exclude 'http://localhost' dist`
+3. Parse the report (`.lycheecache` + stdout).
+4. Group failures by type:
+   - **Dead external link** (404, 410) — propose a replacement via web search or remove
+   - **Redirected external link** (3xx to a different host) — update the URL
+   - **Slow external link** (timeout) — ignore unless repeated (flaky host)
+   - **Broken internal link** — find the renamed or deleted file, fix the reference
+   - **Anchor not found** — update the fragment to match a current heading
+5. For each failure, propose a concrete fix (file:line + old URL → new URL).
+
+## Do not
+
+- Do not silently remove content links — a 404 may mean the external resource moved, not that we should stop referring to it
+- Do not auto-apply fixes to external links without user approval
+"""
+
+[shell.pre]
+command = "pnpm build"
+timeout = 120000
+
+[shell.run]
+command = "lychee --config lychee.toml dist"

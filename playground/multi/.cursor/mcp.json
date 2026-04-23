@@ -2,11 +2,18 @@
 	"mcpServers": {
 		"filesystem": {
 			"command": "npx",
-			"args": ["-y", "@modelcontextprotocol/server-filesystem", "./src"]
+			"args": ["-y", "@modelcontextprotocol/server-filesystem", "./src/lib/components", "./src/routes"]
 		},
 		"fetch": {
 			"command": "npx",
 			"args": ["-y", "@modelcontextprotocol/server-fetch"]
+		},
+		"playwright": {
+			"command": "npx",
+			"args": ["-y", "@playwright/mcp@latest"],
+			"env": {
+				"PLAYWRIGHT_HEADLESS": "true"
+			}
 		}
 	}
 }

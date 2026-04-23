@@ -1,99 +1,36 @@
-# Extended Copilot Instructions — Code Generation
+# Ledger — Task-Level Copilot Instructions
 
-## Import Ordering
+These instructions layer on top of `../copilot-instructions.md`. The repo-wide
+file defines *what the project is*; this file defines *how to approach tasks*.
 
-Organize imports in this exact order, separated by blank lines:
+## Task hygiene
 
-1. Node built-in modules (`node:fs`, `node:path`, etc.)
-2. External packages (`express`, `zod`, `pino`)
-3. Internal aliases starting with `@/` (maps to `src/`)
-4. Relative imports (`./`, `../`)
+- Ask for the linked GitHub issue or Linear ticket before starting non-trivial work. If the user cannot point to one, offer to create one.
+- Start by stating the plan in 3–5 bullets and asking for confirmation. Do not begin editing until the user agrees.
+- Scope changes to the task — do not refactor adjacent code opportunistically.
+- Commits are small and atomic. One behavior change per commit.
 
-Within each group, sort alphabetically by module path.
+## File navigation
 
-## Naming Conventions
+- Use `grep` and `find` to locate call sites before editing a shared utility.
+- When adding a new tRPC procedure, search for an existing one in the same router for the template.
+- When adding a new Prisma model, search the schema for the closest analogue for naming and relation conventions.
 
-- **Files**: kebab-case (`user-service.ts`, `auth-middleware.ts`)
-- **Interfaces**: PascalCase, no `I` prefix (`User`, not `IUser`)
-- **Type aliases**: PascalCase (`CreateUserInput`, `PaginatedResponse<T>`)
-- **Functions**: camelCase, verb-first (`createUser`, `findOrderById`, `validateToken`)
-- **Constants**: UPPER_SNAKE_CASE for true constants (`MAX_RETRY_COUNT`, `DEFAULT_PAGE_SIZE`)
-- **Enums**: PascalCase name, PascalCase members (`enum Status { Active, Inactive }`)
-- **Route parameters**: camelCase in code, kebab-case in URLs (`/user-profiles/:userId`)
-- **Environment variables**: UPPER*SNAKE_CASE, prefixed with `APP*` (`APP_DATABASE_URL`)
+## Edits
 
-## Error Handling Patterns
+- Prefer the smallest diff that solves the problem.
+- Do not change imports that are unrelated to the change.
+- Do not reformat files you did not intend to edit.
+- Run `pnpm check` after every non-trivial edit and before declaring done.
 
-When generating error handling code, follow these patterns:
+## Tests
 
-```typescript
-// Custom errors extend AppError
-export class NotFoundError extends AppError {
-	constructor(resource: string, id: string) {
-		super(`${resource} with id ${id} not found`, 404, 'NOT_FOUND');
-	}
-}
+- Every bug fix needs a regression test that fails on the old code.
+- Every new tRPC procedure needs at least a happy-path test and an unauthorized-access test.
+- Run `pnpm test:unit` before declaring a task complete.
 
-// Service functions return Result types for expected failures
-type Result<T, E = AppError> = { ok: true; value: T } | { ok: false; error: E };
+## Pull requests
 
-// Use early returns for validation
-export function createUser(input: unknown): Result<User> {
-	const parsed = CreateUserSchema.safeParse(input);
-	if (!parsed.success) {
-		return { ok: false, error: new ValidationError(parsed.error) };
-	}
-	// ... proceed with valid data
-}
-```
-
-## Response Formatting
-
-All API responses use this envelope:
-
-```typescript
-// Success
-{ "data": T, "meta"?: { "page": number, "total": number } }
-
-// Error
-{ "error": { "message": string, "code": string, "details"?: unknown } }
-```
-
-Never return raw arrays or primitives at the top level.
-
-## Zod Schema Conventions
-
-- Name schemas with a `Schema` suffix: `CreateUserSchema`, `UpdateOrderSchema`
-- Derive TypeScript types from schemas: `type CreateUserInput = z.infer<typeof CreateUserSchema>`
-- Place schemas in `src/schemas/` alongside the feature they validate
-- Reuse base schemas with `.pick()`, `.omit()`, `.extend()` rather than duplicating fields
-
-## Function Documentation
-
-Add JSDoc comments to all exported functions. Include:
-
-- A one-line summary
-- `@param` for each parameter (with description)
-- `@returns` describing the return value
-- `@throws` if the function can throw
-
-```typescript
-/**
- * Finds a user by their unique identifier.
- *
- * @param userId - The UUID of the user to find
- * @returns The user object if found, or undefined
- * @throws DatabaseError if the query fails
- */
-export async function findUserById(userId: string): Promise<User | undefined> {
-	// ...
-}
-```
-
-## Test Generation Rules
-
-- Always import from `vitest`: `import { describe, it, expect, vi } from "vitest"`
-- Mock dependencies with `vi.mock()` at the top of the file
-- Use `beforeEach` to reset mocks via `vi.clearAllMocks()`
-- Test both success and failure paths for every function
-- For async functions, always use `async/await` in tests (not `.resolves`/`.rejects`)
+- PR title uses Conventional Commits: `feat(expenses): …`, `fix(reports): …`
+- PR body explains the *why* in one paragraph, then the *what* as a bulleted list of notable changes.
+- Link the issue in the body: `Closes #123`.

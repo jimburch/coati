@@ -1,24 +1,30 @@
-# Code Review
+# /review — Review staged changes against Atlas conventions
 
-Review the selected code for quality, correctness, and adherence to project conventions.
+## Steps
 
-## Checklist
+1. `git diff --cached` and list the files changed.
+2. For each changed file, route to the matching rule set:
+   - `src/components/**/*.tsx` → `react-components.mdc`
+   - `src/**/*.stories.tsx` → `storybook.mdc`
+   - `src/**/*.test.tsx` → `testing.mdc`
+   - `src/lib/cva.ts` or any component with variants → `tailwind.mdc`
+   - Any interactive component → `accessibility.mdc`
+3. Check for new component files without:
+   - A `.stories.tsx` sibling (block)
+   - A `.test.tsx` sibling (block)
+   - An entry in `src/index.ts` (block)
+4. Run `pnpm lint` and `pnpm check` and report any new errors.
+5. Run `pnpm test:unit --run` for the changed test files. Report failures.
 
-1. **Type Safety** — Are there any uses of `any`, unsafe type assertions, or missing null checks?
-2. **Error Handling** — Are errors caught, logged, and returned in the standard `{ error, code }` format?
-3. **Input Validation** — Is all external input (request body, params, query) validated with Zod?
-4. **Naming** — Are variables, functions, and types named clearly and consistently?
-5. **Complexity** — Are functions under 30 lines? Should any logic be extracted into helpers?
-6. **Security** — Are there SQL injection risks, exposed secrets, or missing auth checks?
-7. **Tests** — Are there corresponding tests? Do they cover error paths and edge cases?
+## Output
 
-## Output Format
+Group findings by severity:
 
-For each issue found, provide:
+- **🚨 Must fix** — violations of mandatory rules (missing story, missing a11y, type errors)
+- **⚠️  Should fix** — convention violations (variant naming, CVA usage)
+- **💡 Consider** — suggestions (extract subcomponent, add edge-case story)
 
-- **File and line**: where the issue is
-- **Severity**: critical / warning / suggestion
-- **Description**: what the problem is
-- **Fix**: concrete code change to resolve it
+Finish with a Chromatic reminder if any `.stories.tsx` file changed:
+> `📸 Story changes detected — run \`pnpm chromatic\` and review the diff before merging.`
 
-If the code looks good, say so and note any minor improvements that could be made.
+Verdict: `APPROVE`, `REQUEST_CHANGES`, or `BLOCKED`.

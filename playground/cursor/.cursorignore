@@ -1,30 +1,39 @@
+# Files Cursor should never read or include in prompts.
+# These are separate from .gitignore — they exclude from AI context only.
+
 # Dependencies
 node_modules/
+.pnpm-store/
 
-# Build output
+# Build artifacts
 dist/
 build/
+coverage/
+storybook-static/
+.turbo/
+.vite/
 
-# Environment and secrets
+# Generated files
+src/**/*.generated.ts
+src/**/*.generated.tsx
+
+# Secrets
 .env
 .env.*
 !.env.example
+**/*.pem
+**/*.key
 
-# Coverage reports
-coverage/
+# Large test fixtures and snapshots
+**/__fixtures__/
+**/__snapshots__/
 
-# IDE and OS
-.DS_Store
-*.swp
-*.swo
+# Package manager state
+pnpm-lock.yaml
+package-lock.json
 
-# Logs
+# Logs and temp
 *.log
-logs/
-
-# Credentials and keys
-*.pem
-*.key
-*.cert
-credentials.json
-service-account.json
+.DS_Store
+.idea/
+.vscode/

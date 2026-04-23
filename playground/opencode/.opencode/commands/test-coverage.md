@@ -1,60 +1,40 @@
 ---
-description: Run tests with coverage and analyze gaps
-arguments:
-  - name: target
-    description: Specific file or directory to test (defaults to entire project)
-    required: false
+description: Identify test gaps in the diff and propose tests to add
 ---
 
-# Test Coverage Analysis
+# /test-coverage
 
-Run the test suite with coverage enabled, then analyze the results to identify
-gaps and suggest improvements.
+Find source files changed in the current branch without matching tests.
 
 ## Steps
 
-1. **Run tests with coverage.** Execute the following command:
-
+1. List changed TS/Vue files:
    ```
-   npx vitest run --coverage $ARGUMENTS
+   git diff --name-only origin/main...HEAD -- 'app/**/*.{ts,vue}'
    ```
+2. For each:
+   - Check for a colocated `*.test.ts` or `*.test.vue`
+   - If missing, mark as uncovered
+   - If present, parse which exported names appear in the test file
+3. Run coverage only on changed files:
+   ```
+   pnpm exec vitest run --coverage --changed
+   ```
+4. Check that every new `defineProps` field has at least one test asserting
+   behavior when it's set to a non-default value.
+5. Check that every new Pinia action is exercised in the store test.
+6. For new composables, verify at least:
+   - Initial state test
+   - One test per exposed function
+   - Async composables: pending/error transitions
 
-   If no arguments are provided, run coverage for the entire project.
+## Output
 
-2. **Parse the coverage output.** Look at the summary table and identify:
-   - Files with less than 80% line coverage
-   - Files with less than 70% branch coverage
-   - Any files with 0% coverage (completely untested)
+```
+File                                  State     Missing
+app/stores/sites.ts                   ⚠ Partial  select() action untested
+app/composables/useDateRange.ts       ✗ Uncovered  no test file
+app/components/SiteCard.vue           ✓ Covered   —
+```
 
-3. **Read the uncovered files.** For each file below the threshold, read the
-   source code and identify which functions or branches lack tests.
-
-4. **Produce a report** with the following sections:
-
-### Coverage Summary
-
-A brief table showing overall line, branch, and function coverage percentages.
-
-### Gaps
-
-For each under-covered file, list:
-
-- The file path and current coverage percentage
-- The specific functions or branches that are untested
-- Why they matter (e.g., "this handles the error path for invalid input")
-
-### Suggested Tests
-
-For each gap, write a concrete test description (the `it("...")` string) that
-would cover it. Group by file. Example:
-
-- `src/services/taskService.ts` (62% lines)
-  - `it("throws ValidationError when title exceeds 200 characters")`
-  - `it("returns empty array when no tasks match the filter")`
-
-### Quick Wins
-
-Highlight any files where a single additional test would meaningfully improve
-coverage (e.g., testing an error branch bumps a file from 70% to 95%).
-
-Do not write the actual test code unless asked — just provide the analysis.
+Offer to generate missing tests. Do not write them automatically.

@@ -1,81 +1,128 @@
-# opencode.md — My TypeScript App
+# opencode.md — Kite Analytics
 
 ## Project Overview
 
-A lightweight Express REST API built with TypeScript. The app serves as a task
-management backend with CRUD endpoints, input validation, and structured error
-handling. Designed for deployment behind a reverse proxy (Caddy or nginx).
+Kite is a privacy-first web analytics dashboard. The app is a Nuxt 3 SPA that
+connects to a separate self-hosted Kite backend API (not in this repo). It
+ships as static assets behind any CDN and is fully client-rendered once loaded.
+
+Users include website owners viewing their own traffic and team admins
+managing permissions across sites.
 
 ## Tech Stack
 
-- **Runtime:** Node.js 22+ (ESM)
-- **Language:** TypeScript 5.5+ (strict mode)
-- **Framework:** Express 4.x
-- **Testing:** Vitest
-- **Linting:** ESLint 9 (flat config)
+- **Framework:** Nuxt 3 (SPA mode — `ssr: false`)
+- **UI:** Vue 3 + `<script setup>` with the Composition API
+- **Language:** TypeScript 5.6+ (strict)
+- **State:** Pinia with `setup` store syntax
+- **Data fetching:** `$fetch` from `ofetch` (Nuxt's built-in) with a typed API client wrapper
+- **Styling:** UnoCSS (Tailwind-compatible with smaller output)
+- **Charts:** `@unovis/vue` (lightweight, no d3)
+- **Testing:** Vitest + `@vue/test-utils`, Playwright for e2e
+- **Package manager:** pnpm
 
-## Architecture
+## Project Structure
 
 ```
-src/
-  index.ts          # Server bootstrap and graceful shutdown
-  app.ts            # Express app factory (no side effects)
-  routes/           # Route handlers grouped by resource
-    tasks.ts
-    health.ts
-  middleware/        # Custom middleware (auth, error handler, validation)
-    errorHandler.ts
-    validate.ts
-  services/         # Business logic, decoupled from HTTP layer
-    taskService.ts
-  types/            # Shared TypeScript types and interfaces
-    index.ts
-  utils/            # Pure helper functions
-    logger.ts
+app/
+├── app.vue                        # Root component
+├── components/
+│   ├── ui/                        # Reusable UI primitives
+│   │   ├── KButton.vue
+│   │   ├── KInput.vue
+│   │   └── …
+│   ├── charts/
+│   │   ├── TimeseriesChart.vue
+│   │   └── BreakdownBar.vue
+│   └── sites/
+│       ├── SiteList.vue
+│       └── SiteCard.vue
+├── composables/
+│   ├── useAuth.ts
+│   ├── useApiClient.ts
+│   ├── useQueryParams.ts
+│   └── useDateRange.ts
+├── layouts/
+│   ├── default.vue
+│   └── auth.vue
+├── middleware/
+│   ├── auth.global.ts            # Redirect unauthenticated to /login
+│   └── workspace.ts              # Ensure :workspaceId param matches a joined workspace
+├── pages/
+│   ├── index.vue                  # Marketing redirect
+│   ├── login.vue
+│   ├── dashboard/
+│   │   ├── index.vue
+│   │   └── [workspaceId]/
+│   │       ├── index.vue
+│   │       ├── sites/
+│   │       │   ├── index.vue
+│   │       │   └── [siteId].vue
+│   │       └── settings.vue
+│   └── accept-invite/[token].vue
+├── stores/
+│   ├── auth.ts
+│   ├── workspace.ts
+│   └── sites.ts
+└── utils/
+    ├── format.ts
+    └── api.ts
 ```
 
 ## Coding Conventions
 
-- Use `const` by default; use `let` only when reassignment is required.
-- Prefer named exports over default exports.
-- All functions must have explicit return types — no inferred returns on exports.
-- Use `interface` for object shapes, `type` for unions and intersections.
-- Error responses follow the shape `{ error: string; code: string }`.
-- Success responses follow the shape `{ data: T }`.
-- No classes unless modeling stateful resources; prefer plain functions.
-- Keep files under 150 lines. If a file grows beyond that, split it.
+- `<script setup lang="ts">` for every component; never Options API
+- Import order: Vue/Nuxt → composables → components → utils → types
+- Use `<script>` macros without wrapping: `const { $fetch } = useNuxtApp()`
+- Naming:
+  - Components: PascalCase, prefixed with `K` for UI primitives (e.g., `KButton.vue`)
+  - Composables: `useXxx` in `app/composables/`
+  - Pinia stores: camelCase setup stores (`useAuthStore`)
+  - Utils: camelCase functions in `app/utils/` auto-imported by Nuxt
+- `const` by default; never `var`
+- Explicit types on function signatures; rely on inference for locals
+- Use `ref()` for primitives, `reactive()` for objects, `computed()` for derivations
+- One component per file; filename matches the default export (SFC)
 
-## Testing Patterns
+## Data fetching
 
-- Test files live next to the source file: `taskService.ts` -> `taskService.test.ts`.
-- Use `describe` / `it` blocks. Name tests as sentences: `it("returns 404 when task not found")`.
-- Prefer integration tests for route handlers (use `supertest`).
-- Prefer unit tests for services and utilities.
-- Mock external dependencies at the module boundary, not deep internals.
-- Every bug fix must include a regression test.
+- Use `useFetch` for page-level SSR-safe fetches (though SSR is off, it dedupes)
+- Use the typed API client (`useApiClient()`) for mutations and imperative calls
+- Never call `fetch()` directly — go through the client for error formatting + auth headers
+- Treat the API as the source of truth; don't mirror its state in Pinia unless you need optimistic UI
 
-## Shell Commands
+## State
 
-These commands are safe to run at any time:
+- Pinia for shared state that crosses routes (`authStore`, `workspaceStore`)
+- Component-local state stays in the component via `ref`/`reactive`
+- Derived state via `computed` — never store it in Pinia
+- Persisted state (e.g., `selectedDateRange`) uses `@pinia-plugin-persistedstate/nuxt`
 
-- `npm run build` — compile TypeScript
-- `npm run test` — run full test suite
-- `npm run lint` — check for lint errors
-- `npx vitest run src/services/` — run tests for a specific directory
+## Routing
+
+- File-based. Dynamic segments with `[param]`, catch-alls with `[...slug]`
+- Every authenticated page depends on `auth.global.ts`
+- Workspace-scoped pages add `definePageMeta({ middleware: 'workspace' })`
+
+## Testing
+
+- Unit tests for composables and pure functions colocate with source: `format.ts` → `format.test.ts`
+- Component tests use `@vue/test-utils` + `@testing-library/vue` for user-centric assertions
+- E2E tests in `e2e/` run against a mocked API via `msw`
+- Every bug fix includes a regression test
 
 ## Do
 
-- Validate all request inputs at the route handler level.
-- Return early from functions when preconditions fail.
-- Use `unknown` instead of `any` when the type is genuinely unknown.
-- Write JSDoc comments on public service functions.
-- Handle promise rejections — never leave a floating promise.
+- Run `pnpm typecheck && pnpm lint && pnpm test` before declaring a task done
+- Prefer `v-model` for two-way binding over manual `:value` + `@update`
+- Use `<slot>` over prop-driven rendering when the consumer should control content
+- Use `definePageMeta` for layout selection, middleware, transition names
 
 ## Don't
 
-- Don't use `any` — use `unknown` and narrow with type guards.
-- Don't import from `node:*` without the `node:` prefix.
-- Don't mutate function arguments.
-- Don't use synchronous filesystem calls in request handlers.
-- Don't add new dependencies without discussing the trade-off first.
-- Don't commit `.env` files or secrets of any kind.
+- Don't use the Options API
+- Don't import from `vue-demi` — Vue 3 is the baseline
+- Don't install Vuex (use Pinia)
+- Don't install Nuxt modules without checking the open issues page — the ecosystem is volatile
+- Don't use `localStorage` directly for auth — use the httpOnly cookie pattern (auth store handles it)
+- Don't commit `.env` files; `.env.example` is the template

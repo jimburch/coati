@@ -1,51 +1,87 @@
 {
-	"github.copilot.chat.codeGeneration.instructions": [
-		{
-			"file": ".github/copilot-instructions.md"
-		},
-		{
-			"file": ".github/copilot/instructions.md"
-		}
-	],
-	"github.copilot.chat.testGeneration.instructions": [
-		{
-			"file": ".github/copilot/prompts/test-generation.md"
-		}
-	],
-	"github.copilot.chat.reviewSelection.instructions": [
-		{
-			"file": ".github/copilot/prompts/review.md"
-		}
-	],
+	"$schema": "https://json.schemastore.org/vscode-settings.json",
+
+	// ---------------------------------------------------------------------
+	// Copilot
+	// ---------------------------------------------------------------------
 	"github.copilot.enable": {
 		"*": true,
-		"plaintext": false,
 		"markdown": true,
-		"yaml": true
+		"plaintext": false,
+		"yaml": true,
+		"env": false,
+		"dotenv": false
 	},
+	"github.copilot.chat.agent.enabled": true,
+	"github.copilot.chat.codeGeneration.useInstructionFiles": true,
+	"github.copilot.chat.codeGeneration.instructions": [
+		{ "file": ".github/copilot-instructions.md" },
+		{ "file": ".github/copilot/instructions.md" }
+	],
+	"github.copilot.chat.reviewSelection.enabled": true,
+	"github.copilot.chat.reviewSelection.instructions": [
+		{ "file": ".github/copilot/prompts/review.md" }
+	],
+	"github.copilot.chat.testGeneration.instructions": [
+		{ "file": ".github/copilot/prompts/test-generation.md" }
+	],
+	"github.copilot.chat.commitMessageGeneration.instructions": [
+		{
+			"text": "Use Conventional Commits. Scope matches the affected router or page group. Keep the subject under 60 chars. Body explains the why, not the what."
+		}
+	],
+	"github.copilot.chat.pullRequestDescriptionGeneration.instructions": [
+		{
+			"text": "Start with a one-paragraph why. Follow with a bulleted list of notable changes. Link the issue with 'Closes #N'. Include a `## Test plan` section."
+		}
+	],
+	"github.copilot.advanced": {
+		"inlineSuggestCount": 3,
+		"listCount": 5
+	},
+
+	// Preferred model for chat (Copilot reads this if the user hasn't overridden)
+	"github.copilot.chat.preferredModel": "claude-3-5-sonnet",
+
+	// ---------------------------------------------------------------------
+	// TypeScript
+	// ---------------------------------------------------------------------
+	"typescript.tsdk": "node_modules/typescript/lib",
+	"typescript.preferences.importModuleSpecifier": "non-relative",
+	"typescript.enablePromptUseWorkspaceTsdk": true,
+	"typescript.updateImportsOnFileMove.enabled": "always",
+
+	// ---------------------------------------------------------------------
+	// Formatter
+	// ---------------------------------------------------------------------
 	"editor.defaultFormatter": "esbenp.prettier-vscode",
 	"editor.formatOnSave": true,
-	"editor.tabSize": 2,
-	"typescript.preferences.importModuleSpecifier": "non-relative",
-	"typescript.tsdk": "node_modules/typescript/lib",
-	"[typescript]": {
-		"editor.defaultFormatter": "esbenp.prettier-vscode",
-		"editor.codeActionsOnSave": {
-			"source.organizeImports": "explicit"
-		}
+	"editor.codeActionsOnSave": {
+		"source.fixAll.eslint": "explicit",
+		"source.organizeImports": "explicit"
 	},
-	"[json]": {
-		"editor.defaultFormatter": "esbenp.prettier-vscode"
-	},
+
+	// ---------------------------------------------------------------------
+	// File exclusions — Copilot, search, and explorer all use these
+	// ---------------------------------------------------------------------
 	"files.exclude": {
-		"node_modules": true,
-		"dist": true,
-		"coverage": true
+		"**/node_modules": true,
+		".next": true,
+		"dist": true
 	},
 	"search.exclude": {
-		"node_modules": true,
+		"**/node_modules": true,
+		".next": true,
 		"dist": true,
-		"coverage": true,
-		"*.lock": true
-	}
+		"pnpm-lock.yaml": true,
+		"**/*.generated.ts": true
+	},
+	// Never let Copilot read these — secrets/token leaks
+	"github.copilot.chat.exclude": [
+		".env",
+		".env.*",
+		"**/*.pem",
+		"**/*.key",
+		"scripts/backfill/**"
+	]
 }

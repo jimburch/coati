@@ -1,0 +1,106 @@
+---
+description: Svelte 5 runes patterns for Compose components.
+globs:
+  - "src/lib/components/**/*.svelte"
+  - "src/routes/**/+page.svelte"
+  - "src/routes/**/+layout.svelte"
+alwaysApply: false
+---
+
+# Svelte 5 Runes
+
+Compose is on Svelte 5. Use runes exclusively — no legacy reactive statements
+(`$:`), no legacy `export let` props, no old-style stores.
+
+## Props
+
+```svelte
+<script lang="ts">
+  import type { Note } from '$lib/types';
+
+  interface Props {
+    note: Note;
+    showAuthor?: boolean;
+    onarchive?: (id: string) => void;
+  }
+
+  let { note, showAuthor = false, onarchive }: Props = $props();
+</script>
+```
+
+- Props come from `$props()` and are typed via an explicit `Props` interface.
+- Default values go in the destructure, not as `defineProps` defaults.
+- Callback props use the `on<event>` name pattern (e.g., `onarchive`, not `onArchive`).
+
+## State
+
+```svelte
+<script lang="ts">
+  let count = $state(0);
+  let items = $state<string[]>([]);
+  let user = $state<{ name: string; role: 'admin' | 'member' } | null>(null);
+</script>
+```
+
+- Primitives: `$state(value)` creates a reactive cell.
+- Collections: `$state([])` or `$state({})` — mutations in-place are tracked.
+- Re-assignment is also tracked.
+
+## Derived values
+
+```svelte
+<script lang="ts">
+  let notes = $state<Note[]>([]);
+  let archived = $derived(notes.filter((n) => n.archivedAt !== null));
+  let unarchived = $derived(notes.filter((n) => n.archivedAt === null));
+</script>
+```
+
+- `$derived(expr)` recomputes when any reactive dep inside `expr` changes.
+- Never assign to a `$derived` — it's read-only.
+- Never reach outside runes to trigger updates; the compiler tracks deps automatically.
+
+## Effects
+
+```svelte
+<script lang="ts">
+  let count = $state(0);
+
+  $effect(() => {
+    document.title = `Count: ${count}`;
+  });
+
+  $effect(() => {
+    const id = setInterval(() => { count++; }, 1000);
+    return () => clearInterval(id);
+  });
+</script>
+```
+
+- Use `$effect` only for side effects (DOM APIs, timers, external subscriptions)
+- Return a cleanup function for anything that allocates
+- Never use `$effect` to derive state — use `$derived`
+
+## Binding
+
+Two-way with `bind:`:
+
+```svelte
+<input bind:value={name} />
+<input type="checkbox" bind:checked={agreed} />
+```
+
+For custom components, declare a writable prop with `bindable`:
+
+```svelte
+<script lang="ts">
+  let { value = $bindable(''), onchange }: { value?: string; onchange?: (v: string) => void } = $props();
+</script>
+```
+
+## Don't
+
+- Don't use `$:` reactive statements — Svelte 5 still parses them but they're deprecated and don't compose with runes
+- Don't use `export let` — use `$props()`
+- Don't use `writable()` / `readable()` / `derived()` from `svelte/store` — use runes
+- Don't mix Options-style component definitions with `<script setup>` — Svelte has no such concept, just use the rune API

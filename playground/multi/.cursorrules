@@ -1,42 +1,41 @@
-# Project Coding Conventions (LEGACY)
+# Compose — Cursor Coding Conventions (LEGACY FALLBACK)
 #
-# NOTE: This is the legacy .cursorrules format. Prefer using .cursor/rules/*.mdc
-# files for new rules. This file is kept for backward compatibility.
+# This file is kept for older Cursor versions. Newer versions read the scoped
+# rules in .cursor/rules/*.mdc. If those load, this file is ignored.
+
+## Your lane
+
+You (Cursor) own the frontend of this SvelteKit app: components, page markup,
+styles. You do NOT edit files under `src/lib/server/`, `+page.server.ts`,
+`+server.ts`, or `hooks.server.ts`. Those are Claude Code's territory.
+
+If a task requires backend changes, stop and say so — don't edit the server
+files. A human will route the work to Claude.
 
 ## General
 
-- Use TypeScript strict mode in all files
-- Prefer `const` over `let`; never use `var`
-- Use named exports over default exports
-- Keep functions under 30 lines; extract helpers when complexity grows
-- Write JSDoc comments for all public functions and interfaces
+- Svelte 5 with runes (`$state`, `$derived`, `$effect`)
+- TypeScript strict mode
+- Tailwind utilities only — no scoped `<style>` blocks unless unavoidable
+- shadcn-svelte primitives live under `src/lib/components/ui/` (do not edit)
 
-## TypeScript
+## Component rules
 
-- Enable strict null checks — handle `null` and `undefined` explicitly
-- Use `unknown` instead of `any` for untyped external data
-- Prefer interfaces for object shapes; use type aliases for unions and intersections
-- Use discriminated unions for state modeling (e.g., Result<T, E>)
-- Derive types from schemas (Zod infer) rather than duplicating definitions
+- One component per file, filename PascalCase matching the default export
+- Props typed via an explicit `interface Props` in `<script lang="ts">`
+- Accept `class` (Svelte's `class={...}`) and merge via the `cn()` helper
+- Use slots for composition; props for configuration
+- Forward DOM events with `on:click={onclick}` pattern so consumers can bind
 
-## Express
+## Styling
 
-- All route handlers must be async and wrapped in error-catching middleware
-- Return consistent JSON responses: `{ data: T }` on success, `{ error: string, code: string }` on failure
-- Use `express.Router()` to group related routes
-- Validate request bodies with Zod before processing
-- Never trust `req.params` or `req.query` — parse and validate everything
-- Set appropriate HTTP status codes (201 for creation, 204 for deletion)
+- Reach for design tokens (`bg-background`, `text-muted-foreground`) — avoid raw colors
+- 4px spacing scale; no arbitrary values like `p-[7px]`
+- Dark mode via class-based toggle — don't scatter `dark:` variants
 
-## File Organization
+## Don't
 
-- Group by feature, not by type (e.g., `src/users/` not `src/controllers/`)
-- Colocate tests with source files: `foo.ts` and `foo.test.ts` in same directory
-- Keep shared utilities in `src/lib/`
-- One export per file for large modules; barrel exports for small utilities
-
-## Error Handling
-
-- Use custom error classes extending a base `AppError`
-- Log errors with structured data (no plain string concatenation)
-- Never swallow errors silently — always log or rethrow
+- Don't edit files listed in CLAUDE.md's "Claude's lane" section
+- Don't install UI libraries — shadcn-svelte is the only one
+- Don't style with inline `style={…}` except animation transforms
+- Don't reach for a state manager — Svelte 5 runes are enough

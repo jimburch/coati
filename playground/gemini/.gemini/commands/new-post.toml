@@ -1,0 +1,54 @@
+# /new-post — Scaffold a new blog post.
+
+description = "Scaffold a new Beacon blog post with schema-valid frontmatter and SEO-aware scaffolding."
+
+[arguments]
+slug = { required = true, description = "Kebab-case slug; date will be prefixed automatically" }
+title = { required = true, description = "Post title (displayed as H1)" }
+author = { required = false, description = "Author slug (matches src/content/authors/)" }
+
+[prompt]
+template = """
+Create a new blog post at `src/content/blog/{{now:date}}-{{args.slug}}.mdx`.
+
+## Frontmatter
+
+```yaml
+---
+title: "{{args.title}}"
+description: "<ask user for a 1-sentence SEO-friendly description, ≤ 160 chars>"
+author: {{args.author | default: 'beacon-team'}}
+publishDate: {{now:iso-date}}
+tags: <ask user for 2-4 kebab-case tags>
+heroImage: <ask user — path relative to src/assets/blog/, or null>
+draft: true
+---
+```
+
+## Body structure
+
+Structure for skimmability (blog readers scan more than they read):
+
+1. Lede — a 2-sentence hook. Answer the "so what?" immediately.
+2. TL;DR — optional 3-bullet summary for readers in a hurry.
+3. Main body — H2 sections with tight paragraphs (≤ 4 sentences each).
+4. Code examples where helpful — real, runnable, not pseudocode.
+5. Conclusion — 1 paragraph. What the reader now knows, what they should try next.
+
+## SEO
+
+Follow `.gemini/skills/content-seo/SKILL.md`:
+- Title: ≤ 60 chars, keyword-led
+- Description: ≤ 160 chars, contains the primary keyword naturally
+- First paragraph restates the primary keyword without repeating the title
+- Hero image has descriptive alt text (not "image" or "photo")
+
+## Post-creation
+
+1. Run `pnpm astro check` to validate frontmatter.
+2. If `heroImage` was provided, verify the file exists under `src/assets/blog/`.
+3. Offer to run `/optimize-images` if the hero image is > 500KB.
+"""
+
+[shell.post]
+command = "pnpm astro check"

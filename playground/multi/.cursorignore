@@ -1,30 +1,34 @@
-# Dependencies
+# Cursor should not read these files.
+# Some of these are Claude's lane — keeping them out of context prevents
+# Cursor from accidentally "helping" with backend code it shouldn't touch.
+
+# Claude's lane (keep out of Cursor's context)
+src/lib/server/
+src/hooks.server.ts
+**/+page.server.ts
+**/+server.ts
+src/routes/auth/
+drizzle.config.ts
+
+# Dependencies and build output
 node_modules/
-
-# Build output
-dist/
+.svelte-kit/
 build/
+.turbo/
 
-# Environment and secrets
+# Environment
 .env
 .env.*
 !.env.example
 
-# Coverage reports
-coverage/
+# Lockfiles
+pnpm-lock.yaml
 
-# IDE and OS
-.DS_Store
-*.swp
-*.swo
+# Test artifacts
+playwright-report/
+test-results/
+coverage/
 
 # Logs
 *.log
-logs/
-
-# Credentials and keys
-*.pem
-*.key
-*.cert
-credentials.json
-service-account.json
+.DS_Store

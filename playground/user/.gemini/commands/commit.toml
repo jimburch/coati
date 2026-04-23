@@ -1,0 +1,41 @@
+# /commit — Global Conventional Commits workflow.
+# Mirrors the Claude Code /commit command so the two agents behave identically.
+
+description = "Create a Conventional Commits commit with a thoughtful message."
+
+[arguments]
+scope = { required = false, description = "Optional scope to include in the commit header" }
+
+[prompt]
+template = """
+Create a single, well-formed commit from staged changes.
+
+## Steps
+
+1. Run `git status` and `git diff --cached`. If nothing is staged:
+   - List unstaged changes via `git diff`
+   - Ask the user which files to stage
+2. Run `git log --oneline -10` to match this repo's commit style
+3. Analyze the diff and identify the primary change
+4. Draft:
+   - Subject: `<type>(<scope>): <imperative summary>` — ≤ 60 chars
+     ({{args.scope | default: '<infer from paths>'}})
+   - Blank line
+   - Body: one paragraph on WHY
+   - Issue ref if applicable: `Closes #N`
+5. Show the user the full draft and wait for approval
+6. On approval, commit using a HEREDOC to preserve formatting
+7. Run `git status` to confirm
+
+## Rules
+
+- Never commit without showing the message first
+- Never use `--amend` or `--no-verify` unless the user asks
+- If pre-commit hooks fail, stop — don't retry with `--no-verify`
+- If the diff contains multiple unrelated changes, refuse and ask the user to split
+- Warn if any staged file looks like it contains secrets
+- Do NOT add a generated-by trailer
+"""
+
+[shell.allow]
+patterns = ["git status", "git diff*", "git log*", "git commit*", "git add *"]

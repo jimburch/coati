@@ -1,16 +1,46 @@
 {
-	"model": "gemini-2.5-pro",
-	"theme": "Default",
-	"preferences": {
-		"verboseResponses": false,
-		"showTokenCounts": false,
-		"autoApprove": false
+	"$schema": "https://gemini-cli.dev/schemas/settings.json",
+	"model": {
+		"default": "gemini-2.5-pro",
+		"fast": "gemini-2.5-flash",
+		"temperature": 0.2,
+		"maxOutputTokens": 8192
 	},
-	"sandbox": {
-		"enabled": true
+	"context": {
+		"// include": "Project-level rules still apply — this is just the global layer",
+		"include": [
+			"~/.gemini/GEMINI.md"
+		]
 	},
-	"contextWindow": {
-		"includeWorkingDirectory": true,
-		"maxFiles": 50
+	"defaults": {
+		"style": "concise",
+		"showReasoning": false,
+		"requireConfirmation": "on-destructive"
+	},
+	"tools": {
+		"shell": { "enabled": true, "confirmUnknownCommands": true },
+		"read": { "enabled": true },
+		"write": { "enabled": true, "confirmBeforeWrite": true }
+	},
+	"telemetry": {
+		"enabled": false
+	},
+	"safety": {
+		"denyReadGlobs": [
+			".env",
+			".env.*",
+			"~/.ssh/**",
+			"~/.aws/**",
+			"~/.config/gh/**",
+			"**/*.pem",
+			"**/*.key"
+		],
+		"denyShellPatterns": [
+			"rm -rf *",
+			"git push --force*",
+			"sudo *",
+			"curl * | sh",
+			"curl * | bash"
+		]
 	}
 }

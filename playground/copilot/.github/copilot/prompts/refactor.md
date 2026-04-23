@@ -1,58 +1,43 @@
-# Refactor
+# /refactor — Extract a tRPC procedure from inline code
 
-Refactor the provided code to improve clarity, reduce duplication, and align with the project's conventions. Preserve all existing behavior — this is a pure refactor with no feature changes.
+Use this prompt when code in a Server Component or Route Handler should be
+moved into a reusable tRPC procedure.
 
-## Goals
+## Inputs
 
-1. **Extract duplicated logic** into shared utility functions
-2. **Simplify complex conditionals** using early returns and guard clauses
-3. **Break large functions** into smaller, focused functions (target: under 25 lines each)
-4. **Improve naming** so that variables, functions, and types clearly express intent
-5. **Strengthen types** — eliminate `any`, narrow unions, add `readonly` where appropriate
+- The source file where the logic currently lives
+- The target router (e.g., `expenses`, `reports`, or a new router)
+- The desired procedure name (e.g., `listPending`)
 
-## Process
+## Steps
 
-### Step 1 — Identify Issues
+1. Read the source file and isolate the block to extract. Identify:
+   - Inputs (what does the caller pass in?)
+   - Authorization requirements (authenticated? workspace-scoped? admin?)
+   - Return shape
+2. Open the target router under `src/server/api/routers/`. If it does not
+   exist, create it and register it in `src/server/api/root.ts`.
+3. Scaffold the new procedure:
+   - Use `protectedProcedure` for authenticated-only
+   - Use `workspaceProcedure` for workspace-scoped (most common)
+   - Define `.input(z.object({...}))` even if no inputs today (empty object)
+   - Add `.query` or `.mutation` based on semantics
+4. Move the logic into the procedure. Replace Prisma access with the
+   `ctx.prisma` client. Replace session reads with `ctx.session.user.id`.
+5. Rewrite the caller to use the appropriate invocation:
+   - Server Component → `createCaller(await createContext()).expenses.listPending(…)`
+   - Client Component → `api.expenses.listPending.useQuery(…)`
+6. Remove the inlined logic from the caller. Do not leave dead imports.
+7. Add a test file at `src/server/api/routers/<router>.test.ts` covering
+   the new procedure: happy path + unauthorized access + invalid input.
+8. Run `pnpm check && pnpm lint && pnpm test:unit`. Iterate until clean.
 
-List each refactoring opportunity with:
+## Output
 
-- What the current code does
-- Why it's a problem (readability, duplication, fragility)
-- What the improved version looks like
+A commit-ready diff with:
+- The new procedure
+- The updated caller
+- The new test file
+- An updated `src/server/api/root.ts` if a new router was created
 
-### Step 2 — Plan Changes
-
-Describe the changes in order. Call out:
-
-- New functions or types being introduced
-- Functions being renamed or moved
-- Any changes to the public API (there should ideally be none)
-
-### Step 3 — Apply Refactoring
-
-Produce the refactored code in full. Do not leave `// ...` placeholders — output complete, runnable files.
-
-## Rules
-
-- Do NOT change behavior. If a function currently returns `null` on failure, keep that contract.
-- Do NOT add new dependencies or libraries.
-- Do NOT change the function signatures of exported functions (internal helpers can change freely).
-- Do NOT combine refactoring with bug fixes — flag bugs separately.
-- Preserve all existing test coverage. If tests reference internal helpers that changed, update the tests too.
-
-## Patterns to Apply
-
-- Replace `if/else` chains with early returns
-- Replace `switch` statements with lookup objects where appropriate
-- Extract inline callbacks into named functions
-- Convert repeated `try/catch` blocks into a shared error-handling wrapper
-- Use `Array.map`/`filter`/`reduce` over imperative loops when the transform is simple
-- Prefer `const` assertions for literal objects used as configuration
-
-## Output Format
-
-Provide:
-
-1. A summary of all changes made (bulleted list)
-2. The complete refactored file(s)
-3. Notes on any bugs or design concerns discovered during the refactor (but not fixed)
+Do not bundle unrelated cleanups.

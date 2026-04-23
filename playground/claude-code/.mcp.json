@@ -4,13 +4,23 @@
 			"command": "npx",
 			"args": ["-y", "@modelcontextprotocol/server-filesystem", "./src"]
 		},
-		"fetch": {
+		"postgres": {
 			"command": "npx",
-			"args": ["-y", "@modelcontextprotocol/server-fetch"]
+			"args": ["-y", "@modelcontextprotocol/server-postgres", "${DATABASE_URL}"]
 		},
-		"sqlite": {
+		"playwright": {
 			"command": "npx",
-			"args": ["-y", "@modelcontextprotocol/server-sqlite", "./data/app.db"]
+			"args": ["-y", "@playwright/mcp@latest"],
+			"env": {
+				"PLAYWRIGHT_HEADLESS": "true"
+			}
+		},
+		"github": {
+			"command": "npx",
+			"args": ["-y", "@modelcontextprotocol/server-github"],
+			"env": {
+				"GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+			}
 		}
 	}
 }

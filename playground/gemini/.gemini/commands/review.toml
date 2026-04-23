@@ -1,44 +1,56 @@
-[command]
-name = "review"
-description = "Review code changes for quality, correctness, and adherence to project conventions"
+# /review — Review staged changes against Beacon's content conventions.
 
-[command.steps]
+description = "Review the diff for content correctness, schema validity, internal-link health, and SEO basics."
 
-[command.steps.1]
-action = "shell"
-command = "git diff --name-only HEAD~1"
-description = "Identify changed files in the latest commit"
+[prompt]
+template = """
+Review the staged diff.
 
-[command.steps.2]
-action = "read_files"
-source = "changed_files"
-description = "Read all changed files to understand the full context"
+## Steps
 
-[command.steps.3]
-action = "prompt"
-text = """
-Review the code changes with the following checklist:
+1. List changed files: `git diff --cached --name-only`
+2. For each file, classify:
+   - `src/content/docs/**/*.mdx` → docs rules
+   - `src/content/blog/**/*.mdx` → blog rules
+   - `src/content/config.ts` → schema changes
+   - `src/components/**/*.astro` → component rules in GEMINI.md
+   - `astro.config.ts` → config review (flag any plugin changes)
+3. Apply the appropriate checklist.
 
-1. **Type Safety** — Are there any uses of `any`? Are return types explicit?
-2. **Error Handling** — Do all async functions use try/catch? Are errors logged with structured metadata?
-3. **Naming** — Are variables, functions, and files named clearly and consistently?
-4. **Testing** — Do changed service functions have corresponding test updates?
-5. **Security** — Are inputs validated? Any hardcoded secrets or credentials?
-6. **Performance** — Any obvious N+1 queries, unnecessary allocations, or blocking calls?
-7. **Style** — Does the code follow conventions in GEMINI.md?
+## Docs checklist
 
-For each issue found, provide:
-- File path and line number
-- Severity: error | warning | suggestion
-- Description of the issue
-- Suggested fix with code snippet
+- [ ] Frontmatter valid per `src/content/config.ts` (title, description ≤ 160, category, order, draft)
+- [ ] H1 comes from frontmatter `title`, NOT in-body
+- [ ] No skipped heading levels (H2 → H4 without H3)
+- [ ] All internal links relative (`./foo`, not `https://beacon.example.com/docs/foo`)
+- [ ] Code blocks have languages
+- [ ] `<Callout>` used for notes/warnings, not raw `> NOTE:` quotes
+
+## Blog checklist
+
+- [ ] Publish date matches filename prefix
+- [ ] Description ≤ 160 chars and keyword-led
+- [ ] Tags are kebab-case and match existing tags where applicable (`rg 'tags:' src/content/blog/` to compare)
+- [ ] Hero image optimized (≤ 500KB) and has descriptive alt text
+- [ ] First paragraph is a hook, not a definition
+
+## Schema checklist
+
+- [ ] Adding a required field? Migrate existing content or keep the field optional
+- [ ] Tightening a Zod constraint? Verify no existing file violates it
+- [ ] Removing a field? Search content for references before committing
+
+## Link hygiene
+
+Run `lychee --offline dist` to check internal links after a local build. If
+`dist/` is stale, run `pnpm build` first.
+
+## Output
+
+Group findings by severity:
+- **🚨 Must fix** — schema invalid, broken links, missing required frontmatter
+- **⚠️  Should fix** — heading skips, SEO issues, missing alt text
+- **💡 Consider** — naming, structure, callout usage
+
+End with `APPROVE`, `REQUEST_CHANGES`, or `BLOCKED`.
 """
-
-[command.steps.4]
-action = "shell"
-command = "npx eslint src/ --format=compact"
-description = "Run ESLint to catch any linting violations"
-
-[command.steps.5]
-action = "prompt"
-text = "Summarize the review: total issues found by severity, overall code quality assessment, and whether the changes are ready to merge."

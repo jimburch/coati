@@ -1,79 +1,73 @@
-# Multi-Agent Playground
+# Compose — Multi-Agent Setup (Claude Code + Cursor)
 
-This directory demonstrates a **multi-agent setup** — the same Express + TypeScript + SQLite project configured for both **Claude Code** and **Cursor** side by side.
+A collaborative note-taking app built on SvelteKit, configured for
+**parallel work by two AI agents** with non-overlapping lanes:
 
-It is a test environment for the Coati CLI and platform, showing how a single `coati.json` can bundle config files for multiple AI coding agents, with per-file `agent` fields identifying which tool each file belongs to.
+- **Claude Code** — backend, database, auth, API surface
+- **Cursor** — components, styling, interaction patterns
 
-## Config Files
+## Why two agents?
 
-### Shared (no `agent` field — installed for all users)
+Real teams split by concern, and AI-assisted teams can too. Each agent runs
+with a scoped instruction file and scoped rules, which:
 
-| File           | Purpose                             |
-| -------------- | ----------------------------------- |
-| `package.json` | Node.js/TypeScript project manifest |
-| `README.md`    | This file                           |
+1. Keeps context tight (no rules about `.svelte` styling while editing server code)
+2. Avoids conflicting opinions (Claude won't try to restyle a component Cursor already decided on)
+3. Enables true parallel work in separate branches
 
-### Claude Code (`agent: "claude-code"`)
+## The split
 
-| File                                   | Purpose                                                     |
-| -------------------------------------- | ----------------------------------------------------------- |
-| `CLAUDE.md`                            | Project instructions that Claude Code reads for context     |
-| `.claude/settings.json`                | Project-level permissions and model preferences             |
-| `.claude/commands/review.md`           | Custom `/review` slash command for code review              |
-| `.claude/commands/test-coverage.md`    | Custom `/test-coverage` slash command for coverage analysis |
-| `.claude/hooks/pre-commit.sh`          | Pre-commit hook running lint, type-check, and tests         |
-| `.claude/skills/api-patterns/SKILL.md` | Skill teaching Claude the project's API conventions         |
-| `.mcp.json`                            | MCP server configuration (filesystem, fetch, sqlite)        |
+| Domain | Files | Agent |
+| --- | --- | --- |
+| Server code | `src/lib/server/**`, `hooks.server.ts`, `**/+page.server.ts`, `**/+server.ts` | Claude |
+| Database | `src/lib/server/db/schema.ts`, migrations | Claude |
+| Components | `src/lib/components/**` | Cursor |
+| Page markup | `**/+page.svelte`, `**/+layout.svelte` | Cursor |
+| Styles | `app.css`, Tailwind config | Cursor |
+| Shared types | `src/lib/types/**`, `src/lib/validation.ts` | Both (respect each other's naming) |
 
-### Cursor (`agent: "cursor"`)
+## Instruction files
 
-| File                                   | Purpose                                                            |
-| -------------------------------------- | ------------------------------------------------------------------ |
-| `.cursorrules`                         | Legacy root-level rules file (predates MDC format)                 |
-| `.cursor/rules/typescript.mdc`         | MDC rule: TypeScript conventions (`alwaysApply: true`)             |
-| `.cursor/rules/api-patterns.mdc`       | MDC rule: Express API patterns (glob-scoped to routes/controllers) |
-| `.cursor/rules/testing.mdc`            | MDC rule: Vitest testing conventions (glob-scoped to test files)   |
-| `.cursor/mcp.json`                     | MCP server configuration (filesystem + fetch servers)              |
-| `.cursor/hooks.json`                   | Agent lifecycle hooks (eslint auto-fix, shell logging)             |
-| `.cursor/commands/review.md`           | Custom slash command: code review checklist                        |
-| `.cursor/commands/test-coverage.md`    | Custom slash command: test coverage analysis                       |
-| `.cursor/commands/refactor.md`         | Custom slash command: guided refactoring                           |
-| `.cursor/skills/api-patterns/SKILL.md` | Skill: API endpoint writing instructions                           |
-| `.cursorignore`                        | Excludes sensitive files from AI access                            |
-| `.cursorindexingignore`                | Excludes large generated files from Cursor's codebase index        |
+- `CLAUDE.md` — Claude's instruction file with the lane rules
+- `.cursor/rules/*.mdc` — Cursor's scoped rules by file glob
+- `.cursorrules` — legacy fallback for old Cursor versions
 
-## How the `agent` Field Works
+## What's in `.claude/`
 
-In `coati.json`, each file entry has an optional `agent` field:
+| Path | Purpose |
+| --- | --- |
+| `settings.json` | Permissions, model, hooks |
+| `hooks/pre-commit.sh` | Lint + type-check on server files only |
+| `agents/drizzle-migrator.md` | Plans safe schema changes |
+| `agents/security-reviewer.md` | Audits auth before merge |
+| `agents/handoff-writer.md` | Writes handoff notes when a task crosses into Cursor's lane |
+| `commands/add-route.md` | Scaffold a route + hand off the UI to Cursor |
+| `commands/migrate.md` | Generate a migration via the subagent |
+| `commands/review.md` | Review the server-side diff |
+| `skills/sveltekit-routes/SKILL.md` | Load functions, form actions, endpoints |
+| `skills/drizzle-queries/SKILL.md` | Drizzle query patterns |
 
-```json
-{
-	"source": ".claude/settings.json",
-	"target": ".claude/settings.json",
-	"placement": "project",
-	"componentType": "instruction",
-	"agent": "claude-code"
-}
-```
+## What's in `.cursor/`
 
-- **With `agent`**: installed only when the user has that agent, or when explicitly requested
-- **Without `agent`**: shared file, always installed regardless of which agents the user has
+| Path | Purpose |
+| --- | --- |
+| `rules/components.mdc` | Svelte component conventions, scoped to `src/lib/components/**` |
+| `rules/svelte5-runes.mdc` | Svelte 5 runes patterns |
+| `rules/tailwind.mdc` | Tailwind + design tokens |
+| `rules/forms.mdc` | Form action wiring, scoped to `**/+page.svelte` |
+| `rules/boundaries.mdc` | Enforces the lane split — refuses to edit server files |
+| `commands/new-component.md` | Scaffold a component |
+| `commands/wire-form.md` | Wire a Svelte form to a `+page.server.ts` form action |
+| `commands/review.md` | Review the frontend-side diff |
+| `skills/svelte-components/SKILL.md` | Component authoring patterns |
+| `skills/tailwind-styling/SKILL.md` | Design-token-aware styling |
 
-## Usage with Coati CLI
+## Getting started
 
 ```bash
-# Clone this multi-agent setup
-coati clone @jim/typescript-express-multi-agent
-
-# Initialize a new setup from an existing multi-agent project
-coati init
-
-# Publish a multi-agent setup
-coati publish
+pnpm install
+cp .env.example .env
+docker compose up -d db
+pnpm db:migrate
+pnpm dev
 ```
-
-## Not Included
-
-- `coati.json` is present here (unlike the single-agent playgrounds) to demonstrate the manifest format
-- `node_modules/` — simulated project, no dependencies installed
-- `src/` — source code omitted; the playground focuses on config files only

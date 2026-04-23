@@ -1,75 +1,109 @@
-# AGENTS.md — My TypeScript App
+# AGENTS.md — Pipedream API
 
 ## Project Overview
 
-A lightweight Express API server written in TypeScript. The app exposes a
-RESTful JSON API for managing tasks and users. It is designed to be small,
-well-tested, and easy to deploy as a Docker container.
+Pipedream is a task queue and webhook relay service. Incoming HTTP webhooks are
+captured, enqueued, and delivered to downstream consumers with retries and
+dead-lettering. This repo is the backend API only — there is no UI.
+
+The service is deployed as a single Node process behind Caddy, backed by
+PostgreSQL for durable storage and LISTEN/NOTIFY for the worker loop.
 
 ## Tech Stack
 
-- **Runtime:** Node.js 22 (ESM)
-- **Language:** TypeScript 5.5+ (strict mode)
-- **Framework:** Express 4
-- **Testing:** Vitest (unit + integration)
-- **Linting:** ESLint 9 flat config
+- **Runtime:** Node.js 22 (ESM, no CommonJS anywhere)
+- **Language:** TypeScript 5.6+ (strict, `exactOptionalPropertyTypes: true`)
+- **Framework:** Fastify 5
+- **Database:** PostgreSQL 16
+- **ORM:** Drizzle ORM
+- **Validation:** Zod + `fastify-type-provider-zod`
+- **Testing:** Vitest (+ `supertest` for HTTP integration)
+- **Linting:** ESLint 9 (flat config) + `@typescript-eslint`
+- **Package manager:** pnpm
 
 ## Project Structure
 
 ```
 src/
-├── index.ts          # Server bootstrap and graceful shutdown
-├── app.ts            # Express app factory (no listen call)
-├── routes/           # Route handlers grouped by domain
-│   ├── tasks.ts
-│   └── users.ts
-├── middleware/        # Auth, validation, error handling
+├── server.ts                 # Fastify app factory (no listen)
+├── index.ts                  # Entry point — starts listener, wires signals
+├── plugins/                  # Fastify plugins (auth, error, rate-limit, swagger)
 │   ├── auth.ts
-│   ├── validate.ts
-│   └── errorHandler.ts
-├── services/         # Business logic (no HTTP concerns)
-│   ├── taskService.ts
-│   └── userService.ts
-├── db/               # Database access layer
-│   └── client.ts
-└── types/            # Shared TypeScript interfaces
+│   ├── error-handler.ts
+│   ├── ratelimit.ts
+│   └── swagger.ts
+├── routes/                   # Route plugins grouped by resource
+│   ├── health.ts
+│   ├── webhooks.ts           # POST /webhooks/:id — ingress
+│   ├── jobs.ts               # GET /jobs, /jobs/:id — queue inspection
+│   └── admin/
+│       └── deliveries.ts
+├── db/
+│   ├── client.ts             # Drizzle client + pg Pool
+│   ├── schema.ts             # Table definitions
+│   └── migrations/
+├── queue/
+│   ├── worker.ts             # LISTEN/NOTIFY consumer loop
+│   ├── dispatcher.ts         # HTTP delivery + retry with exponential backoff
+│   └── deadletter.ts
+├── lib/
+│   ├── logger.ts             # pino instance, request-scoped child loggers
+│   ├── hmac.ts               # Webhook signature verification
+│   └── time.ts               # Deterministic clock for tests
+└── types/
     └── index.ts
 ```
 
 ## Coding Conventions
 
-- Use `const` by default; use `let` only when reassignment is necessary.
-- Prefer named exports over default exports.
-- All functions must have explicit return types.
-- Use Zod for runtime validation of request bodies and query params.
-- Route handlers should be thin — delegate logic to service functions.
-- Never throw raw strings; always throw `Error` objects or custom error classes.
-- Keep files under 150 lines. If a file grows larger, split it.
+- ESM only; always use `.js` suffix on local imports (e.g., `import { x } from './lib/x.js'`)
+- `const` by default; `let` only when reassignment is required; never `var`
+- Prefer named exports; default exports only for Fastify plugin factories
+- All exported functions need explicit return types
+- Keep files under ~200 lines; if longer, split by responsibility
+- One Fastify route plugin per resource file; each registers its own schemas
+- Use Zod for every request body / params / querystring; wire through `fastify-type-provider-zod` so handlers are strongly typed
+- Never throw string literals — throw `Error` instances or custom error classes from `src/lib/errors.ts`
+- All `async` route handlers must let errors propagate — the error-handler plugin formats them
 
 ## API Response Format
 
-All endpoints return a consistent envelope:
+Consistent envelope on every route:
 
-- Success: `{ "data": T }`
-- Error: `{ "error": "Human-readable message", "code": "MACHINE_CODE" }`
+- Success: `{ data: T, meta?: { ... } }`
+- Error: `{ error: { message: string, code: string, details?: unknown } }`
 
-## Testing Patterns
+Status codes follow REST conventions: 200 read, 201 create, 202 accepted-queued,
+204 delete, 400 validation, 401 unauth, 404 not found, 409 conflict, 422 business
+rule violation, 429 rate limited, 500 internal.
 
-- Test files live next to source files: `taskService.test.ts` beside `taskService.ts`.
-- Use `describe` / `it` blocks; name tests as sentences ("it returns 404 when task not found").
-- Integration tests use `supertest` against the Express app factory.
-- Never mock the database in integration tests — use a test database.
-- Unit tests should mock external dependencies using `vi.mock()`.
+## Database
+
+- Migrations generated via `pnpm db:generate`; never hand-write SQL migrations
+- Every query must be workspace-scoped when operating on workspace-owned tables
+- Use transactions when mutating two or more tables
+- No `db.query.*` — use `db.select()` / `db.insert()` / `db.update()` for consistency
+
+## Testing
+
+- Unit tests colocate with source: `hmac.ts` → `hmac.test.ts`
+- Integration tests under `src/__tests__/integration/` hit a real Postgres via `docker compose up -d db-test`
+- Every bug fix needs a regression test that fails on the old code
+- Never mock the database in integration tests — use a test schema and truncate between tests
+- Unit tests may mock external services with `vi.mock()`
 
 ## Do
 
-- Run `pnpm lint` before considering any code change complete.
-- Write or update tests whenever you change business logic.
-- Use async/await consistently; never mix callbacks and promises.
+- Run `pnpm lint && pnpm check && pnpm test:unit` before declaring a task done
+- Add an `@fastify/swagger` schema annotation to every new route
+- Use the `pino` request logger (`request.log.info(...)`) — never `console.log`
+- Use `AbortController` for any HTTP call that could hang; default 10s timeout
 
 ## Don't
 
-- Don't install new dependencies without explaining why.
-- Don't use `any` — use `unknown` and narrow with type guards.
-- Don't write SQL strings directly; use the query builder in `db/client.ts`.
-- Don't commit `.env` files or secrets.
+- Don't install a different validator (no Joi, Yup, AJV); Zod is the single source
+- Don't use CommonJS (`require`, `module.exports`)
+- Don't call `fetch` without a timeout
+- Don't handle retries in the dispatcher without exponential backoff + jitter
+- Don't commit `.env` files
+- Don't add an ORM other than Drizzle

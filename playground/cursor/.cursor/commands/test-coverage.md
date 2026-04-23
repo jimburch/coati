@@ -1,24 +1,35 @@
-# Test Coverage Analysis
+# /test-coverage — Analyze coverage gaps in the diff
 
-Run the test suite with coverage reporting and analyze the results.
+Identify components whose behavior changed without tests, or whose public
+prop surface has grown without matching assertions.
 
 ## Steps
 
-1. Run `npx vitest run --coverage` to generate a coverage report
-2. Identify files with less than 80% line coverage
-3. For each under-covered file, identify the uncovered branches and lines
-4. Suggest specific test cases that would improve coverage for the most critical gaps
+1. List files changed since `origin/main`:
+   ```
+   git diff --name-only origin/main...HEAD -- 'src/**/*.tsx'
+   ```
+2. For each `.tsx` source file, locate its colocated `.test.tsx`:
+   - No test file → mark as uncovered
+   - Test file exists → parse which `describe` blocks and `it` clauses reference the exported names
+3. For each exported prop added in the diff:
+   - Is there a test exercising it? (query by role, pass the prop, assert behavior)
+   - If not, add it to the gap list
+4. Run coverage against the changed files only:
+   ```
+   pnpm exec vitest run --coverage --reporter=verbose <files>
+   ```
+5. Check Storybook: does each new prop have a dedicated story or an argType?
 
-## Focus Areas
+## Output
 
-- Prioritize coverage gaps in `src/services/` and `src/routes/` over utilities
-- Pay special attention to error handling paths — these are often untested
-- Highlight any functions with 0% coverage that contain business logic
+Markdown table:
 
-## Output Format
+| File | State | Missing |
+| --- | --- | --- |
+| `src/components/Button/Button.tsx` | ⚠ Partial | `iconOnly` prop untested, `Loading` story missing |
+| `src/components/Badge/Badge.tsx` | ✓ Covered | — |
+| `src/components/Toast/Toast.tsx` | ✗ Uncovered | No `.test.tsx` exists |
 
-Provide a summary table:
-| File | Lines | Branches | Uncovered Areas |
-|------|-------|----------|-----------------|
-
-Then list 3-5 specific test cases to write, ordered by impact on overall coverage.
+Then offer to generate the missing tests and stories. Do not write them
+automatically — wait for the user to pick which files to cover.

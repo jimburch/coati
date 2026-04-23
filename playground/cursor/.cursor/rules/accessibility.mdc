@@ -1,0 +1,81 @@
+---
+description: Accessibility rules for interactive components and patterns.
+globs:
+  - "src/components/**/*.tsx"
+alwaysApply: false
+---
+
+# Accessibility
+
+Atlas targets WCAG 2.2 AA. Every interactive component must:
+
+1. Have a keyboard-only interaction path that matches the mouse path.
+2. Announce state changes to screen readers.
+3. Pass axe with no violations at default settings.
+4. Support reduced-motion preferences.
+
+## Semantic HTML first
+
+Before reaching for ARIA, use the right element:
+
+- Use `<button>` for anything that triggers an action; never `<div onClick>`
+- Use `<a>` for navigation to a URL; never `<button>` with `router.push`
+- Use `<label>` associated with form controls via `htmlFor` or nesting
+- Use native `<dialog>` where browsers support it; Radix `Dialog` otherwise
+- Use `<fieldset>` + `<legend>` for grouped form controls
+
+If ARIA is required, follow the WAI-ARIA Authoring Practices patterns — do not
+invent roles.
+
+## Names and descriptions
+
+- Every interactive element has an accessible name (visible label, `aria-label`, or `aria-labelledby`)
+- Prefer a visible label over `aria-label` — sighted users deserve labels too
+- Icon-only buttons MUST have `aria-label`
+- Decorative icons have `aria-hidden="true"`
+
+## Focus
+
+- Focus is always visible. Never `outline: none` without an equivalent `focus-visible` ring
+- Focus order matches visual order; do not use positive `tabIndex` values
+- When a dialog opens, focus moves to its first focusable element
+- When a dialog closes, focus returns to the trigger
+- Use `tabIndex={-1}` for programmatically focusable elements not in the tab order
+
+## Keyboard
+
+- Enter + Space activate buttons
+- Escape closes modals, popovers, dropdowns
+- Arrow keys navigate within composites (menu, tabs, radiogroup)
+- Home/End jump to first/last within composites
+- Typeahead works in listboxes and menus for lists longer than 10 items
+
+## Announcements
+
+- Form errors use `aria-describedby` pointing at the error text
+- Loading/async state announces via a polite live region (use `<LiveRegion>` from `src/components/LiveRegion`)
+- Toasts use `role="status"` (polite) for success, `role="alert"` (assertive) for errors
+
+## Color
+
+- Text contrast ratio ≥ 4.5:1 (≥ 3:1 for large text)
+- Never convey information by color alone — pair with icons, text, or patterns
+- Focus ring contrast ≥ 3:1 against both adjacent colors
+
+## Motion
+
+- Respect `prefers-reduced-motion`: wrap nontrivial transitions in `motion-safe:`
+- Do not autoplay video or animation longer than 5 seconds
+
+## Testing
+
+- Every component test renders the component and verifies `getByRole` works with the expected name
+- Chromatic runs axe in every story via `@storybook/addon-a11y`
+- `pnpm test:a11y` runs Playwright + axe against the built Storybook
+
+## Don't
+
+- Don't use `role="button"` on anything that could be a `<button>`
+- Don't use `aria-hidden` on focusable content (it hides from AT but keeps in tab order — a trap)
+- Don't trap focus outside of modal contexts
+- Don't use `title` as the only source of the accessible name

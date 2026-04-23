@@ -1,62 +1,81 @@
-[policy]
-name = "shell"
-description = "Controls which shell commands Gemini CLI is allowed to execute"
+# Shell execution policy for Beacon Docs.
+# Gemini requires a matching [[allow]] rule to run a command. Commands that
+# match [[deny]] are blocked even if also allowed. Anything not matched
+# prompts the user for confirmation.
 
-# Commands that are always allowed without confirmation
-[policy.allow]
-patterns = [
-  "npm run *",
-  "npm test",
-  "npm install",
-  "npm ci",
-  "npx vitest *",
-  "npx eslint *",
-  "npx tsc *",
-  "npx prettier *",
-  "node *",
-  "cat *",
-  "ls *",
-  "head *",
-  "tail *",
-  "wc *",
-  "diff *",
-  "git status",
-  "git diff *",
-  "git log *",
-  "git branch *",
-  "git show *",
-]
+policy_version = 1
 
-# Commands that require explicit user confirmation before running
-[policy.confirm]
-patterns = [
-  "git add *",
-  "git commit *",
-  "git push *",
-  "git checkout *",
-  "git merge *",
-  "git rebase *",
-  "npm publish *",
-  "npm version *",
-  "curl *",
-  "wget *",
-]
+# --- allowed ---------------------------------------------------------------
 
-# Commands that are never allowed
-[policy.deny]
-patterns = [
-  "rm -rf *",
-  "rm -r /",
-  "sudo *",
-  "chmod 777 *",
-  "shutdown *",
-  "reboot *",
-  "mkfs *",
-  "dd if=*",
-  "> /dev/*",
-  "git push --force *",
-  "git reset --hard *",
-  "git clean -fd *",
-  "npm unpublish *",
-  "eval *",
-]
+[[allow]]
+pattern = "pnpm *"
+reason = "project uses pnpm for all scripts"
+
+[[allow]]
+pattern = "npx astro *"
+reason = "direct Astro CLI for debugging"
+
+[[allow]]
+pattern = "npx pagefind *"
+reason = "search index generation"
+
+[[allow]]
+pattern = "lychee *"
+reason = "link checker for /audit-links command"
+
+[[allow]]
+pattern = "git status"
+
+[[allow]]
+pattern = "git diff*"
+
+[[allow]]
+pattern = "git log*"
+
+[[allow]]
+pattern = "ls *"
+
+[[allow]]
+pattern = "rg *"
+
+[[allow]]
+pattern = "find *"
+
+[[allow]]
+pattern = "sharp *"
+reason = "image optimization for /optimize-images"
+
+# --- denied (takes precedence over allow) ----------------------------------
+
+[[deny]]
+pattern = "rm -rf *"
+reason = "destructive, never needed"
+
+[[deny]]
+pattern = "git push --force*"
+reason = "use regular push; force-push requires explicit user run"
+
+[[deny]]
+pattern = "git push -f*"
+reason = "see above"
+
+[[deny]]
+pattern = "curl * | sh"
+reason = "pipe-to-shell is the #1 supply-chain vector"
+
+[[deny]]
+pattern = "curl * | bash"
+
+[[deny]]
+pattern = "pnpm publish*"
+reason = "docs site is not a published package"
+
+[[deny]]
+pattern = "wrangler pages deploy*"
+reason = "deploys happen via Cloudflare on push to main — not from Gemini"
+
+# --- prompt for confirmation (anything not listed) ------------------------
+
+[default]
+action = "prompt"
+reason = "unknown commands require the user's explicit approval"

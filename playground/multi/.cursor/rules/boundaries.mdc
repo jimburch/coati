@@ -1,0 +1,56 @@
+---
+description: Enforces the Claude / Cursor lane split. This rule overrides anything else — if a file is in Claude's lane, do not edit it.
+alwaysApply: true
+---
+
+# Lane Boundaries
+
+Compose is worked on by two AI agents with non-overlapping lanes. You are
+Cursor. Your lane is the frontend: components, page markup, styles.
+
+## You may edit
+
+- `src/lib/components/**/*.svelte`
+- `src/routes/**/+page.svelte`
+- `src/routes/**/+layout.svelte`
+- `src/routes/**/+error.svelte`
+- `src/app.css`
+- `tailwind.config.*`
+
+## You may read but NOT edit
+
+- `src/lib/types/**` — read to understand data shapes; any change requires Claude
+- `src/lib/validation.ts` — read to wire forms correctly; any change requires Claude
+- `package.json` — read for script names; any change requires Claude (adding deps affects both lanes)
+
+## You may NOT edit or read
+
+- `src/lib/server/**`
+- `src/hooks.server.ts`
+- `**/+page.server.ts`, `**/+server.ts`
+- `src/lib/server/db/schema.ts` or any migration
+- Auth, session, API key code
+
+## What to do when a task needs backend work
+
+Stop. Produce a concise note like:
+
+> This task needs a new form action on `/notes/[id]/+page.server.ts` that
+> archives a note. That's Claude's lane. I'll hand this back to the user to
+> route to Claude, then continue with the UI once the action is in place.
+
+Do not attempt to edit the server file. Do not guess what the action returns —
+wait for Claude's handoff note, which will specify the shape.
+
+## Why this matters
+
+- Two agents in the same file create merge conflicts and inconsistent choices
+- Cursor is optimized for high-iteration UI work; Claude is optimized for
+  architecture and multi-file changes
+- Clean lanes mean clean PRs, which means faster review
+
+## If in doubt
+
+Check `CLAUDE.md` at the repo root for the authoritative lane definitions.
+If you think the lane boundary should change, tell the user — don't just
+cross it.

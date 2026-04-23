@@ -1,0 +1,77 @@
+{
+	"id": "aae51a2c-4b51-4097-8dc0-c85e55b602f7",
+	"display": "Personal AI Dotfiles",
+	"name": "personal-ai-dotfiles",
+	"version": "1.0.0",
+	"description": "A cross-agent \"dotfiles\" setup that installs to your home directory andtravels with you across every project",
+	"category": "general",
+	"agents": [
+		"claude-code",
+		"codex",
+		"gemini"
+	],
+	"tags": [
+		"claude",
+		"codex",
+		"gemini",
+		"dotfiles"
+	],
+	"visibility": "public",
+	"files": [
+		{
+			"path": ".claude/CLAUDE.md",
+			"componentType": "instruction",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".claude/settings.json",
+			"componentType": "instruction",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".codex/config.toml",
+			"componentType": "instruction",
+			"agent": "codex"
+		},
+		{
+			"path": ".gemini/settings.json",
+			"componentType": "instruction",
+			"agent": "gemini"
+		},
+		{
+			"path": ".claude/commands/commit.md",
+			"componentType": "command",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".claude/commands/focus.md",
+			"componentType": "command",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".claude/commands/pr.md",
+			"componentType": "command",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".claude/commands/standup.md",
+			"componentType": "command",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".gemini/commands/commit.toml",
+			"componentType": "command",
+			"agent": "gemini"
+		},
+		{
+			"path": ".gemini/commands/pr.toml",
+			"componentType": "command",
+			"agent": "gemini"
+		},
+		{
+			"path": ".gemini/commands/standup.toml",
+			"componentType": "command",
+			"agent": "gemini"
+		}
+	]
+}

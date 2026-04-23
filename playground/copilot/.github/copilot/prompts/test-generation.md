@@ -1,65 +1,45 @@
-# Test Generation
+# /test-generation — Generate Vitest tests for a file
 
-Generate comprehensive Vitest tests for the provided code. Follow the project's testing conventions exactly.
+Given a source file, generate a comprehensive Vitest test file following
+Ledger's testing patterns.
 
-## Setup
+## Inputs
 
-```typescript
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-```
+- `$1` — path to the source file (e.g., `src/server/api/routers/expenses.ts`)
+- `$2` (optional) — specific function name to focus on
 
-Mock all external dependencies at the top of the file using `vi.mock()`. Reset mocks in a `beforeEach` block with `vi.clearAllMocks()`.
+## Process
 
-## Structure
+1. Read the source file. For each exported function or procedure, document:
+   - Signature (inputs, outputs)
+   - Side effects (database writes, external calls)
+   - Error cases (what can throw?)
+   - Edge cases (empty inputs, boundary values, concurrent access)
+2. If the file is a tRPC router, include:
+   - Happy path per procedure
+   - Unauthorized access test (no session)
+   - Wrong-workspace access test (user in workspace A calling for workspace B)
+   - Invalid input test (Zod validation fails)
+3. If the file is a Prisma query helper, include:
+   - Workspace scoping test (rows from other workspaces never leak)
+   - Empty-result test
+   - Transaction-boundary test if relevant
+4. Write the test file at the colocated path (`foo.ts` → `foo.test.ts`).
+5. Use the test helpers already in place:
+   - `createTestCaller({ userId, workspaceId })` for tRPC invocation
+   - `resetDatabase()` + `seedExpense()` / `seedWorkspace()` for state
+6. Run `pnpm exec vitest related $1 --run`. Iterate until green.
 
-Organize tests using nested `describe` blocks:
+## Naming
 
-```
-describe("functionName")
-  describe("when input is valid")
-    it("should return the expected result")
-    it("should call the repository with correct params")
-  describe("when input is invalid")
-    it("should return a validation error")
-  describe("when the dependency fails")
-    it("should propagate the error with context")
-```
+Tests read as sentences starting with "should":
+- `"should return paginated expenses for the current workspace"`
+- `"should throw UNAUTHORIZED when no session exists"`
+- `"should not leak expenses from other workspaces"`
 
-## What to Test
+## Do not
 
-For each function, generate tests covering:
-
-1. **Happy path** — typical valid input produces expected output
-2. **Boundary values** — empty strings, zero, max values, single-element arrays
-3. **Invalid input** — wrong types, missing required fields, malformed data
-4. **Error propagation** — what happens when a dependency throws or returns an error
-5. **Side effects** — verify that the correct downstream functions were called with expected arguments
-
-## Conventions
-
-- Test descriptions start with "should" and describe behavior, not implementation
-- One assertion per test when possible; multiple assertions are fine if testing a single logical outcome
-- Use `toEqual` for objects and arrays, `toBe` for primitives and references
-- For async functions, use `async/await` — do not use `.resolves` or `.rejects` matchers
-- Use `vi.fn()` to create mock functions and assert calls with `toHaveBeenCalledWith`
-- Create factory functions for test data instead of repeating object literals
-
-## Test Data Factories
-
-Generate a factory helper at the top of the test file:
-
-```typescript
-function createUser(overrides: Partial<User> = {}): User {
-	return {
-		id: crypto.randomUUID(),
-		name: 'Test User',
-		email: 'test@example.com',
-		createdAt: new Date('2025-01-01'),
-		...overrides
-	};
-}
-```
-
-## Output
-
-Generate the complete test file ready to run. Include all imports, mocks, factories, and test cases. The file should pass `vitest run` without modifications.
+- Do not mock Prisma. Use the test database.
+- Do not test implementation details (private helpers, internal state)
+- Do not test Zod parsing itself — trust Zod
+- Do not add `it.only` or `describe.only` — reviewers will bounce the PR

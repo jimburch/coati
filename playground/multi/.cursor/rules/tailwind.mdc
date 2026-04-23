@@ -1,0 +1,67 @@
+---
+description: Tailwind + design token rules for Compose.
+globs:
+  - "src/lib/components/**/*.svelte"
+  - "src/routes/**/+page.svelte"
+  - "src/routes/**/+layout.svelte"
+  - "src/app.css"
+alwaysApply: false
+---
+
+# Tailwind + Design Tokens
+
+Compose uses shadcn-svelte's token system. Design tokens map to CSS variables
+in `src/app.css`; Tailwind utilities resolve to those variables.
+
+## Tokens over raw colors
+
+- `bg-background`, `bg-card`, `bg-popover`
+- `text-foreground`, `text-muted-foreground`
+- `border-input`, `border-ring`
+- `bg-primary`, `bg-destructive`, `bg-accent`
+- `text-primary-foreground`, `text-accent-foreground`
+
+Never reach for `bg-blue-500` or `text-gray-700` — they'll look wrong in dark
+mode and inconsistent across the app.
+
+## Spacing
+
+The 4px scale: `gap-1, gap-2, gap-3, gap-4, gap-6, gap-8`. No arbitrary
+values like `gap-[7px]`. If a spacing decision can't be expressed in the
+scale, raise it — the scale is probably wrong.
+
+## Dark mode
+
+Class-based (`dark:` prefix). Tokens already auto-switch — you rarely need
+explicit dark mode classes. If you do, the usual suspect is an image or
+SVG that needs an inverted variant.
+
+## `cn()` for class merging
+
+Use the `cn()` helper from `$lib/cn` — wraps `clsx` + `tailwind-merge`:
+
+```svelte
+<div class={cn('rounded-md border p-4', archived && 'opacity-60', className)} />
+```
+
+This handles conflicts correctly: a consumer passing `p-2` will override the
+default `p-4`.
+
+## Typography plugin
+
+For long-form text (note bodies, MDX), use the `prose` classes from
+`@tailwindcss/typography`:
+
+```svelte
+<article class="prose prose-neutral dark:prose-invert max-w-prose">
+  {@html note.html}
+</article>
+```
+
+## Don't
+
+- Don't use raw color palettes from Tailwind (`bg-red-500`, `text-gray-900`)
+- Don't use `@apply` in `<style>` blocks — utilities in markup only
+- Don't scatter `dark:` variants across components when a token already handles it
+- Don't write new CSS variables in `app.css` without updating the shadcn token spec
+- Don't use arbitrary values (`h-[73px]`) — if the value isn't in the scale, the design is off

@@ -1,80 +1,133 @@
-# CLAUDE.md — My TypeScript App
+# CLAUDE.md — Compose (Multi-Agent Setup)
 
 ## Project Overview
 
-A REST API service built with Express and TypeScript. Provides user management,
-authentication, and a lightweight task-tracking system. Deployed as a single
-Node.js process behind Nginx on a VPS.
+Compose is a collaborative note-taking app built on SvelteKit. This repository
+is set up to be worked on by **two AI agents in parallel**, each with its own
+lane of responsibility:
+
+- **Claude Code** owns the backend surface: server routes, database schema,
+  auth, migrations, tRPC-style endpoints, and architectural decisions.
+- **Cursor** owns the frontend surface: Svelte components, Tailwind styling,
+  interaction patterns, and the design system.
+
+This file is the **Claude-specific** instruction file. The frontend-focused
+conventions Cursor should follow live in `.cursor/rules/*.mdc`.
+
+## Boundary rules (important)
+
+- Claude edits `src/lib/server/`, `src/routes/**/+page.server.ts`,
+  `+server.ts`, `hooks.server.ts`, `src/lib/server/db/schema.ts`, and
+  migrations.
+- Cursor edits `src/lib/components/`, `src/routes/**/+page.svelte`, `app.css`,
+  and Tailwind config.
+- **Shared:** `src/lib/types/`, `src/lib/validation.ts`, `package.json`.
+  Either agent may edit these, but both must respect the other's naming.
+- **Off-limits for Claude:** anything that's purely presentational. If a task
+  requires both, Claude scaffolds the backend and explicitly hands the UI work
+  to Cursor — don't write the component yourself.
+- **Off-limits for Cursor:** direct database access from Svelte components.
+  Always go through a `+page.server.ts` load or a form action.
 
 ## Tech Stack
 
-- **Runtime:** Node.js 22 (LTS)
-- **Language:** TypeScript 5.5+ (strict mode)
-- **Framework:** Express 4
-- **Database:** SQLite via better-sqlite3 (single-file, no external DB needed)
-- **Testing:** Vitest
-- **Linting:** ESLint 9 flat config
+- **Framework:** SvelteKit 2 (Svelte 5 runes)
+- **Language:** TypeScript 5.6+ (strict)
+- **Styling:** Tailwind CSS 3 + shadcn-svelte
+- **Database:** PostgreSQL 16
+- **ORM:** Drizzle ORM
+- **Auth:** Lucia Auth v3 + Arctic (GitHub OAuth)
+- **Real-time:** Server-Sent Events for collaborative presence
+- **Testing:** Vitest (unit) + Playwright (e2e)
+- **Package manager:** pnpm
 
 ## Project Structure
 
 ```
 src/
-├── index.ts          # Server entry — creates app, starts listening
-├── app.ts            # Express app factory (for testability)
-├── routes/
-│   ├── users.ts      # CRUD for /api/users
-│   ├── tasks.ts      # CRUD for /api/tasks
-│   └── health.ts     # GET /health
-├── middleware/
-│   ├── auth.ts       # Bearer-token validation
-│   ├── errors.ts     # Global error handler
-│   └── validate.ts   # Zod-based request validation
-├── db/
-│   ├── client.ts     # Database connection singleton
-│   ├── schema.ts     # Table definitions
-│   └── migrations/   # SQL migration files
-├── services/
-│   ├── userService.ts
-│   └── taskService.ts
-└── utils/
-    ├── logger.ts     # Structured JSON logging (pino)
-    └── config.ts     # Env-var loading with defaults
+├── app.html
+├── app.css                          # Tailwind base + shadcn tokens (Cursor-owned)
+├── hooks.server.ts                  # Session validation (Claude-owned)
+├── lib/
+│   ├── server/                      # ━━━━━━━ CLAUDE'S LANE ━━━━━━━
+│   │   ├── db/
+│   │   │   ├── index.ts
+│   │   │   ├── schema.ts
+│   │   │   └── migrations/
+│   │   ├── auth/
+│   │   ├── queries/
+│   │   └── sse/                     # Presence channel
+│   ├── components/                  # ━━━━━━━ CURSOR'S LANE ━━━━━━━
+│   │   ├── ui/                      # shadcn-svelte primitives
+│   │   ├── editor/
+│   │   │   ├── Editor.svelte
+│   │   │   ├── Toolbar.svelte
+│   │   │   └── PresenceCursor.svelte
+│   │   └── NoteList.svelte
+│   ├── types/                       # ━━━ SHARED ━━━
+│   │   └── index.ts
+│   └── validation.ts                # ━━━ SHARED ━━━ (Zod schemas)
+└── routes/
+    ├── (marketing)/                 # SSR landing page
+    ├── (app)/                       # Authenticated workspace
+    │   ├── +layout.server.ts        # Auth guard (Claude)
+    │   ├── +layout.svelte           # App shell (Cursor)
+    │   └── notes/
+    │       ├── +page.server.ts      # Data load (Claude)
+    │       ├── +page.svelte         # UI (Cursor)
+    │       └── [id]/
+    └── api/
+        └── v1/
+            └── notes/+server.ts     # Claude
 ```
 
-## Coding Conventions
+## Claude's conventions
 
-- Use `const` by default; `let` only when reassignment is necessary; never `var`
-- All functions must have explicit return types — no implicit `any`
-- Prefer named exports over default exports
-- Error responses follow `{ error: string, code: string }` shape
-- Success responses follow `{ data: T }` shape
-- Route handlers should be thin — delegate logic to service functions
-- One route file per resource; register in `app.ts` with `app.use()`
-- Write unit tests for services, integration tests for routes
-- Keep test files next to source: `userService.test.ts` beside `userService.ts`
+### Server code
+
+- All `.server.ts` files go through Drizzle — never hand-written SQL
+- Every query filters by `workspaceId`
+- Validate inputs with Zod using the shared schemas in `src/lib/validation.ts`
+- Throw `error(...)` / `fail(...)` from SvelteKit — don't return error objects
+- API routes return `{ data: T }` on success, `{ error, code }` on failure
+
+### Schema changes
+
+- Generate migrations via `pnpm db:generate`; never hand-write
+- After any schema change, update the shared types in `src/lib/types/` — this
+  is the seam Cursor relies on for component prop types
+- Run the `drizzle-migrator` subagent for anything destructive
+
+### Handoff to Cursor
+
+When a task requires both backend and frontend, **stop after the backend is
+done** and write a clear handoff note:
+
+```markdown
+## Handoff to Cursor
+
+**Task:** Add an archive toggle to notes.
+
+**Backend changes (done):**
+- `src/lib/validation.ts` — added `ArchiveNoteSchema`
+- `src/routes/(app)/notes/[id]/+page.server.ts` — new `archive` form action
+- `src/lib/server/queries/notes.ts` — added `archiveNote`
+
+**Frontend to-do:**
+- Add an archive button to `src/lib/components/editor/Toolbar.svelte`
+- Wire it to the `?/archive` form action
+- Show archived state with a muted row in `NoteList.svelte`
+```
 
 ## Do
 
-- Run `npm run lint` before considering any change complete
-- Validate all request bodies with Zod schemas defined in the route file
-- Use `try/catch` in async route handlers or use an async wrapper
-- Add JSDoc comments to public service functions
-- Use HTTP status codes correctly (201 for creation, 204 for deletion, etc.)
+- Run `pnpm check` (svelte-check + tsc) after every non-trivial change
+- When editing shared files (`types/`, `validation.ts`), leave a comment noting the change so Cursor's next session knows
+- Use the `security-reviewer` subagent before merging anything touching `auth/`
 
 ## Don't
 
-- Don't install ORMs — use raw SQL via better-sqlite3
-- Don't add authentication middleware to the health endpoint
-- Don't use `console.log` — use the logger utility
-- Don't commit `.env` files; use `.env.example` as a template
-- Don't use `any` as a type — prefer `unknown` and narrow
-- Don't mutate function parameters
-
-## Running Locally
-
-```bash
-npm install
-cp .env.example .env
-npm run dev          # starts with hot-reload via tsx
-npm test             # runs vitest
-```
+- Don't edit `.svelte` files outside `+error.svelte` — that's Cursor's territory
+- Don't style elements in server-rendered HTML — Cursor owns the visual layer
+- Don't assume the component exists when writing a form action — write the action first, then hand off
+- Don't check in generated files from `pnpm check` (`.svelte-kit/`)

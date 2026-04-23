@@ -1,22 +1,43 @@
 {
-	"name": "my-typescript-app",
-	"version": "1.0.0",
+	"name": "kite-analytics",
+	"version": "0.14.2",
+	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "tsc",
-		"dev": "tsx watch src/index.ts",
-		"test": "vitest run",
-		"lint": "eslint src/",
-		"coati": "COATI_API_BASE=http://localhost:5173/api/v1 ../../cli/node_modules/.bin/tsx ../../cli/src/index.ts",
-		"coati-test": "COATI_API_BASE=https://develop.coati.sh/api/v1 ../../cli/node_modules/.bin/tsx ../../cli/src/index.ts"
+		"dev": "nuxt dev",
+		"build": "nuxt build",
+		"generate": "nuxt generate",
+		"preview": "nuxt preview",
+		"typecheck": "nuxt typecheck",
+		"lint": "eslint .",
+		"format": "prettier --write .",
+		"test": "vitest",
+		"test:unit": "vitest run",
+		"test:e2e": "playwright test"
 	},
 	"dependencies": {
-		"express": "^4.18.0"
+		"@pinia/nuxt": "^0.7.0",
+		"@unovis/ts": "^1.4.5",
+		"@unovis/vue": "^1.4.5",
+		"@vueuse/core": "^11.1.0",
+		"@vueuse/nuxt": "^11.1.0",
+		"date-fns": "^4.1.0",
+		"nuxt": "^3.14.0",
+		"pinia": "^2.2.4",
+		"pinia-plugin-persistedstate": "^4.1.0",
+		"vue": "^3.5.0"
 	},
 	"devDependencies": {
-		"typescript": "^5.5.0",
-		"tsx": "^4.0.0",
-		"vitest": "^2.0.0",
-		"eslint": "^9.0.0"
+		"@nuxt/test-utils": "^3.14.0",
+		"@playwright/test": "^1.48.0",
+		"@testing-library/vue": "^8.1.0",
+		"@unocss/nuxt": "^0.63.0",
+		"@vue/test-utils": "^2.4.6",
+		"eslint": "^9.13.0",
+		"msw": "^2.4.0",
+		"prettier": "^3.3.0",
+		"typescript": "^5.6.0",
+		"vitest": "^2.1.0",
+		"vue-tsc": "^2.1.0"
 	}
 }

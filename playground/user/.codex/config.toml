@@ -1,17 +1,60 @@
-# Codex global configuration
-# This file lives at ~/.codex/config.toml and applies to all projects.
+# Global Codex configuration.
+# Project-level .codex/config.toml still applies on top; this is the default.
 
-model = "o4-mini"
-approval_mode = "suggest"
+model = "gpt-5-codex"
+model_reasoning_effort = "medium"
+approval_policy = "on-request"
+preferred_shell = "zsh"
 
-[notify]
-on_apply = true
-on_error = true
+# Global instructions appended to every prompt
+[instructions]
+preamble = """
+Personal preferences for this user (see ~/.codex/AGENTS.md for detail):
 
-[history]
-persist = true
-max_entries = 200
+- Be concise. One-sentence updates; no paragraphs.
+- Bias toward action, but stop at destructive or irreversible operations.
+- Don't over-engineer. Match existing patterns, resist opportunistic refactors.
+- Use Conventional Commits. One behavior per commit.
+- Never add Co-Authored-By or generator trailers to commits.
+- If you make a mistake, fix it silently; don't apologize.
 
-[sandbox]
-enabled = true
-network = false
+Project-level AGENTS.md / CLAUDE.md rules take precedence when they conflict.
+"""
+
+# Sandbox: allow workspace writes, allow network.
+[sandbox_workspace_write]
+writable_roots = ["./"]
+network_access = true
+
+# MCP servers: none at user scope. Projects register their own.
+
+# Shell policies — global denies, projects add allows.
+[[shell.deny]]
+pattern = "rm -rf *"
+
+[[shell.deny]]
+pattern = "rm -rf /"
+
+[[shell.deny]]
+pattern = "git push --force*"
+
+[[shell.deny]]
+pattern = "git push -f*"
+
+[[shell.deny]]
+pattern = "git reset --hard*"
+
+[[shell.deny]]
+pattern = "sudo *"
+
+[[shell.deny]]
+pattern = "curl * | sh"
+
+[[shell.deny]]
+pattern = "curl * | bash"
+
+[[shell.deny]]
+pattern = "npm publish*"
+
+[[shell.deny]]
+pattern = "pnpm publish*"

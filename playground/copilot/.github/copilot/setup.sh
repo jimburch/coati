@@ -1,41 +1,56 @@
-#!/bin/bash
-# setup.sh — Copilot Coding Agent environment setup
-# This script runs when the Copilot coding agent initializes a workspace.
+#!/usr/bin/env bash
+# Copilot Coding Agent bootstrap for Ledger.
+# Runs once before the agent starts working — installs deps, brings up the
+# test database, and generates the Prisma client.
 
 set -euo pipefail
 
-echo "==> Setting up development environment..."
+log() { printf '\033[36m[setup]\033[0m %s\n' "$*"; }
+fail() { printf '\033[31m[setup] error:\033[0m %s\n' "$*" >&2; exit 1; }
 
-# Use Node.js 22 LTS if nvm is available
-if command -v nvm &> /dev/null; then
-  nvm install 22
-  nvm use 22
+# --- toolchain check --------------------------------------------------------
+
+command -v pnpm >/dev/null || fail "pnpm is not installed"
+command -v docker >/dev/null || fail "docker is not installed"
+command -v node >/dev/null || fail "node is not installed"
+
+NODE_MAJOR=$(node -p 'process.versions.node.split(".")[0]')
+if [ "$NODE_MAJOR" -lt 20 ]; then
+  fail "node 20+ required (found $NODE_MAJOR)"
 fi
 
-echo "==> Node $(node --version)"
-echo "==> npm $(npm --version)"
+# --- dependencies -----------------------------------------------------------
 
-# Install dependencies
-echo "==> Installing npm dependencies..."
-npm ci --ignore-scripts
+log "installing node dependencies"
+pnpm install --frozen-lockfile
 
-# Run TypeScript compilation to verify the project builds
-echo "==> Verifying TypeScript compilation..."
-npx tsc --noEmit
+# --- test database ----------------------------------------------------------
 
-# Run linter to catch pre-existing issues
-echo "==> Running ESLint..."
-npx eslint src/ --max-warnings 0 || echo "Warning: lint issues found"
+log "starting test postgres"
+docker compose up -d db
+for i in $(seq 1 30); do
+  if docker compose exec -T db pg_isready -U ledger >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+  if [ "$i" = "30" ]; then fail "postgres never became ready"; fi
+done
 
-# Run tests to establish baseline
-echo "==> Running test suite..."
-npx vitest run || echo "Warning: some tests are failing"
+log "applying migrations"
+pnpm db:migrate:dev --name=copilot-bootstrap
 
-# Create .env from template if it doesn't exist
-if [ ! -f .env ] && [ -f .env.example ]; then
-  echo "==> Creating .env from .env.example..."
-  cp .env.example .env
-  echo "Note: Update .env with real values before running the app"
-fi
+log "generating prisma client"
+pnpm db:generate
 
-echo "==> Environment setup complete"
+# --- playwright browsers ----------------------------------------------------
+
+log "installing playwright browsers"
+pnpm exec playwright install --with-deps chromium
+
+# --- smoke test -------------------------------------------------------------
+
+log "running smoke tests"
+pnpm check
+pnpm test:unit -- --run
+
+log "setup complete"

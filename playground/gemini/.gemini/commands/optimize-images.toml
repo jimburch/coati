@@ -1,0 +1,48 @@
+# /optimize-images — Compress new or modified images and migrate to <Image>.
+
+description = "Find raw <img> tags in the diff, migrate to Astro's <Image>, and compress oversized source files."
+
+[arguments]
+threshold_kb = { required = false, description = "File size threshold in KB (default 500)" }
+
+[prompt]
+template = """
+Optimize images in the diff.
+
+## Steps
+
+1. List image files changed since `origin/main`:
+   ```
+   git diff --name-only origin/main...HEAD -- 'src/assets/**/*.{png,jpg,jpeg,webp}' 'public/images/**/*.{png,jpg,jpeg,webp}'
+   ```
+2. For each image:
+   - Check file size with `wc -c`
+   - If over {{args.threshold_kb | default: 500}}KB, flag it
+3. For files flagged, run `sharp` to compress:
+   - PNG → PNG with lossless compression (`-q 90`)
+   - JPG → JPG at quality 85 OR convert to WebP at quality 80 (prefer WebP for hero images)
+   - Always strip metadata (EXIF, color profile)
+4. Grep for raw `<img>` tags in MDX/Astro files:
+   ```
+   rg '<img ' src/content src/components
+   ```
+   - For each match inside `src/content/`, propose a migration to `<Image>` from `astro:assets`:
+     ```astro
+     import { Image } from 'astro:assets';
+     import heroImg from '~/assets/blog/hero.jpg';
+     <Image src={heroImg} alt="..." loading="lazy" />
+     ```
+   - This gives automatic responsive srcsets + format negotiation.
+5. Verify every `<Image>` has descriptive alt text. Flag any that say "image", "photo", or are empty.
+
+## Output
+
+Report as a table:
+
+| File | Before | After | Format | Notes |
+| --- | --- | --- | --- | --- |
+| src/assets/blog/launch-hero.jpg | 1.8MB | 180KB | → WebP | migrated <img> → <Image> in launch.mdx |
+"""
+
+[shell.pre]
+command = "git diff --name-only origin/main...HEAD -- 'src/assets/**' 'public/images/**'"

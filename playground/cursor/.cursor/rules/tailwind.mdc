@@ -1,0 +1,84 @@
+---
+description: Tailwind CSS + class-variance-authority conventions for Atlas UI.
+globs:
+  - "src/components/**/*.tsx"
+  - "src/lib/cva.ts"
+alwaysApply: false
+---
+
+# Tailwind + CVA
+
+## Tokens first
+
+Atlas exposes a design token layer in `src/tokens.ts` and maps them to Tailwind
+theme extensions in `tailwind.config.ts`. Always reach for a token:
+
+- Colors: `bg-primary`, `text-muted-foreground`, `border-input`
+- Spacing: the 4px scale (`gap-2`, `px-4`) — do not use arbitrary values like `gap-[7px]`
+- Radii: `rounded-md`, `rounded-lg` — do not use `rounded-[9px]`
+- Typography: `text-sm`, `text-base`, `text-lg` — font sizes are capped by tokens
+
+Arbitrary values are a code smell. If you need a value not in the token set,
+the token set probably needs expanding — open a design-token PR first.
+
+## Class ordering
+
+Prettier's `prettier-plugin-tailwindcss` handles sorting. Do not reorder
+manually.
+
+## `cn()` helper
+
+Every class string passes through `cn()` in `src/lib/cn.ts` — it merges
+duplicate utilities (e.g., a base `p-4` overridden by consumer's `p-2`):
+
+```tsx
+import { cn } from '~/lib/cn';
+
+<div className={cn('p-4 bg-card', className)} />
+```
+
+Never use string concatenation or template literals to build classnames.
+
+## Variants with `cva`
+
+For components with multiple states, use `cva` — never handwrite variant maps.
+
+```ts
+import { cva } from 'class-variance-authority';
+
+export const badgeVariants = cva(
+  'inline-flex items-center rounded-full text-xs font-medium',
+  {
+    variants: {
+      tone: {
+        neutral: 'bg-muted text-muted-foreground',
+        success: 'bg-success/10 text-success',
+        warning: 'bg-warning/10 text-warning',
+        danger: 'bg-danger/10 text-danger'
+      },
+      size: {
+        sm: 'px-2 py-0.5',
+        md: 'px-2.5 py-1'
+      }
+    },
+    defaultVariants: { tone: 'neutral', size: 'md' }
+  }
+);
+```
+
+Variant values are always declared on the variant map, never inferred from
+string unions.
+
+## Dark mode
+
+Atlas uses class-based dark mode (`dark:`). Every component must look correct
+in both themes. For tokens that differ between themes, define the token at the
+CSS variable level — do not scatter `dark:` variants across components.
+
+## Don't
+
+- Don't write custom CSS files for components — utilities only
+- Don't use `!important` — override specificity with token changes or `cn()` merging
+- Don't animate with CSS keyframes in component files — use Tailwind's `animate-*` utilities or Framer Motion
+- Don't use `style={{…}}` except for dynamic positioning (tooltip/popover transforms)
+- Don't use `@apply` in a component — if you want reusability, make it a variant

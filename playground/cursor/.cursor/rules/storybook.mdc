@@ -1,0 +1,95 @@
+---
+description: Story-writing conventions for Atlas UI.
+globs: "**/*.stories.tsx"
+alwaysApply: false
+---
+
+# Storybook
+
+Every component ships with a `<Component>.stories.tsx` file. Stories drive
+both human exploration (the Storybook UI) and Chromatic visual regression.
+
+## CSF 3 structure
+
+```tsx
+import type { Meta, StoryObj } from '@storybook/react';
+import { Button } from './Button';
+
+const meta = {
+  title: 'Actions/Button',
+  component: Button,
+  parameters: {
+    layout: 'centered',
+    a11y: { config: { rules: [{ id: 'color-contrast', enabled: true }] } }
+  },
+  argTypes: {
+    variant: { control: 'select', options: ['primary', 'secondary', 'ghost'] },
+    size: { control: 'select', options: ['sm', 'md', 'lg'] },
+    disabled: { control: 'boolean' }
+  },
+  args: {
+    children: 'Click me'
+  }
+} satisfies Meta<typeof Button>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+export const Primary: Story = {};
+
+export const AllVariants: Story = {
+  render: (args) => (
+    <div className="flex gap-2">
+      <Button {...args} variant="primary" />
+      <Button {...args} variant="secondary" />
+      <Button {...args} variant="ghost" />
+    </div>
+  )
+};
+
+export const Disabled: Story = {
+  args: { disabled: true }
+};
+
+export const WithInteraction: Story = {
+  play: async ({ canvas, userEvent }) => {
+    const btn = canvas.getByRole('button', { name: /click me/i });
+    await userEvent.click(btn);
+  }
+};
+```
+
+## Title conventions
+
+- Use slash-separated paths: `Actions/Button`, `Forms/Input`, `Feedback/Toast`
+- Category is the component role, not a package or file name
+- One story file per component; one component per story file
+
+## Required stories per component
+
+At minimum every component exports:
+
+1. **Default** — the canonical usage
+2. **All variants / All sizes** — every combination rendered side-by-side for Chromatic
+3. **Disabled / Loading** if applicable
+4. **With interaction** — `play` function exercising the primary user flow
+5. **Edge cases** — long text, very short text, RTL, max width
+
+## `play` functions
+
+Use them to exercise behavior and generate Chromatic diffs for interaction
+states (hover, focus, open). Use `canvas` from the CSF `play` context; use
+`userEvent` from the same context — never import it directly.
+
+## A11y
+
+Every story runs axe via the `addon-a11y`. If a story has a legitimate reason
+to violate a rule (e.g., intentionally demoing low contrast), disable the rule
+in that story's `parameters.a11y.config.rules` with a comment explaining why.
+
+## Don't
+
+- Don't add stories that require a data-fetching provider — this is a pure UI library
+- Don't write stories in JavaScript (`.stories.js`) — TypeScript only
+- Don't use `args.onClick: fn()` — use `action('click')` from `@storybook/addon-actions`
+- Don't reuse a story name across files (Chromatic baseline collisions)
