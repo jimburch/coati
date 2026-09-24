@@ -61,7 +61,7 @@ The project enforces a consistent style via ESLint and Prettier (`pnpm lint`, `p
 - **API responses** follow `{ data }` on success / `{ error, code }` on failure
 - **Validation** uses Zod schemas from `packages/validation` — share schemas between client and server
 - **UI** uses shadcn-svelte primitives; don't add new UI libraries
-- **Domain terms** — use the canonical terms from [`docs/UBIQUITOUS_LANGUAGE.md`](docs/UBIQUITOUS_LANGUAGE.md) (say **Setup** not "workflow", **Agent** not "tool", **Clone** not "download")
+- **Domain terms** — use the canonical terms from [`CONTEXT.md`](CONTEXT.md) (say **Setup** not "workflow", **Agent** not "tool", **Clone** not "download")
 - **Small components** — one component per file; prefer composition over deep nesting
 
 See [`CLAUDE.md`](CLAUDE.md) for the complete conventions. It's written for AI coding agents but is accurate for humans too.

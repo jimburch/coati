@@ -32,7 +32,7 @@ The workflow is simple:
 2. **Discover** setups through search, trending, and user profiles
 3. **Clone** a setup to your machine with a single command
 
-See [`docs/SETUP.md`](docs/SETUP.md) for the full manifest spec and [`docs/UBIQUITOUS_LANGUAGE.md`](docs/UBIQUITOUS_LANGUAGE.md) for the domain glossary.
+See [`docs/SETUP.md`](docs/SETUP.md) for the full manifest spec and [`CONTEXT.md`](CONTEXT.md) for the domain glossary.
 
 ## Surfaces
 
@@ -292,7 +292,7 @@ Contributions are welcome — bug reports, feature ideas, and PRs.
 - API responses follow `{ data }` / `{ error, code }` shape
 - Shared Zod schemas in `packages/validation`
 - shadcn-svelte primitives only — don't add new UI libraries
-- Use the canonical domain terms from [`docs/UBIQUITOUS_LANGUAGE.md`](docs/UBIQUITOUS_LANGUAGE.md) (e.g. **Setup** not "workflow")
+- Use the canonical domain terms from [`CONTEXT.md`](CONTEXT.md) (e.g. **Setup** not "workflow")
 
 See [`CLAUDE.md`](CLAUDE.md) for the complete project conventions — it's written for AI coding agents but is an accurate guide for humans too.
 

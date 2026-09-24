@@ -1,4 +1,4 @@
-# Ubiquitous Language
+# Coati — Domain Context
 
 ## Core entities
 
