@@ -242,7 +242,7 @@ pnpm cf:types    # regenerate Worker binding types
 pnpm preview:cf  # production-shaped local Worker
 ```
 
-Custom domains in `wrangler.jsonc` stay commented until DNS for `develop.coati.sh` and `coati.sh` is moved off the VPS. A push to `develop` deploys the Workers dev environment from `.github/workflows/deploy.yml` and does not call Coolify. A push to `main` still deploys the production VPS from `.github/workflows/coolify.yml` until the prod DNS cutover, and also deploys the Workers production environment. Custom domains stay commented, so production traffic stays on the VPS.
+Custom domains in `wrangler.jsonc` stay commented until DNS for `develop.coati.sh` and `coati.sh` is moved off the VPS. Deploys run from `.github/workflows/deploy.yml`.
 
 The Neon database name is `neondb` and the role is `neondb_owner`. Migrations and `pnpm seed:dev` use a direct URL, `postgresql://neondb_owner:<password>@<host>/neondb?sslmode=require`, from `NEON_DEV_DIRECT_URL` or `NEON_PROD_DIRECT_URL`. Hyperdrive configs are `coati-dev` (`51967bcc2bfb4767b8bd84ac02c40794`) and `coati-prod` (`ac509d55d4a549b9935917e386df6e1e`). The Cloudflare account id `98e35850d8eb904f5f11f1b537132362` is in both wrangler configs. Local Docker Postgres in `.env` is a separate database (`coati` / `coati_dev`).
 
