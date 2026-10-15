@@ -242,7 +242,7 @@ pnpm cf:types    # regenerate Worker binding types
 pnpm preview:cf  # production-shaped local Worker
 ```
 
-`develop.coati.sh` is a Worker custom domain on `coati-dev` (`custom_domain: true` in `wrangler.jsonc`). The `coati.sh` route stays commented until that proxied A record is removed. Deploys run from `.github/workflows/deploy.yml`.
+`develop.coati.sh` is a Worker custom domain on `coati-dev`, and `coati.sh` is a Worker custom domain on `coati-prod` (`custom_domain: true` in `wrangler.jsonc`). `www.coati.sh` is a zone redirect rule, not a Worker route. Deploys run from `.github/workflows/deploy.yml`.
 
 The Neon database name is `neondb` and the role is `neondb_owner`. Migrations and `pnpm seed:dev` use a direct URL, `postgresql://neondb_owner:<password>@<host>/neondb?sslmode=require`, from `NEON_DEV_DIRECT_URL` or `NEON_PROD_DIRECT_URL`. Hyperdrive configs are `coati-dev` (`51967bcc2bfb4767b8bd84ac02c40794`) and `coati-prod` (`ac509d55d4a549b9935917e386df6e1e`). The Cloudflare account id `98e35850d8eb904f5f11f1b537132362` is in both wrangler configs. Local Docker Postgres in `.env` is a separate database (`coati` / `coati_dev`).
 

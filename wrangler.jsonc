@@ -24,14 +24,13 @@
 	// `pnpm dev` reads .env, not these vars: Coati Dev → http://localhost:5173/auth/callback/github
 	// Named environments do not inherit vars, hyperdrive, or ratelimits.
 	// Deploy with `wrangler deploy --env dev` or `--env production`.
-	// develop.coati.sh is a Worker custom domain on coati-dev. Its VPS A record is gone.
-	// coati.sh stays commented until that proxied A record is removed. Uncommenting
-	// it on a deploy would attach the Worker and fight the existing DNS.
-	// www.coati.sh is a Cloudflare redirect rule, not a Worker route.
+	// develop.coati.sh is a Worker custom domain on coati-dev.
+	// coati.sh is a Worker custom domain on coati-prod.
+	// www.coati.sh is a zone redirect rule, plus a proxied AAAA 100:: record. Not a Worker route.
 	"env": {
 		"production": {
 			"name": "coati-prod",
-			// "routes": [{ "pattern": "coati.sh", "custom_domain": true }],
+			"routes": [{ "pattern": "coati.sh", "custom_domain": true }],
 			"vars": {
 				"PUBLIC_ENV": "production",
 				"PUBLIC_SITE_URL": "https://coati.sh",
