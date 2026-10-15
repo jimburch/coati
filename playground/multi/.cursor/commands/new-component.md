@@ -35,18 +35,18 @@ conventions.
 
 ```svelte
 <script lang="ts">
-	import { cn } from '$lib/cn';
+  import { cn } from '$lib/cn';
 
-	interface Props {
-		class?: string;
-		// add your props here
-	}
+  interface Props {
+    class?: string;
+    // add your props here
+  }
 
-	let { class: className = '' }: Props = $props();
+  let { class: className = '' }: Props = $props();
 </script>
 
 <div class={cn('rounded-md', className)}>
-	<!-- content -->
+  <!-- content -->
 </div>
 ```
 

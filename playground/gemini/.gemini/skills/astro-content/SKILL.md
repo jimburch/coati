@@ -22,29 +22,28 @@ Every collection has a Zod schema. Adding a new collection:
 import { defineCollection, z } from 'astro:content';
 
 const docs = defineCollection({
-	type: 'content',
-	schema: z.object({
-		title: z.string(),
-		description: z.string().max(160),
-		category: z.enum(['getting-started', 'guides', 'api', 'reference']),
-		order: z.number().default(0),
-		draft: z.boolean().default(false),
-		updatedAt: z.coerce.date().optional()
-	})
+  type: 'content',
+  schema: z.object({
+    title: z.string(),
+    description: z.string().max(160),
+    category: z.enum(['getting-started', 'guides', 'api', 'reference']),
+    order: z.number().default(0),
+    draft: z.boolean().default(false),
+    updatedAt: z.coerce.date().optional()
+  })
 });
 
 const blog = defineCollection({
-	type: 'content',
-	schema: ({ image }) =>
-		z.object({
-			title: z.string(),
-			description: z.string().max(160),
-			author: z.string(),
-			publishDate: z.coerce.date(),
-			tags: z.array(z.string()).min(1).max(5),
-			heroImage: image().optional(),
-			draft: z.boolean().default(false)
-		})
+  type: 'content',
+  schema: ({ image }) => z.object({
+    title: z.string(),
+    description: z.string().max(160),
+    author: z.string(),
+    publishDate: z.coerce.date(),
+    tags: z.array(z.string()).min(1).max(5),
+    heroImage: image().optional(),
+    draft: z.boolean().default(false)
+  })
 });
 
 export const collections = { docs, blog };

@@ -7,11 +7,12 @@ import { dev } from '$app/environment';
 import type { Cookies } from '@sveltejs/kit';
 import { sanitizeUsername } from '$lib/utils/username';
 import { hashToken, randomHex } from '$lib/server/crypto';
-import {
-	createSession as createSessionRecord,
-	validateSessionToken as validateSessionRecord,
-	invalidateSession as invalidateSessionRecord,
-	invalidateAllUserSessions as invalidateAllUserSessionsRecord
+
+export {
+	createSession,
+	validateSessionToken,
+	invalidateSession,
+	invalidateAllUserSessions
 } from '$lib/server/session';
 
 // ─── Arctic GitHub Provider ────────────────────────────────────────────────
@@ -33,22 +34,6 @@ export function generateSessionToken(): string {
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const COOKIE_NAME = 'coati_session';
-
-export async function createSession(token: string, userId: string) {
-	return createSessionRecord(db, token, userId);
-}
-
-export async function validateSessionToken(token: string) {
-	return validateSessionRecord(db, token);
-}
-
-export async function invalidateSession(sessionId: string): Promise<void> {
-	await invalidateSessionRecord(db, sessionId);
-}
-
-export async function invalidateAllUserSessions(userId: string): Promise<void> {
-	await invalidateAllUserSessionsRecord(db, userId);
-}
 
 // ─── Cookie Helpers ────────────────────────────────────────────────────────
 

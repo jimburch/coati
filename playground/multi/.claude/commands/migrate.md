@@ -1,6 +1,6 @@
 ---
 description: Generate and apply a Drizzle migration via the drizzle-migrator subagent
-argument-hint: '<migration-name>'
+argument-hint: "<migration-name>"
 ---
 
 # /migrate

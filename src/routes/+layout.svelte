@@ -1,35 +1,29 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { afterNavigate } from '$app/navigation';
-	import { browser } from '$app/environment';
 	import Navbar from '$lib/components/Navbar.svelte';
 	import Footer from '$lib/components/Footer.svelte';
 	import FeedbackWidget from '$lib/components/FeedbackWidget.svelte';
 	import GuideNudge from '$lib/components/GuideNudge.svelte';
 	import NavigationProgress from '$lib/components/NavigationProgress.svelte';
 	import { Toaster } from 'svelte-sonner';
+	import { initMixpanelClient, pageview, identify } from '$lib/observability/mixpanel-client';
 	import '../app.css';
 
 	let { data, children } = $props();
 
-	// mixpanel-browser is client-only. A static import here would ship it in the
-	// Worker and spend cold-start CPU parsing it. `browser` is false in the
-	// server build, so this branch is dropped from the Worker.
-	type Analytics = typeof import('$lib/observability/mixpanel-client');
-	const analyticsReady: Promise<Analytics | null> = browser
-		? import('$lib/observability/mixpanel-client').then((mod) => {
-				mod.initMixpanelClient();
-				return mod;
-			})
-		: Promise.resolve(null);
+	onMount(() => {
+		initMixpanelClient();
+	});
 
 	afterNavigate(() => {
-		void analyticsReady.then((mod) => mod?.pageview());
+		pageview();
 	});
 
 	$effect(() => {
-		const user = data.user;
-		if (!user) return;
-		void analyticsReady.then((mod) => mod?.identify(user.id, { username: user.username }));
+		if (data.user) {
+			identify(data.user.id, { username: data.user.username });
+		}
 	});
 </script>
 

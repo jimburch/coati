@@ -28,7 +28,7 @@ Every interactive element has a visible focus ring. Base your styles on
 `focus-visible:` so mouse users don't see the ring, keyboard users do.
 
 ```tsx
-'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
 ```
 
 Never use `outline: none` without an alternative focus indicator.
@@ -38,16 +38,16 @@ Never use `outline: none` without an alternative focus indicator.
 Follow the WAI-ARIA Authoring Practices patterns. Radix implements them; your
 job is not to break them when wrapping.
 
-| Component        | Expected keys                                                               |
-| ---------------- | --------------------------------------------------------------------------- |
-| Button           | Enter, Space activate                                                       |
-| Checkbox, Switch | Space toggles                                                               |
-| Dialog           | Escape closes, Tab cycles within                                            |
-| Menu, Dropdown   | Arrow keys navigate, Home/End jump, Escape closes, typeahead for long lists |
-| Tabs             | Arrow keys move, Home/End jump, manual activation by default                |
-| Radio group      | Arrow keys navigate AND select (single-activation model)                    |
-| Combobox         | Down opens, arrow keys navigate suggestions, Enter selects, Escape clears   |
-| Tooltip          | Shown on focus AND hover, dismissed on Escape                               |
+| Component | Expected keys |
+| --- | --- |
+| Button | Enter, Space activate |
+| Checkbox, Switch | Space toggles |
+| Dialog | Escape closes, Tab cycles within |
+| Menu, Dropdown | Arrow keys navigate, Home/End jump, Escape closes, typeahead for long lists |
+| Tabs | Arrow keys move, Home/End jump, manual activation by default |
+| Radio group | Arrow keys navigate AND select (single-activation model) |
+| Combobox | Down opens, arrow keys navigate suggestions, Enter selects, Escape clears |
+| Tooltip | Shown on focus AND hover, dismissed on Escape |
 
 ## ARIA naming
 
@@ -62,7 +62,7 @@ Icon-only buttons always need one:
 
 ```tsx
 <Button iconOnly aria-label="Close">
-	<XIcon aria-hidden="true" />
+  <XIcon aria-hidden="true" />
 </Button>
 ```
 
@@ -72,7 +72,7 @@ For announcements (toast, form errors, loading), use a live region:
 
 ```tsx
 <div role="status" aria-live="polite">
-	{message}
+  {message}
 </div>
 ```
 
@@ -99,7 +99,6 @@ Every text/background pair meets 4.5:1 (or 3:1 for large text, ≥ 18pt or ≥ 1
 Every focus ring meets 3:1 against both adjacent colors.
 
 Check with:
-
 - Chromatic's a11y addon (runs axe automatically)
 - `pnpm test:a11y` (Playwright + axe)
 - Stark, Contrast, or dev tools' contrast checker for design review
@@ -109,7 +108,7 @@ Check with:
 Respect `prefers-reduced-motion`. Wrap nontrivial transitions in `motion-safe:`:
 
 ```tsx
-'motion-safe:transition-transform motion-safe:duration-200';
+'motion-safe:transition-transform motion-safe:duration-200'
 ```
 
 For Framer Motion, respect the user's preference via the `useReducedMotion()` hook.

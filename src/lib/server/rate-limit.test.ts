@@ -142,11 +142,20 @@ describe('checkRateLimit', () => {
 		expect(anonLimit).not.toHaveBeenCalled();
 	});
 
-	it('throws when the binding is missing', async () => {
+	it('skips limiting and warns once when the binding is missing', async () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 		const { event } = makeEvent({ omitBinding: 'anon' });
 
-		await expect(checkRateLimit(event as never)).rejects.toThrow(
-			'Rate limit binding is not configured'
-		);
+		await expect(checkRateLimit(event as never)).resolves.toEqual({
+			limited: false,
+			retryAfter: 0
+		});
+		await expect(checkRateLimit(event as never)).resolves.toEqual({
+			limited: false,
+			retryAfter: 0
+		});
+
+		expect(warn).toHaveBeenCalledTimes(1);
+		warn.mockRestore();
 	});
 });

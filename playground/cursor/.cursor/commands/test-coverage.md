@@ -25,11 +25,11 @@ prop surface has grown without matching assertions.
 
 Markdown table:
 
-| File                               | State       | Missing                                           |
-| ---------------------------------- | ----------- | ------------------------------------------------- |
-| `src/components/Button/Button.tsx` | ⚠ Partial   | `iconOnly` prop untested, `Loading` story missing |
-| `src/components/Badge/Badge.tsx`   | ✓ Covered   | —                                                 |
-| `src/components/Toast/Toast.tsx`   | ✗ Uncovered | No `.test.tsx` exists                             |
+| File | State | Missing |
+| --- | --- | --- |
+| `src/components/Button/Button.tsx` | ⚠ Partial | `iconOnly` prop untested, `Loading` story missing |
+| `src/components/Badge/Badge.tsx` | ✓ Covered | — |
+| `src/components/Toast/Toast.tsx` | ✗ Uncovered | No `.test.tsx` exists |
 
 Then offer to generate the missing tests and stories. Do not write them
 automatically — wait for the user to pick which files to cover.

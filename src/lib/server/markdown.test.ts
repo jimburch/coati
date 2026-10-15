@@ -49,6 +49,28 @@ describe('renderMarkdown', () => {
 		expect(html.toLowerCase()).not.toContain('javascript:');
 	});
 
+	it('keeps Shiki classes and drops class and style on other tags', async () => {
+		const html = await renderMarkdown(
+			'```typescript\nconst x = 1;\n```\n\n<p class="evil" style="color:red">text</p>'
+		);
+		expect(html).toContain('github-dark');
+		expect(html).toContain('github-light');
+		expect(html).toContain('--shiki-dark');
+		expect(html).not.toContain('class="evil"');
+		expect(html).not.toContain('color:red');
+	});
+
+	it('drops non-Shiki inline styles, including javascript urls', async () => {
+		const html = await renderMarkdown(
+			'<span style="background-image:url(javascript:alert(1));--shiki-dark:#fff">x</span><a style="color:expression(alert(1))" href="https://example.com">link</a>'
+		);
+		expect(html.toLowerCase()).not.toContain('javascript:');
+		expect(html).not.toContain('expression');
+		expect(html).not.toContain('background-image');
+		expect(html).toContain('--shiki-dark:#fff');
+		expect(html).toContain('https://example.com');
+	});
+
 	it('strips iframe and svg payloads', async () => {
 		const html = await renderMarkdown(
 			'<iframe src="https://evil.test"></iframe><svg onload="alert(1)"></svg>'

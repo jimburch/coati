@@ -1,6 +1,6 @@
 ---
 description: Reduce distraction by narrowing Claude's attention to the current task
-argument-hint: '<task-description>'
+argument-hint: "<task-description>"
 ---
 
 # /focus

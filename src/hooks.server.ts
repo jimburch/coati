@@ -136,7 +136,6 @@ const databaseHandle: Handle = async ({ event, resolve }) => {
 	}
 
 	const { db: database, end } = createDb(connectionString);
-	event.locals.db = database;
 	try {
 		return await runWithDatabase(database, () => applicationHandle({ event, resolve }));
 	} finally {

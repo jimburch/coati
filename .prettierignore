@@ -26,3 +26,9 @@ site/build/
 # Wrangler runtime types (regenerate with `pnpm cf:types`)
 src/worker-configuration.d.ts
 workers/cron/worker-configuration.d.ts
+
+# Example agent setups. Not app source; formatting them is unrelated churn.
+playground/
+
+# Pre-existing and unrelated to the Workers port. Left as it is on develop.
+docs/LAUNCH-POSTS.md

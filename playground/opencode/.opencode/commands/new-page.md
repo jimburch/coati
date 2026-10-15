@@ -36,31 +36,30 @@ conventions.
 ```vue
 <script setup lang="ts">
 definePageMeta({
-	middleware: ['auth', 'workspace'],
-	layout: 'default'
+  middleware: ['auth', 'workspace'],
+  layout: 'default'
 });
 
 const route = useRoute();
 const { data, pending, error, refresh } = await useFetch(
-	() => `/workspaces/${route.params.workspaceId}/...`,
-	{ key: route.fullPath }
+  () => `/workspaces/${route.params.workspaceId}/...`,
+  { key: route.fullPath }
 );
 </script>
 
 <template>
-	<section>
-		<h1>Page title</h1>
-		<p v-if="pending">Loading…</p>
-		<p v-else-if="error">Failed to load: {{ error.message }}</p>
-		<pre v-else>{{ data }}</pre>
-	</section>
+  <section>
+    <h1>Page title</h1>
+    <p v-if="pending">Loading…</p>
+    <p v-else-if="error">Failed to load: {{ error.message }}</p>
+    <pre v-else>{{ data }}</pre>
+  </section>
 </template>
 ```
 
 ## Output
 
 Print a summary:
-
 - File created at: `app/pages/...`
 - Middleware attached: `auth`, `workspace` (or none)
 - Next steps: add to the sidebar config in `app/config/nav.ts`

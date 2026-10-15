@@ -16,17 +16,17 @@ import { computed, ref, watch } from 'vue';
 import type { Site } from '~/types';
 
 interface Props {
-	site: Site;
-	showUsage?: boolean;
+  site: Site;
+  showUsage?: boolean;
 }
 
 interface Emits {
-	(e: 'select', siteId: string): void;
-	(e: 'archive', siteId: string): void;
+  (e: 'select', siteId: string): void;
+  (e: 'archive', siteId: string): void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
-	showUsage: false
+  showUsage: false
 });
 
 const emit = defineEmits<Emits>();
@@ -35,24 +35,24 @@ const isSelected = ref(false);
 const displayName = computed(() => props.site.name || props.site.domain);
 
 watch(
-	() => props.site.id,
-	() => {
-		isSelected.value = false;
-	}
+  () => props.site.id,
+  () => {
+    isSelected.value = false;
+  }
 );
 
 function onSelect(): void {
-	isSelected.value = true;
-	emit('select', props.site.id);
+  isSelected.value = true;
+  emit('select', props.site.id);
 }
 </script>
 
 <template>
-	<article class="site-card" :class="{ 'is-selected': isSelected }">
-		<h3>{{ displayName }}</h3>
-		<p v-if="showUsage">{{ site.monthlyEvents.toLocaleString() }} events / mo</p>
-		<button type="button" @click="onSelect">Select</button>
-	</article>
+  <article class="site-card" :class="{ 'is-selected': isSelected }">
+    <h3>{{ displayName }}</h3>
+    <p v-if="showUsage">{{ site.monthlyEvents.toLocaleString() }} events / mo</p>
+    <button type="button" @click="onSelect">Select</button>
+  </article>
 </template>
 ```
 
@@ -81,25 +81,24 @@ logic. It returns refs and functions.
 import { customRef } from 'vue';
 
 export function useDebouncedRef<T>(value: T, delay = 300) {
-	let timeout: ReturnType<typeof setTimeout>;
-	return customRef<T>((track, trigger) => ({
-		get() {
-			track();
-			return value;
-		},
-		set(newValue) {
-			clearTimeout(timeout);
-			timeout = setTimeout(() => {
-				value = newValue;
-				trigger();
-			}, delay);
-		}
-	}));
+  let timeout: ReturnType<typeof setTimeout>;
+  return customRef<T>((track, trigger) => ({
+    get() {
+      track();
+      return value;
+    },
+    set(newValue) {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        value = newValue;
+        trigger();
+      }, delay);
+    }
+  }));
 }
 ```
 
 Rules:
-
 - Composables return refs, not unwrapped values — consumers need reactivity
 - Composables can call other composables
 - Composables can call `onMounted` / `onUnmounted` (they run in the calling component's context)
@@ -116,12 +115,12 @@ import { onMounted, useTemplateRef } from 'vue';
 const inputRef = useTemplateRef<HTMLInputElement>('input');
 
 onMounted(() => {
-	inputRef.value?.focus();
+  inputRef.value?.focus();
 });
 </script>
 
 <template>
-	<input ref="input" />
+  <input ref="input" />
 </template>
 ```
 

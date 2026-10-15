@@ -1,6 +1,6 @@
 ---
 description: Review the server-side diff against Compose conventions
-argument-hint: '[base-branch]'
+argument-hint: "[base-branch]"
 ---
 
 # /review
@@ -28,7 +28,7 @@ Review the Claude-lane portion of the current diff.
 ## Output
 
 - 🚨 Must fix — bugs, missing migrations, security issues
-- ⚠️ Should fix — missing workspace scoping, missing Zod validation
+- ⚠️  Should fix — missing workspace scoping, missing Zod validation
 - 💡 Consider — naming, structure
 - 📤 Handoff — a bulleted list of things Cursor should know about
 

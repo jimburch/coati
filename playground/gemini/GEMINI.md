@@ -80,14 +80,14 @@ src/
 import { defineCollection, z } from 'astro:content';
 
 const docs = defineCollection({
-	type: 'content',
-	schema: z.object({
-		title: z.string(),
-		description: z.string().max(160),
-		category: z.enum(['getting-started', 'guides', 'api', 'reference']),
-		order: z.number().default(0),
-		draft: z.boolean().default(false)
-	})
+  type: 'content',
+  schema: z.object({
+    title: z.string(),
+    description: z.string().max(160),
+    category: z.enum(['getting-started', 'guides', 'api', 'reference']),
+    order: z.number().default(0),
+    draft: z.boolean().default(false)
+  })
 });
 
 export const collections = { docs, blog };

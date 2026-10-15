@@ -1,6 +1,6 @@
 ---
 description: Run an accessibility audit against the running dev server via Playwright MCP
-argument-hint: '[route-path]'
+argument-hint: "[route-path]"
 ---
 
 # /a11y-check

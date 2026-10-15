@@ -39,15 +39,14 @@ Generate a complete component package: `Component.tsx`, `Component.stories.tsx`,
 
 Print a summary table:
 
-| File                               | Status                |
-| ---------------------------------- | --------------------- |
-| `src/components/$1/$1.tsx`         | ✓ created             |
+| File | Status |
+| --- | --- |
+| `src/components/$1/$1.tsx` | ✓ created |
 | `src/components/$1/$1.stories.tsx` | ✓ created (4 stories) |
-| `src/components/$1/$1.test.tsx`    | ✓ created (5 tests)   |
-| `src/components/$1/index.ts`       | ✓ created             |
-| `src/index.ts`                     | ✓ updated             |
+| `src/components/$1/$1.test.tsx` | ✓ created (5 tests) |
+| `src/components/$1/index.ts` | ✓ created |
+| `src/index.ts` | ✓ updated |
 
 Followed by next steps:
-
 - "Add Chromatic baseline: `pnpm chromatic`"
 - "Add to the design-tokens spec if new tokens were introduced"

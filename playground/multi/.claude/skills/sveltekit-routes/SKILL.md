@@ -20,12 +20,12 @@ import type { PageServerLoad } from './$types';
 import { getNoteById } from '$lib/server/queries/notes';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
-	if (!locals.user) throw redirect(302, '/login');
+  if (!locals.user) throw redirect(302, '/login');
 
-	const note = await getNoteById(params.id, locals.user.workspaceId);
-	if (!note) throw error(404, 'Note not found');
+  const note = await getNoteById(params.id, locals.user.workspaceId);
+  if (!note) throw error(404, 'Note not found');
 
-	return { note };
+  return { note };
 };
 ```
 
@@ -45,24 +45,24 @@ import { UpdateNoteSchema } from '$lib/validation';
 import { updateNote, archiveNote } from '$lib/server/queries/notes';
 
 export const actions: Actions = {
-	update: async ({ request, locals, params }) => {
-		if (!locals.user) return fail(401, { error: 'UNAUTHORIZED' });
+  update: async ({ request, locals, params }) => {
+    if (!locals.user) return fail(401, { error: 'UNAUTHORIZED' });
 
-		const form = await request.formData();
-		const parsed = UpdateNoteSchema.safeParse(Object.fromEntries(form));
-		if (!parsed.success) {
-			return fail(400, { errors: parsed.error.flatten().fieldErrors });
-		}
+    const form = await request.formData();
+    const parsed = UpdateNoteSchema.safeParse(Object.fromEntries(form));
+    if (!parsed.success) {
+      return fail(400, { errors: parsed.error.flatten().fieldErrors });
+    }
 
-		const note = await updateNote(params.id, locals.user.workspaceId, parsed.data);
-		return { note };
-	},
+    const note = await updateNote(params.id, locals.user.workspaceId, parsed.data);
+    return { note };
+  },
 
-	archive: async ({ locals, params }) => {
-		if (!locals.user) return fail(401, { error: 'UNAUTHORIZED' });
-		await archiveNote(params.id, locals.user.workspaceId);
-		return { success: true };
-	}
+  archive: async ({ locals, params }) => {
+    if (!locals.user) return fail(401, { error: 'UNAUTHORIZED' });
+    await archiveNote(params.id, locals.user.workspaceId);
+    return { success: true };
+  }
 };
 ```
 
@@ -81,21 +81,21 @@ import { CreateNoteSchema } from '$lib/validation';
 import { createNote, listNotes } from '$lib/server/queries/notes';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
-	if (!locals.apiKey) throw error(401);
-	const limit = Math.min(Number(url.searchParams.get('limit') ?? 50), 100);
-	const notes = await listNotes(locals.apiKey.workspaceId, { limit });
-	return json({ data: notes });
+  if (!locals.apiKey) throw error(401);
+  const limit = Math.min(Number(url.searchParams.get('limit') ?? 50), 100);
+  const notes = await listNotes(locals.apiKey.workspaceId, { limit });
+  return json({ data: notes });
 };
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-	if (!locals.apiKey) throw error(401);
-	const body = await request.json();
-	const parsed = CreateNoteSchema.safeParse(body);
-	if (!parsed.success) {
-		throw error(400, JSON.stringify({ error: 'Invalid', code: 'VALIDATION' }));
-	}
-	const note = await createNote({ ...parsed.data, workspaceId: locals.apiKey.workspaceId });
-	return json({ data: note }, { status: 201 });
+  if (!locals.apiKey) throw error(401);
+  const body = await request.json();
+  const parsed = CreateNoteSchema.safeParse(body);
+  if (!parsed.success) {
+    throw error(400, JSON.stringify({ error: 'Invalid', code: 'VALIDATION' }));
+  }
+  const note = await createNote({ ...parsed.data, workspaceId: locals.apiKey.workspaceId });
+  return json({ data: note }, { status: 201 });
 };
 ```
 
@@ -108,14 +108,14 @@ and mention it in the handoff note:
 ```typescript
 // src/lib/types/index.ts
 export interface Note {
-	id: string;
-	title: string;
-	body: string;
-	authorId: string;
-	workspaceId: string;
-	createdAt: Date;
-	updatedAt: Date;
-	archivedAt: Date | null; // added in PR #143 — Cursor should handle muted styling
+  id: string;
+  title: string;
+  body: string;
+  authorId: string;
+  workspaceId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  archivedAt: Date | null;  // added in PR #143 — Cursor should handle muted styling
 }
 ```
 

@@ -1,6 +1,6 @@
 ---
 description: Create a Conventional Commits commit with a thoughtful message
-argument-hint: '[scope]'
+argument-hint: "[scope]"
 ---
 
 # /commit

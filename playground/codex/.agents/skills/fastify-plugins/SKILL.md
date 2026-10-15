@@ -67,8 +67,7 @@ export default fp(async (app) => {
 		if (!token) return reply.code(401).send({ error: { message: 'Unauthorized', code: 'UNAUTH' } });
 
 		const workspace = await validateApiKey(token);
-		if (!workspace)
-			return reply.code(401).send({ error: { message: 'Invalid token', code: 'UNAUTH' } });
+		if (!workspace) return reply.code(401).send({ error: { message: 'Invalid token', code: 'UNAUTH' } });
 
 		req.workspace = workspace;
 	});

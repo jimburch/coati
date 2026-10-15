@@ -5,8 +5,17 @@
 	"version": "1.0.0",
 	"description": "A cross-agent \"dotfiles\" setup that installs to your home directory andtravels with you across every project",
 	"category": "general",
-	"agents": ["claude-code", "codex", "gemini"],
-	"tags": ["claude", "codex", "gemini", "dotfiles"],
+	"agents": [
+		"claude-code",
+		"codex",
+		"gemini"
+	],
+	"tags": [
+		"claude",
+		"codex",
+		"gemini",
+		"dotfiles"
+	],
 	"visibility": "public",
 	"files": [
 		{

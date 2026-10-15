@@ -2,13 +2,6 @@ import { Marked } from 'marked';
 import type { HighlighterCore } from 'shiki/core';
 import sanitizeHtml from 'sanitize-html';
 
-/**
- * Shiki's JS regex engine is the CPU-heavy path on a request (Workers Free is
- * 10ms of CPU). Grammars load on the first highlight, not at isolate start, and
- * identical inputs are reused for the life of the isolate.
- */
-const HIGHLIGHT_CACHE_LIMIT = 32;
-
 let highlighterPromise: Promise<HighlighterCore> | null = null;
 
 function getHighlighter() {
@@ -61,27 +54,33 @@ async function loadHighlighter(): Promise<HighlighterCore> {
 	});
 }
 
-function remember(cache: Map<string, string>, key: string, value: string): string {
-	if (cache.has(key)) cache.delete(key);
-	cache.set(key, value);
-	if (cache.size > HIGHLIGHT_CACHE_LIMIT) {
-		const oldest = cache.keys().next().value;
-		if (oldest !== undefined) cache.delete(oldest);
-	}
-	return value;
-}
+const SHIKI_COLOR = [/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i];
 
-const renderCache = new Map<string, string>();
-const highlightCache = new Map<string, string>();
+/** Dual-theme Shiki sets only these custom properties on `pre` and `span`. */
+const shikiStyles: sanitizeHtml.IOptions['allowedStyles'] = {
+	pre: {
+		'--shiki-dark': SHIKI_COLOR,
+		'--shiki-light': SHIKI_COLOR,
+		'--shiki-dark-bg': SHIKI_COLOR,
+		'--shiki-light-bg': SHIKI_COLOR
+	},
+	span: {
+		'--shiki-dark': SHIKI_COLOR,
+		'--shiki-light': SHIKI_COLOR,
+		'--shiki-dark-bg': SHIKI_COLOR,
+		'--shiki-light-bg': SHIKI_COLOR
+	}
+};
 
 const sanitizeOptions: sanitizeHtml.IOptions = {
 	allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'input', 'del', 'ins']),
 	allowedAttributes: {
 		...sanitizeHtml.defaults.allowedAttributes,
-		'*': ['class', 'style']
+		pre: ['class', 'style'],
+		code: ['class'],
+		span: ['class', 'style']
 	},
-	// Leave Shiki's `--shiki-*` custom properties intact and avoid pulling in a CSS parser.
-	parseStyleAttributes: false
+	allowedStyles: shikiStyles
 };
 
 function sanitize(html: string): string {
@@ -90,8 +89,6 @@ function sanitize(html: string): string {
 
 export async function renderMarkdown(content: string): Promise<string> {
 	if (!content) return '';
-	const cached = renderCache.get(content);
-	if (cached !== undefined) return remember(renderCache, content, cached);
 
 	const highlighter = await getHighlighter();
 
@@ -117,7 +114,7 @@ export async function renderMarkdown(content: string): Promise<string> {
 	});
 
 	const html = await marked.parse(content);
-	return remember(renderCache, content, sanitize(html));
+	return sanitize(html);
 }
 
 const EXT_TO_LANG: Record<string, string> = {
@@ -146,24 +143,16 @@ export async function highlightCode(content: string, filename: string): Promise<
 		return `<pre><code>${escapeHtml(content)}</code></pre>`;
 	}
 
-	const cacheKey = `${lang}\0${content}`;
-	const cached = highlightCache.get(cacheKey);
-	if (cached !== undefined) return remember(highlightCache, cacheKey, cached);
-
 	try {
 		const highlighter = await getHighlighter();
-		return remember(
-			highlightCache,
-			cacheKey,
-			highlighter.codeToHtml(content, {
-				lang,
-				themes: {
-					dark: 'github-dark',
-					light: 'github-light'
-				},
-				defaultColor: false
-			})
-		);
+		return highlighter.codeToHtml(content, {
+			lang,
+			themes: {
+				dark: 'github-dark',
+				light: 'github-light'
+			},
+			defaultColor: false
+		});
 	} catch {
 		return `<pre><code>${escapeHtml(content)}</code></pre>`;
 	}

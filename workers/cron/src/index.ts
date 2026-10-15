@@ -33,7 +33,6 @@ function sentryOptions(env: Env): CloudflareOptions | undefined {
 		dsn: env.PUBLIC_SENTRY_DSN,
 		environment: env.PUBLIC_ENV,
 		release: `coati-cron@${env.PUBLIC_APP_VERSION || 'unknown'}`,
-		tracesSampleRate: 0.1,
 		sendDefaultPii: false
 	};
 }

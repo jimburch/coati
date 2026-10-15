@@ -50,7 +50,7 @@ conventions in `.github/copilot-instructions.md`.
 Produce a markdown report with findings grouped by severity:
 
 - **🚨 Must fix** — security, data-loss, or broken behavior
-- **⚠️ Should fix** — convention violations, missing tests
+- **⚠️  Should fix** — convention violations, missing tests
 - **💡 Consider** — style, naming, future-proofing
 
 End with a one-line verdict: `APPROVE`, `REQUEST_CHANGES`, or `BLOCKED`.

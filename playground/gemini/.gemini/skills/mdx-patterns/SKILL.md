@@ -11,29 +11,32 @@ slows them down.
 
 ## File anatomy
 
-````mdx
+```mdx
 ---
-title: 'Authenticating API Requests'
-description: 'Use HMAC-signed requests or API keys to authenticate against the Beacon API.'
+title: "Authenticating API Requests"
+description: "Use HMAC-signed requests or API keys to authenticate against the Beacon API."
 category: api
 order: 2
 draft: false
 ---
-
 import { Callout, CodeGroup, Steps } from '~/components/mdx';
 
 ## Overview
 
 Beacon supports two authentication methods: …
 
-<Callout type="info">New to Beacon? Start with [Getting Started](./getting-started).</Callout>
+<Callout type="info">
+  New to Beacon? Start with [Getting Started](./getting-started).
+</Callout>
 
 ## API keys
 
 API keys are issued per workspace. Each key has a name and a scope.
 
 <Steps>
-	1. Open **Settings → API keys** 2. Click **Create key** 3. Scope the key to the minimum needed
+  1. Open **Settings → API keys**
+  2. Click **Create key**
+  3. Scope the key to the minimum needed
 </Steps>
 
 ## Example request
@@ -42,9 +45,7 @@ API keys are issued per workspace. Each key has a name and a scope.
 curl https://api.beacon.example.com/v1/events \
   -H "Authorization: Bearer $BEACON_KEY"
 ```
-````
-
-````
+```
 
 ## Component vocabulary
 
@@ -77,12 +78,11 @@ Anything more interactive belongs in a Preact island component, not inline MDX.
 <CodeGroup default="curl">
 ```bash title="curl"
 curl https://api.beacon.example.com/v1/events
-````
+```
 
 ```ts title="JavaScript"
 const res = await fetch('https://api.beacon.example.com/v1/events');
 ```
-
 </CodeGroup>
 ```
 
@@ -118,9 +118,9 @@ import { Image } from 'astro:assets';
 import heroImg from '~/assets/docs/auth-flow.png';
 
 <Figure
-	src={heroImg}
-	alt="Sequence diagram of the HMAC-signed request flow"
-	caption="HMAC authentication flow from client to Beacon API."
+  src={heroImg}
+  alt="Sequence diagram of the HMAC-signed request flow"
+  caption="HMAC authentication flow from client to Beacon API."
 />
 ```
 

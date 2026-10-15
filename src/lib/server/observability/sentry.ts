@@ -15,7 +15,6 @@ export function buildSentryOptions() {
 		dsn,
 		environment,
 		release: `coati-web@${version}`,
-		tracesSampleRate: 0.1,
 		sendDefaultPii: false as const
 	};
 }

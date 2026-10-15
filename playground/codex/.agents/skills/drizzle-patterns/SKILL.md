@@ -65,9 +65,7 @@ is the single most common cause of data leaks in multi-tenant systems.
 db.select().from(jobs).where(eq(jobs.id, id));
 
 // ✓ RIGHT
-db.select()
-	.from(jobs)
-	.where(and(eq(jobs.id, id), eq(jobs.workspaceId, workspaceId)));
+db.select().from(jobs).where(and(eq(jobs.id, id), eq(jobs.workspaceId, workspaceId)));
 ```
 
 ## Transactions

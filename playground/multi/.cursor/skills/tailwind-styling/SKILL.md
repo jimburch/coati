@@ -12,16 +12,16 @@ the token first, Tailwind second, raw CSS never.
 
 Use these, not raw palette values:
 
-| Token                                            | Use for                           |
-| ------------------------------------------------ | --------------------------------- |
-| `bg-background` / `text-foreground`              | Default page colors               |
-| `bg-card` / `text-card-foreground`               | Elevated surfaces (cards, modals) |
-| `bg-popover` / `text-popover-foreground`         | Floating surfaces                 |
-| `bg-muted` / `text-muted-foreground`             | De-emphasized content             |
-| `bg-accent` / `text-accent-foreground`           | Hover highlights                  |
-| `bg-primary` / `text-primary-foreground`         | Primary buttons, links            |
-| `bg-destructive` / `text-destructive-foreground` | Danger actions                    |
-| `border-input` / `border-ring`                   | Borders on inputs and focus rings |
+| Token | Use for |
+| --- | --- |
+| `bg-background` / `text-foreground` | Default page colors |
+| `bg-card` / `text-card-foreground` | Elevated surfaces (cards, modals) |
+| `bg-popover` / `text-popover-foreground` | Floating surfaces |
+| `bg-muted` / `text-muted-foreground` | De-emphasized content |
+| `bg-accent` / `text-accent-foreground` | Hover highlights |
+| `bg-primary` / `text-primary-foreground` | Primary buttons, links |
+| `bg-destructive` / `text-destructive-foreground` | Danger actions |
+| `border-input` / `border-ring` | Borders on inputs and focus rings |
 
 Using `bg-blue-500` or `text-gray-700` is a bug — it breaks dark mode and
 violates the design system.
@@ -62,14 +62,12 @@ rarely need `dark:` classes. If you do, the usual culprit is:
 The `cn()` helper from `$lib/cn` combines `clsx` and `tailwind-merge`:
 
 ```svelte
-<div
-	class={cn(
-		'rounded-md border bg-card p-4', // base
-		isActive && 'border-primary bg-primary/10', // active state
-		isDisabled && 'opacity-50 pointer-events-none', // disabled
-		className // consumer override wins
-	)}
-/>
+<div class={cn(
+  'rounded-md border bg-card p-4',  // base
+  isActive && 'border-primary bg-primary/10',  // active state
+  isDisabled && 'opacity-50 pointer-events-none',  // disabled
+  className  // consumer override wins
+)} />
 ```
 
 `tailwind-merge` deduplicates conflicts — a consumer's `p-2` correctly
@@ -86,9 +84,9 @@ Mobile-first. Breakpoints:
 
 ```svelte
 <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-	{#each notes as note (note.id)}
-		<NoteCard {note} />
-	{/each}
+  {#each notes as note (note.id)}
+    <NoteCard {note} />
+  {/each}
 </div>
 ```
 

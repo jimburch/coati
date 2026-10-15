@@ -3,6 +3,8 @@ import { env } from '$env/dynamic/private';
 
 const STATIC_PREFIXES = ['/_app/', '/favicon'];
 
+let warnedMissingBinding = false;
+
 /**
  * Cloudflare rate limiting binding. Counts are per location and approximate.
  * Signed-in requests are keyed by user id; everyone else by client IP
@@ -24,7 +26,11 @@ export async function checkRateLimit(
 	const userId = event.locals.user?.id;
 	const binding = userId ? event.platform?.env.RL_AUTH : event.platform?.env.RL_ANON;
 	if (!binding) {
-		throw new Error('Rate limit binding is not configured');
+		if (!warnedMissingBinding) {
+			warnedMissingBinding = true;
+			console.warn('[rate-limit] Rate limit binding is not configured; skipping rate limits');
+		}
+		return { limited: false, retryAfter: 0 };
 	}
 
 	const key = userId ?? event.getClientAddress();
