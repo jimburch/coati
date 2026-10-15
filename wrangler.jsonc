@@ -1,0 +1,94 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "coati",
+	// Not a secret. Named environments inherit this.
+	"account_id": "98e35850d8eb904f5f11f1b537132362",
+	"main": ".svelte-kit/cloudflare/_worker.js",
+	"compatibility_date": "2026-10-15",
+	// nodejs_compat provides AsyncLocalStorage for the per-request database client.
+	"compatibility_flags": ["nodejs_compat"],
+	"assets": {
+		"binding": "ASSETS",
+		"directory": ".svelte-kit/cloudflare"
+	},
+	"observability": {
+		"enabled": true,
+		"traces": {
+			"enabled": true
+		}
+	},
+	"upload_source_maps": true,
+	// GitHub OAuth callback path is /auth/callback/github on every app.
+	// production secrets: Coati Prod  → https://coati.sh/auth/callback/github
+	// dev secrets:        Coati Test  → https://develop.coati.sh/auth/callback/github
+	// `pnpm dev` reads .env, not these vars: Coati Dev → http://localhost:5173/auth/callback/github
+	// Named environments do not inherit vars, hyperdrive, or ratelimits.
+	// Deploy with `wrangler deploy --env dev` or `--env production`.
+	// Custom-domain routes stay commented until the proxied A records for
+	// develop.coati.sh and coati.sh are removed (Phases 5 and 6). Uncommenting
+	// them on a deploy would attach the Worker and fight the existing DNS.
+	// www.coati.sh is a Cloudflare redirect rule, not a Worker route.
+	"env": {
+		"production": {
+			"name": "coati-prod",
+			// "routes": [{ "pattern": "coati.sh", "custom_domain": true }],
+			"vars": {
+				"PUBLIC_ENV": "production",
+				"PUBLIC_SITE_URL": "https://coati.sh",
+				"PUBLIC_BETA_MODE": "false",
+				"PUBLIC_SENTRY_DSN": "",
+				"PUBLIC_MIXPANEL_TOKEN": "",
+				"PUBLIC_APP_VERSION": ""
+			},
+			"hyperdrive": [
+				{
+					"binding": "HYPERDRIVE",
+					"id": "ac509d55d4a549b9935917e386df6e1e"
+				}
+			],
+			"ratelimits": [
+				{
+					"name": "RL_ANON",
+					"namespace_id": "1001",
+					"simple": { "limit": 100, "period": 60 }
+				},
+				{
+					"name": "RL_AUTH",
+					"namespace_id": "1002",
+					"simple": { "limit": 200, "period": 60 }
+				}
+			]
+		},
+		"dev": {
+			"name": "coati-dev",
+			// "routes": [{ "pattern": "develop.coati.sh", "custom_domain": true }],
+			"vars": {
+				"PUBLIC_ENV": "staging",
+				"PUBLIC_SITE_URL": "https://develop.coati.sh",
+				"PUBLIC_BETA_MODE": "false",
+				"PUBLIC_SENTRY_DSN": "",
+				"PUBLIC_MIXPANEL_TOKEN": "",
+				"PUBLIC_APP_VERSION": ""
+			},
+			"hyperdrive": [
+				{
+					"binding": "HYPERDRIVE",
+					"id": "51967bcc2bfb4767b8bd84ac02c40794",
+					"localConnectionString": "postgresql://coati:coati@localhost:5432/coati_dev"
+				}
+			],
+			"ratelimits": [
+				{
+					"name": "RL_ANON",
+					"namespace_id": "2001",
+					"simple": { "limit": 100, "period": 60 }
+				},
+				{
+					"name": "RL_AUTH",
+					"namespace_id": "2002",
+					"simple": { "limit": 200, "period": 60 }
+				}
+			]
+		}
+	}
+}

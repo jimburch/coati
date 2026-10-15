@@ -1,12 +1,12 @@
 import { redirect, type RequestHandler } from '@sveltejs/kit';
 import { dev } from '$app/environment';
-import { github } from '$lib/server/auth';
+import { createGitHubClient } from '$lib/server/auth';
 import { generateState } from 'arctic';
 import { isSafeInternalRedirect } from '@coati/validation';
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
 	const state = generateState();
-	const authUrl = github.createAuthorizationURL(state, ['read:user', 'user:email']);
+	const authUrl = createGitHubClient().createAuthorizationURL(state, ['read:user', 'user:email']);
 	authUrl.searchParams.set('prompt', 'consent');
 
 	cookies.set('github_oauth_state', state, {

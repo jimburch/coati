@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockExecute = vi.hoisted(() => vi.fn());
 
@@ -17,7 +17,7 @@ vi.mock('$lib/server/db', () => ({
 	db: { execute: mockExecute }
 }));
 
-import { refreshTrendingView, startScheduler } from './scheduler';
+import { refreshTrendingView } from './scheduler';
 
 describe('refreshTrendingView', () => {
 	beforeEach(() => {
@@ -44,38 +44,5 @@ describe('refreshTrendingView', () => {
 		await refreshTrendingView();
 
 		expect(mockExecute).toHaveBeenCalledTimes(1);
-	});
-});
-
-describe('startScheduler', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-		vi.useFakeTimers();
-	});
-
-	afterEach(() => {
-		vi.useRealTimers();
-	});
-
-	it('refreshes the trending view every 15 minutes', async () => {
-		mockExecute.mockResolvedValue([]);
-
-		startScheduler();
-
-		// Advance time by 15 minutes
-		await vi.advanceTimersByTimeAsync(15 * 60 * 1000);
-		expect(mockExecute).toHaveBeenCalledTimes(1);
-
-		// Advance another 15 minutes
-		await vi.advanceTimersByTimeAsync(15 * 60 * 1000);
-		expect(mockExecute).toHaveBeenCalledTimes(2);
-	});
-
-	it('does not refresh immediately on start', () => {
-		mockExecute.mockResolvedValue([]);
-
-		startScheduler();
-
-		expect(mockExecute).not.toHaveBeenCalled();
 	});
 });

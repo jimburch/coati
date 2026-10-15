@@ -1,0 +1,12 @@
+# Copy to .dev.vars for `wrangler dev` / `pnpm preview:cf` only.
+# `pnpm dev` / `npm run dev` does not read this file. It uses .env and the Coati Dev
+# OAuth app (http://localhost:5173/auth/callback/github).
+# For a Worker that mimics develop.coati.sh, put the Coati Test app credentials here.
+# Do not commit .dev.vars.
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+GITHUB_FEEDBACK_TOKEN=
+# Optional. Leave empty to disable Sentry locally.
+PUBLIC_SENTRY_DSN=
+# Set to true to skip the rate-limit binding while developing.
+DISABLE_RATE_LIMIT=

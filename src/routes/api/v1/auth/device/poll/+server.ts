@@ -6,8 +6,6 @@ import { eq } from 'drizzle-orm';
 import { upsertGithubUser, generateSessionToken, createSession } from '$lib/server/auth';
 import { success, error, parseRequestBody } from '$lib/server/responses';
 import { env } from '$env/dynamic/private';
-const GITHUB_CLIENT_ID = env.GITHUB_CLIENT_ID!;
-const GITHUB_CLIENT_SECRET = env.GITHUB_CLIENT_SECRET!;
 import { updateLastLoginAt } from '$lib/server/queries/users';
 
 const deviceCodeSchema = z.object({ deviceCode: z.string().min(1) });
@@ -30,6 +28,8 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	// Poll GitHub for access token
+	const githubClientId = env.GITHUB_CLIENT_ID;
+	const githubClientSecret = env.GITHUB_CLIENT_SECRET;
 	const ghRes = await fetch('https://github.com/login/oauth/access_token', {
 		method: 'POST',
 		headers: {
@@ -37,8 +37,8 @@ export const POST: RequestHandler = async ({ request }) => {
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify({
-			client_id: GITHUB_CLIENT_ID,
-			client_secret: GITHUB_CLIENT_SECRET,
+			client_id: githubClientId,
+			client_secret: githubClientSecret,
 			device_code: state.githubDeviceCode,
 			grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
 		})

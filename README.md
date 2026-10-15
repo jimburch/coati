@@ -57,14 +57,14 @@ coati publish                     # Publish a setup to Coati
 ## Tech stack
 
 - **Framework:** SvelteKit 2 (TypeScript, SSR + SPA hybrid)
-- **Database:** PostgreSQL 18 + Drizzle ORM
+- **Database:** Neon Postgres 18 + Drizzle ORM, reached through Cloudflare Hyperdrive in production
 - **Styling:** Tailwind CSS + shadcn-svelte
 - **Auth:** Lucia-style sessions + Arctic (GitHub OAuth for web, device flow for CLI)
 - **Markdown:** Marked + Shiki syntax highlighting
 - **CLI:** Commander, published to npm as `@coati/sh` (built with tsup)
 - **Observability:** Sentry (errors + releases), optional Mixpanel (product analytics)
 - **Testing:** Vitest (unit + component) + Playwright (e2e, desktop + mobile)
-- **Deployment:** Docker image, deployable to any container host (Coolify, Fly, Railway, Render, a bare VPS, etc.)
+- **Deployment:** Cloudflare Workers. A Docker image is still in the repo as the rollback path until the VPS is retired.
 
 ## Development
 
@@ -73,7 +73,7 @@ coati publish                     # Publish a setup to Coati
 - [Node.js](https://nodejs.org/) v22+ (see `.nvmrc`)
 - [pnpm](https://pnpm.io/) v10+
 - [Docker](https://www.docker.com/) (for local PostgreSQL)
-- A [GitHub OAuth App](https://github.com/settings/developers) (for authentication)
+- The **Coati Dev** GitHub OAuth app (Device Flow enabled, callback `http://localhost:5173/auth/callback/github`)
 
 ### Getting started
 
@@ -81,7 +81,7 @@ coati publish                     # Publish a setup to Coati
 # Install dependencies
 pnpm install
 
-# Copy environment variables and fill in GitHub OAuth credentials
+# Copy environment variables and fill in the Coati Dev OAuth app credentials
 cp .env.example .env
 
 # Start PostgreSQL (dev on :5432, test on :5433)
@@ -110,9 +110,9 @@ The app will be running at [http://localhost:5173](http://localhost:5173).
 | `POSTGRES_USER`         | local Docker | Username for the Docker Postgres container                                  |
 | `POSTGRES_PASSWORD`     | local Docker | Password for the Docker Postgres container                                  |
 | `POSTGRES_DB`           | local Docker | Database name for the Docker Postgres container                             |
-| `GITHUB_CLIENT_ID`      | yes          | GitHub OAuth app client ID                                                  |
-| `GITHUB_CLIENT_SECRET`  | yes          | GitHub OAuth app client secret                                              |
-| `PUBLIC_SITE_URL`       | yes (prod)   | Canonical site URL used for OG tags and callbacks (e.g. `https://coati.sh`) |
+| `GITHUB_CLIENT_ID`      | yes          | Coati Dev OAuth app client ID (`pnpm dev` only)                             |
+| `GITHUB_CLIENT_SECRET`  | yes          | Coati Dev OAuth app client secret (`pnpm dev` only)                         |
+| `PUBLIC_SITE_URL`       | yes (prod)   | Canonical site URL for OG tags and absolute links (`http://localhost:5173`) |
 | `PUBLIC_ENV`            | prod         | `staging` or `production`; leave unset locally                              |
 | `PUBLIC_BETA_MODE`      | no           | Gate beta-only UI features                                                  |
 | `PUBLIC_SENTRY_DSN`     | no           | Sentry DSN for error capture (omit to disable)                              |
@@ -220,14 +220,37 @@ Selected endpoints (see `src/routes/api/v1/` for the complete list):
 
 ## Auth
 
-- **Web:** GitHub OAuth via Arctic. Session cookie set on callback, validated in `hooks.server.ts`.
-- **CLI:** GitHub device flow. User runs `coati login`, authorizes in browser, token saved to `~/.coati/config.json` and sent as `Authorization: Bearer <token>`.
+Three GitHub OAuth apps, each with Device Flow enabled. The callback path is `/auth/callback/github` on all of them. Arctic does not send a `redirect_uri`; GitHub uses the callback registered on the app whose client id the process is using.
+
+| App        | Callback                                        | Where the client id lives                  |
+| ---------- | ----------------------------------------------- | ------------------------------------------ |
+| Coati Dev  | `http://localhost:5173/auth/callback/github`    | `.env`, used by `pnpm dev` / `npm run dev` |
+| Coati Test | `https://develop.coati.sh/auth/callback/github` | Worker secrets on `coati-dev`              |
+| Coati Prod | `https://coati.sh/auth/callback/github`         | Worker secrets on `coati-prod`             |
+
+- **Web:** GitHub OAuth via Arctic. Session cookie set on callback, validated in `hooks.server.ts`. Existing sessions stay valid.
+- **CLI:** GitHub device flow. User runs `coati login`, authorizes in browser, token saved to `~/.coati/config.json` and sent as `Authorization: Bearer <token>`. The `/api/v1/auth/device` contract is unchanged.
 
 See [`docs/AUTH.md`](docs/AUTH.md) for the full flow.
 
+## Deployment
+
+The app targets **Cloudflare Workers** (Free plan while this lands: 3 MB compressed script, 10ms CPU) with **Neon Postgres 18** behind a Hyperdrive binding. `pnpm dev` / `npm run dev` is Vite plus the adapter's local platform proxy. It reads the **Coati Dev** OAuth app from `.env` and points Hyperdrive at Docker Postgres via `localConnectionString` in `wrangler.jsonc`. `pnpm preview:cf` builds and runs `wrangler dev --env dev`, which reads `.dev.vars` (see `.dev.vars.example`) and is the Coati Test shape. Drizzle and Vitest keep using `.env`.
+
+```sh
+pnpm cf:types    # regenerate Worker binding types
+pnpm preview:cf  # production-shaped local Worker
+```
+
+Custom domains in `wrangler.jsonc` stay commented until DNS for `develop.coati.sh` and `coati.sh` is moved off the VPS. Deploys run from `.github/workflows/deploy.yml`.
+
+The Neon database name is `neondb` and the role is `neondb_owner`. Migrations and `pnpm seed:dev` use a direct URL, `postgresql://neondb_owner:<password>@<host>/neondb?sslmode=require`, from `NEON_DEV_DIRECT_URL` or `NEON_PROD_DIRECT_URL`. Hyperdrive configs are `coati-dev` (`51967bcc2bfb4767b8bd84ac02c40794`) and `coati-prod` (`ac509d55d4a549b9935917e386df6e1e`). The Cloudflare account id `98e35850d8eb904f5f11f1b537132362` is in both wrangler configs. Local Docker Postgres in `.env` is a separate database (`coati` / `coati_dev`).
+
+The `Dockerfile`, Caddy config, and VPS bootstrap scripts remain so the current Coolify host can still be rolled back. They are not the runtime this branch builds.
+
 ## Self-hosting
 
-Coati ships as a single Docker image and a Postgres database. You can run your own instance on any container host.
+Coati still ships a Docker image and can run against any Postgres 18 database. That image is the rollback path for the current VPS; new deploys use the Workers config above.
 
 ### What you need
 
