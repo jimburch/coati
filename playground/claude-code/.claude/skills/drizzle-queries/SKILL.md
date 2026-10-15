@@ -54,7 +54,9 @@ This is the single most common cause of data leaks. Never write:
 db.select().from(links).where(eq(links.id, id));
 
 // ✓ RIGHT
-db.select().from(links).where(and(eq(links.id, id), eq(links.workspaceId, workspaceId)));
+db.select()
+	.from(links)
+	.where(and(eq(links.id, id), eq(links.workspaceId, workspaceId)));
 ```
 
 ## Transactions

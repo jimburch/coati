@@ -64,10 +64,10 @@ Review staged changes (or the diff against `$1`, defaulting to `origin/main`).
 
 ## Output
 
-| Severity | Count | Examples |
-| --- | --- | --- |
-| 🚨 Must fix | N | list with file:line |
-| ⚠️  Should fix | N | |
-| 💡 Consider | N | |
+| Severity      | Count | Examples            |
+| ------------- | ----- | ------------------- |
+| 🚨 Must fix   | N     | list with file:line |
+| ⚠️ Should fix | N     |                     |
+| 💡 Consider   | N     |                     |
 
 End with `APPROVE`, `REQUEST_CHANGES`, or `BLOCKED`.

@@ -17,32 +17,37 @@ Create a new composable in `app/composables/<name>.ts`.
 import { ref, computed, watch, type Ref } from 'vue';
 
 export interface UseDateRangeOptions {
-  initialRange?: 'last-7-days' | 'last-30-days' | 'custom';
+	initialRange?: 'last-7-days' | 'last-30-days' | 'custom';
 }
 
 export interface UseDateRangeReturn {
-  start: Ref<Date>;
-  end: Ref<Date>;
-  label: Ref<string>;
-  setRange: (range: 'last-7-days' | 'last-30-days' | 'custom', start?: Date, end?: Date) => void;
+	start: Ref<Date>;
+	end: Ref<Date>;
+	label: Ref<string>;
+	setRange: (range: 'last-7-days' | 'last-30-days' | 'custom', start?: Date, end?: Date) => void;
 }
 
 export function useDateRange(opts: UseDateRangeOptions = {}): UseDateRangeReturn {
-  const start = ref<Date>(new Date());
-  const end = ref<Date>(new Date());
-  const label = computed(() => formatRange(start.value, end.value));
+	const start = ref<Date>(new Date());
+	const end = ref<Date>(new Date());
+	const label = computed(() => formatRange(start.value, end.value));
 
-  function setRange(range, customStart, customEnd): void {
-    // …
-  }
+	function setRange(range, customStart, customEnd): void {
+		// …
+	}
 
-  return { start, end, label, setRange };
+	return { start, end, label, setRange };
 }
 ```
 
 4. For `--async`, include loading/error state in the return type:
    ```typescript
-   { data: Ref<T | null>; pending: Ref<boolean>; error: Ref<Error | null>; refresh: () => Promise<void> }
+   {
+   	data: Ref<T | null>;
+   	pending: Ref<boolean>;
+   	error: Ref<Error | null>;
+   	refresh: () => Promise<void>;
+   }
    ```
 5. Write a colocated test at `app/composables/<name>.test.ts`:
    - Returns expected initial state

@@ -14,14 +14,14 @@ node ../../cli/bin/coati.js <command>
 
 Each directory contains a realistic, fully fleshed-out project-level setup for one agent. Each one targets a different web-dev archetype so the configurations showcase how each agent's features map to a real stack. **None of these have a `coati.json`** — they're designed for testing `node ../../cli/bin/coati.js init` auto-detection.
 
-| Directory      | Agent          | Project archetype                              | Key Config Files                                      |
-| -------------- | -------------- | ---------------------------------------------- | ----------------------------------------------------- |
-| `claude-code/` | Claude Code    | SvelteKit SaaS (Linkly — link shortener)       | `CLAUDE.md`, `.claude/`, `.mcp.json`                  |
-| `codex/`       | Codex CLI      | Fastify + Drizzle API (Pipedream — webhook relay) | `AGENTS.md`, `.codex/`, `.agents/`                 |
-| `copilot/`     | GitHub Copilot | Next.js 15 + Prisma + tRPC (Ledger — expense SaaS) | `.github/copilot-instructions.md`, `.github/copilot/`, `.vscode/` |
-| `cursor/`      | Cursor         | React + Vite + Storybook component library (Atlas UI) | `.cursorrules`, `.cursor/rules/*.mdc`, `.cursor/` |
-| `gemini/`      | Gemini CLI     | Astro + MDX content site (Beacon Docs)         | `GEMINI.md`, `.gemini/`, `.geminiignore`              |
-| `opencode/`    | OpenCode       | Nuxt 3 + Pinia SPA (Kite Analytics)            | `opencode.md`, `.opencode.json`, `.opencode/`         |
+| Directory      | Agent          | Project archetype                                     | Key Config Files                                                  |
+| -------------- | -------------- | ----------------------------------------------------- | ----------------------------------------------------------------- |
+| `claude-code/` | Claude Code    | SvelteKit SaaS (Linkly — link shortener)              | `CLAUDE.md`, `.claude/`, `.mcp.json`                              |
+| `codex/`       | Codex CLI      | Fastify + Drizzle API (Pipedream — webhook relay)     | `AGENTS.md`, `.codex/`, `.agents/`                                |
+| `copilot/`     | GitHub Copilot | Next.js 15 + Prisma + tRPC (Ledger — expense SaaS)    | `.github/copilot-instructions.md`, `.github/copilot/`, `.vscode/` |
+| `cursor/`      | Cursor         | React + Vite + Storybook component library (Atlas UI) | `.cursorrules`, `.cursor/rules/*.mdc`, `.cursor/`                 |
+| `gemini/`      | Gemini CLI     | Astro + MDX content site (Beacon Docs)                | `GEMINI.md`, `.gemini/`, `.geminiignore`                          |
+| `opencode/`    | OpenCode       | Nuxt 3 + Pinia SPA (Kite Analytics)                   | `opencode.md`, `.opencode.json`, `.opencode/`                     |
 
 Each setup is opinionated and showcases the agent's signature features: Claude Code's hooks + subagents + skills + statusline, Codex's TOML subagents + sandboxed config, Copilot's firewall + agents.json + .vscode integration, Cursor's scoped `.mdc` rules with globs + hooks, Gemini's TOML commands + shell policies, and OpenCode's provider fallbacks + contextPaths.
 

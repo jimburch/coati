@@ -14,6 +14,7 @@ execution once the plan is approved.
 ### 1. Inspect current shape
 
 Read `prisma/schema.prisma` and summarize the affected models. Note:
+
 - Column count
 - Indexes and unique constraints
 - Relations (cascade? restrict?)

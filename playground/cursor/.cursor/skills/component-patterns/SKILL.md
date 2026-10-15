@@ -19,27 +19,28 @@ import { cn } from '~/lib/cn';
 export const Popover = PopoverPrimitive.Root;
 export const PopoverTrigger = PopoverPrimitive.Trigger;
 
-export interface PopoverContentProps
-  extends ComponentPropsWithoutRef<typeof PopoverPrimitive.Content> {}
+export interface PopoverContentProps extends ComponentPropsWithoutRef<
+	typeof PopoverPrimitive.Content
+> {}
 
 export const PopoverContent = forwardRef<
-  ElementRef<typeof PopoverPrimitive.Content>,
-  PopoverContentProps
+	ElementRef<typeof PopoverPrimitive.Content>,
+	PopoverContentProps
 >(({ className, align = 'center', sideOffset = 8, ...rest }, ref) => (
-  <PopoverPrimitive.Portal>
-    <PopoverPrimitive.Content
-      ref={ref}
-      align={align}
-      sideOffset={sideOffset}
-      className={cn(
-        'z-50 w-72 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-none',
-        'data-[state=open]:animate-in data-[state=closed]:animate-out',
-        'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
-        className
-      )}
-      {...rest}
-    />
-  </PopoverPrimitive.Portal>
+	<PopoverPrimitive.Portal>
+		<PopoverPrimitive.Content
+			ref={ref}
+			align={align}
+			sideOffset={sideOffset}
+			className={cn(
+				'z-50 w-72 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-none',
+				'data-[state=open]:animate-in data-[state=closed]:animate-out',
+				'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+				className
+			)}
+			{...rest}
+		/>
+	</PopoverPrimitive.Portal>
 ));
 PopoverContent.displayName = 'PopoverContent';
 ```
@@ -51,8 +52,10 @@ export each part separately from the same file. The consumer composes them:
 
 ```tsx
 <Popover>
-  <PopoverTrigger asChild><Button>Open</Button></PopoverTrigger>
-  <PopoverContent>…</PopoverContent>
+	<PopoverTrigger asChild>
+		<Button>Open</Button>
+	</PopoverTrigger>
+	<PopoverContent>…</PopoverContent>
 </Popover>
 ```
 
@@ -66,7 +69,9 @@ Radix's `Slot`. Consumers can swap the default element:
 
 ```tsx
 <Tooltip.Trigger asChild>
-  <Button variant="ghost" size="sm">?</Button>
+	<Button variant="ghost" size="sm">
+		?
+	</Button>
 </Tooltip.Trigger>
 ```
 
@@ -74,16 +79,16 @@ Never use `asChild` on more than one child — it only merges one set of props.
 
 ## Variants via CVA
 
-Variants belong on the *styled* layer, not the *behavioral* layer. The Radix
+Variants belong on the _styled_ layer, not the _behavioral_ layer. The Radix
 primitive stays behavior-only; the Atlas wrapper adds CVA.
 
 ```tsx
 const buttonVariants = cva('...base classes', {
-  variants: {
-    variant: { primary: '...', secondary: '...', ghost: '...' },
-    size: { sm: '...', md: '...', lg: '...' }
-  },
-  defaultVariants: { variant: 'primary', size: 'md' }
+	variants: {
+		variant: { primary: '...', secondary: '...', ghost: '...' },
+		size: { sm: '...', md: '...', lg: '...' }
+	},
+	defaultVariants: { variant: 'primary', size: 'md' }
 });
 ```
 

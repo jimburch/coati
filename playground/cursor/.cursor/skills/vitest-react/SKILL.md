@@ -22,35 +22,35 @@ import userEvent from '@testing-library/user-event';
 import { Dialog, DialogTrigger, DialogContent, DialogTitle } from './Dialog';
 
 describe('Dialog', () => {
-  it('opens when the trigger is clicked', async () => {
-    const user = userEvent.setup();
-    render(
-      <Dialog>
-        <DialogTrigger>Open</DialogTrigger>
-        <DialogContent>
-          <DialogTitle>Hello</DialogTitle>
-        </DialogContent>
-      </Dialog>
-    );
+	it('opens when the trigger is clicked', async () => {
+		const user = userEvent.setup();
+		render(
+			<Dialog>
+				<DialogTrigger>Open</DialogTrigger>
+				<DialogContent>
+					<DialogTitle>Hello</DialogTitle>
+				</DialogContent>
+			</Dialog>
+		);
 
-    await user.click(screen.getByRole('button', { name: /open/i }));
+		await user.click(screen.getByRole('button', { name: /open/i }));
 
-    expect(await screen.findByRole('dialog', { name: /hello/i })).toBeVisible();
-  });
+		expect(await screen.findByRole('dialog', { name: /hello/i })).toBeVisible();
+	});
 
-  it('closes when Escape is pressed', async () => {
-    const user = userEvent.setup();
-    render(
-      <Dialog defaultOpen>
-        <DialogContent>
-          <DialogTitle>Hello</DialogTitle>
-        </DialogContent>
-      </Dialog>
-    );
+	it('closes when Escape is pressed', async () => {
+		const user = userEvent.setup();
+		render(
+			<Dialog defaultOpen>
+				<DialogContent>
+					<DialogTitle>Hello</DialogTitle>
+				</DialogContent>
+			</Dialog>
+		);
 
-    await user.keyboard('{Escape}');
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  });
+		await user.keyboard('{Escape}');
+		expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+	});
 });
 ```
 
@@ -84,18 +84,18 @@ import { renderHook, act } from '@testing-library/react';
 import { useDisclosure } from './useDisclosure';
 
 describe('useDisclosure', () => {
-  it('defaults to closed', () => {
-    const { result } = renderHook(() => useDisclosure());
-    expect(result.current.isOpen).toBe(false);
-  });
+	it('defaults to closed', () => {
+		const { result } = renderHook(() => useDisclosure());
+		expect(result.current.isOpen).toBe(false);
+	});
 
-  it('toggles open state', () => {
-    const { result } = renderHook(() => useDisclosure());
-    act(() => result.current.open());
-    expect(result.current.isOpen).toBe(true);
-    act(() => result.current.close());
-    expect(result.current.isOpen).toBe(false);
-  });
+	it('toggles open state', () => {
+		const { result } = renderHook(() => useDisclosure());
+		act(() => result.current.open());
+		expect(result.current.isOpen).toBe(true);
+		act(() => result.current.close());
+		expect(result.current.isOpen).toBe(false);
+	});
 });
 ```
 

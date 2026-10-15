@@ -1,7 +1,7 @@
 # Ledger — Task-Level Copilot Instructions
 
 These instructions layer on top of `../copilot-instructions.md`. The repo-wide
-file defines *what the project is*; this file defines *how to approach tasks*.
+file defines _what the project is_; this file defines _how to approach tasks_.
 
 ## Task hygiene
 
@@ -32,5 +32,5 @@ file defines *what the project is*; this file defines *how to approach tasks*.
 ## Pull requests
 
 - PR title uses Conventional Commits: `feat(expenses): …`, `fix(reports): …`
-- PR body explains the *why* in one paragraph, then the *what* as a bulleted list of notable changes.
+- PR body explains the _why_ in one paragraph, then the _what_ as a bulleted list of notable changes.
 - Link the issue in the body: `Closes #123`.

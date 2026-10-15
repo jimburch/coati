@@ -23,27 +23,27 @@ import type { InferSelectModel } from 'drizzle-orm';
 export type Note = InferSelectModel<typeof notes>;
 
 export async function getNoteById(id: string, workspaceId: string): Promise<Note | undefined> {
-  const [row] = await db
-    .select()
-    .from(notes)
-    .where(and(eq(notes.id, id), eq(notes.workspaceId, workspaceId), isNull(notes.deletedAt)))
-    .limit(1);
-  return row;
+	const [row] = await db
+		.select()
+		.from(notes)
+		.where(and(eq(notes.id, id), eq(notes.workspaceId, workspaceId), isNull(notes.deletedAt)))
+		.limit(1);
+	return row;
 }
 
 export async function listNotesByWorkspace(workspaceId: string): Promise<Note[]> {
-  return db
-    .select()
-    .from(notes)
-    .where(and(eq(notes.workspaceId, workspaceId), isNull(notes.deletedAt)))
-    .orderBy(desc(notes.updatedAt));
+	return db
+		.select()
+		.from(notes)
+		.where(and(eq(notes.workspaceId, workspaceId), isNull(notes.deletedAt)))
+		.orderBy(desc(notes.updatedAt));
 }
 
 export async function archiveNote(id: string, workspaceId: string): Promise<void> {
-  await db
-    .update(notes)
-    .set({ archivedAt: new Date() })
-    .where(and(eq(notes.id, id), eq(notes.workspaceId, workspaceId)));
+	await db
+		.update(notes)
+		.set({ archivedAt: new Date() })
+		.where(and(eq(notes.id, id), eq(notes.workspaceId, workspaceId)));
 }
 ```
 
@@ -57,7 +57,9 @@ This is the #1 source of cross-tenant data leaks.
 db.select().from(notes).where(eq(notes.id, id));
 
 // ✓ RIGHT
-db.select().from(notes).where(and(eq(notes.id, id), eq(notes.workspaceId, workspaceId)));
+db.select()
+	.from(notes)
+	.where(and(eq(notes.id, id), eq(notes.workspaceId, workspaceId)));
 ```
 
 ## Transactions
@@ -66,30 +68,30 @@ Use when mutating two or more tables, or when a read-then-write must be atomic.
 
 ```typescript
 export async function shareNote(
-  noteId: string,
-  workspaceId: string,
-  userId: string
+	noteId: string,
+	workspaceId: string,
+	userId: string
 ): Promise<void> {
-  await db.transaction(async (tx) => {
-    const [note] = await tx
-      .select()
-      .from(notes)
-      .where(and(eq(notes.id, noteId), eq(notes.workspaceId, workspaceId)))
-      .limit(1);
-    if (!note) throw new Error('Note not found');
+	await db.transaction(async (tx) => {
+		const [note] = await tx
+			.select()
+			.from(notes)
+			.where(and(eq(notes.id, noteId), eq(notes.workspaceId, workspaceId)))
+			.limit(1);
+		if (!note) throw new Error('Note not found');
 
-    await tx.insert(noteShares).values({
-      noteId,
-      userId,
-      grantedAt: new Date()
-    });
-    await tx.insert(auditLog).values({
-      workspaceId,
-      action: 'note.shared',
-      subjectId: noteId,
-      metadata: { sharedWith: userId }
-    });
-  });
+		await tx.insert(noteShares).values({
+			noteId,
+			userId,
+			grantedAt: new Date()
+		});
+		await tx.insert(auditLog).values({
+			workspaceId,
+			action: 'note.shared',
+			subjectId: noteId,
+			metadata: { sharedWith: userId }
+		});
+	});
 }
 ```
 

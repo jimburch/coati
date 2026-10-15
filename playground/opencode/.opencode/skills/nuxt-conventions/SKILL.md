@@ -27,10 +27,10 @@ Declared at the top of `<script setup>`:
 ```vue
 <script setup lang="ts">
 definePageMeta({
-  layout: 'default',
-  middleware: ['auth', 'workspace'],
-  keepalive: true,
-  pageTransition: { name: 'fade', mode: 'out-in' }
+	layout: 'default',
+	middleware: ['auth', 'workspace'],
+	keepalive: true,
+	pageTransition: { name: 'fade', mode: 'out-in' }
 });
 </script>
 ```
@@ -51,6 +51,7 @@ Three flavors:
 3. **Global:** file at `app/middleware/auth.global.ts`, runs on every navigation
 
 Kite conventions:
+
 - `auth.global.ts` redirects unauthenticated users to `/login`
 - `workspace.ts` runs on workspace-scoped pages and ensures the URL param
   matches a workspace the user belongs to — redirects to `/dashboard` if not
@@ -58,17 +59,18 @@ Kite conventions:
 ```typescript
 // app/middleware/workspace.ts
 export default defineNuxtRouteMiddleware((to) => {
-  const workspaceStore = useWorkspaceStore();
-  const wsId = to.params.workspaceId as string | undefined;
-  if (!wsId) return;
-  const found = workspaceStore.workspaces.find((w) => w.id === wsId);
-  if (!found) return navigateTo('/dashboard');
+	const workspaceStore = useWorkspaceStore();
+	const wsId = to.params.workspaceId as string | undefined;
+	if (!wsId) return;
+	const found = workspaceStore.workspaces.find((w) => w.id === wsId);
+	if (!found) return navigateTo('/dashboard');
 });
 ```
 
 ## Auto-imports
 
 Nuxt auto-imports from:
+
 - `app/composables/` — every `useXxx` is globally available
 - `app/utils/` — every exported function is globally available
 - `app/components/` — every component is globally available by filename
@@ -95,7 +97,10 @@ const api = useApiClient();
 const sites = await api.sites.list(workspaceId);
 
 // Page load
-const { data, pending } = await useFetch<Site[]>('/sites', { baseURL: API_URL, query: { workspaceId } });
+const { data, pending } = await useFetch<Site[]>('/sites', {
+	baseURL: API_URL,
+	query: { workspaceId }
+});
 ```
 
 ## Runtime config
@@ -104,14 +109,14 @@ Public values and secrets both go through `nuxt.config.ts` `runtimeConfig`:
 
 ```typescript
 export default defineNuxtConfig({
-  runtimeConfig: {
-    // server-only (empty in SPA but keeps the API stable)
-    internalApiKey: '',
-    public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:4000',
-      posthogKey: process.env.NUXT_PUBLIC_POSTHOG_KEY || ''
-    }
-  }
+	runtimeConfig: {
+		// server-only (empty in SPA but keeps the API stable)
+		internalApiKey: '',
+		public: {
+			apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:4000',
+			posthogKey: process.env.NUXT_PUBLIC_POSTHOG_KEY || ''
+		}
+	}
 });
 ```
 

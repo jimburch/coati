@@ -21,10 +21,11 @@
 Group findings by severity:
 
 - **🚨 Must fix** — violations of mandatory rules (missing story, missing a11y, type errors)
-- **⚠️  Should fix** — convention violations (variant naming, CVA usage)
+- **⚠️ Should fix** — convention violations (variant naming, CVA usage)
 - **💡 Consider** — suggestions (extract subcomponent, add edge-case story)
 
 Finish with a Chromatic reminder if any `.stories.tsx` file changed:
+
 > `📸 Story changes detected — run \`pnpm chromatic\` and review the diff before merging.`
 
 Verdict: `APPROVE`, `REQUEST_CHANGES`, or `BLOCKED`.

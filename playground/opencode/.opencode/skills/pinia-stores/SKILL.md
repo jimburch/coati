@@ -16,50 +16,54 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 
 export interface Workspace {
-  id: string;
-  name: string;
-  slug: string;
-  role: 'owner' | 'admin' | 'member';
+	id: string;
+	name: string;
+	slug: string;
+	role: 'owner' | 'admin' | 'member';
 }
 
-export const useWorkspaceStore = defineStore('workspace', () => {
-  const workspaces = ref<Workspace[]>([]);
-  const activeId = ref<string | null>(null);
+export const useWorkspaceStore = defineStore(
+	'workspace',
+	() => {
+		const workspaces = ref<Workspace[]>([]);
+		const activeId = ref<string | null>(null);
 
-  const active = computed<Workspace | null>(() =>
-    workspaces.value.find((w) => w.id === activeId.value) ?? null
-  );
+		const active = computed<Workspace | null>(
+			() => workspaces.value.find((w) => w.id === activeId.value) ?? null
+		);
 
-  const canManage = computed(() =>
-    active.value?.role === 'owner' || active.value?.role === 'admin'
-  );
+		const canManage = computed(
+			() => active.value?.role === 'owner' || active.value?.role === 'admin'
+		);
 
-  async function load(): Promise<void> {
-    const api = useApiClient();
-    workspaces.value = await api.workspaces.list();
-    if (!activeId.value && workspaces.value[0]) {
-      activeId.value = workspaces.value[0].id;
-    }
-  }
+		async function load(): Promise<void> {
+			const api = useApiClient();
+			workspaces.value = await api.workspaces.list();
+			if (!activeId.value && workspaces.value[0]) {
+				activeId.value = workspaces.value[0].id;
+			}
+		}
 
-  function setActive(id: string): void {
-    if (workspaces.value.some((w) => w.id === id)) {
-      activeId.value = id;
-    }
-  }
+		function setActive(id: string): void {
+			if (workspaces.value.some((w) => w.id === id)) {
+				activeId.value = id;
+			}
+		}
 
-  function reset(): void {
-    workspaces.value = [];
-    activeId.value = null;
-  }
+		function reset(): void {
+			workspaces.value = [];
+			activeId.value = null;
+		}
 
-  return { workspaces, activeId, active, canManage, load, setActive, reset };
-}, {
-  persist: {
-    storage: piniaPluginPersistedstate.localStorage(),
-    pick: ['activeId']  // never persist the workspace list — re-fetch on load
-  }
-});
+		return { workspaces, activeId, active, canManage, load, setActive, reset };
+	},
+	{
+		persist: {
+			storage: piniaPluginPersistedstate.localStorage(),
+			pick: ['activeId'] // never persist the workspace list — re-fetch on load
+		}
+	}
+);
 ```
 
 ## What to store
@@ -81,10 +85,10 @@ Call other stores from inside actions:
 
 ```typescript
 async function archiveSite(siteId: string): Promise<void> {
-  const workspaceStore = useWorkspaceStore();
-  const api = useApiClient();
-  await api.sites.archive(workspaceStore.activeId!, siteId);
-  sites.value = sites.value.filter((s) => s.id !== siteId);
+	const workspaceStore = useWorkspaceStore();
+	const api = useApiClient();
+	await api.sites.archive(workspaceStore.activeId!, siteId);
+	sites.value = sites.value.filter((s) => s.id !== siteId);
 }
 ```
 
@@ -98,11 +102,11 @@ on every other store:
 
 ```typescript
 async function logout(): Promise<void> {
-  await useApiClient().auth.logout();
-  useWorkspaceStore().reset();
-  useSitesStore().reset();
-  useSettingsStore().reset();
-  user.value = null;
+	await useApiClient().auth.logout();
+	useWorkspaceStore().reset();
+	useSitesStore().reset();
+	useSettingsStore().reset();
+	user.value = null;
 }
 ```
 
@@ -116,26 +120,26 @@ import { setActivePinia, createPinia } from 'pinia';
 import { useWorkspaceStore } from './workspace';
 
 describe('workspaceStore', () => {
-  beforeEach(() => setActivePinia(createPinia()));
+	beforeEach(() => setActivePinia(createPinia()));
 
-  it('initializes empty', () => {
-    const store = useWorkspaceStore();
-    expect(store.workspaces).toEqual([]);
-    expect(store.active).toBeNull();
-  });
+	it('initializes empty', () => {
+		const store = useWorkspaceStore();
+		expect(store.workspaces).toEqual([]);
+		expect(store.active).toBeNull();
+	});
 
-  it('selects first workspace as active after load', async () => {
-    const store = useWorkspaceStore();
-    await store.load(); // uses mocked API client
-    expect(store.activeId).toBe('ws_1');
-  });
+	it('selects first workspace as active after load', async () => {
+		const store = useWorkspaceStore();
+		await store.load(); // uses mocked API client
+		expect(store.activeId).toBe('ws_1');
+	});
 
-  it('does not switch active to an unknown id', () => {
-    const store = useWorkspaceStore();
-    store.workspaces = [{ id: 'ws_1', name: 'A', slug: 'a', role: 'owner' }];
-    store.setActive('unknown');
-    expect(store.activeId).toBeNull();
-  });
+	it('does not switch active to an unknown id', () => {
+		const store = useWorkspaceStore();
+		store.workspaces = [{ id: 'ws_1', name: 'A', slug: 'a', role: 'owner' }];
+		store.setActive('unknown');
+		expect(store.activeId).toBeNull();
+	});
 });
 ```
 

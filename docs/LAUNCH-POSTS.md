@@ -36,21 +36,21 @@ Before posting anything, these assets need to exist:
 
 ### Asset placement at a glance
 
-| Platform | Clone flow | Init/publish | Platform browse |
-| -------- | :--------: | :----------: | :-------------: |
-| HN (Show HN) | link in a reply | . | . |
-| r/ClaudeCode, r/cursor, r/ChatGPTCoding | ✅ attach | . | . |
-| r/LLMDevs, r/AI_Agents | ✅ attach | . | . |
-| r/PromptEngineering | . | . | ✅ attach (skills + CLAUDE.md visible) |
-| r/programming, r/webdev, r/SideProject | ✅ attach | . | . |
-| r/devtools, r/commandline | ✅ attach | . | . |
-| r/opensource, r/selfhosted | . | . | ✅ attach (show registry UI) |
-| Twitter/X thread | ✅ tweet 1 | ✅ tweet 3 | ✅ tweet 4 |
-| LinkedIn | ✅ native video | . | . |
-| Indie Hackers | ✅ embedded | . | . |
-| Dev.to | ✅ inline | ✅ inline | ✅ inline |
-| Product Hunt gallery | ✅ slot 1 | ✅ slot 3 | ✅ slot 2 |
-| Discord / Slack | ✅ native upload | . | . |
+| Platform                                |    Clone flow    | Init/publish |            Platform browse             |
+| --------------------------------------- | :--------------: | :----------: | :------------------------------------: |
+| HN (Show HN)                            | link in a reply  |      .       |                   .                    |
+| r/ClaudeCode, r/cursor, r/ChatGPTCoding |    ✅ attach     |      .       |                   .                    |
+| r/LLMDevs, r/AI_Agents                  |    ✅ attach     |      .       |                   .                    |
+| r/PromptEngineering                     |        .         |      .       | ✅ attach (skills + CLAUDE.md visible) |
+| r/programming, r/webdev, r/SideProject  |    ✅ attach     |      .       |                   .                    |
+| r/devtools, r/commandline               |    ✅ attach     |      .       |                   .                    |
+| r/opensource, r/selfhosted              |        .         |      .       |      ✅ attach (show registry UI)      |
+| Twitter/X thread                        |    ✅ tweet 1    |  ✅ tweet 3  |               ✅ tweet 4               |
+| LinkedIn                                | ✅ native video  |      .       |                   .                    |
+| Indie Hackers                           |   ✅ embedded    |      .       |                   .                    |
+| Dev.to                                  |    ✅ inline     |  ✅ inline   |               ✅ inline                |
+| Product Hunt gallery                    |    ✅ slot 1     |  ✅ slot 3   |               ✅ slot 2                |
+| Discord / Slack                         | ✅ native upload |      .       |                   .                    |
 
 ---
 
@@ -424,18 +424,18 @@ The AI-tools space on Reddit is less one audience and more seven, each with a di
 
 ### Tier 2: Broader developer audiences
 
-| Subreddit                 | Fit       | Notes                                                                                   |
-| ------------------------- | --------- | --------------------------------------------------------------------------------------- |
-| **r/programming**         | Strong    | Must be substantive, no hype. Read rules carefully; they ban self-promo in many forms.  |
-| **r/webdev**              | Good      | Emphasize the full-stack SvelteKit build.                                               |
-| **r/coding**              | Moderate  | Smaller, friendly.                                                                      |
-| **r/devtools**            | Strong    | Exact fit. Post the HN writeup here.                                                    |
-| **r/SideProject**         | Strong    | Launch posts welcomed, but the community rewards substance.                             |
-| **r/commandline**         | Good      | Angle on the CLI specifically.                                                          |
-| **r/opensource**          | Good      | Angle on the project being open source and self-hostable.                               |
-| **r/selfhosted**          | Moderate  | Post only if you write specifically about running your own Coati instance.              |
-| **r/coolgithubprojects**  | Moderate  | Low engagement but low friction.                                                        |
-| **r/InternetIsBeautiful** | Long shot | Only if the site itself has enough visual appeal to carry a non-technical audience.     |
+| Subreddit                 | Fit       | Notes                                                                                  |
+| ------------------------- | --------- | -------------------------------------------------------------------------------------- |
+| **r/programming**         | Strong    | Must be substantive, no hype. Read rules carefully; they ban self-promo in many forms. |
+| **r/webdev**              | Good      | Emphasize the full-stack SvelteKit build.                                              |
+| **r/coding**              | Moderate  | Smaller, friendly.                                                                     |
+| **r/devtools**            | Strong    | Exact fit. Post the HN writeup here.                                                   |
+| **r/SideProject**         | Strong    | Launch posts welcomed, but the community rewards substance.                            |
+| **r/commandline**         | Good      | Angle on the CLI specifically.                                                         |
+| **r/opensource**          | Good      | Angle on the project being open source and self-hostable.                              |
+| **r/selfhosted**          | Moderate  | Post only if you write specifically about running your own Coati instance.             |
+| **r/coolgithubprojects**  | Moderate  | Low engagement but low friction.                                                       |
+| **r/InternetIsBeautiful** | Long shot | Only if the site itself has enough visual appeal to carry a non-technical audience.    |
 
 ### Tier 3: Adjacent, post selectively
 
@@ -524,43 +524,43 @@ Prerequisites, not posts:
 
 ### Day 0: launch day
 
-| Time (ET) | Channel | Action |
-| --------- | ------- | ------ |
-| 7:45 AM | (prep) | Final check: site up, demos accessible, bio links updated, pinned tweet ready |
-| 8:00 AM | **Hacker News (Show HN)** | Post. This is the anchor. Full attention for the next 3 hours. |
-| 8:10 AM | HN | Top-level self-reply linking the clone-flow demo |
-| 8:00 to 11:00 AM | HN | Respond to every comment within minutes. Be technical, specific, honest. |
-| 11:00 AM | **Twitter/X launch thread** | Post (4 tweets, demos on tweets 1, 3, 4) |
-| 11:05 AM | Twitter | Quote-tweet the HN link from your account so followers can go vouch |
-| 11:00 AM to 2:00 PM | HN + Twitter | Monitor both; HN is still priority |
-| 2:00 PM | **r/ClaudeCode** | Post. Home audience. Rapid engagement expected. |
-| 2:00 to 5:00 PM | r/ClaudeCode + HN | Respond under 15 minutes. The first 3 hours decide Reddit ranking. |
-| 5:00 PM | **Discord / Slack** | Drop the "Something I built..." message in 2 or 3 communities where you're already a regular. No more. |
-| Evening | HN | Check every 30 minutes until bed. If still on the front page, keep responding. |
+| Time (ET)           | Channel                     | Action                                                                                                 |
+| ------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 7:45 AM             | (prep)                      | Final check: site up, demos accessible, bio links updated, pinned tweet ready                          |
+| 8:00 AM             | **Hacker News (Show HN)**   | Post. This is the anchor. Full attention for the next 3 hours.                                         |
+| 8:10 AM             | HN                          | Top-level self-reply linking the clone-flow demo                                                       |
+| 8:00 to 11:00 AM    | HN                          | Respond to every comment within minutes. Be technical, specific, honest.                               |
+| 11:00 AM            | **Twitter/X launch thread** | Post (4 tweets, demos on tweets 1, 3, 4)                                                               |
+| 11:05 AM            | Twitter                     | Quote-tweet the HN link from your account so followers can go vouch                                    |
+| 11:00 AM to 2:00 PM | HN + Twitter                | Monitor both; HN is still priority                                                                     |
+| 2:00 PM             | **r/ClaudeCode**            | Post. Home audience. Rapid engagement expected.                                                        |
+| 2:00 to 5:00 PM     | r/ClaudeCode + HN           | Respond under 15 minutes. The first 3 hours decide Reddit ranking.                                     |
+| 5:00 PM             | **Discord / Slack**         | Drop the "Something I built..." message in 2 or 3 communities where you're already a regular. No more. |
+| Evening             | HN                          | Check every 30 minutes until bed. If still on the front page, keep responding.                         |
 
 ### Day 1
 
-| Time (ET) | Channel | Action |
-| --------- | ------- | ------ |
-| Morning | HN + r/ClaudeCode | Clear overnight comments |
-| 10:00 AM | **r/cursor** | Post with the Cursor-specific angle |
-| 2:00 PM | **r/devtools** | Post with the CLI-focused angle |
-| Throughout | (all previous) | Continue engaging on yesterday's threads |
+| Time (ET)  | Channel           | Action                                   |
+| ---------- | ----------------- | ---------------------------------------- |
+| Morning    | HN + r/ClaudeCode | Clear overnight comments                 |
+| 10:00 AM   | **r/cursor**      | Post with the Cursor-specific angle      |
+| 2:00 PM    | **r/devtools**    | Post with the CLI-focused angle          |
+| Throughout | (all previous)    | Continue engaging on yesterday's threads |
 
 ### Day 2
 
-| Time (ET) | Channel | Action |
-| --------- | ------- | ------ |
-| 10:00 AM | **r/ChatGPTCoding** | Multi-tool framing |
-| 2:00 PM | **Indie Hackers** | Post with the "is the frame landing" question |
-| Afternoon | Twitter | Follow-up tweet quoting a good HN response or Reddit thread |
+| Time (ET) | Channel             | Action                                                      |
+| --------- | ------------------- | ----------------------------------------------------------- |
+| 10:00 AM  | **r/ChatGPTCoding** | Multi-tool framing                                          |
+| 2:00 PM   | **Indie Hackers**   | Post with the "is the frame landing" question               |
+| Afternoon | Twitter             | Follow-up tweet quoting a good HN response or Reddit thread |
 
 ### Day 3
 
-| Time (ET) | Channel | Action |
-| --------- | ------- | ------ |
-| 10:00 AM | **r/LLMDevs** or **r/AI_Agents** | Pick whichever had more relevant recent activity. Save the other for Week 2. |
-| 3:00 PM | **LinkedIn** | Launch post with the clone-flow demo as a native video |
+| Time (ET) | Channel                          | Action                                                                       |
+| --------- | -------------------------------- | ---------------------------------------------------------------------------- |
+| 10:00 AM  | **r/LLMDevs** or **r/AI_Agents** | Pick whichever had more relevant recent activity. Save the other for Week 2. |
+| 3:00 PM   | **LinkedIn**                     | Launch post with the clone-flow demo as a native video                       |
 
 ### Day 4
 
@@ -568,18 +568,18 @@ Rest and catch-up. No new posts unless the reply backlog needs clearing. Quiet d
 
 ### Day 5
 
-| Time (ET) | Channel | Action |
-| --------- | ------- | ------ |
-| 10:00 AM | **Dev.to** | Publish the longform with all three demos embedded |
-| 11:00 AM | Twitter | Quote-tweet the Dev.to link: "wrote up the why behind this" |
-| Afternoon | LinkedIn | Share the Dev.to article as a follow-up native post |
+| Time (ET) | Channel    | Action                                                      |
+| --------- | ---------- | ----------------------------------------------------------- |
+| 10:00 AM  | **Dev.to** | Publish the longform with all three demos embedded          |
+| 11:00 AM  | Twitter    | Quote-tweet the Dev.to link: "wrote up the why behind this" |
+| Afternoon | LinkedIn   | Share the Dev.to article as a follow-up native post         |
 
 ### Day 6
 
-| Time (ET) | Channel | Action |
-| --------- | ------- | ------ |
-| 10:00 AM | **r/programming** or **r/webdev** or **r/SideProject** | Pick one. Read the last 20 top posts in that sub before posting. |
-| Afternoon | (all previous) | Monitor today's post; catch up on trailing threads elsewhere |
+| Time (ET) | Channel                                                | Action                                                           |
+| --------- | ------------------------------------------------------ | ---------------------------------------------------------------- |
+| 10:00 AM  | **r/programming** or **r/webdev** or **r/SideProject** | Pick one. Read the last 20 top posts in that sub before posting. |
+| Afternoon | (all previous)                                         | Monitor today's post; catch up on trailing threads elsewhere     |
 
 ### Day 7
 
@@ -587,23 +587,23 @@ Rest day. No new posts. Final engagement on week 1 threads before they fall off 
 
 ### Week 2
 
-| Day | Channel | Action |
-| --- | ------- | ------ |
-| Mon | (prep) | Confirm Product Hunt launch for Tue. Notify supporter list. Upload gallery. |
-| Tue 12:01 AM PT | **Product Hunt** | Launch goes live (PH opens the new-product window at midnight PT) |
-| Tue all day | PH | Respond to every comment within 15 minutes. Maker visibly present. |
-| Wed | **r/PromptEngineering** | Post with the platform-browse demo |
-| Thu | **r/commandline** | Post (if not already covered on Day 1) |
-| Fri | **r/LLMDevs** or **r/AI_Agents** | Post the one you didn't use on Day 3 |
-| Weekend | (nothing) | Rest. Respond to trailing comments only. |
+| Day             | Channel                          | Action                                                                      |
+| --------------- | -------------------------------- | --------------------------------------------------------------------------- |
+| Mon             | (prep)                           | Confirm Product Hunt launch for Tue. Notify supporter list. Upload gallery. |
+| Tue 12:01 AM PT | **Product Hunt**                 | Launch goes live (PH opens the new-product window at midnight PT)           |
+| Tue all day     | PH                               | Respond to every comment within 15 minutes. Maker visibly present.          |
+| Wed             | **r/PromptEngineering**          | Post with the platform-browse demo                                          |
+| Thu             | **r/commandline**                | Post (if not already covered on Day 1)                                      |
+| Fri             | **r/LLMDevs** or **r/AI_Agents** | Post the one you didn't use on Day 3                                        |
+| Weekend         | (nothing)                        | Rest. Respond to trailing comments only.                                    |
 
 ### Week 3
 
-| Day | Channel | Action |
-| --- | ------- | ------ |
-| Mon | **r/opensource** | Post with the self-hosting angle |
-| Wed | **r/selfhosted** | Post only if you've written a short self-hosting walkthrough to link |
-| Fri | **r/LocalLLaMA** (optional) | Only if you have setups built around local models. Skip otherwise. |
+| Day | Channel                     | Action                                                               |
+| --- | --------------------------- | -------------------------------------------------------------------- |
+| Mon | **r/opensource**            | Post with the self-hosting angle                                     |
+| Wed | **r/selfhosted**            | Post only if you've written a short self-hosting walkthrough to link |
+| Fri | **r/LocalLLaMA** (optional) | Only if you have setups built around local models. Skip otherwise.   |
 
 ### Week 2 and 3: launch directories
 

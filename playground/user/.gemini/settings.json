@@ -8,9 +8,7 @@
 	},
 	"context": {
 		"// include": "Project-level rules still apply — this is just the global layer",
-		"include": [
-			"~/.gemini/GEMINI.md"
-		]
+		"include": ["~/.gemini/GEMINI.md"]
 	},
 	"defaults": {
 		"style": "concise",
@@ -35,12 +33,6 @@
 			"**/*.pem",
 			"**/*.key"
 		],
-		"denyShellPatterns": [
-			"rm -rf *",
-			"git push --force*",
-			"sudo *",
-			"curl * | sh",
-			"curl * | bash"
-		]
+		"denyShellPatterns": ["rm -rf *", "git push --force*", "sudo *", "curl * | sh", "curl * | bash"]
 	}
 }

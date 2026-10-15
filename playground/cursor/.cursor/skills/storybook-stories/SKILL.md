@@ -20,14 +20,14 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { Button } from './Button';
 
 const meta = {
-  title: 'Actions/Button',
-  component: Button,
-  parameters: { layout: 'centered' },
-  argTypes: {
-    variant: { control: 'select', options: ['primary', 'secondary', 'ghost'] },
-    size: { control: 'select', options: ['sm', 'md', 'lg'] }
-  },
-  args: { children: 'Click me' }
+	title: 'Actions/Button',
+	component: Button,
+	parameters: { layout: 'centered' },
+	argTypes: {
+		variant: { control: 'select', options: ['primary', 'secondary', 'ghost'] },
+		size: { control: 'select', options: ['sm', 'md', 'lg'] }
+	},
+	args: { children: 'Click me' }
 } satisfies Meta<typeof Button>;
 
 export default meta;
@@ -50,13 +50,19 @@ Every component exports at least:
 
 ```tsx
 export const AllVariants: Story = {
-  render: (args) => (
-    <div className="grid grid-cols-3 gap-4">
-      <Button {...args} variant="primary">Primary</Button>
-      <Button {...args} variant="secondary">Secondary</Button>
-      <Button {...args} variant="ghost">Ghost</Button>
-    </div>
-  )
+	render: (args) => (
+		<div className="grid grid-cols-3 gap-4">
+			<Button {...args} variant="primary">
+				Primary
+			</Button>
+			<Button {...args} variant="secondary">
+				Secondary
+			</Button>
+			<Button {...args} variant="ghost">
+				Ghost
+			</Button>
+		</div>
+	)
 };
 ```
 
@@ -70,10 +76,10 @@ from the `play` context — not the top-level imports.
 
 ```tsx
 export const OpenedTooltip: Story = {
-  play: async ({ canvas, userEvent }) => {
-    const trigger = canvas.getByRole('button', { name: /help/i });
-    await userEvent.hover(trigger);
-  }
+	play: async ({ canvas, userEvent }) => {
+		const trigger = canvas.getByRole('button', { name: /help/i });
+		await userEvent.hover(trigger);
+	}
 };
 ```
 
@@ -87,17 +93,17 @@ rule for an intentional demo:
 
 ```tsx
 export const LowContrastDemo: Story = {
-  parameters: {
-    a11y: {
-      config: {
-        rules: [{ id: 'color-contrast', enabled: false, reviewOnFail: true }]
-      }
-    }
-  }
+	parameters: {
+		a11y: {
+			config: {
+				rules: [{ id: 'color-contrast', enabled: false, reviewOnFail: true }]
+			}
+		}
+	}
 };
 ```
 
-Always include a comment explaining *why* a rule is disabled.
+Always include a comment explaining _why_ a rule is disabled.
 
 ## Args vs. render
 

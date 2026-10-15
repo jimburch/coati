@@ -6,18 +6,18 @@ provider fallbacks, commands, skills, and MCP servers.
 
 ## What's in `.opencode/`
 
-| Path | Purpose |
-| --- | --- |
-| `commands/new-page.md` | Scaffold a new route following Nuxt file-based conventions |
-| `commands/pinia-store.md` | Scaffold a new Pinia setup store with persistence |
-| `commands/composable.md` | Scaffold a Vue composable with typed returns |
-| `commands/review.md` | Review the diff against Kite conventions |
-| `commands/test-coverage.md` | Identify test gaps in the diff |
-| `commands/deploy-check.md` | Pre-flight checks before a Cloudflare Pages deploy |
-| `skills/vue-composition/SKILL.md` | `<script setup>`, composables, reactive primitives |
-| `skills/pinia-stores/SKILL.md` | Setup-store patterns, persistence, devtools |
-| `skills/nuxt-conventions/SKILL.md` | File-based routing, middleware, auto-imports |
-| `skills/testing/SKILL.md` | Vue Testing Library + Vitest patterns |
+| Path                               | Purpose                                                    |
+| ---------------------------------- | ---------------------------------------------------------- |
+| `commands/new-page.md`             | Scaffold a new route following Nuxt file-based conventions |
+| `commands/pinia-store.md`          | Scaffold a new Pinia setup store with persistence          |
+| `commands/composable.md`           | Scaffold a Vue composable with typed returns               |
+| `commands/review.md`               | Review the diff against Kite conventions                   |
+| `commands/test-coverage.md`        | Identify test gaps in the diff                             |
+| `commands/deploy-check.md`         | Pre-flight checks before a Cloudflare Pages deploy         |
+| `skills/vue-composition/SKILL.md`  | `<script setup>`, composables, reactive primitives         |
+| `skills/pinia-stores/SKILL.md`     | Setup-store patterns, persistence, devtools                |
+| `skills/nuxt-conventions/SKILL.md` | File-based routing, middleware, auto-imports               |
+| `skills/testing/SKILL.md`          | Vue Testing Library + Vitest patterns                      |
 
 ## `.opencode.json`
 

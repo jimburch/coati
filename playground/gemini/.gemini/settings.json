@@ -16,12 +16,7 @@
 			"src/layouts/**/*.astro",
 			"astro.config.ts"
 		],
-		"exclude": [
-			"dist/**",
-			"node_modules/**",
-			"**/*.generated.ts",
-			".astro/**"
-		],
+		"exclude": ["dist/**", "node_modules/**", "**/*.generated.ts", ".astro/**"],
 		"maxFiles": 200,
 		"maxTokens": 200000
 	},

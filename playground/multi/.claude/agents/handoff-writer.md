@@ -19,19 +19,23 @@ Always produce this exact shape:
 **Task:** <one-sentence description of the whole task>
 
 **Backend changes (done by Claude):**
+
 - `<file>` — <what changed and why it matters to the UI>
 - `<file>` — …
 
 **Types / schema touched:**
+
 - `src/lib/types/…` — added `Foo` / renamed `Bar` → `Baz`
 - `src/lib/validation.ts` — added `ArchiveNoteSchema`
 
 **Frontend to-do:**
+
 - [ ] `<component>` — <specific UI change needed>
 - [ ] `<component>` — <specific UI change needed>
 - [ ] New component — `<path>` — <purpose>
 
 **Form actions available:**
+
 - `POST /notes/:id ?/archive` — takes `{ id }`, returns `{ success: true }` on `200` or `{ error, code }` with `4xx`
 
 **Shared types to import:**
@@ -41,6 +45,7 @@ import { ArchiveNoteSchema } from '~/lib/validation';
 \`\`\`
 
 **Gotchas:**
+
 - <anything a well-meaning Cursor pass might mess up>
 ```
 

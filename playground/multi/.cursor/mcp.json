@@ -2,7 +2,12 @@
 	"mcpServers": {
 		"filesystem": {
 			"command": "npx",
-			"args": ["-y", "@modelcontextprotocol/server-filesystem", "./src/lib/components", "./src/routes"]
+			"args": [
+				"-y",
+				"@modelcontextprotocol/server-filesystem",
+				"./src/lib/components",
+				"./src/routes"
+			]
 		},
 		"fetch": {
 			"command": "npx",

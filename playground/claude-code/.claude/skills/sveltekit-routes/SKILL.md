@@ -18,6 +18,7 @@ Use this skill when writing anything under `src/routes/`.
 ## Load functions
 
 Always:
+
 - Throw `error(404)` for missing resources — do not return `null`
 - Throw `error(401)` / `redirect(302, '/login')` for unauthenticated access
 - Return a plain object with typed properties — SvelteKit serializes it

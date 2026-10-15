@@ -1,6 +1,6 @@
 ---
 description: Open a pull request with a body I'd actually write
-argument-hint: "[base-branch]"
+argument-hint: '[base-branch]'
 ---
 
 # /pr

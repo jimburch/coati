@@ -35,6 +35,7 @@ moved into a reusable tRPC procedure.
 ## Output
 
 A commit-ready diff with:
+
 - The new procedure
 - The updated caller
 - The new test file

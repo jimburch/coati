@@ -33,6 +33,7 @@ Ledger's testing patterns.
 ## Naming
 
 Tests read as sentences starting with "should":
+
 - `"should return paginated expenses for the current workspace"`
 - `"should throw UNAUTHORIZED when no session exists"`
 - `"should not leak expenses from other workspaces"`

@@ -23,7 +23,7 @@ Review the Cursor-lane portion of the current diff.
 ## Output
 
 - 🚨 Must fix — lane violations, broken types, inaccessible HTML
-- ⚠️  Should fix — token violations (raw colors), missing error rendering
+- ⚠️ Should fix — token violations (raw colors), missing error rendering
 - 💡 Consider — extract subcomponent, naming, layout ideas
 
 Verdict: `APPROVE`, `REQUEST_CHANGES`, or `BLOCKED`.

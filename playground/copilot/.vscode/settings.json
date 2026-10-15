@@ -77,11 +77,5 @@
 		"**/*.generated.ts": true
 	},
 	// Never let Copilot read these — secrets/token leaks
-	"github.copilot.chat.exclude": [
-		".env",
-		".env.*",
-		"**/*.pem",
-		"**/*.key",
-		"scripts/backfill/**"
-	]
+	"github.copilot.chat.exclude": [".env", ".env.*", "**/*.pem", "**/*.key", "scripts/backfill/**"]
 }

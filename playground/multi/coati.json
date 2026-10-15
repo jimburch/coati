@@ -5,15 +5,8 @@
 	"version": "1.0.0",
 	"description": "A collaborative note-taking app built on SvelteKit",
 	"category": "web-dev",
-	"agents": [
-		"claude-code",
-		"cursor"
-	],
-	"tags": [
-		"claude",
-		"cursor",
-		"sveltekit"
-	],
+	"agents": ["claude-code", "cursor"],
+	"tags": ["claude", "cursor", "sveltekit"],
 	"visibility": "public",
 	"files": [
 		{

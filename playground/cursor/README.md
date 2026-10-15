@@ -7,26 +7,26 @@ skills, hooks, and MCP servers.
 
 ## What's in `.cursor/`
 
-| Path | Purpose |
-| --- | --- |
-| `rules/project.mdc` | Repo-wide rules (`alwaysApply: true`) |
-| `rules/typescript.mdc` | TS conventions (`alwaysApply: true`) |
-| `rules/react-components.mdc` | Component conventions scoped to `src/components/**/*.tsx` |
-| `rules/storybook.mdc` | Story conventions scoped to `**/*.stories.tsx` |
-| `rules/testing.mdc` | Test conventions scoped to `**/*.test.tsx` |
-| `rules/tailwind.mdc` | Tailwind + `cva` conventions |
-| `rules/accessibility.mdc` | A11y rules for interactive components |
-| `commands/new-component.md` | Scaffold a new component + story + test |
-| `commands/refactor.md` | Extract a subcomponent from a large file |
-| `commands/review.md` | Review staged changes against Atlas conventions |
-| `commands/test-coverage.md` | Identify test gaps |
-| `commands/a11y-audit.md` | Run axe against the Storybook dev server |
-| `skills/component-patterns/SKILL.md` | How to build a shadcn-style primitive |
-| `skills/storybook-stories/SKILL.md` | Story-writing patterns |
-| `skills/vitest-react/SKILL.md` | RTL + Vitest patterns |
-| `skills/accessibility/SKILL.md` | ARIA patterns and keyboard handling |
-| `hooks.json` | Auto-format on save, log shell commands |
-| `mcp.json` | Filesystem, Chromatic, Figma, fetch |
+| Path                                 | Purpose                                                   |
+| ------------------------------------ | --------------------------------------------------------- |
+| `rules/project.mdc`                  | Repo-wide rules (`alwaysApply: true`)                     |
+| `rules/typescript.mdc`               | TS conventions (`alwaysApply: true`)                      |
+| `rules/react-components.mdc`         | Component conventions scoped to `src/components/**/*.tsx` |
+| `rules/storybook.mdc`                | Story conventions scoped to `**/*.stories.tsx`            |
+| `rules/testing.mdc`                  | Test conventions scoped to `**/*.test.tsx`                |
+| `rules/tailwind.mdc`                 | Tailwind + `cva` conventions                              |
+| `rules/accessibility.mdc`            | A11y rules for interactive components                     |
+| `commands/new-component.md`          | Scaffold a new component + story + test                   |
+| `commands/refactor.md`               | Extract a subcomponent from a large file                  |
+| `commands/review.md`                 | Review staged changes against Atlas conventions           |
+| `commands/test-coverage.md`          | Identify test gaps                                        |
+| `commands/a11y-audit.md`             | Run axe against the Storybook dev server                  |
+| `skills/component-patterns/SKILL.md` | How to build a shadcn-style primitive                     |
+| `skills/storybook-stories/SKILL.md`  | Story-writing patterns                                    |
+| `skills/vitest-react/SKILL.md`       | RTL + Vitest patterns                                     |
+| `skills/accessibility/SKILL.md`      | ARIA patterns and keyboard handling                       |
+| `hooks.json`                         | Auto-format on save, log shell commands                   |
+| `mcp.json`                           | Filesystem, Chromatic, Figma, fetch                       |
 
 ## Scoped `.mdc` rules
 

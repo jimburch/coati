@@ -1,6 +1,6 @@
 ---
 description: Scaffold a route's backend (load + actions + endpoints) and write a Cursor handoff for the UI
-argument-hint: "<route-path>"
+argument-hint: '<route-path>'
 ---
 
 # /add-route

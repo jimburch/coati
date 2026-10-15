@@ -13,30 +13,30 @@ project you touch inherits it.
 
 ### Claude Code (`~/.claude/`)
 
-| Path | Purpose |
-| --- | --- |
-| `CLAUDE.md` | Your coding preferences, shown to Claude in every project |
-| `settings.json` | Model, permissions, hooks, include-co-authored |
-| `commands/commit.md` | `/commit` — Conventional Commits with your preferred style |
-| `commands/pr.md` | `/pr` — opens a PR with a body you'd actually write |
-| `commands/standup.md` | `/standup` — summarizes yesterday's git activity |
-| `commands/focus.md` | `/focus` — reduces distraction (closes unrelated tabs of context) |
+| Path                  | Purpose                                                           |
+| --------------------- | ----------------------------------------------------------------- |
+| `CLAUDE.md`           | Your coding preferences, shown to Claude in every project         |
+| `settings.json`       | Model, permissions, hooks, include-co-authored                    |
+| `commands/commit.md`  | `/commit` — Conventional Commits with your preferred style        |
+| `commands/pr.md`      | `/pr` — opens a PR with a body you'd actually write               |
+| `commands/standup.md` | `/standup` — summarizes yesterday's git activity                  |
+| `commands/focus.md`   | `/focus` — reduces distraction (closes unrelated tabs of context) |
 
 ### Gemini CLI (`~/.gemini/`)
 
-| Path | Purpose |
-| --- | --- |
-| `settings.json` | Default model, telemetry off, permission policy |
-| `commands/commit.toml` | Same commit workflow as Claude's `/commit` |
-| `commands/pr.toml` | Same PR workflow as Claude's `/pr` |
-| `commands/standup.toml` | Daily standup summary |
+| Path                    | Purpose                                         |
+| ----------------------- | ----------------------------------------------- |
+| `settings.json`         | Default model, telemetry off, permission policy |
+| `commands/commit.toml`  | Same commit workflow as Claude's `/commit`      |
+| `commands/pr.toml`      | Same PR workflow as Claude's `/pr`              |
+| `commands/standup.toml` | Daily standup summary                           |
 
 ### Codex CLI (`~/.codex/`)
 
-| Path | Purpose |
-| --- | --- |
+| Path          | Purpose                                        |
+| ------------- | ---------------------------------------------- |
 | `config.toml` | Default model, sandbox policy, approval policy |
-| `AGENTS.md` | User-scoped coding preferences |
+| `AGENTS.md`   | User-scoped coding preferences                 |
 
 ## Install
 

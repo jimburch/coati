@@ -20,12 +20,14 @@ should become its own component.
 ## When to extract
 
 Extract when:
+
 - A cohesive subtree has its own state
 - The subtree is tested in isolation already (test file mentions it)
 - The subtree would be reused by a sibling
 - The parent file exceeds 150 lines
 
 Do NOT extract when:
+
 - The subtree exists only once and sharing state with the parent is constant
 - The prop surface would be > 8 props (coupling too high)
 - Extraction requires lifting state that currently lives correctly in the parent

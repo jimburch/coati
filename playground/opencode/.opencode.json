@@ -68,13 +68,7 @@
 			"git diff*",
 			"git log*"
 		],
-		"deny": [
-			"rm -rf *",
-			"git push --force*",
-			"pnpm publish*",
-			"curl * | sh",
-			"curl * | bash"
-		],
+		"deny": ["rm -rf *", "git push --force*", "pnpm publish*", "curl * | sh", "curl * | bash"],
 		"confirmOnMatch": true
 	},
 	"agents": {

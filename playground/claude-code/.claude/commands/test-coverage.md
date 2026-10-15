@@ -25,7 +25,7 @@ Identify test gaps in the diff between `HEAD` and `origin/main`.
 Produce a markdown table:
 
 | File | State | Missing cases |
-|------|-------|---------------|
+| ---- | ----- | ------------- |
 
 Then offer to write the missing tests. Do not write them automatically — wait
 for the user to pick which files to cover.

@@ -21,7 +21,7 @@ Use this prompt to push the client/server boundary to the right place.
 ### 1. Identify the boundary
 
 - Read the component and its children.
-- Find the deepest node that *genuinely* needs client-side capability.
+- Find the deepest node that _genuinely_ needs client-side capability.
 - Walk back up until you hit the shallowest node that introduces a client dep.
 - That node is the new `'use client'` boundary.
 
@@ -42,11 +42,15 @@ If a parent component has both server-only and client-only concerns:
 import { createCaller } from '~/server/api/createCaller';
 import { ExpenseTable } from '~/components/ExpenseTable';
 
-export default async function ExpensesPage({ params }: { params: Promise<{ workspaceSlug: string }> }) {
-  const { workspaceSlug } = await params;
-  const caller = await createCaller(workspaceSlug);
-  const expenses = await caller.expenses.list();
-  return <ExpenseTable expenses={expenses} />;
+export default async function ExpensesPage({
+	params
+}: {
+	params: Promise<{ workspaceSlug: string }>;
+}) {
+	const { workspaceSlug } = await params;
+	const caller = await createCaller(workspaceSlug);
+	const expenses = await caller.expenses.list();
+	return <ExpenseTable expenses={expenses} />;
 }
 ```
 
@@ -57,8 +61,8 @@ export default async function ExpensesPage({ params }: { params: Promise<{ works
 import { api } from '~/trpc/react';
 
 export function ExpenseTable({ expenses: initial }: { expenses: Expense[] }) {
-  const query = api.expenses.list.useQuery(undefined, { initialData: initial });
-  return <table>…</table>;
+	const query = api.expenses.list.useQuery(undefined, { initialData: initial });
+	return <table>…</table>;
 }
 ```
 

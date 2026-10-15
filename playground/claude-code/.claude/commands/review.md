@@ -1,6 +1,6 @@
 ---
 description: Review staged changes against project conventions
-argument-hint: "[base-branch]"
+argument-hint: '[base-branch]'
 ---
 
 # /review

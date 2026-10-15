@@ -109,11 +109,13 @@ done** and write a clear handoff note:
 **Task:** Add an archive toggle to notes.
 
 **Backend changes (done):**
+
 - `src/lib/validation.ts` — added `ArchiveNoteSchema`
 - `src/routes/(app)/notes/[id]/+page.server.ts` — new `archive` form action
 - `src/lib/server/queries/notes.ts` — added `archiveNote`
 
 **Frontend to-do:**
+
 - Add an archive button to `src/lib/components/editor/Toolbar.svelte`
 - Wire it to the `?/archive` form action
 - Show archived state with a muted row in `NoteList.svelte`
