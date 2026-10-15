@@ -1,41 +1,35 @@
-#!/bin/bash
-# Pre-commit hook: runs lint and type-check on staged files before allowing commit.
+#!/usr/bin/env bash
+# Pre-commit hook — lint, type-check, and test staged files.
 # Install: cp .claude/hooks/pre-commit.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
 
 set -euo pipefail
 
-echo "🔍 Running pre-commit checks..."
+echo "→ Pre-commit checks"
 
-# Get list of staged TypeScript files
-STAGED_TS_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx)$' || true)
+STAGED=$(git diff --cached --name-only --diff-filter=ACM)
+TS_FILES=$(echo "$STAGED" | grep -E '\.(ts|svelte)$' || true)
 
-if [ -z "$STAGED_TS_FILES" ]; then
-  echo "No TypeScript files staged, skipping checks."
+if [ -z "$TS_FILES" ]; then
+  echo "  no ts/svelte files staged — skipping"
   exit 0
 fi
 
-# Run ESLint on staged files only
-echo "  Linting staged files..."
-npx eslint $STAGED_TS_FILES
-if [ $? -ne 0 ]; then
-  echo "❌ Lint errors found. Fix them before committing."
-  exit 1
+echo "  eslint…"
+pnpm exec eslint $TS_FILES
+
+echo "  svelte-check + tsc…"
+pnpm run check
+
+echo "  related tests…"
+pnpm exec vitest related $TS_FILES --run --passWithNoTests
+
+# Guardrail: if schema.ts changed but no migration was generated, block.
+if echo "$STAGED" | grep -q 'src/lib/server/db/schema.ts'; then
+  MIGRATIONS=$(git diff --cached --name-only -- 'src/lib/server/db/migrations' | wc -l | tr -d ' ')
+  if [ "$MIGRATIONS" = "0" ]; then
+    echo "✗ schema.ts changed but no migration staged — run 'pnpm db:generate'"
+    exit 1
+  fi
 fi
 
-# Run TypeScript type-check (whole project, since types are interconnected)
-echo "  Type-checking..."
-npx tsc --noEmit
-if [ $? -ne 0 ]; then
-  echo "❌ Type errors found. Fix them before committing."
-  exit 1
-fi
-
-# Run tests related to changed files
-echo "  Running related tests..."
-npx vitest related $STAGED_TS_FILES --run
-if [ $? -ne 0 ]; then
-  echo "❌ Tests failed. Fix them before committing."
-  exit 1
-fi
-
-echo "✅ All pre-commit checks passed."
+echo "✓ pre-commit passed"

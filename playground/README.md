@@ -12,16 +12,18 @@ node ../../cli/bin/coati.js <command>
 
 ## Single-Agent Directories
 
-Each directory contains a realistic project-level setup for one agent. **None of these have a `coati.json`** — they're designed for testing `node ../../cli/bin/coati.js init` auto-detection.
+Each directory contains a realistic, fully fleshed-out project-level setup for one agent. Each one targets a different web-dev archetype so the configurations showcase how each agent's features map to a real stack. **None of these have a `coati.json`** — they're designed for testing `node ../../cli/bin/coati.js init` auto-detection.
 
-| Directory      | Agent          | Key Config Files                                      |
-| -------------- | -------------- | ----------------------------------------------------- |
-| `claude-code/` | Claude Code    | `CLAUDE.md`, `.claude/`, `.mcp.json`                  |
-| `codex/`       | Codex CLI      | `AGENTS.md`, `.codex/`, `.agents/`                    |
-| `copilot/`     | GitHub Copilot | `.github/copilot-instructions.md`, `.github/copilot/` |
-| `cursor/`      | Cursor         | `.cursorrules`, `.cursor/rules/*.mdc`, `.cursor/`     |
-| `gemini/`      | Gemini CLI     | `GEMINI.md`, `.gemini/`, `.geminiignore`              |
-| `opencode/`    | OpenCode       | `opencode.md`, `.opencode.json`, `.opencode/`         |
+| Directory      | Agent          | Project archetype                              | Key Config Files                                      |
+| -------------- | -------------- | ---------------------------------------------- | ----------------------------------------------------- |
+| `claude-code/` | Claude Code    | SvelteKit SaaS (Linkly — link shortener)       | `CLAUDE.md`, `.claude/`, `.mcp.json`                  |
+| `codex/`       | Codex CLI      | Fastify + Drizzle API (Pipedream — webhook relay) | `AGENTS.md`, `.codex/`, `.agents/`                 |
+| `copilot/`     | GitHub Copilot | Next.js 15 + Prisma + tRPC (Ledger — expense SaaS) | `.github/copilot-instructions.md`, `.github/copilot/`, `.vscode/` |
+| `cursor/`      | Cursor         | React + Vite + Storybook component library (Atlas UI) | `.cursorrules`, `.cursor/rules/*.mdc`, `.cursor/` |
+| `gemini/`      | Gemini CLI     | Astro + MDX content site (Beacon Docs)         | `GEMINI.md`, `.gemini/`, `.geminiignore`              |
+| `opencode/`    | OpenCode       | Nuxt 3 + Pinia SPA (Kite Analytics)            | `opencode.md`, `.opencode.json`, `.opencode/`         |
+
+Each setup is opinionated and showcases the agent's signature features: Claude Code's hooks + subagents + skills + statusline, Codex's TOML subagents + sandboxed config, Copilot's firewall + agents.json + .vscode integration, Cursor's scoped `.mdc` rules with globs + hooks, Gemini's TOML commands + shell policies, and OpenCode's provider fallbacks + contextPaths.
 
 ### Testing `node ../../cli/bin/coati.js init`
 
@@ -41,7 +43,7 @@ Verify: the generated `coati.json` should list only the one agent and tag every 
 
 ## Multi-Agent Directory
 
-`multi/` — A project-level setup targeting **Claude Code + Cursor** simultaneously. This directory **includes a `coati.json`** as a reference manifest.
+`multi/` — A project-level setup (Compose — collaborative note-taking on SvelteKit) targeting **Claude Code + Cursor** simultaneously, with a **lane split**: Claude owns the backend (server routes, DB, auth); Cursor owns the frontend (components, styling, forms). Includes PreToolUse hooks on both sides that enforce the lane boundaries.
 
 ### Testing multi-agent init
 
@@ -98,7 +100,7 @@ This restores the directory to its committed state — removes all files added b
 
 ## User/Global Directory
 
-`user/` — A global setup that installs to home directories (`~/`), targeting **Claude Code + Gemini + Codex**. This directory **includes a `coati.json`** with `placement: "global"` on every file.
+`user/` — A "polyglot dotfiles" global setup that installs to home directories (`~/`), targeting **Claude Code + Gemini + Codex**. Provides a consistent personality across all three agents: same `/commit`, `/pr`, `/standup` commands in both Claude (Markdown) and Gemini (TOML) forms, matching personal preferences in CLAUDE.md and AGENTS.md, and shared deny-lists for destructive commands.
 
 ### Testing global clone behavior
 

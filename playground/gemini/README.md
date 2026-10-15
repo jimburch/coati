@@ -1,41 +1,36 @@
-# Gemini CLI Playground
+# Beacon Docs — Gemini CLI Setup
 
-This directory simulates a real TypeScript project with a complete Gemini CLI
-configuration. It serves as a test environment for the Coati CLI's `clone` and
-`init` commands to verify correct handling of Gemini CLI setups.
+The public documentation and blog site for Beacon, built on Astro. This
+repository ships a complete Gemini CLI configuration: project memory,
+context rules, slash commands, shell policies, and skills.
 
-## What's Inside
+## What's in `.gemini/`
 
-### Project Files
+| Path | Purpose |
+| --- | --- |
+| `settings.json` | Model defaults, token limits, include patterns |
+| `commands/new-doc.toml` | Scaffold a new docs page with frontmatter + schema-valid fields |
+| `commands/new-post.toml` | Scaffold a new blog post |
+| `commands/audit-links.toml` | Run the link checker and triage failures |
+| `commands/optimize-images.toml` | Compress images in the diff and swap to `<Image>` where needed |
+| `commands/review.toml` | Review the diff against Beacon's content conventions |
+| `commands/deploy-check.toml` | Pre-flight checks before deploying to Cloudflare Pages |
+| `policies/shell.toml` | Shell allow/deny list |
+| `policies/read.toml` | Files Gemini may not read (secrets, drafts) |
+| `skills/astro-content/SKILL.md` | Astro content collections patterns |
+| `skills/mdx-patterns/SKILL.md` | MDX authoring rules for Beacon |
+| `skills/content-seo/SKILL.md` | SEO-focused content rules (titles, descriptions, schema.org) |
 
-| File            | Purpose                                                       |
-| --------------- | ------------------------------------------------------------- |
-| `package.json`  | Standard Node.js/TypeScript project manifest                  |
-| `GEMINI.md`     | Project instructions for Gemini CLI (equivalent to CLAUDE.md) |
-| `.geminiignore` | Tells Gemini CLI which files/directories to skip              |
+## `.geminiignore`
 
-### Gemini Configuration (`.gemini/`)
+Excludes large binary assets, build output, and draft content from Gemini's
+context window.
 
-| File                                   | Purpose                                                                               |
-| -------------------------------------- | ------------------------------------------------------------------------------------- |
-| `.gemini/settings.json`                | Project-level settings: MCP servers, tool permissions, context window config          |
-| `.gemini/commands/review.toml`         | Custom `/review` slash command for code review                                        |
-| `.gemini/commands/test-coverage.toml`  | Custom `/test-coverage` slash command for coverage analysis                           |
-| `.gemini/commands/deploy-check.toml`   | Custom `/deploy-check` slash command for deployment readiness                         |
-| `.gemini/skills/api-patterns/SKILL.md` | Skill teaching Gemini the project's API route patterns                                |
-| `.gemini/skills/testing/SKILL.md`      | Skill teaching Gemini the project's testing conventions                               |
-| `.gemini/policies/shell.toml`          | Policy controlling which shell commands are allowed, need confirmation, or are denied |
+## Getting started
 
-## How Coati Uses This
-
-When a user publishes a Gemini CLI setup to Coati, the platform packages these
-configuration files into a shareable, installable unit. Another user can then
-`coati clone` that setup to bootstrap their own project with the same Gemini CLI
-configuration.
-
-This playground lets us test that:
-
-1. All Gemini-specific files are detected and categorized correctly
-2. The `init` command maps Gemini config files to the right coati.json fields
-3. The `clone` command writes files to the correct paths with proper content
-4. Conflict resolution works when cloning into an existing project
+```bash
+pnpm install
+pnpm dev        # http://localhost:4321
+pnpm build      # static output to dist/
+pnpm preview    # preview the production build
+```

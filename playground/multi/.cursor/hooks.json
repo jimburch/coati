@@ -3,16 +3,34 @@
 	"hooks": {
 		"afterFileEdit": [
 			{
-				"command": "npx eslint --fix ${file}",
+				"name": "prettier-write",
 				"type": "command",
+				"command": "npx prettier --write --log-level=warn ${file}",
+				"matcher": "**/*.{svelte,ts,css,md}",
+				"timeout": 10000
+			},
+			{
+				"name": "eslint-fix",
+				"type": "command",
+				"command": "npx eslint --fix --cache ${file}",
+				"matcher": "**/*.{ts,svelte}",
 				"timeout": 10000
 			}
 		],
 		"beforeShellExecution": [
 			{
-				"command": "echo 'Running: ${command}'",
+				"name": "block-destructive",
 				"type": "command",
-				"timeout": 5000
+				"command": "echo '${command}' | grep -Eq 'rm -rf|git push --force|pnpm publish|drizzle-kit' && exit 1 || exit 0",
+				"timeout": 2000
+			}
+		],
+		"beforeFileEdit": [
+			{
+				"name": "enforce-lane",
+				"type": "command",
+				"command": ".cursor/enforce-lane.sh ${file}",
+				"timeout": 2000
 			}
 		]
 	}

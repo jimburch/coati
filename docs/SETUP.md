@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-A **setup** is a publishable, installable package of AI coding tool configuration. It bundles everything needed to reproduce a specific workflow — instructions, commands, skills, tool integrations, and hooks — into a single unit that can be shared, discovered, and cloned.
+A **setup** is a publishable, installable package of AI coding tool configuration. It bundles everything needed to reproduce a specific workflow — instructions, commands, skills, tool integrations, and hooks — into a single unit that can be shared, discovered, and cloned. The app that hosts setups runs on Cloudflare Workers, with Neon Postgres behind Hyperdrive.
 
 Think of it like a GitHub repo, but for your AI assistant's brain.
 

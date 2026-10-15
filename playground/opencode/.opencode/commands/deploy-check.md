@@ -1,87 +1,86 @@
 ---
-description: Check if the project is ready for deployment
-arguments: []
+description: Pre-flight checks before deploying Kite to Cloudflare Pages
 ---
 
-# Deployment Readiness Check
+# /deploy-check
 
-Run through a comprehensive checklist to verify the project is ready to deploy.
-Report each check as PASS, FAIL, or WARN with details.
+Run the full gauntlet before shipping. Stop on any failure.
 
-## Checks to perform
+## Steps
 
-### 1. Build
-
-Run `npm run build` and verify it completes without errors.
-
-- FAIL if the build has TypeScript errors
-- WARN if there are TypeScript warnings (e.g., unused variables caught by tsc)
-
-### 2. Tests
-
-Run `npm run test` and verify all tests pass.
-
-- FAIL if any test fails
-- WARN if no tests exist at all
-
-### 3. Lint
-
-Run `npm run lint` and verify no errors.
-
-- FAIL if there are lint errors
-- WARN if there are only lint warnings
-
-### 4. Type Safety Audit
-
-Search the codebase for unsafe patterns:
-
-- Any usage of `any` type (search for `: any`, `as any`, `<any>`)
-- Any usage of `@ts-ignore` or `@ts-expect-error`
-- Any usage of non-null assertions (`!.` or `!,`)
-- WARN for each occurrence found, listing file and line number
-
-### 5. Environment Variables
-
-Check that all required environment variables are documented:
-
-- Search for `process.env.` references in the source code
-- Verify each one is listed in `.env.example` (if it exists)
-- FAIL if env vars are used but no `.env.example` exists
-- WARN if `.env.example` is missing entries
-
-### 6. Dependencies
-
-Check for obvious dependency issues:
-
-- Verify `package-lock.json` exists and is up to date
-- Check for any `devDependencies` imported in production source files
-- WARN if lockfile is missing or outdated
-
-### 7. Security Basics
-
-Scan for common security issues:
-
-- Hardcoded secrets, API keys, or tokens in source files
-- `.env` files that are not gitignored
-- Overly permissive CORS settings
-- FAIL for hardcoded secrets, WARN for the rest
-
-## Output Format
+### 1. Type check
 
 ```
-Deployment Readiness Report
-===========================
-
-Build .............. PASS
-Tests .............. PASS
-Lint ............... WARN (2 warnings)
-Type Safety ........ WARN (1 instance of `as any` in src/utils/logger.ts:14)
-Env Variables ...... PASS
-Dependencies ....... PASS
-Security ........... PASS
-
-Overall: READY (with 2 warnings)
+pnpm typecheck
 ```
 
-After the summary, provide details for any FAIL or WARN items with actionable
-next steps. If everything passes, confirm the project is ready to deploy.
+Must pass with zero errors.
+
+### 2. Lint
+
+```
+pnpm lint
+```
+
+Warnings are fine; errors block.
+
+### 3. Unit + component tests
+
+```
+pnpm test:unit
+```
+
+### 4. E2E smoke
+
+```
+pnpm test:e2e --grep @smoke
+```
+
+Only the `@smoke` tag — full e2e runs in CI, this is the fast subset.
+
+### 5. Build
+
+```
+pnpm generate
+```
+
+Check output size:
+- `.output/public/_nuxt/*.js` total size should be < 300KB gzipped.
+- If a new JS file appears with > 50KB, investigate (likely a chart lib or
+  a full-page import in a route that could lazy-load).
+
+### 6. Bundle preview
+
+```
+pnpm preview
+```
+
+Spot-check the login and dashboard routes manually — or via Playwright in the
+background.
+
+### 7. Environment sanity
+
+Verify `.env.example` lists every variable the build actually reads:
+
+```
+grep -rE "process\.env\.[A-Z_]+" app/ | awk '{print $NF}' | sort -u
+```
+
+Any new env var must also land in:
+- `.env.example` (with a comment)
+- Cloudflare Pages dashboard (production secrets)
+- `nuxt.config.ts` `runtimeConfig` block (typed)
+
+## Output
+
+| Check | Status | Notes |
+| --- | --- | --- |
+| Typecheck | ✓ | — |
+| Lint | ✓ | 3 warnings (non-blocking) |
+| Unit tests | ✓ | 142 passed |
+| Smoke e2e | ✓ | 8 passed |
+| Build | ✓ | 182KB JS gzipped |
+| Preview | — | manual spot-check |
+| Env sanity | ✓ | — |
+
+Verdict: `SHIP` or `HOLD`.

@@ -1,36 +1,50 @@
-# Claude Code Playground
+# Linkly — Claude Code Setup
 
-This directory simulates a real TypeScript project with a full Claude Code setup.
-It is a **test environment for the Coati CLI** — use it to verify that Coati
-correctly discovers, parses, and packages Claude Code configuration files.
+A self-hosted link shortener built with SvelteKit, Drizzle, and Lucia Auth.
+This repository ships a complete Claude Code configuration: project memory,
+permissions, hooks, subagents, commands, skills, and MCP servers.
 
-## What's Here
+## What's in `.claude/`
 
-| File / Directory                       | Purpose                                                     |
-| -------------------------------------- | ----------------------------------------------------------- |
-| `package.json`                         | Project manifest for a TypeScript/Express app               |
-| `CLAUDE.md`                            | Project instructions that Claude Code reads for context     |
-| `.claude/settings.json`                | Project-level permissions and model preferences             |
-| `.claude/commands/review.md`           | Custom `/review` slash command for code review              |
-| `.claude/commands/test-coverage.md`    | Custom `/test-coverage` slash command for coverage analysis |
-| `.claude/skills/api-patterns/SKILL.md` | Skill teaching Claude the project's API conventions         |
-| `.claude/hooks/pre-commit.sh`          | Pre-commit hook running lint, type-check, and tests         |
-| `.mcp.json`                            | MCP server configuration (filesystem, fetch, sqlite)        |
+| Path | Purpose |
+| --- | --- |
+| `settings.json` | Permissions, default model, statusline, environment |
+| `hooks/pre-commit.sh` | Lint + type-check + related tests before commit |
+| `hooks/post-tool-use.sh` | Auto-format TypeScript/Svelte files after edits |
+| `hooks/user-prompt-submit.sh` | Blocks prompts containing API keys or secrets |
+| `hooks/session-start.sh` | Prints a concise project snapshot at session start |
+| `agents/route-writer.md` | Subagent that scaffolds SvelteKit routes |
+| `agents/drizzle-migrator.md` | Subagent that plans safe schema migrations |
+| `agents/security-reviewer.md` | Subagent that audits auth and rate-limit code |
+| `commands/review.md` | Review staged changes against project conventions |
+| `commands/test-coverage.md` | Gap-analyze tests for changed files |
+| `commands/add-route.md` | Scaffold a new SvelteKit route with the right boilerplate |
+| `commands/migrate.md` | Generate and apply a Drizzle migration safely |
+| `commands/a11y-check.md` | Run an accessibility audit against the dev server |
+| `skills/sveltekit-routes/` | How to write load functions, form actions, endpoints |
+| `skills/drizzle-queries/` | Patterns for Drizzle queries, joins, and transactions |
+| `skills/lucia-auth/` | Auth middleware, sessions, API keys |
+| `skills/shadcn-svelte/` | Adding and customizing shadcn-svelte components |
+| `output-styles/concise.md` | Output style that skips preamble and summary |
+| `statusline.sh` | Statusline showing git branch + uncommitted count |
 
-## Usage with Coati CLI
+## MCP Servers
 
-From this directory, you can test Coati commands like:
+`.mcp.json` configures four servers:
+
+- **filesystem** — scoped to `./src` for safe edits
+- **postgres** — read-only access to the local dev database
+- **playwright** — drive the e2e browser from Claude
+- **github** — pull issue/PR context into the session
+
+Set `GITHUB_TOKEN` and `DATABASE_URL` in your shell before launching Claude.
+
+## Getting started
 
 ```bash
-# Initialize a Coati setup from this project's config
-coati init
-
-# Verify the generated coati.json includes all detected files
-cat coati.json
+pnpm install
+cp .env.example .env
+docker compose up -d db
+pnpm db:migrate
+pnpm dev
 ```
-
-## Not Included
-
-- `coati.json` — intentionally omitted so you can test `coati init` generating it
-- `node_modules/` — this is a simulated project, no need to install dependencies
-- `src/` — source code is not needed; the playground focuses on config files only

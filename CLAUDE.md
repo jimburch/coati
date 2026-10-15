@@ -17,7 +17,7 @@ The platform has two surfaces:
 1. **Web app** — discovery, profiles, social features, setup browsing/creation
 2. **CLI tool (`coati`)** — clone/install setups to local machines, publish setups, search/star/follow from terminal
 
-When discussing domain concepts, use the canonical terms defined in [`docs/UBIQUITOUS_LANGUAGE.md`](docs/UBIQUITOUS_LANGUAGE.md). Avoid the listed aliases (e.g., say **Setup** not "workflow", **Agent** not "tool", **Clone** not "download").
+When discussing domain concepts, use the canonical terms defined in [`CONTEXT.md`](CONTEXT.md). Avoid the listed aliases (e.g., say **Setup** not "workflow", **Agent** not "tool", **Clone** not "download").
 
 ## Tech Stack
 
@@ -287,3 +287,17 @@ For pages with user interactions (buttons, forms, toggles, copy actions):
 ### Playwright Config
 
 The `playwright.config.ts` defines two projects: `desktop` (Desktop Chrome) and `mobile` (430x932 viewport with `isMobile: true`). All e2e test files match the pattern `**/*.e2e.{ts,js}`.
+
+## Agent skills
+
+### Issue tracker
+
+Issues, specs, and wayfinder maps live in GitHub Issues (`jimburch/coati`), driven via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` at the repo root, ADRs in `docs/adr/`. See `docs/agents/domain.md`.

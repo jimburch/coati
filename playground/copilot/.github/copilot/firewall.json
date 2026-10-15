@@ -1,4 +1,73 @@
 {
-	"allow": ["registry.npmjs.org", "api.github.com", "nodejs.org", "deno.land"],
-	"deny": ["*"]
+	"$schema": "https://aka.ms/copilot/firewall.schema.json",
+	"description": "Network allow-list for Copilot Coding Agent runs against the Ledger repo. Deny by default; only the hosts below are reachable.",
+	"default": "deny",
+	"allow": [
+		{
+			"host": "registry.npmjs.org",
+			"reason": "pnpm install"
+		},
+		{
+			"host": "*.github.com",
+			"reason": "Git, PR creation, issue linking"
+		},
+		{
+			"host": "api.github.com",
+			"reason": "gh CLI operations"
+		},
+		{
+			"host": "objects.githubusercontent.com",
+			"reason": "GitHub LFS and release artifacts"
+		},
+		{
+			"host": "pypi.org",
+			"reason": "pre-commit hooks written in Python"
+		},
+		{
+			"host": "files.pythonhosted.org",
+			"reason": "pre-commit dependency downloads"
+		},
+		{
+			"host": "deb.nodesource.com",
+			"reason": "Node.js install in devcontainer"
+		},
+		{
+			"host": "prisma-photongo.s3-eu-west-1.amazonaws.com",
+			"reason": "Prisma query engine binary download"
+		},
+		{
+			"host": "binaries.prisma.sh",
+			"reason": "Prisma engine mirror"
+		},
+		{
+			"host": "api.inngest.com",
+			"reason": "Inngest dev server sync for local function registration"
+		},
+		{
+			"host": "playwright.download.prss.microsoft.com",
+			"reason": "Playwright browser binaries"
+		},
+		{
+			"host": "api.stripe.com",
+			"reason": "Stripe SDK tests hit the test-mode API; the agent uses sk_test_* keys only"
+		}
+	],
+	"deny": [
+		{
+			"host": "*",
+			"reason": "Fallthrough — all other hosts blocked by default"
+		},
+		{
+			"host": "pastebin.com",
+			"reason": "Common exfiltration target"
+		},
+		{
+			"host": "transfer.sh",
+			"reason": "Common exfiltration target"
+		},
+		{
+			"host": "0x0.st",
+			"reason": "Common exfiltration target"
+		}
+	]
 }

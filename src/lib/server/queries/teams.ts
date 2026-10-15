@@ -1,7 +1,7 @@
 import { eq, and, desc, sql, count } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { teams, teamMembers, teamInvites, setups, users, activities } from '$lib/server/db/schema';
-import { randomBytes } from 'crypto';
+import { randomHex } from '$lib/server/crypto';
 import type { z } from 'zod';
 import type { createTeamSchema, updateTeamSchema } from '$lib/types';
 
@@ -333,7 +333,7 @@ export async function createInviteByUsername(
 		};
 	}
 
-	const token = randomBytes(32).toString('hex');
+	const token = randomHex(32);
 	const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
 	const [invite] = await db
@@ -461,7 +461,7 @@ export async function createInviteLink(
 	teamId: string,
 	invitedByUserId: string
 ): Promise<{ ok: true; token: string } | { ok: false; error: string; code: string }> {
-	const token = randomBytes(32).toString('hex');
+	const token = randomHex(32);
 	const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
 	const [invite] = await db

@@ -4,9 +4,32 @@
 			"command": "npx",
 			"args": ["-y", "@modelcontextprotocol/server-filesystem", "./src"]
 		},
-		"fetch": {
+		"postgres": {
 			"command": "npx",
-			"args": ["-y", "@modelcontextprotocol/server-fetch"]
+			"args": ["-y", "@modelcontextprotocol/server-postgres", "${DATABASE_URL}"],
+			"note": "Read-only access is enforced by the role Copilot connects as (copilot_ro, SELECT privilege only)."
+		},
+		"github": {
+			"command": "npx",
+			"args": ["-y", "@modelcontextprotocol/server-github"],
+			"env": {
+				"GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+			}
+		},
+		"inngest": {
+			"command": "npx",
+			"args": ["-y", "@inngest/mcp-server"],
+			"env": {
+				"INNGEST_SIGNING_KEY": "${INNGEST_SIGNING_KEY}",
+				"INNGEST_ENV": "dev"
+			}
+		},
+		"playwright": {
+			"command": "npx",
+			"args": ["-y", "@playwright/mcp@latest"],
+			"env": {
+				"PLAYWRIGHT_HEADLESS": "true"
+			}
 		}
 	}
 }

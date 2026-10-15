@@ -1,69 +1,53 @@
-# Cursor IDE Playground
+# Atlas UI — Cursor Setup
 
-This is a test environment for the **Coati CLI** that simulates a real TypeScript project with a full Cursor IDE setup. It contains realistic configuration files covering every Cursor feature surface.
+Atlas UI is a React + Tailwind component library shipping 60+ primitives,
+composites, and patterns used across the Atlas product suite. This repository
+ships a complete Cursor configuration with scoped rules, slash commands,
+skills, hooks, and MCP servers.
 
-## Config Files Present
+## What's in `.cursor/`
 
-| File                                   | Purpose                                                            |
-| -------------------------------------- | ------------------------------------------------------------------ |
-| `package.json`                         | Node.js/TypeScript project manifest                                |
-| `.cursorrules`                         | **Legacy** root-level rules file (predates MDC format)             |
-| `.cursor/rules/typescript.mdc`         | MDC rule: TypeScript conventions (`alwaysApply: true`)             |
-| `.cursor/rules/api-patterns.mdc`       | MDC rule: Express API patterns (glob-scoped to routes/controllers) |
-| `.cursor/rules/testing.mdc`            | MDC rule: Vitest testing conventions (glob-scoped to test files)   |
-| `.cursor/mcp.json`                     | MCP server configuration (filesystem + fetch servers)              |
-| `.cursor/hooks.json`                   | Agent lifecycle hooks (eslint auto-fix, shell logging)             |
-| `.cursor/commands/review.md`           | Custom slash command: code review checklist                        |
-| `.cursor/commands/test-coverage.md`    | Custom slash command: test coverage analysis                       |
-| `.cursor/commands/refactor.md`         | Custom slash command: guided refactoring                           |
-| `.cursor/skills/api-patterns/SKILL.md` | Skill: API endpoint writing instructions                           |
-| `.cursorignore`                        | Excludes sensitive files from AI access                            |
-| `.cursorindexingignore`                | Excludes large generated files from codebase indexing              |
+| Path | Purpose |
+| --- | --- |
+| `rules/project.mdc` | Repo-wide rules (`alwaysApply: true`) |
+| `rules/typescript.mdc` | TS conventions (`alwaysApply: true`) |
+| `rules/react-components.mdc` | Component conventions scoped to `src/components/**/*.tsx` |
+| `rules/storybook.mdc` | Story conventions scoped to `**/*.stories.tsx` |
+| `rules/testing.mdc` | Test conventions scoped to `**/*.test.tsx` |
+| `rules/tailwind.mdc` | Tailwind + `cva` conventions |
+| `rules/accessibility.mdc` | A11y rules for interactive components |
+| `commands/new-component.md` | Scaffold a new component + story + test |
+| `commands/refactor.md` | Extract a subcomponent from a large file |
+| `commands/review.md` | Review staged changes against Atlas conventions |
+| `commands/test-coverage.md` | Identify test gaps |
+| `commands/a11y-audit.md` | Run axe against the Storybook dev server |
+| `skills/component-patterns/SKILL.md` | How to build a shadcn-style primitive |
+| `skills/storybook-stories/SKILL.md` | Story-writing patterns |
+| `skills/vitest-react/SKILL.md` | RTL + Vitest patterns |
+| `skills/accessibility/SKILL.md` | ARIA patterns and keyboard handling |
+| `hooks.json` | Auto-format on save, log shell commands |
+| `mcp.json` | Filesystem, Chromatic, Figma, fetch |
 
-## MDC Rule Format
+## Scoped `.mdc` rules
 
-Cursor's `.mdc` (Markdown Configuration) files use YAML frontmatter to control when rules are applied:
+Cursor loads `.mdc` rules based on which files are in context:
 
-```
----
-description: Human-readable description of the rule
-alwaysApply: true          # Apply to every conversation
-globs: ["src/**/*.ts"]     # Or apply only when matching files are referenced
----
+- `alwaysApply: true` — always included (project + typescript)
+- `alwaysApply: false` with `globs` — loaded only when matching files are open
 
-# Rule content in Markdown
-```
+This keeps the context budget tight and avoids irrelevant rules polluting
+simple edits.
 
-- `alwaysApply: true` rules are included in every AI interaction
-- `globs` rules activate only when the user is working with matching files
-- The legacy `.cursorrules` file at the project root applies globally but lacks the scoping features of MDC
+## Legacy `.cursorrules`
 
-## Example Coati CLI Usage
+The root `.cursorrules` file is kept as a fallback for older Cursor versions
+that don't parse `.mdc`. Newer versions ignore it and read the scoped rules.
+
+## Getting started
 
 ```bash
-# Clone this setup from Coati
-coati clone @jim/cursor-typescript-setup
-
-# Initialize a new setup from this directory
-coati init
-
-# Publish this setup to Coati
-coati publish
-
-# View a setup's details
-coati view @jim/cursor-typescript-setup
-
-# Search for Cursor setups
-coati search "cursor typescript"
+pnpm install
+pnpm storybook       # http://localhost:6006
+pnpm test            # vitest in watch mode
+pnpm test:a11y       # axe run against built Storybook
 ```
-
-## Purpose
-
-This playground exists to test how the Coati CLI handles:
-
-- Detecting and cataloging Cursor config files
-- Parsing MDC frontmatter (YAML + Markdown body)
-- Handling the legacy `.cursorrules` format alongside modern `.cursor/rules/` MDC files
-- Packaging MCP server configs, hooks, commands, and skills
-- Generating `coati.json` manifests from existing project files
-- Resolving file conflicts during `coati clone`

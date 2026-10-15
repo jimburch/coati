@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
 
 vi.mock('$lib/server/auth', () => ({
-	github: {
+	createGitHubClient: () => ({
 		validateAuthorizationCode: vi.fn(async () => ({ accessToken: () => 'token-xyz' }))
-	},
+	}),
 	upsertGithubUser: vi.fn(async () => 'user-1'),
 	generateSessionToken: () => 'session-token',
 	createSession: vi.fn(async () => {}),

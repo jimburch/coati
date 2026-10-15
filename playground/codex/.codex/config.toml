@@ -1,46 +1,104 @@
-# Codex project configuration
-#
-# This file configures the OpenAI Codex CLI for this project.
+# Codex project configuration for Pipedream API.
 # Docs: https://github.com/openai/codex
 
-# Default model for all interactions
-model = "o4-mini"
+# Default model. Small tasks use o4-mini, subagents may override.
+model = "gpt-5-codex"
+model_reasoning_effort = "medium"
 
-# Approval policy: "suggest" shows diffs for approval, "auto-edit" applies
-# file changes automatically, "full-auto" also runs commands without asking.
-approval_policy = "suggest"
+# Approval policy:
+#   "suggest"   — show diffs for approval (default)
+#   "auto-edit" — apply file edits automatically; still ask before shell commands
+#   "full-auto" — run commands without asking (only for trusted sandboxes)
+approval_policy = "on-request"
 
-# Sandbox configuration
-[sandbox]
-type = "docker"
-# Mount the project root read-write inside the sandbox
-writable_paths = ["./"]
-# Network access needed for fetching npm packages during builds
-allow_network = true
+# The project is built with pnpm; prefer it in generated commands.
+preferred_shell = "zsh"
 
-# Environment variables injected into the sandbox
-[sandbox.env]
+# ---------------------------------------------------------------------------
+# Sandbox
+# ---------------------------------------------------------------------------
+
+[sandbox_workspace_write]
+# Codex may write only within the project root.
+writable_roots = ["./"]
+# Network access needed for `pnpm install` and MCP fetches.
+network_access = true
+# Keep a scratch space for migrations and build artifacts.
+exclude_tmpdir_env_var = false
+
+# Environment forwarded into the sandbox.
+[sandbox_workspace_write.env]
 NODE_ENV = "development"
-LOG_LEVEL = "debug"
+LOG_LEVEL = "info"
+PIPEDREAM_MODE = "dev"
 
-# MCP server: filesystem access scoped to src/
+# ---------------------------------------------------------------------------
+# Project instructions
+# ---------------------------------------------------------------------------
+
+[instructions]
+# Appended to every prompt so small tasks never drift from project rules.
+preamble = """
+This is the Pipedream API. Always follow the conventions in AGENTS.md.
+Prefer the smallest change that solves the problem. Reach for subagents for
+review, security audits, and migration planning — don't inline those concerns.
+"""
+
+# ---------------------------------------------------------------------------
+# MCP servers
+# ---------------------------------------------------------------------------
+
 [mcp_servers.filesystem]
 command = "npx"
 args = ["-y", "@modelcontextprotocol/server-filesystem", "./src"]
 
-# MCP server: HTTP fetch for pulling documentation or API specs
+[mcp_servers.postgres]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-postgres"]
+[mcp_servers.postgres.env]
+DATABASE_URL = "${DATABASE_URL}"
+
 [mcp_servers.fetch]
 command = "npx"
 args = ["-y", "@modelcontextprotocol/server-fetch"]
 
-# MCP server: PostgreSQL for inspecting the dev database schema
-[mcp_servers.postgres]
+[mcp_servers.github]
 command = "npx"
-args = ["-y", "@modelcontextprotocol/server-postgres"]
+args = ["-y", "@modelcontextprotocol/server-github"]
+[mcp_servers.github.env]
+GITHUB_PERSONAL_ACCESS_TOKEN = "${GITHUB_TOKEN}"
 
-[mcp_servers.postgres.env]
-DATABASE_URL = "postgresql://localhost:5432/myapp_dev"
+# ---------------------------------------------------------------------------
+# Shell allow-list (skips approval prompts)
+# ---------------------------------------------------------------------------
 
-# Project-specific instructions appended to every prompt
-[instructions]
-preamble = "Always follow the conventions in AGENTS.md. Prefer small, focused changes."
+[[shell.allow]]
+pattern = "pnpm *"
+
+[[shell.allow]]
+pattern = "npx vitest *"
+
+[[shell.allow]]
+pattern = "npx drizzle-kit *"
+
+[[shell.allow]]
+pattern = "git diff*"
+
+[[shell.allow]]
+pattern = "git log*"
+
+[[shell.allow]]
+pattern = "git status"
+
+# Block destructive operations even in full-auto mode.
+[[shell.deny]]
+pattern = "rm -rf *"
+
+[[shell.deny]]
+pattern = "git push --force*"
+
+[[shell.deny]]
+pattern = "pnpm publish*"
+
+[[shell.deny]]
+pattern = "drizzle-kit drop*"

@@ -40,6 +40,7 @@ vi.stubGlobal('fetch', mockFetch);
 
 import {
 	generateSessionToken,
+	hashToken,
 	createSession,
 	validateSessionToken,
 	invalidateSession,
@@ -69,11 +70,18 @@ describe('auth module', () => {
 	});
 
 	describe('token hashing', () => {
-		it('is deterministic — same token produces same hash', () => {
+		it('is deterministic — same token produces same hash', async () => {
 			const token = 'a'.repeat(64);
-			const hash1 = crypto.createHash('sha256').update(token).digest('hex');
-			const hash2 = crypto.createHash('sha256').update(token).digest('hex');
+			const hash1 = await hashToken(token);
+			const hash2 = await hashToken(token);
 			expect(hash1).toBe(hash2);
+		});
+
+		it('matches the historical node:crypto sha256 hex so existing sessions stay valid', async () => {
+			const token = 'a'.repeat(64);
+			const expected = 'ffe054fe7ae0cb6dc65c3af9b61d5209f439851db43d0ba5997337df154668eb';
+			expect(await hashToken(token)).toBe(expected);
+			expect(crypto.createHash('sha256').update(token).digest('hex')).toBe(expected);
 		});
 	});
 

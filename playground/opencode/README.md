@@ -1,39 +1,44 @@
-# OpenCode Playground
+# Kite Analytics — OpenCode Setup
 
-This directory is a test environment for the **Coati CLI**. It simulates a
-realistic TypeScript project that uses [OpenCode](https://opencode.ai) as its
-AI coding assistant, providing a complete set of configuration files for Coati
-to detect, parse, and clone.
+A privacy-first web analytics dashboard built as a Nuxt 3 SPA. This
+repository ships a complete OpenCode configuration: project instructions,
+provider fallbacks, commands, skills, and MCP servers.
 
-## What's inside
+## What's in `.opencode/`
 
-| File                                  | Purpose                                                                                |
-| ------------------------------------- | -------------------------------------------------------------------------------------- |
-| `package.json`                        | Standard Node.js/TypeScript project manifest                                           |
-| `opencode.md`                         | Project instructions for OpenCode (coding conventions, architecture, testing patterns) |
-| `.opencode.json`                      | OpenCode project configuration (provider, MCP servers, context paths, shell allowlist) |
-| `.opencode/commands/review.md`        | Custom slash command: code review (`project:review`)                                   |
-| `.opencode/commands/test-coverage.md` | Custom slash command: test coverage analysis (`project:test-coverage`)                 |
-| `.opencode/commands/deploy-check.md`  | Custom slash command: deployment readiness check (`project:deploy-check`)              |
+| Path | Purpose |
+| --- | --- |
+| `commands/new-page.md` | Scaffold a new route following Nuxt file-based conventions |
+| `commands/pinia-store.md` | Scaffold a new Pinia setup store with persistence |
+| `commands/composable.md` | Scaffold a Vue composable with typed returns |
+| `commands/review.md` | Review the diff against Kite conventions |
+| `commands/test-coverage.md` | Identify test gaps in the diff |
+| `commands/deploy-check.md` | Pre-flight checks before a Cloudflare Pages deploy |
+| `skills/vue-composition/SKILL.md` | `<script setup>`, composables, reactive primitives |
+| `skills/pinia-stores/SKILL.md` | Setup-store patterns, persistence, devtools |
+| `skills/nuxt-conventions/SKILL.md` | File-based routing, middleware, auto-imports |
+| `skills/testing/SKILL.md` | Vue Testing Library + Vitest patterns |
 
-## How Coati uses this
+## `.opencode.json`
 
-When running `coati init` in this directory, the CLI should detect the OpenCode
-configuration files and offer to create a `coati.json` manifest from them. This
-playground lets you test that detection and initialization flow against realistic
-file contents rather than minimal stubs.
+Configures the default provider (Anthropic), with OpenAI and Google as
+fallbacks; registers MCP servers (filesystem, fetch, playwright, github);
+sets context paths and exclusions; defines a shell allow/deny list.
 
-The directory intentionally does **not** include a `coati.json` so you can test
-the full init flow from scratch.
+## Getting started
 
-## OpenCode config structure
+```bash
+pnpm install
+cp .env.example .env
+pnpm dev          # http://localhost:3000
+pnpm test         # vitest in watch mode
+pnpm test:e2e     # playwright against the dev server
+```
 
-OpenCode uses a flat project-level config:
+## Deploying
 
-- **`opencode.md`** at the project root contains human-readable instructions
-  (equivalent to Claude Code's `CLAUDE.md`)
-- **`.opencode.json`** at the project root contains machine-readable config
-  (provider settings, MCP servers, context paths, shell allowlists)
-- **`.opencode/commands/*.md`** contains custom slash commands scoped to the
-  project, each with YAML frontmatter for metadata and Markdown body for the
-  prompt template
+```bash
+pnpm generate     # static output to .output/public/
+```
+
+Deploys happen on push to `main` via the Cloudflare Pages GitHub integration.

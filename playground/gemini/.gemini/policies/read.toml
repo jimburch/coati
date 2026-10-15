@@ -1,0 +1,34 @@
+# Read policy — files Gemini may never read.
+#
+# These files either contain secrets or unreleased material that shouldn't
+# influence generated content.
+
+policy_version = 1
+
+[[deny]]
+pattern = ".env"
+reason = "environment secrets"
+
+[[deny]]
+pattern = ".env.*"
+reason = "environment secrets (all variants)"
+
+[[deny]]
+pattern = "**/*.pem"
+reason = "key material"
+
+[[deny]]
+pattern = "**/*.key"
+reason = "key material"
+
+[[deny]]
+pattern = "src/content/drafts/**"
+reason = "drafts are not ready for AI-assisted edits; prevents accidental publication"
+
+[[deny]]
+pattern = ".github/workflows/release-secret.yml"
+reason = "contains hashed deploy token references"
+
+[[deny]]
+pattern = "scripts/one-off/**"
+reason = "one-off migration scripts — do not use as patterns"

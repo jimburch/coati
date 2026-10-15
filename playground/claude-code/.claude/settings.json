@@ -1,19 +1,61 @@
 {
+	"$schema": "https://json.schemastore.org/claude-code-settings.json",
 	"permissions": {
 		"allow": [
-			"Bash(npm run *)",
-			"Bash(npx vitest *)",
-			"Bash(npx eslint *)",
-			"Bash(npm install *)",
-			"Bash(npm test)",
-			"Bash(node *)",
+			"Bash(pnpm *)",
+			"Bash(npx playwright *)",
+			"Bash(npx drizzle-kit *)",
+			"Bash(docker compose *)",
+			"Bash(git status)",
+			"Bash(git diff:*)",
+			"Bash(git log:*)",
 			"Read",
+			"Edit",
 			"Write",
-			"Edit"
+			"Glob",
+			"Grep"
 		],
-		"deny": ["Bash(rm -rf /)", "Bash(curl * | bash)", "Bash(git push --force *)"]
+		"deny": [
+			"Bash(rm -rf *)",
+			"Bash(git push --force*)",
+			"Bash(git push -f*)",
+			"Bash(curl * | sh)",
+			"Bash(curl * | bash)",
+			"Bash(pnpm publish*)",
+			"Bash(drizzle-kit drop*)",
+			"Read(.env)",
+			"Read(.env.local)",
+			"Read(.env.production)"
+		]
 	},
-	"model": {
-		"default": "claude-sonnet-4-20250514"
-	}
+	"model": "claude-sonnet-4-5",
+	"statusLine": {
+		"type": "command",
+		"command": ".claude/statusline.sh"
+	},
+	"hooks": {
+		"SessionStart": [
+			{
+				"matcher": "",
+				"hooks": [{ "type": "command", "command": ".claude/hooks/session-start.sh" }]
+			}
+		],
+		"UserPromptSubmit": [
+			{
+				"matcher": "",
+				"hooks": [{ "type": "command", "command": ".claude/hooks/user-prompt-submit.sh" }]
+			}
+		],
+		"PostToolUse": [
+			{
+				"matcher": "Edit|Write",
+				"hooks": [{ "type": "command", "command": ".claude/hooks/post-tool-use.sh" }]
+			}
+		]
+	},
+	"env": {
+		"NODE_ENV": "development",
+		"VITE_LOG_LEVEL": "info"
+	},
+	"includeCoAuthoredBy": false
 }

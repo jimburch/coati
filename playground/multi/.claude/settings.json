@@ -1,19 +1,53 @@
 {
+	"$schema": "https://json.schemastore.org/claude-code-settings.json",
 	"permissions": {
 		"allow": [
-			"Bash(npm run *)",
-			"Bash(npx vitest *)",
-			"Bash(npx eslint *)",
-			"Bash(npm install *)",
-			"Bash(npm test)",
-			"Bash(node *)",
+			"Bash(pnpm *)",
+			"Bash(npx drizzle-kit *)",
+			"Bash(docker compose *)",
+			"Bash(git status)",
+			"Bash(git diff:*)",
+			"Bash(git log:*)",
 			"Read",
+			"Edit",
 			"Write",
-			"Edit"
+			"Glob",
+			"Grep"
 		],
-		"deny": ["Bash(rm -rf /)", "Bash(curl * | bash)", "Bash(git push --force *)"]
+		"deny": [
+			"Bash(rm -rf *)",
+			"Bash(git push --force*)",
+			"Bash(curl * | sh)",
+			"Bash(pnpm publish*)",
+			"Bash(drizzle-kit drop*)",
+			"Edit(src/lib/components/**)",
+			"Edit(src/routes/**/+page.svelte)",
+			"Edit(src/routes/**/+layout.svelte)",
+			"Edit(src/app.css)",
+			"Edit(tailwind.config.*)",
+			"Write(src/lib/components/**)",
+			"Write(src/routes/**/+page.svelte)",
+			"Write(src/routes/**/+layout.svelte)",
+			"Read(.env)",
+			"Read(.env.*)"
+		]
 	},
-	"model": {
-		"default": "claude-sonnet-4-20250514"
+	"model": "claude-sonnet-4-5",
+	"hooks": {
+		"PreToolUse": [
+			{
+				"matcher": "Edit|Write",
+				"hooks": [{ "type": "command", "command": ".claude/hooks/enforce-lane.sh" }]
+			}
+		],
+		"PostToolUse": [
+			{
+				"matcher": "Edit|Write",
+				"hooks": [{ "type": "command", "command": ".claude/hooks/pre-commit-lite.sh" }]
+			}
+		]
+	},
+	"env": {
+		"NODE_ENV": "development"
 	}
 }

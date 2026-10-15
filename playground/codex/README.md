@@ -1,31 +1,38 @@
-# Codex CLI Playground
+# Pipedream API — Codex Setup
 
-This directory simulates a real TypeScript project that uses the **OpenAI Codex CLI** as its AI coding tool. It serves as a test environment for the Coati CLI's `init`, `clone`, and `publish` commands.
+A Fastify + Drizzle task queue and webhook relay service. This repository ships
+a complete OpenAI Codex CLI configuration: project instructions, subagents,
+skills, sandboxed config, and MCP servers.
 
-## What's Here
+## What's in `.codex/` and `.agents/`
 
-| File / Directory                       | Purpose                                                                                                                                         |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `package.json`                         | Standard Node.js/TypeScript project manifest with build, dev, test, and lint scripts                                                            |
-| `AGENTS.md`                            | Project-level instructions for Codex (equivalent to Claude's `CLAUDE.md`) — coding conventions, architecture, testing patterns, do's and don'ts |
-| `.codex/config.toml`                   | Codex project configuration — model selection, sandbox settings, MCP server definitions                                                         |
-| `.codex/agents/reviewer.toml`          | Custom subagent specialized in code review                                                                                                      |
-| `.codex/agents/test-writer.toml`       | Custom subagent specialized in writing test suites                                                                                              |
-| `.agents/skills/api-patterns/SKILL.md` | Skill file teaching Codex how to write API route handlers following project conventions                                                         |
-| `.agents/skills/testing/SKILL.md`      | Skill file teaching Codex the project's testing patterns and rules                                                                              |
+| Path | Purpose |
+| --- | --- |
+| `.codex/config.toml` | Sandbox, approval policy, MCP servers, per-model defaults |
+| `.codex/agents/reviewer.toml` | Subagent for code review against AGENTS.md |
+| `.codex/agents/test-writer.toml` | Subagent that writes Vitest tests TDD-style |
+| `.codex/agents/security-auditor.toml` | Subagent that audits auth, HMAC verification, and input validation |
+| `.codex/agents/migration-planner.toml` | Subagent that plans safe Drizzle migrations |
+| `.agents/skills/api-patterns/SKILL.md` | How to write Fastify route plugins |
+| `.agents/skills/fastify-plugins/SKILL.md` | Custom Fastify plugin authoring |
+| `.agents/skills/drizzle-patterns/SKILL.md` | Drizzle query + migration patterns |
+| `.agents/skills/testing/SKILL.md` | Vitest patterns for unit + integration tests |
 
-## How Codex Uses These Files
+## MCP servers configured
 
-- **AGENTS.md** is automatically loaded as context for every Codex session, similar to how Claude reads `CLAUDE.md`.
-- **`.codex/config.toml`** configures the model, sandbox environment, and MCP servers that Codex connects to.
-- **Subagents** in `.codex/agents/` are invoked with `codex --agent <name>` for specialized tasks.
-- **Skills** in `.agents/skills/` provide reusable knowledge that Codex can reference when performing specific types of work.
+- `filesystem` — scoped to `./src`
+- `postgres` — read-only access to dev database for schema introspection
+- `fetch` — HTTP fetch for pulling external API specs
+- `github` — PR and issue context
 
-## Testing With Coati
+## Getting started
 
-This playground is used to verify that the Coati CLI correctly:
+```bash
+pnpm install
+cp .env.example .env
+docker compose up -d db
+pnpm db:migrate
+pnpm dev
+```
 
-1. Detects Codex config files during `coati init`
-2. Writes all config files to the correct paths during `coati clone`
-3. Packages and uploads config files during `coati publish`
-4. Handles dotfile directories (`.codex/`, `.agents/`) without issues
+Open `http://localhost:3000/docs` for the Swagger UI.

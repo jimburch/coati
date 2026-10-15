@@ -1,42 +1,48 @@
 ---
-description: TypeScript coding standards for this project
+description: TypeScript conventions for the Atlas UI library.
 alwaysApply: true
 ---
 
-# TypeScript Conventions
+# TypeScript
 
-## Strict Mode
-- The project uses `strict: true` in tsconfig.json — never loosen strictness
-- Enable `noUncheckedIndexedAccess` to catch potential undefined array/object accesses
-- All function parameters and return types should be inferable or explicitly typed
+## Strictness
 
-## Type Safety
-- Never use `any` — use `unknown` for truly unknown data, then narrow with type guards
-- Prefer `as const` assertions over literal type annotations for constant values
-- Use `satisfies` operator to validate types without widening
-- Avoid type assertions (`as`) except when interfacing with untyped libraries
+- `strict: true` in tsconfig — never relax it
+- `noUncheckedIndexedAccess: true` — handle the potential `undefined` from array/object indexing
+- `exactOptionalPropertyTypes: true` — `{ x?: string }` does not accept `{ x: undefined }`
 
-## Interfaces vs Types
-- Use `interface` for object shapes that may be extended or implemented
-- Use `type` for unions, intersections, mapped types, and conditional types
-- Prefix generic type parameters descriptively: `TResult`, `TInput` not just `T`, `U`
+## Types
 
-## Null Handling
-- Use optional chaining (`?.`) and nullish coalescing (`??`) over manual checks
-- Prefer `undefined` over `null` for optional values in application code
-- Use `null` only when interfacing with APIs or databases that return `null`
-- Model absent values explicitly in types: `{ user: User | undefined }` not `{ user?: User }`
+- Never use `any`. Use `unknown` for truly unknown input; narrow with type guards.
+- Prefer `interface` for prop types and other object shapes that may be extended.
+- Use `type` for unions, intersections, mapped types, and conditional types.
+- Use `satisfies` to validate a value's type without widening.
+- Avoid `as` except when interfacing with untyped libraries — and add a comment explaining why.
 
-## Enums and Constants
-- Avoid TypeScript `enum` — use `as const` objects or union literal types instead
-- Group related constants in a single `as const` object for namespacing
+## Generics
+
+- Name generic parameters descriptively: `TProps`, `TElement`, `TValue` — not `T`, `U`, `V`.
+- Extend generics only when you need to constrain: `TElement extends HTMLElement = HTMLButtonElement`.
 
 ## Imports
-- Use explicit named imports; avoid wildcard `import *`
-- Organize imports: external packages first, then internal modules, then relative paths
-- Use the `type` keyword for type-only imports: `import type { User } from './types'`
+
+- Explicit named imports only — no `import * as X`.
+- Use `import type { Foo }` for type-only imports.
+- Organize in groups: react → react-dom → third-party → `~/*` aliases → relative. One blank line between groups.
 
 ## Functions
-- Prefer arrow functions for callbacks and inline functions
-- Use regular function declarations for top-level named functions (hoisting benefits)
-- Keep function signatures narrow — accept the minimum type needed
+
+- All exported functions and components have explicit return types.
+- Prefer arrow functions for callbacks, function declarations for named top-level functions (hoisting + better stack traces).
+- Do not overload — a union parameter type is usually cleaner than `function foo(a: string): X; function foo(a: number): Y;`.
+
+## Nullability
+
+- Use `undefined` over `null` in library code. Reserve `null` for interop with APIs that emit `null` (JSON, Prisma).
+- Use `?.` and `??` over manual checks.
+- Model absence explicitly: prefer `{ user: User | undefined }` over `{ user?: User }` when the field is always present on the shape.
+
+## Constants and enums
+
+- Use `as const` objects or union string literals over TypeScript `enum`.
+- Group related constants in a namespaced `as const` object: `const Sizes = { sm: 'sm', md: 'md', lg: 'lg' } as const;`

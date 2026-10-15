@@ -1,36 +1,33 @@
-# Dependencies
+# Files Gemini should not include in its context.
+
+# Dependencies and build output
 node_modules/
-
-# Build output
 dist/
-build/
+.astro/
+.pagefind/
+.cache/
 
-# Test coverage
-coverage/
+# Image binaries — referenced via <Image>, not parsed as text
+public/images/**/*.png
+public/images/**/*.jpg
+public/images/**/*.webp
+public/images/**/*.avif
+!public/images/**/README.md
 
-# Environment files
+# Font binaries
+public/fonts/**
+
+# Drafts (not yet ready for review)
+src/content/drafts/
+
+# Lockfile
+pnpm-lock.yaml
+
+# Secrets
 .env
-.env.local
-.env.production
+.env.*
+!.env.example
 
-# OS files
-.DS_Store
-Thumbs.db
-
-# IDE files
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Logs
-*.log
-logs/
-
-# Temporary files
-tmp/
-temp/
-*.tmp
-
-# Package lock (large, not useful for context)
-package-lock.json
+# Build reports
+.lighthouseci/
+playwright-report/

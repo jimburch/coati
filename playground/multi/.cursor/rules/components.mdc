@@ -1,0 +1,112 @@
+---
+description: Component conventions for Compose Svelte components.
+globs:
+  - "src/lib/components/**/*.svelte"
+alwaysApply: false
+---
+
+# Component Conventions
+
+## File layout
+
+One component per file. Filename PascalCase matches the export.
+
+```
+src/lib/components/
+├── ui/                       # shadcn-svelte primitives (do not edit)
+├── editor/
+│   ├── Editor.svelte
+│   ├── Toolbar.svelte
+│   └── PresenceCursor.svelte
+├── NoteList.svelte
+└── NoteCard.svelte
+```
+
+## Props interface
+
+Explicit `Props` interface in `<script lang="ts">`:
+
+```svelte
+<script lang="ts">
+  import type { Note } from '$lib/types';
+  import { cn } from '$lib/cn';
+
+  interface Props {
+    note: Note;
+    class?: string;
+    onarchive?: (id: string) => void;
+  }
+
+  let { note, class: className = '', onarchive }: Props = $props();
+</script>
+
+<article class={cn('rounded-md border p-4', note.archivedAt && 'opacity-60', className)}>
+  <h3>{note.title}</h3>
+  <p class="text-muted-foreground text-sm">{note.body.slice(0, 200)}</p>
+  {#if onarchive}
+    <button type="button" onclick={() => onarchive(note.id)}>Archive</button>
+  {/if}
+</article>
+```
+
+## Rules
+
+- Accept `class` prop (aliased to `className` in destructure) and merge with `cn()`
+- Interactive elements are semantic (`<button>`, `<a>`), never `<div onclick>`
+- Callback props named `on<event>` (lowercase)
+- Keep component files under 150 lines — extract subcomponents when they grow
+
+## Server interaction
+
+You cannot call the database or a server function directly. Instead:
+
+- **For data** — the page's load function provides it as `data` prop; destructure in `+page.svelte` and pass to components
+- **For mutations** — use `use:enhance` on a `<form>` pointing at a named action
+
+```svelte
+<!-- +page.svelte (in routes, not components) -->
+<script lang="ts">
+  import { enhance } from '$app/forms';
+  import NoteEditor from '$lib/components/NoteEditor.svelte';
+
+  let { data, form } = $props();
+</script>
+
+<form method="POST" action="?/update" use:enhance>
+  <NoteEditor initial={data.note} />
+  <button type="submit">Save</button>
+</form>
+
+{#if form?.error}
+  <p role="alert">{form.error}</p>
+{/if}
+```
+
+## shadcn-svelte primitives
+
+Do not edit anything in `src/lib/components/ui/`. Compose with them:
+
+```svelte
+<script lang="ts">
+  import { Button } from '$lib/components/ui/button';
+  import * as Dialog from '$lib/components/ui/dialog';
+</script>
+
+<Dialog.Root>
+  <Dialog.Trigger asChild><Button>Share</Button></Dialog.Trigger>
+  <Dialog.Content>
+    <Dialog.Title>Share note</Dialog.Title>
+    ...
+  </Dialog.Content>
+</Dialog.Root>
+```
+
+If you need a new primitive, add it via `pnpm dlx shadcn-svelte@latest add <name>`
+and commit the generated files.
+
+## Don't
+
+- Don't import from `$lib/server/*` — it won't ship to the client; the build will fail
+- Don't call `fetch()` directly — use `use:enhance` for forms, or `$app/forms`'s `applyAction` for imperative submissions
+- Don't define UI types in `src/lib/types/` — keep those in the component file
+- Don't use inline `style="…"` except for animation transforms

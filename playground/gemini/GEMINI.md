@@ -1,74 +1,123 @@
-# GEMINI.md — My TypeScript App
+# GEMINI.md — Beacon Docs
 
 ## Project Overview
 
-A lightweight Express-based REST API written in TypeScript. The app serves as a
-task management backend with CRUD operations, input validation, and structured
-error handling.
+Beacon Docs is the public documentation and blog site for the Beacon SaaS
+product. It is built with Astro 5 using content collections, MDX for rich
+documentation, and a small amount of interactive islands (a search box and a
+"copy code" button).
+
+The site deploys as static HTML + Cloudflare Pages. No server runtime.
 
 ## Tech Stack
 
-- **Runtime:** Node.js 22+ (ES modules)
-- **Language:** TypeScript 5.5+ (strict mode)
-- **Framework:** Express 4.x
-- **Testing:** Vitest
-- **Linting:** ESLint 9 (flat config)
+- **Framework:** Astro 5 (static output)
+- **Language:** TypeScript 5.6+ (strict)
+- **Content:** MDX + Astro Content Collections (content layer API)
+- **Styling:** Tailwind CSS 3 + `@tailwindcss/typography`
+- **Syntax highlighting:** Shiki (built into Astro)
+- **Search:** Pagefind (generated at build time)
+- **Diagrams:** Mermaid rendered at build time via `remark-mermaid`
+- **Islands:** Preact for the handful of interactive pieces
+- **Deploy:** Cloudflare Pages (build on push to `main`)
 
 ## Project Structure
 
 ```
 src/
-├── index.ts          # Server entry point
-├── routes/           # Express route handlers
-│   ├── tasks.ts
-│   └── health.ts
-├── middleware/        # Custom middleware
-│   ├── auth.ts
-│   ├── validate.ts
-│   └── errorHandler.ts
-├── services/         # Business logic layer
-│   └── taskService.ts
-├── types/            # Shared TypeScript types
-│   └── index.ts
-└── utils/            # Helper functions
-    ├── logger.ts
-    └── config.ts
+├── content/
+│   ├── config.ts                 # Collection schemas (Zod)
+│   ├── docs/
+│   │   ├── getting-started.mdx
+│   │   ├── api/
+│   │   │   └── authentication.mdx
+│   │   └── guides/
+│   └── blog/
+│       └── 2026-01-launch.mdx
+├── components/
+│   ├── DocLayout.astro
+│   ├── CodeBlock.astro            # Wraps Shiki with a copy button (Preact island)
+│   ├── Callout.astro              # {type: 'info' | 'warning' | 'danger'}
+│   └── search/
+│       └── SearchBox.tsx          # Preact island using Pagefind
+├── layouts/
+│   ├── Base.astro
+│   ├── Docs.astro
+│   └── Blog.astro
+├── pages/
+│   ├── index.astro
+│   ├── docs/
+│   │   └── [...slug].astro        # Dynamic route for every doc
+│   └── blog/
+│       └── [...slug].astro
+└── styles/
+    └── global.css
 ```
 
 ## Coding Conventions
 
-- Use `const` by default; use `let` only when reassignment is necessary; never use `var`
-- Prefer named exports over default exports
-- All functions must have explicit return types
-- Use `interface` for object shapes, `type` for unions and intersections
-- Error responses follow `{ error: string, code: string }` format
-- Success responses follow `{ data: T }` format
-- Route handlers must be async and use try/catch with the error middleware
-- Keep route handlers thin — delegate logic to service functions
-- Validate all request bodies at the middleware layer before reaching handlers
+- Astro components (`.astro`): frontmatter uses TypeScript; prefer explicit types
+- MDX: frontmatter validated by the collection schema — every file gets title, description, publishDate, author (for blog), category (for docs)
+- Use named exports in `.ts` utility files; `.astro` files have no exports
+- No default exports outside of Astro/MDX files
+- Use `const` by default; never `var`
+- Keep components small — Astro components under 150 lines, Preact islands under 100
 
-## Testing Patterns
+## Content rules
 
-- Test files live next to source files: `taskService.test.ts` beside `taskService.ts`
-- Use `describe` blocks grouped by function name
-- Use `it` (not `test`) for individual test cases
-- Mock external dependencies with `vi.mock()`
-- Every service function needs at least: one happy-path test, one error-path test
-- Run tests with `npm test` before considering any change complete
+- Every doc has a `title` (H1, set in frontmatter, not in-body) and a `description` (used for `<meta>` and search snippets)
+- Use H2 (`##`) for top-level sections; never skip heading levels
+- Code blocks must set a language: ` ```ts`, ` ```bash`, ` ```astro` — otherwise Shiki renders plaintext
+- Use `:::` containers for Callouts: `<Callout type="warning">` via MDX components
+- Internal links use relative paths: `[setup](./setup)` — never absolute URLs to our own domain
+- External links open in a new tab via `<a href target="_blank" rel="noopener">`
+
+## Content collections
+
+`src/content/config.ts` defines schemas:
+
+```ts
+import { defineCollection, z } from 'astro:content';
+
+const docs = defineCollection({
+  type: 'content',
+  schema: z.object({
+    title: z.string(),
+    description: z.string().max(160),
+    category: z.enum(['getting-started', 'guides', 'api', 'reference']),
+    order: z.number().default(0),
+    draft: z.boolean().default(false)
+  })
+});
+
+export const collections = { docs, blog };
+```
+
+## Build + deploy
+
+- `pnpm build` generates static HTML to `dist/`
+- `pnpm build` runs Pagefind after Astro's build (configured in `astro.config.ts`)
+- Cloudflare Pages watches `main`; every merge triggers a deploy
+- Draft content (`draft: true`) is excluded at build time
+
+## Testing
+
+- No unit tests — this is a content site
+- Link checker via `pnpm check:links` (runs `lychee` against `dist/`)
+- Lighthouse CI on every PR (configured in `.github/workflows/lighthouse.yml`)
+- Visual regression via Playwright against the staging preview URL
 
 ## Do
 
-- Use early returns to reduce nesting
-- Add JSDoc comments to exported functions
-- Use `unknown` instead of `any` for untyped values
-- Destructure function parameters when there are 3+ fields
-- Log errors with structured metadata (request ID, timestamp)
+- Run `pnpm astro check` to validate content frontmatter before committing
+- Optimize images with `<Image>` from `astro:assets` — never `<img>` for content imagery
+- Add an entry to `src/content/docs/<category>/_meta.json` when creating a new doc (drives sidebar order)
+- Use Shiki's `{1,3-5}` line highlighting for code walkthroughs
 
 ## Don't
 
-- Don't use `any` — use `unknown` and narrow with type guards
-- Don't throw raw strings — always throw `Error` objects or custom error classes
-- Don't import from `dist/` — always import from `src/`
-- Don't add new dependencies without checking if an existing one covers the use case
-- Don't write console.log for debugging — use the structured logger utility
-- Don't commit `.env` files or secrets
+- Don't write new pages as static HTML in `src/pages/` — use a content collection
+- Don't import React; use Preact for islands (already aliased in `astro.config.ts`)
+- Don't use client-side routing — Astro is static HTML + View Transitions
+- Don't commit raw PNGs/JPGs > 500KB; optimize first with `squoosh` or `sharp`
+- Don't use inline `<script>` in MDX — add a Preact island instead

@@ -7,6 +7,27 @@
 		"fetch": {
 			"command": "npx",
 			"args": ["-y", "@modelcontextprotocol/server-fetch"]
+		},
+		"chromatic": {
+			"command": "npx",
+			"args": ["-y", "@chromatic-com/mcp"],
+			"env": {
+				"CHROMATIC_PROJECT_TOKEN": "${CHROMATIC_PROJECT_TOKEN}"
+			}
+		},
+		"figma": {
+			"command": "npx",
+			"args": ["-y", "figma-developer-mcp"],
+			"env": {
+				"FIGMA_API_KEY": "${FIGMA_API_KEY}"
+			}
+		},
+		"playwright": {
+			"command": "npx",
+			"args": ["-y", "@playwright/mcp@latest"],
+			"env": {
+				"PLAYWRIGHT_HEADLESS": "true"
+			}
 		}
 	}
 }

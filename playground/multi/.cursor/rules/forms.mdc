@@ -1,0 +1,107 @@
+---
+description: How to wire Svelte forms to Claude-owned form actions.
+globs:
+  - "src/routes/**/+page.svelte"
+  - "src/lib/components/**/*Form*.svelte"
+alwaysApply: false
+---
+
+# Forms
+
+Compose forms use SvelteKit's form actions + `use:enhance`. The actions are
+defined in `+page.server.ts` by Claude; you wire the UI.
+
+## Reading the server contract
+
+Before writing a form, read the matching `+page.server.ts` to learn:
+
+1. What actions are defined (e.g., `?/update`, `?/archive`)
+2. What form fields each action validates (via the Zod schema in `src/lib/validation.ts`)
+3. What the return shape is (`{ note }`, `{ success: true }`, `fail(400, {...})`)
+
+If you're missing any of this, stop — ask for a handoff note from Claude.
+
+## Form template
+
+```svelte
+<!-- src/routes/(app)/notes/[id]/+page.svelte -->
+<script lang="ts">
+  import { enhance } from '$app/forms';
+  import { Button } from '$lib/components/ui/button';
+  import { Input } from '$lib/components/ui/input';
+
+  let { data, form } = $props();
+
+  // Track submitting state for optimistic UI.
+  let submitting = $state(false);
+</script>
+
+<form
+  method="POST"
+  action="?/update"
+  use:enhance={() => {
+    submitting = true;
+    return async ({ update }) => {
+      await update({ reset: false });  // keep user's input on error
+      submitting = false;
+    };
+  }}
+>
+  <Input name="title" value={form?.title ?? data.note.title} required />
+  <Input name="body" value={form?.body ?? data.note.body} />
+
+  {#if form?.errors?.title}
+    <p role="alert" class="text-destructive text-sm">{form.errors.title}</p>
+  {/if}
+
+  <Button type="submit" disabled={submitting}>
+    {submitting ? 'Saving…' : 'Save'}
+  </Button>
+</form>
+
+<form method="POST" action="?/archive" use:enhance>
+  <Button type="submit" variant="destructive">Archive</Button>
+</form>
+```
+
+## The `form` prop
+
+`form` is populated with the server action's return value (or the `fail()`
+payload). Use it to:
+- Re-render with user input after validation failures
+- Surface error messages from the server
+- Show success confirmations
+
+## Progressive enhancement
+
+`use:enhance` is the pattern. Without JS, forms still post and reload the
+page (SvelteKit handles the round trip). With JS, the response updates
+`form` in place without a full reload.
+
+Never write `onclick` handlers that manually `fetch()` — that bypasses the
+form-action contract and won't work without JS.
+
+## Imperative submission
+
+For buttons not inside a `<form>` (rare), use `applyAction`:
+
+```svelte
+<script lang="ts">
+  import { applyAction, deserialize } from '$app/forms';
+
+  async function share(noteId: string): Promise<void> {
+    const body = new FormData();
+    body.set('noteId', noteId);
+    const res = await fetch('?/share', { method: 'POST', body });
+    const result = deserialize(await res.text());
+    await applyAction(result);
+  }
+</script>
+```
+
+## Don't
+
+- Don't invent form field names that don't exist in the Zod schema — check `src/lib/validation.ts`
+- Don't show loading spinners for forms; use the submit button's disabled state
+- Don't swallow the `form` prop's error state — always surface it
+- Don't use `on:submit|preventDefault` and hand-roll fetch — use `use:enhance`

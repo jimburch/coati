@@ -1,0 +1,145 @@
+{
+	"id": "5bffe4c4-02d3-487b-9994-67169ee10fc3",
+	"display": "Claude Code + Cursor for SvelteKit",
+	"name": "claude-code-cursor-for-sveltekit",
+	"version": "1.0.0",
+	"description": "A collaborative note-taking app built on SvelteKit",
+	"category": "web-dev",
+	"agents": [
+		"claude-code",
+		"cursor"
+	],
+	"tags": [
+		"claude",
+		"cursor",
+		"sveltekit"
+	],
+	"visibility": "public",
+	"files": [
+		{
+			"path": "CLAUDE.md",
+			"componentType": "instruction",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".mcp.json",
+			"componentType": "mcp_server",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".cursorrules",
+			"componentType": "instruction",
+			"agent": "cursor"
+		},
+		{
+			"path": ".cursorignore",
+			"componentType": "instruction",
+			"agent": "cursor"
+		},
+		{
+			"path": ".cursorindexingignore",
+			"componentType": "instruction",
+			"agent": "cursor"
+		},
+		{
+			"path": ".claude/settings.json",
+			"componentType": "instruction",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".cursor/hooks.json",
+			"componentType": "hook",
+			"agent": "cursor"
+		},
+		{
+			"path": ".cursor/mcp.json",
+			"componentType": "mcp_server",
+			"agent": "cursor"
+		},
+		{
+			"path": ".claude/commands/add-route.md",
+			"componentType": "command",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".claude/commands/migrate.md",
+			"componentType": "command",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".claude/commands/review.md",
+			"componentType": "command",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".claude/hooks/enforce-lane.sh",
+			"componentType": "hook",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".claude/hooks/pre-commit-lite.sh",
+			"componentType": "hook",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".cursor/commands/new-component.md",
+			"componentType": "command",
+			"agent": "cursor"
+		},
+		{
+			"path": ".cursor/commands/review.md",
+			"componentType": "command",
+			"agent": "cursor"
+		},
+		{
+			"path": ".cursor/commands/wire-form.md",
+			"componentType": "command",
+			"agent": "cursor"
+		},
+		{
+			"path": ".cursor/rules/boundaries.mdc",
+			"componentType": "instruction",
+			"agent": "cursor"
+		},
+		{
+			"path": ".cursor/rules/components.mdc",
+			"componentType": "instruction",
+			"agent": "cursor"
+		},
+		{
+			"path": ".cursor/rules/forms.mdc",
+			"componentType": "instruction",
+			"agent": "cursor"
+		},
+		{
+			"path": ".cursor/rules/svelte5-runes.mdc",
+			"componentType": "instruction",
+			"agent": "cursor"
+		},
+		{
+			"path": ".cursor/rules/tailwind.mdc",
+			"componentType": "instruction",
+			"agent": "cursor"
+		},
+		{
+			"path": ".claude/skills/drizzle-queries/SKILL.md",
+			"componentType": "skill",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".claude/skills/sveltekit-routes/SKILL.md",
+			"componentType": "skill",
+			"agent": "claude-code"
+		},
+		{
+			"path": ".cursor/skills/svelte-components/SKILL.md",
+			"componentType": "skill",
+			"agent": "cursor"
+		},
+		{
+			"path": ".cursor/skills/tailwind-styling/SKILL.md",
+			"componentType": "skill",
+			"agent": "cursor"
+		}
+	]
+}

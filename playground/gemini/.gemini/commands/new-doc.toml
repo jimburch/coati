@@ -1,0 +1,57 @@
+# /new-doc — Scaffold a new documentation page.
+#
+# Usage: /new-doc <category> <slug>
+# Example: /new-doc guides webhooks-getting-started
+
+description = "Scaffold a new Beacon docs page with schema-valid frontmatter."
+
+[arguments]
+category = { required = true, description = "One of: getting-started, guides, api, reference" }
+slug = { required = true, description = "Kebab-case slug for the page (used as filename)" }
+title = { required = false, description = "Page title (prompted if omitted)" }
+
+[prompt]
+template = """
+Create a new documentation page at `src/content/docs/{{args.category}}/{{args.slug}}.mdx`.
+
+## Frontmatter
+
+Populate the frontmatter from the collection schema in `src/content/config.ts`:
+
+```yaml
+---
+title: "{{args.title | default: '<ask user>'}}"
+description: "<ask user for a 1-sentence description, ≤ 160 chars>"
+category: {{args.category}}
+order: <next available order in this category — read src/content/docs/{{args.category}}/_meta.json>
+draft: true
+---
+```
+
+Set `draft: true` until review is complete.
+
+## Body structure
+
+Generate the page body with these sections, in order:
+
+1. Overview — 1-2 sentences on what the reader will accomplish
+2. Prerequisites — bulleted list, if any
+3. Step-by-step instructions — H2 headings per step, H3 for sub-steps
+4. Verification — how the reader confirms success
+5. Troubleshooting — common failure modes with fixes
+6. What's next — links to related docs
+
+## Post-creation
+
+1. Update `src/content/docs/{{args.category}}/_meta.json` to add this slug at the correct position.
+2. Run `pnpm astro check` and fix any frontmatter validation errors.
+3. Run `pnpm dev` and verify the page renders at http://localhost:4321/docs/{{args.category}}/{{args.slug}}
+"""
+
+[shell.pre]
+# Ensure the category directory exists.
+command = "mkdir -p src/content/docs/{{args.category}}"
+
+[shell.post]
+# Validate the generated file against the schema.
+command = "pnpm astro check"

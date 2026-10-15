@@ -6,6 +6,9 @@
  *
  * Usage:
  *   DATABASE_URL=postgres://... npx tsx scripts/reset-db.ts
+ *
+ * Neon (dev and prod) uses database `neondb` and role `neondb_owner`:
+ *   postgresql://neondb_owner:<password>@<host>/neondb?sslmode=require
  */
 
 import postgres from 'postgres';

@@ -1,22 +1,54 @@
 {
-	"model": {
-		"default": "claude-sonnet-4-20250514",
-		"large": "claude-opus-4-20250514"
-	},
-	"preferences": {
-		"verboseResponses": false,
-		"confirmDangerousActions": true
-	},
+	"$schema": "https://json.schemastore.org/claude-code-settings.json",
+	"model": "claude-sonnet-4-5",
 	"permissions": {
 		"allow": [
+			"Bash(git status)",
+			"Bash(git diff:*)",
+			"Bash(git log:*)",
+			"Bash(git branch:*)",
+			"Bash(git stash*)",
+			"Bash(ls *)",
+			"Bash(cat *)",
+			"Bash(pwd)",
+			"Bash(which *)",
+			"Bash(rg *)",
+			"Bash(fd *)",
+			"Bash(pnpm install)",
+			"Bash(pnpm test*)",
+			"Bash(pnpm lint*)",
+			"Bash(pnpm check*)",
+			"Bash(pnpm typecheck*)",
 			"Read",
-			"Write",
-			"Edit",
-			"Bash(git *)",
-			"Bash(npm run *)",
-			"Bash(pnpm *)",
-			"Bash(npx *)"
+			"Glob",
+			"Grep"
 		],
-		"deny": ["Bash(rm -rf /)", "Bash(curl * | bash)", "Bash(git push --force *)"]
+		"deny": [
+			"Bash(rm -rf *)",
+			"Bash(rm -rf /)",
+			"Bash(git push --force*)",
+			"Bash(git push -f*)",
+			"Bash(git reset --hard*)",
+			"Bash(git clean -f*)",
+			"Bash(git branch -D *)",
+			"Bash(curl * | sh)",
+			"Bash(curl * | bash)",
+			"Bash(wget * | sh)",
+			"Bash(sudo *)",
+			"Bash(npm publish*)",
+			"Bash(pnpm publish*)",
+			"Read(.env)",
+			"Read(.env.*)",
+			"Read(~/.ssh/**)",
+			"Read(~/.aws/**)",
+			"Read(~/.config/gh/**)"
+		]
+	},
+	"includeCoAuthoredBy": false,
+	"env": {
+		"PAGER": "cat"
+	},
+	"defaults": {
+		"concise": true
 	}
 }

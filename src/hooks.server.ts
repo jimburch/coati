@@ -1,4 +1,5 @@
-import type { Cookies, Handle, HandleServerError } from '@sveltejs/kit';
+import { type Cookies, type Handle, type HandleServerError } from '@sveltejs/kit';
+import { sequence } from '@sveltejs/kit/hooks';
 import type { ThemePreference } from '$lib/utils/theme';
 import {
 	validateSessionToken,
@@ -8,13 +9,11 @@ import {
 } from '$lib/server/auth';
 import { checkRateLimit } from '$lib/server/rate-limit';
 import { env } from '$env/dynamic/public';
-import { startScheduler } from '$lib/server/scheduler';
 import { detectSurface } from '$lib/server/observability/surface';
-import { initSentry, setSentryUser } from '$lib/server/observability/sentry';
+import { buildSentryOptions, setSentryUser } from '$lib/server/observability/sentry';
+import { initCloudflareSentryHandle, sentryHandle } from '@sentry/sveltekit';
 import * as Sentry from '@sentry/sveltekit';
-
-startScheduler();
-initSentry();
+import { createDb, runWithDatabase } from '$lib/server/db';
 
 const VALID_THEMES: ThemePreference[] = ['light', 'dark', 'system'];
 
@@ -58,7 +57,7 @@ export function betaGate(event: GateEvent, betaModeEnabled: boolean): Response |
 	return null;
 }
 
-export const handle: Handle = async ({ event, resolve }) => {
+const applicationHandle: Handle = async ({ event, resolve }) => {
 	// Surface detection — identify web vs CLI requests
 	const { surface, cliVersion } = detectSurface(event.request.headers.get('user-agent'));
 	event.locals.surface = surface;
@@ -128,6 +127,35 @@ export const handle: Handle = async ({ event, resolve }) => {
 		transformPageChunk: ({ html }) => html.replace('%coati.theme%', themeClass)
 	});
 };
+
+const databaseHandle: Handle = async ({ event, resolve }) => {
+	const platform = event.platform;
+	const connectionString = platform?.env?.HYPERDRIVE?.connectionString;
+	if (!connectionString || !platform) {
+		return applicationHandle({ event, resolve });
+	}
+
+	const { db: database, end } = createDb(connectionString);
+	try {
+		return await runWithDatabase(database, () => applicationHandle({ event, resolve }));
+	} finally {
+		platform.ctx.waitUntil(end());
+	}
+};
+
+let requestHandle: Handle | null = null;
+
+function getRequestHandle(): Handle {
+	if (requestHandle) return requestHandle;
+	const options = buildSentryOptions();
+	const handle: Handle = options
+		? sequence(initCloudflareSentryHandle(options), sentryHandle(), databaseHandle)
+		: databaseHandle;
+	requestHandle = handle;
+	return handle;
+}
+
+export const handle: Handle = (input) => getRequestHandle()(input);
 
 export const handleError: HandleServerError = ({ error, event, status }) => {
 	console.error(`[handleError] ${status} ${event.request.method} ${event.url.pathname}`, error);

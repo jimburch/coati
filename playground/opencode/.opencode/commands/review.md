@@ -1,59 +1,73 @@
 ---
-description: Review code for quality, correctness, and adherence to project conventions
-arguments:
-  - name: target
-    description: File path or directory to review (defaults to staged changes)
-    required: false
+description: Review the diff against Kite conventions and run the standard checks
+args: [base-branch]
 ---
 
-# Code Review
+# /review
 
-You are performing a code review on this project. Be thorough but pragmatic.
+Review staged changes (or the diff against `$1`, defaulting to `origin/main`).
 
 ## Steps
 
-1. **Identify the scope.** If `$ARGUMENTS` specifies a file or directory, focus
-   there. Otherwise, review all staged changes (`git diff --cached`).
+1. Fetch the diff:
+   ```
+   git diff ${1:-origin/main}...HEAD
+   ```
+2. Classify each changed file and apply the matching checklist.
+3. Run the quality gates:
+   - `pnpm typecheck`
+   - `pnpm lint`
+   - `pnpm test:unit --changed`
+4. Produce a grouped report.
 
-2. **Check for correctness.** Look for:
-   - Logic errors, off-by-one mistakes, unhandled edge cases
-   - Missing null/undefined checks
-   - Incorrect async/await usage (floating promises, missing error handling)
-   - Type safety issues (`any` usage, unsafe casts)
+## Checklists
 
-3. **Check conventions.** Verify the code follows the project's coding conventions
-   documented in `opencode.md`:
-   - Explicit return types on exported functions
-   - `const` over `let`, never `any`
-   - Files under 150 lines
-   - Named exports, no default exports
-   - Consistent error/success response shapes
+### Components (`app/components/**/*.vue`)
 
-4. **Check tests.** For every changed source file, verify:
-   - A corresponding `.test.ts` file exists
-   - New code paths have test coverage
-   - Test names are descriptive sentences
+- `<script setup lang="ts">` — not Options API
+- `defineProps` uses explicit TypeScript interface, not runtime object
+- `defineEmits` types all emitted events
+- No `any` types
+- No direct DOM access (`document.*`) — use template refs or `@vueuse/core`
+- `v-for` always has `:key`, never index as key when items reorder
+- `v-if` and `v-for` never on the same element — wrap in `<template v-for>` instead
 
-5. **Check for security concerns:**
-   - User input validated before use
-   - No secrets or credentials in code
-   - No SQL injection vectors (if applicable)
-   - Dependencies are well-known and maintained
+### Composables (`app/composables/**/*.ts`)
 
-## Output Format
+- Named `useXxx`
+- Explicit return type interface
+- No side effects at module level
+- Lifecycle hooks (`onMounted` etc.) documented if used
+- Returns an object of refs, not unwrapped values
 
-Organize your findings into three sections:
+### Stores (`app/stores/**/*.ts`)
 
-### Issues (must fix)
+- Setup syntax, not Options
+- No auth tokens in persisted state
+- Each action is tested
+- Getters are `computed`, not plain functions
 
-Bugs, security problems, or convention violations that need to be addressed.
+### Pages (`app/pages/**/*.vue`)
 
-### Suggestions (should consider)
+- `definePageMeta` sets layout and middleware
+- Authenticated pages depend on `auth` middleware
+- Workspace pages depend on `workspace` middleware AND use `[workspaceId]` param
+- Data fetching via `useFetch` or the API client — not raw `fetch`
+- Loading + error states are handled in the template, not just happy path
 
-Improvements to readability, performance, or maintainability.
+### Tests
 
-### Praise
+- Colocated with source
+- Every bug fix has a regression test
+- No `it.only` or `describe.only`
+- Uses `@testing-library/vue` queries, not `wrapper.find('.class')`
 
-Call out anything well-done — clean abstractions, good test coverage, clear naming.
+## Output
 
-If everything looks good, say so concisely. Don't manufacture issues.
+| Severity | Count | Examples |
+| --- | --- | --- |
+| 🚨 Must fix | N | list with file:line |
+| ⚠️  Should fix | N | |
+| 💡 Consider | N | |
+
+End with `APPROVE`, `REQUEST_CHANGES`, or `BLOCKED`.

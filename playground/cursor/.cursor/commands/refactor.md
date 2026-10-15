@@ -1,26 +1,37 @@
-# Guided Refactoring
+# /refactor — Extract a subcomponent
 
-Analyze the selected code and propose a step-by-step refactoring plan.
+Use when a component file has grown past 150 lines and a cohesive subtree
+should become its own component.
 
-## Analysis
+## Steps
 
-1. Identify code smells: long functions, deep nesting, duplicated logic, unclear naming
-2. Check for violations of project conventions (see .cursor/rules/)
-3. Assess coupling — does this code depend on too many external modules?
-4. Look for opportunities to use TypeScript features: discriminated unions, generics, utility types
+1. Identify the subtree to extract. It should have:
+   - A clear single responsibility
+   - A minimal prop surface (≤ 5 props)
+   - No refs reaching into the parent component
+2. Propose a name. Check `src/components/` for collisions.
+3. Create `src/components/<Name>/` with the standard file set
+   (see `/new-component` for the template).
+4. Move the JSX, hooks, and local state used only by the subtree.
+5. Replace the original location with `<NewComponent {...} />`.
+6. Update the parent's test file to stub or interact with the new component via RTL queries.
+7. Run `pnpm lint && pnpm check && pnpm test:unit`. Iterate until green.
 
-## Refactoring Plan
+## When to extract
 
-For each proposed change:
+Extract when:
+- A cohesive subtree has its own state
+- The subtree is tested in isolation already (test file mentions it)
+- The subtree would be reused by a sibling
+- The parent file exceeds 150 lines
 
-1. **What**: describe the refactoring (extract function, introduce interface, simplify conditional, etc.)
-2. **Why**: explain the benefit (readability, testability, type safety, performance)
-3. **How**: show the before and after code
-4. **Risk**: note if this change could break existing tests or callers
+Do NOT extract when:
+- The subtree exists only once and sharing state with the parent is constant
+- The prop surface would be > 8 props (coupling too high)
+- Extraction requires lifting state that currently lives correctly in the parent
 
-## Constraints
+## Do not
 
-- Preserve the public API — do not change function signatures used by other modules
-- Maintain or improve test coverage — suggest new tests if behavior changes
-- Make changes incrementally — each step should leave the code in a working state
-- Prefer small, focused changes over large rewrites
+- Do not bundle unrelated cleanups into the refactor commit
+- Do not rename props while extracting — keep them identical to minimize diff
+- Do not break the public API — if the extracted component needs to be exported, append to `src/index.ts`

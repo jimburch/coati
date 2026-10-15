@@ -1,56 +1,38 @@
-# GitHub Copilot Playground
+# Ledger — GitHub Copilot Setup
 
-A test environment for the Coati CLI that simulates a real TypeScript project with a full GitHub Copilot configuration.
+A multi-tenant expense management SaaS built with Next.js 15, Prisma, and
+tRPC. This repository ships a complete GitHub Copilot configuration:
+repository instructions, specialized agents, prompt library, firewall rules,
+MCP servers, and VS Code settings.
 
-## Purpose
+## What's in `.github/copilot/`
 
-This playground is used to test Coati's `init` and `clone` commands against a realistic project structure. It represents how a team would configure GitHub Copilot across all its supported configuration surfaces.
+| Path | Purpose |
+| --- | --- |
+| `../copilot-instructions.md` | Repo-wide rules Copilot sees on every interaction |
+| `agents.json` | Named agents (reviewer, architect, migrator, debugger, refactorer) |
+| `firewall.json` | Network allow-list for Copilot Coding Agent runs |
+| `mcp.json` | MCP servers available to Copilot (filesystem, postgres, github, inngest) |
+| `instructions.md` | Task-specific instructions layered on top of the repo-wide ones |
+| `prompts/review.md` | Prompt template for reviewing a PR |
+| `prompts/refactor.md` | Prompt template for extracting a tRPC procedure |
+| `prompts/test-generation.md` | Prompt template for generating Vitest tests |
+| `prompts/prisma-migration.md` | Prompt template for planning a Prisma migration |
+| `prompts/trpc-procedure.md` | Prompt template for scaffolding a new tRPC procedure |
+| `prompts/rsc-pattern.md` | Prompt template for converting a Client → Server Component |
+| `setup.sh` | Dev-environment bootstrap for Copilot Coding Agent |
 
-## Configuration Files
+## What's in `.vscode/`
 
-| File                                         | Purpose                                                                                                                       |
-| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `package.json`                               | Node.js project manifest (TypeScript + Express)                                                                               |
-| `.github/copilot-instructions.md`            | Project-level Copilot instructions — coding conventions, architecture, testing patterns, preferred libraries                  |
-| `.github/copilot/instructions.md`            | Extended code generation instructions — naming conventions, error handling patterns, import ordering, documentation standards |
-| `.github/copilot/mcp.json`                   | MCP (Model Context Protocol) server configuration — filesystem and fetch servers                                              |
-| `.github/copilot/prompts/review.md`          | Reusable prompt for structured code reviews with severity ratings                                                             |
-| `.github/copilot/prompts/test-generation.md` | Reusable prompt for generating comprehensive Vitest test suites                                                               |
-| `.github/copilot/prompts/refactor.md`        | Reusable prompt for safe code refactoring with before/after output                                                            |
-| `.github/copilot/agents.json`                | Custom agent definitions — reviewer, architect, migrator, debugger                                                            |
-| `.github/copilot/firewall.json`              | Network access rules restricting the coding agent to npm registry and GitHub API                                              |
-| `.github/copilot/setup.sh`                   | Environment setup script for the Copilot coding agent (installs deps, runs checks)                                            |
-| `.vscode/settings.json`                      | VS Code workspace settings referencing Copilot instruction files and editor preferences                                       |
+`settings.json` locks down Copilot's behavior to match the repo conventions:
+excluded paths, preferred model, chat agents, and inline suggestion settings.
 
-## File Tree
-
-```
-copilot/
-├── package.json
-├── README.md
-├── .github/
-│   ├── copilot-instructions.md
-│   └── copilot/
-│       ├── instructions.md
-│       ├── mcp.json
-│       ├── agents.json
-│       ├── firewall.json
-│       ├── setup.sh
-│       └── prompts/
-│           ├── review.md
-│           ├── test-generation.md
-│           └── refactor.md
-└── .vscode/
-    └── settings.json
-```
-
-## Usage with Coati
+## Getting started
 
 ```bash
-# Initialize a Coati setup from this directory
-cd playground/copilot
-coati init
-
-# Clone this setup into another project
-coati clone <username>/copilot-setup --target /path/to/project
+pnpm install
+cp .env.example .env
+docker compose up -d db
+pnpm db:migrate:dev
+pnpm dev
 ```

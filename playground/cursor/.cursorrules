@@ -1,42 +1,44 @@
-# Project Coding Conventions (LEGACY)
+# Atlas UI — Coding Conventions (LEGACY FALLBACK)
 #
-# NOTE: This is the legacy .cursorrules format. Prefer using .cursor/rules/*.mdc
-# files for new rules. This file is kept for backward compatibility.
+# NOTE: This is the legacy .cursorrules format. Atlas has migrated to scoped
+# .mdc rules under .cursor/rules/. This file exists only for older Cursor
+# versions that don't read .mdc files. If you're seeing this warning, update
+# Cursor and the scoped rules will take over.
 
 ## General
 
-- Use TypeScript strict mode in all files
-- Prefer `const` over `let`; never use `var`
-- Use named exports over default exports
-- Keep functions under 30 lines; extract helpers when complexity grows
-- Write JSDoc comments for all public functions and interfaces
+- TypeScript strict mode in every file
+- `const` by default; never `var`
+- Named exports only (Atlas re-exports from a single barrel in `src/index.ts`)
+- One component per file; filename matches the default export (PascalCase)
+- Keep component files under 150 lines; split into subcomponents if longer
+- Write JSDoc on every exported component and public function
 
-## TypeScript
+## Components
 
-- Enable strict null checks — handle `null` and `undefined` explicitly
-- Use `unknown` instead of `any` for untyped external data
-- Prefer interfaces for object shapes; use type aliases for unions and intersections
-- Use discriminated unions for state modeling (e.g., Result<T, E>)
-- Derive types from schemas (Zod infer) rather than duplicating definitions
+- Accept a single `props` object typed with an explicit `interface`
+- Forward `ref` with `React.forwardRef` on every interactive element
+- Accept and merge a `className` prop using the `cn()` helper from `src/lib/cn.ts`
+- Never use inline styles except for animation transforms
+- Use semantic HTML — no `<div>` for buttons or links
 
-## Express
+## Hooks
 
-- All route handlers must be async and wrapped in error-catching middleware
-- Return consistent JSON responses: `{ data: T }` on success, `{ error: string, code: string }` on failure
-- Use `express.Router()` to group related routes
-- Validate request bodies with Zod before processing
-- Never trust `req.params` or `req.query` — parse and validate everything
-- Set appropriate HTTP status codes (201 for creation, 204 for deletion)
+- Prefer composition over configuration — many small hooks over one big one
+- Custom hooks live in `src/hooks/` and are named `useXxx`
+- No hook calls inside loops, conditionals, or nested functions
 
-## File Organization
+## Testing
 
-- Group by feature, not by type (e.g., `src/users/` not `src/controllers/`)
-- Colocate tests with source files: `foo.ts` and `foo.test.ts` in same directory
-- Keep shared utilities in `src/lib/`
-- One export per file for large modules; barrel exports for small utilities
+- Colocate tests: `Button.tsx` + `Button.test.tsx`
+- Colocate stories: `Button.tsx` + `Button.stories.tsx`
+- Every component ships with at least one story and one test
+- Tests use Vitest + React Testing Library
+- Prefer `getByRole` over `getByTestId`
 
-## Error Handling
+## Don't
 
-- Use custom error classes extending a base `AppError`
-- Log errors with structured data (no plain string concatenation)
-- Never swallow errors silently — always log or rethrow
+- Don't use `any` — use `unknown` and narrow
+- Don't install UI libraries beyond the ones already in package.json
+- Don't write `React.FC` — use an explicit prop interface
+- Don't export a component from both the barrel and a subpath

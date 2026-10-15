@@ -1,22 +1,39 @@
 {
-	"name": "my-typescript-app",
-	"version": "1.0.0",
+	"name": "beacon-docs",
+	"version": "1.12.3",
+	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "tsc",
-		"dev": "tsx watch src/index.ts",
-		"test": "vitest run",
-		"lint": "eslint src/",
-		"coati": "COATI_API_BASE=http://localhost:5173/api/v1 ../../cli/node_modules/.bin/tsx ../../cli/src/index.ts",
-		"coati-test": "COATI_API_BASE=https://develop.coati.sh/api/v1 ../../cli/node_modules/.bin/tsx ../../cli/src/index.ts"
+		"dev": "astro dev --port 4321",
+		"build": "astro build && pagefind --site dist",
+		"preview": "astro preview --port 4321",
+		"check": "astro check",
+		"check:links": "lychee --config lychee.toml dist",
+		"lint": "eslint . && prettier --check .",
+		"format": "prettier --write .",
+		"lighthouse": "lhci autorun"
 	},
 	"dependencies": {
-		"express": "^4.18.0"
+		"@astrojs/check": "^0.9.0",
+		"@astrojs/mdx": "^4.0.0",
+		"@astrojs/preact": "^4.0.0",
+		"@astrojs/sitemap": "^3.2.0",
+		"@astrojs/tailwind": "^5.1.0",
+		"@tailwindcss/typography": "^0.5.15",
+		"astro": "^5.0.0",
+		"pagefind": "^1.1.0",
+		"preact": "^10.24.0",
+		"rehype-external-links": "^3.0.0",
+		"remark-mermaidjs": "^7.0.0",
+		"shiki": "^1.22.0",
+		"tailwindcss": "^3.4.13",
+		"typescript": "^5.6.0"
 	},
 	"devDependencies": {
-		"typescript": "^5.5.0",
-		"tsx": "^4.0.0",
-		"vitest": "^2.0.0",
-		"eslint": "^9.0.0"
+		"@lhci/cli": "^0.14.0",
+		"@playwright/test": "^1.48.0",
+		"eslint": "^9.13.0",
+		"prettier": "^3.3.0",
+		"prettier-plugin-astro": "^0.14.1"
 	}
 }

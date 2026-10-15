@@ -1,12 +1,12 @@
-import crypto from 'node:crypto';
 import type { RequestHandler } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { deviceFlowStates } from '$lib/server/db/schema';
 import { success, error } from '$lib/server/responses';
 import { env } from '$env/dynamic/private';
-const GITHUB_CLIENT_ID = env.GITHUB_CLIENT_ID!;
+import { randomHex } from '$lib/server/crypto';
 
 export const POST: RequestHandler = async () => {
+	const githubClientId = env.GITHUB_CLIENT_ID;
 	// Request device code from GitHub
 	const ghRes = await fetch('https://github.com/login/device/code', {
 		method: 'POST',
@@ -15,7 +15,7 @@ export const POST: RequestHandler = async () => {
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify({
-			client_id: GITHUB_CLIENT_ID,
+			client_id: githubClientId,
 			scope: 'read:user user:email'
 		})
 	});
@@ -33,7 +33,7 @@ export const POST: RequestHandler = async () => {
 	};
 
 	// Generate our own device code for the CLI to poll with
-	const deviceCode = crypto.randomBytes(32).toString('hex');
+	const deviceCode = randomHex(32);
 	const expiresAt = new Date(Date.now() + ghData.expires_in * 1000);
 
 	await db.insert(deviceFlowStates).values({

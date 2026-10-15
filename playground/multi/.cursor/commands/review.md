@@ -1,24 +1,29 @@
-# Code Review
+# /review — Review the frontend-side diff
 
-Review the selected code for quality, correctness, and adherence to project conventions.
+Review the Cursor-lane portion of the current diff.
 
-## Checklist
+## Steps
 
-1. **Type Safety** — Are there any uses of `any`, unsafe type assertions, or missing null checks?
-2. **Error Handling** — Are errors caught, logged, and returned in the standard `{ error, code }` format?
-3. **Input Validation** — Is all external input (request body, params, query) validated with Zod?
-4. **Naming** — Are variables, functions, and types named clearly and consistently?
-5. **Complexity** — Are functions under 30 lines? Should any logic be extracted into helpers?
-6. **Security** — Are there SQL injection risks, exposed secrets, or missing auth checks?
-7. **Tests** — Are there corresponding tests? Do they cover error paths and edge cases?
+1. Get the diff: `git diff --cached` or `git diff origin/main...HEAD`.
+2. Filter to files in Cursor's lane:
+   - `src/lib/components/**/*.svelte`
+   - `src/routes/**/+page.svelte`, `+layout.svelte`
+   - `src/app.css`
+   - `tailwind.config.*`
+3. For each file, apply the matching rules:
+   - Components → `rules/components.mdc` + `rules/svelte5-runes.mdc`
+   - Page markup with forms → `rules/forms.mdc`
+   - Styling → `rules/tailwind.mdc`
+4. Flag any edit that crossed into Claude's lane — those should never have
+   been made. Block the review.
+5. Run `pnpm check` and report any Svelte-check errors introduced.
+6. If a form was added/changed, verify the action exists in the matching
+   `+page.server.ts` — reading the server file is allowed for verification.
 
-## Output Format
+## Output
 
-For each issue found, provide:
+- 🚨 Must fix — lane violations, broken types, inaccessible HTML
+- ⚠️  Should fix — token violations (raw colors), missing error rendering
+- 💡 Consider — extract subcomponent, naming, layout ideas
 
-- **File and line**: where the issue is
-- **Severity**: critical / warning / suggestion
-- **Description**: what the problem is
-- **Fix**: concrete code change to resolve it
-
-If the code looks good, say so and note any minor improvements that could be made.
+Verdict: `APPROVE`, `REQUEST_CHANGES`, or `BLOCKED`.

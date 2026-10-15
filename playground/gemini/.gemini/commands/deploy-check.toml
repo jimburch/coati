@@ -1,48 +1,86 @@
-[command]
-name = "deploy-check"
-description = "Verify the project is ready for deployment by running a comprehensive pre-deploy checklist"
+# /deploy-check — Pre-flight checks before a Cloudflare Pages deploy.
 
-[command.steps]
+description = "Run the full pre-deploy gauntlet: build, check, links, lighthouse."
 
-[command.steps.1]
-action = "shell"
-command = "npx tsc --noEmit"
-description = "Type-check the entire project without emitting files"
+[prompt]
+template = """
+Pre-flight deployment check for Beacon Docs.
 
-[command.steps.2]
-action = "shell"
-command = "npx eslint src/ --max-warnings=0"
-description = "Ensure zero lint warnings — strict mode for production"
+Run the following in order. Stop on any failure and surface the cause.
 
-[command.steps.3]
-action = "shell"
-command = "npx vitest run"
-description = "Run the full test suite and ensure all tests pass"
+## 1. Content validation
 
-[command.steps.4]
-action = "shell"
-command = "npm run build"
-description = "Verify the TypeScript build completes without errors"
+```
+pnpm astro check
+```
 
-[command.steps.5]
-action = "read_files"
-paths = ["package.json", "tsconfig.json"]
-description = "Read configuration files to check for common deployment issues"
+Reports schema violations, broken MDX imports, and type errors across
+content and components.
 
-[command.steps.6]
-action = "prompt"
-text = """
-Perform a deployment readiness assessment:
+## 2. Build
 
-1. **Build Artifacts** — Confirm `dist/` output exists and contains expected entry points
-2. **Dependencies** — Check that package.json has no missing or extraneous dependencies
-3. **Environment Variables** — Scan source for `process.env.*` references and list every
-   required env var. Flag any that lack defaults or validation.
-4. **Health Check** — Verify a `/health` endpoint exists and returns appropriate status
-5. **Security** — Check for hardcoded secrets, debug flags left enabled, or verbose error
-   messages that could leak internals
-6. **Node Version** — Confirm the engines field in package.json matches the target runtime
+```
+pnpm build
+```
 
-Output a deploy readiness scorecard: PASS / WARN / FAIL for each category,
-with details for any WARN or FAIL items.
+This also runs Pagefind to regenerate the search index. Build must succeed
+with zero warnings related to content (Astro warns about missing frontmatter,
+broken image imports, etc.).
+
+## 3. Internal link check
+
+```
+lychee --offline dist
+```
+
+Fast (no network). Any failure blocks the deploy.
+
+## 4. External link check (best effort)
+
+```
+lychee --exclude 'github.com' --exclude 'twitter.com' dist
+```
+
+Network-dependent. Failures are flagged but don't block deploy unless
+they're on getting-started or api docs (high-traffic pages).
+
+## 5. Lighthouse CI
+
+```
+pnpm lighthouse
+```
+
+Thresholds (from `.lighthouserc.cjs`):
+- Performance: ≥ 95
+- Accessibility: ≥ 100
+- Best Practices: ≥ 95
+- SEO: ≥ 100
+
+Drops below those thresholds block the deploy.
+
+## 6. Draft check
+
+Scan `dist/` for accidentally-published drafts:
+
+```
+rg -l 'draft=\"true\"' dist
+```
+
+Any match is a bug — drafts should be filtered out at build time via
+`getCollection('docs', ({ data }) => !data.draft)`.
+
+## Output
+
+Table summarizing each check:
+
+| Check | Status | Notes |
+| --- | --- | --- |
+| astro check | ✓ | — |
+| build | ✓ | 238 pages, 1.2MB JS |
+| internal links | ✓ | 0 broken |
+| external links | ⚠ | 2 slow responses (acme.com) |
+| lighthouse | ✓ | 98 / 100 / 97 / 100 |
+| drafts leaked | ✓ | — |
+
+Verdict: `SHIP` or `HOLD`.
 """

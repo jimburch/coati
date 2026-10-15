@@ -1,0 +1,48 @@
+# /standup — Daily standup summary from git activity.
+
+description = "Generate a standup-friendly summary of yesterday's (or last Friday's) git activity."
+
+[prompt]
+template = """
+Produce a standup summary I can paste into Slack.
+
+## Lookback window
+
+- Monday → since last Friday 00:00 local time
+- Other weekdays → since yesterday 00:00 local time
+
+## Steps
+
+1. Determine the date range based on today's weekday
+2. Run:
+   ```
+   git log --all --author="$(git config user.email)" \\
+     --since=<date> --until=now \\
+     --pretty=format:"%h|%s|%ar"
+   ```
+3. If the parent directory contains sibling repos, run the same in each
+4. Match commits to PRs: `gh pr list --author @me --state all --limit 20`
+5. List open PRs I authored: `gh pr list --author @me --state open`
+6. List issues assigned to me: `gh issue list --assignee @me --state open --limit 10`
+
+## Output
+
+```
+**Yesterday**
+- Landed <summary> in <repo>#<pr>
+- Continued <work> — <what's left>
+- Reviewed <n> PRs
+
+**Today**
+- Pick up <open PR or issue>
+
+**Blockers**
+- <open review comments awaiting my reply>
+- (or: None)
+```
+
+Keep it under 15 lines. A standup is a heartbeat, not a log.
+"""
+
+[shell.allow]
+patterns = ["git log*", "git config *", "gh pr list*", "gh issue list*"]

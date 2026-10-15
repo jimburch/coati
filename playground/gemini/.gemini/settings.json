@@ -1,49 +1,40 @@
 {
-	"mcpServers": {
-		"filesystem": {
-			"command": "npx",
-			"args": ["-y", "@modelcontextprotocol/server-filesystem", "./src"]
-		},
-		"fetch": {
-			"command": "npx",
-			"args": ["-y", "@modelcontextprotocol/server-fetch"]
-		},
-		"postgres": {
-			"command": "npx",
-			"args": ["-y", "@modelcontextprotocol/server-postgres"],
-			"env": {
-				"DATABASE_URL": "${DATABASE_URL}"
-			}
-		}
+	"$schema": "https://gemini-cli.dev/schemas/settings.json",
+	"model": {
+		"default": "gemini-2.5-pro",
+		"fast": "gemini-2.5-flash",
+		"maxOutputTokens": 8192,
+		"temperature": 0.2
 	},
-	"coreTools": {
-		"shell": {
-			"allowedCommands": [
-				"npm run *",
-				"npx vitest *",
-				"npx eslint *",
-				"npx tsc --noEmit",
-				"cat *",
-				"ls *"
-			]
-		},
-		"readFile": {
-			"enabled": true
-		},
-		"writeFile": {
-			"enabled": true,
-			"requireConfirmation": false
-		},
-		"editFile": {
-			"enabled": true,
-			"requireConfirmation": false
-		}
+	"context": {
+		"include": [
+			"GEMINI.md",
+			"src/content/**/*.mdx",
+			"src/content/**/*.md",
+			"src/content/config.ts",
+			"src/components/**/*.astro",
+			"src/layouts/**/*.astro",
+			"astro.config.ts"
+		],
+		"exclude": [
+			"dist/**",
+			"node_modules/**",
+			"**/*.generated.ts",
+			".astro/**"
+		],
+		"maxFiles": 200,
+		"maxTokens": 200000
 	},
-	"contextWindow": {
-		"maxTokens": 1048576
+	"tools": {
+		"shell": { "enabled": true, "policy": ".gemini/policies/shell.toml" },
+		"read": { "enabled": true, "policy": ".gemini/policies/read.toml" },
+		"write": { "enabled": true, "confirmBeforeWrite": true }
 	},
-	"history": {
-		"saveConversations": true,
-		"maxConversations": 50
+	"defaults": {
+		"showReasoning": false,
+		"requireConfirmation": "on-destructive"
+	},
+	"telemetry": {
+		"enabled": false
 	}
 }
