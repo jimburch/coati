@@ -1,3 +1,6 @@
+# Workers only. This workflow does not call Coolify.
+# The develop Coolify app is not deployed from Actions. Production Coolify
+# stays in coolify.yml and runs on push to main only.
 name: Deploy
 
 on:

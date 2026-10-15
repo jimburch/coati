@@ -1,0 +1,22 @@
+# Production VPS only, until the coati.sh DNS cutover.
+# Pushing develop must not deploy the develop Coolify app (usnp1cm6cl4b3g75l7yykla2):
+# this branch drops adapter-node, so that rebuild fails. Develop goes to Workers
+# from deploy.yml. This file is the main half of the workflow removed in 73ac34a.
+name: Coolify
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Trigger Coolify Deploy
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    steps:
+      - name: Deploy production to Coolify
+        run: |
+          curl -f -X GET \
+            "https://coolify.coati.sh/api/v1/deploy?uuid=rda0t0olc067jhfzerbmyn2h&force=false" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
