@@ -34,6 +34,8 @@ jobs:
       - name: Migrate database (direct Neon URL, not Hyperdrive)
         run: pnpm db:migrate
         env:
+          # Database name is neondb, role is neondb_owner.
+          # postgresql://neondb_owner:<password>@<host>/neondb?sslmode=require
           DATABASE_URL: ${{ github.ref_name == 'main' && secrets.NEON_PROD_DIRECT_URL || secrets.NEON_DEV_DIRECT_URL }}
 
       - run: pnpm build

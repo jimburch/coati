@@ -1,6 +1,8 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "coati",
+	// Not a secret. Named environments inherit this.
+	"account_id": "98e35850d8eb904f5f11f1b537132362",
 	"main": ".svelte-kit/cloudflare/_worker.js",
 	"compatibility_date": "2026-10-15",
 	// nodejs_compat provides AsyncLocalStorage for the per-request database client.
@@ -41,7 +43,7 @@
 			"hyperdrive": [
 				{
 					"binding": "HYPERDRIVE",
-					"id": "00000000-0000-0000-0000-0000000000a1"
+					"id": "ac509d55d4a549b9935917e386df6e1e"
 				}
 			],
 			"ratelimits": [
@@ -71,7 +73,7 @@
 			"hyperdrive": [
 				{
 					"binding": "HYPERDRIVE",
-					"id": "00000000-0000-0000-0000-0000000000d1",
+					"id": "51967bcc2bfb4767b8bd84ac02c40794",
 					"localConnectionString": "postgresql://coati:coati@localhost:5432/coati_dev"
 				}
 			],

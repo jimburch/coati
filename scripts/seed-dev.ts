@@ -7,6 +7,9 @@
  * Usage:
  *   DATABASE_URL=postgres://... pnpm run seed:dev
  *   GITHUB_TOKEN=ghp_... DATABASE_URL=postgres://... pnpm run seed:dev
+ *
+ * Neon (dev and prod) uses database `neondb` and role `neondb_owner`:
+ *   DATABASE_URL=postgresql://neondb_owner:<password>@<host>/neondb?sslmode=require pnpm run seed:dev
  */
 
 import 'dotenv/config';
