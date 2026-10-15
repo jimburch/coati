@@ -2,20 +2,31 @@ import * as Sentry from '@sentry/sveltekit';
 import { env } from '$env/dynamic/public';
 import { getEnvironment } from './env';
 
-export function initSentry(): void {
+export function buildSentryOptions() {
 	const environment = getEnvironment();
-	if (environment === 'local' || environment === 'test') return;
+	if (environment === 'local' || environment === 'test') return null;
 
 	const dsn = env.PUBLIC_SENTRY_DSN;
-	if (!dsn) return;
+	if (!dsn) return null;
 
 	const version = env.PUBLIC_APP_VERSION || 'unknown';
 
-	Sentry.init({
+	return {
 		dsn,
 		environment,
 		release: `coati-web@${version}`,
-		sendDefaultPii: false,
+		tracesSampleRate: 0.1,
+		sendDefaultPii: false as const
+	};
+}
+
+/** Used by unit tests and any non-Workers caller. Request handling uses `buildSentryOptions`. */
+export function initSentry(): void {
+	const options = buildSentryOptions();
+	if (!options) return;
+
+	Sentry.init({
+		...options,
 		// No session replay — privacy posture requires minimal data collection
 		integrations: []
 	});

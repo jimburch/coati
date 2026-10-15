@@ -26,10 +26,10 @@ When discussing domain concepts, use the canonical terms defined in [`CONTEXT.md
 - **Styling:** Tailwind CSS + shadcn-svelte
 - **Database:** PostgreSQL
 - **ORM:** Drizzle ORM
-- **Auth:** Lucia Auth v3 + Arctic (GitHub OAuth)
+- **Auth:** Vendored Lucia-style sessions + Arctic (GitHub OAuth). Existing `coati_session` cookies stay valid.
 - **Markdown rendering:** mdsvex + shiki for syntax highlighting
 - **SSR Strategy:** Hybrid — SSR for public routes, SPA for authenticated routes
-- **Deployment:** Coolify (self-hosted) on Hostinger VPS — Docker builds from `Dockerfile`, Traefik reverse proxy, PostgreSQL managed by Coolify
+- **Deployment:** Cloudflare Workers (`@sveltejs/adapter-cloudflare`) with Neon Postgres 18 through Hyperdrive. Docker/Coolify files stay in the repo as the rollback path until cutover. Local Postgres is still `docker compose`.
 - **CLI framework:** commander (published to npm as `coati`)
 
 ## Project Structure

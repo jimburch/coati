@@ -35,7 +35,8 @@ vi.mock('$lib/server/rate-limit', () => ({
 // with the module-level initSentry() call in hooks.server.ts
 vi.mock('$lib/server/observability/sentry', () => ({
 	initSentry: vi.fn(),
-	setSentryUser: vi.fn()
+	setSentryUser: vi.fn(),
+	buildSentryOptions: () => null
 }));
 
 // Mock @sentry/sveltekit for setContext and captureException

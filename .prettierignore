@@ -22,3 +22,7 @@ site/build/
 
 # SvelteKit generated files
 **/.svelte-kit/
+
+# Wrangler runtime types (regenerate with `pnpm cf:types`)
+src/worker-configuration.d.ts
+workers/cron/worker-configuration.d.ts

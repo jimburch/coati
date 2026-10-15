@@ -1,6 +1,6 @@
 import { redirect, type RequestHandler } from '@sveltejs/kit';
 import {
-	github,
+	createGitHubClient,
 	upsertGithubUser,
 	generateSessionToken,
 	createSession,
@@ -23,7 +23,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
 	let accessToken: string;
 	try {
-		const tokens = await github.validateAuthorizationCode(code);
+		const tokens = await createGitHubClient().validateAuthorizationCode(code);
 		accessToken = tokens.accessToken();
 	} catch (err) {
 		console.error('[OAuth] Code exchange failed:', err);

@@ -4,9 +4,9 @@ import type { RequestEvent } from '@sveltejs/kit';
 vi.mock('$app/environment', () => ({ dev: true }));
 
 vi.mock('$lib/server/auth', () => ({
-	github: {
+	createGitHubClient: () => ({
 		createAuthorizationURL: vi.fn(() => new URL('https://github.com/login/oauth/authorize'))
-	}
+	})
 }));
 
 vi.mock('arctic', () => ({ generateState: () => 'test-state' }));

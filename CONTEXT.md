@@ -159,6 +159,10 @@ These four tiers are the only canonical environment names. All scripts, configur
 
 ---
 
+## Runtime
+
+The web app runs on **Cloudflare Workers**. Postgres is **Neon Postgres 18**, reached per request through **Hyperdrive**. Sessions stay Lucia-style: a `coati_session` cookie (or a CLI bearer token) whose SHA-256 hex is `sessions.id`. Existing sessions remain valid. Production refreshes **Trending** from a separate cron Worker every two hours.
+
 ## Flagged ambiguities
 
 - **"Agent"** is overloaded. In the database and manifest it means an AI coding tool (Claude Code, Cursor). In casual discussion and some older docs, "tool" is used interchangeably. **Recommendation:** Always use **Agent** for AI coding tools; use **MCP Server** for external tool integrations.

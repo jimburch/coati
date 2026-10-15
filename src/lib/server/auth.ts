@@ -1,72 +1,53 @@
 import { GitHub } from 'arctic';
-import crypto from 'node:crypto';
 import { db } from '$lib/server/db';
-import { sessions, users } from '$lib/server/db/schema';
+import { users } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
 import { dev } from '$app/environment';
 import type { Cookies } from '@sveltejs/kit';
 import { sanitizeUsername } from '$lib/utils/username';
+import { hashToken, randomHex } from '$lib/server/crypto';
+import {
+	createSession as createSessionRecord,
+	validateSessionToken as validateSessionRecord,
+	invalidateSession as invalidateSessionRecord,
+	invalidateAllUserSessions as invalidateAllUserSessionsRecord
+} from '$lib/server/session';
 
 // ─── Arctic GitHub Provider ────────────────────────────────────────────────
 
-export const github = new GitHub(env.GITHUB_CLIENT_ID!, env.GITHUB_CLIENT_SECRET!, null);
+/** Built per call so Worker secrets are read in the request, not at module load. */
+export function createGitHubClient(): GitHub {
+	return new GitHub(env.GITHUB_CLIENT_ID!, env.GITHUB_CLIENT_SECRET!, null);
+}
 
 // ─── Token Helpers ─────────────────────────────────────────────────────────
 
-export function generateSessionToken(): string {
-	return crypto.randomBytes(32).toString('hex');
-}
+export { hashToken };
 
-function hashToken(token: string): string {
-	return crypto.createHash('sha256').update(token).digest('hex');
+export function generateSessionToken(): string {
+	return randomHex(32);
 }
 
 // ─── Session Lifecycle ─────────────────────────────────────────────────────
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-const SESSION_REFRESH_THRESHOLD_MS = 15 * 24 * 60 * 60 * 1000; // 15 days
 const COOKIE_NAME = 'coati_session';
 
 export async function createSession(token: string, userId: string) {
-	const id = hashToken(token);
-	const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
-	const [session] = await db.insert(sessions).values({ id, userId, expiresAt }).returning();
-	return session;
+	return createSessionRecord(db, token, userId);
 }
 
 export async function validateSessionToken(token: string) {
-	const id = hashToken(token);
-	const result = await db.query.sessions.findFirst({
-		where: eq(sessions.id, id),
-		with: { user: true }
-	});
-
-	if (!result) return null;
-	if (result.expiresAt.getTime() < Date.now()) {
-		await invalidateSession(id);
-		return null;
-	}
-
-	const { user, ...session } = result;
-
-	// Sliding window: extend if less than 15 days remaining
-	const timeRemaining = session.expiresAt.getTime() - Date.now();
-	if (timeRemaining < SESSION_REFRESH_THRESHOLD_MS) {
-		const newExpiresAt = new Date(Date.now() + SESSION_DURATION_MS);
-		await db.update(sessions).set({ expiresAt: newExpiresAt }).where(eq(sessions.id, id));
-		session.expiresAt = newExpiresAt;
-	}
-
-	return { session, user };
+	return validateSessionRecord(db, token);
 }
 
 export async function invalidateSession(sessionId: string): Promise<void> {
-	await db.delete(sessions).where(eq(sessions.id, sessionId));
+	await invalidateSessionRecord(db, sessionId);
 }
 
 export async function invalidateAllUserSessions(userId: string): Promise<void> {
-	await db.delete(sessions).where(eq(sessions.userId, userId));
+	await invalidateAllUserSessionsRecord(db, userId);
 }
 
 // ─── Cookie Helpers ────────────────────────────────────────────────────────

@@ -1,0 +1,60 @@
+name: Deploy
+
+on:
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'production' || 'dev' }}
+    env:
+      WRANGLER_ENV: ${{ github.ref_name == 'main' && 'production' || 'dev' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm ci:checks
+
+      - name: Migrate database (direct Neon URL, not Hyperdrive)
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: ${{ github.ref_name == 'main' && secrets.NEON_PROD_DIRECT_URL || secrets.NEON_DEV_DIRECT_URL }}
+
+      - run: pnpm build
+
+      - name: Deploy app
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --env ${{ env.WRANGLER_ENV }} --var PUBLIC_APP_VERSION:${{ github.sha }}
+
+      - name: Deploy cron worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config workers/cron/wrangler.jsonc --env ${{ env.WRANGLER_ENV }} --var PUBLIC_APP_VERSION:${{ github.sha }}
+
+      # coati.sh and develop.coati.sh still point at the VPS (and develop is
+      # behind Cloudflare Access, which returns 302). This must not fail the
+      # deploy until DNS cutover. Hit the workers.dev URL once routes are live.
+      - name: Smoke test
+        continue-on-error: true
+        run: curl -fsS "${{ github.ref_name == 'main' && 'https://coati.sh' || 'https://develop.coati.sh' }}/api/v1/health"

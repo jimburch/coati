@@ -44,6 +44,20 @@ describe('renderMarkdown', () => {
 		expect(html).not.toContain('onerror');
 	});
 
+	it('strips javascript: links', async () => {
+		const html = await renderMarkdown('[click](javascript:alert(1))');
+		expect(html.toLowerCase()).not.toContain('javascript:');
+	});
+
+	it('strips iframe and svg payloads', async () => {
+		const html = await renderMarkdown(
+			'<iframe src="https://evil.test"></iframe><svg onload="alert(1)"></svg>'
+		);
+		expect(html).not.toContain('<iframe');
+		expect(html).not.toContain('<svg');
+		expect(html).not.toContain('onload');
+	});
+
 	it('renders links', async () => {
 		const html = await renderMarkdown('[click here](https://example.com)');
 		expect(html).toContain('<a');

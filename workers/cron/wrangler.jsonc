@@ -1,0 +1,49 @@
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"name": "coati-cron",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-10-15",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": {
+		"enabled": true,
+		"traces": {
+			"enabled": true
+		}
+	},
+	// Crons run in production only. Refresh dev on demand with
+	// `wrangler dev --env dev --test-scheduled --config workers/cron/wrangler.jsonc`.
+	"env": {
+		"production": {
+			"name": "coati-cron-prod",
+			"triggers": {
+				"crons": ["0 */2 * * *"]
+			},
+			"vars": {
+				"PUBLIC_ENV": "production",
+				"PUBLIC_SENTRY_DSN": "",
+				"PUBLIC_APP_VERSION": ""
+			},
+			"hyperdrive": [
+				{
+					"binding": "HYPERDRIVE",
+					"id": "00000000-0000-0000-0000-0000000000a1"
+				}
+			]
+		},
+		"dev": {
+			"name": "coati-cron-dev",
+			"vars": {
+				"PUBLIC_ENV": "staging",
+				"PUBLIC_SENTRY_DSN": "",
+				"PUBLIC_APP_VERSION": ""
+			},
+			"hyperdrive": [
+				{
+					"binding": "HYPERDRIVE",
+					"id": "00000000-0000-0000-0000-0000000000d1",
+					"localConnectionString": "postgresql://coati:coati@localhost:5432/coati_dev"
+				}
+			]
+		}
+	}
+}
