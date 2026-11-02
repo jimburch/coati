@@ -6,7 +6,10 @@
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
 | **Setup**     | A shareable, installable package of AI coding tool configuration — the platform's atomic unit                                 | Workflow, config, repo, package   |
 | **SetupFile** | An individual file within a setup, tagged by component type and optional agent scope                                          | Asset, attachment, config file    |
-| **Manifest**  | The `coati.json` file that describes a setup's metadata, files, and install behavior                                          | Config, setup.json, package.json  |
+| **Setup Metadata** | The descriptive attributes of a **Setup** owned by the platform: name, description, category, tags, license, agents, post-install commands, prerequisites, visibility, team | Manifest, coati.json, config, settings |
+| **Revision**  | The record each **Publish** creates: the set of file paths and their content hashes at that moment. Numbered sequentially per **Setup** (e.g. `alice/x@7`); only the latest keeps full file contents | Version, commit, snapshot, release |
+| **Local copy** | A **Setup**'s files as they exist in one directory on one machine — whether the owner published from it or a user cloned into it | Working copy, install, checkout, "a clone" |
+| **Repo fingerprint** | An opaque identifier of where a **Revision** was published from: its git remote plus its directory within that repo. It lets **Publish** recognize a **Local copy**'s **Setup** without anything stored on disk | Repo ID, link, binding, remote |
 | **User**      | A person with a Coati account, authenticated via GitHub OAuth                                                                 | Account, member, developer        |
 | **Team**      | A named group of users that can co-own setups and share private setups among its members (appears as `org` in URL paths only) | Organization, workspace, group    |
 | **Tag**       | A freeform lowercase label for categorizing and discovering setups                                                            | Label, keyword, topic             |
@@ -28,7 +31,7 @@
 
 | Term        | Definition                                                                           | Aliases to avoid             |
 | ----------- | ------------------------------------------------------------------------------------ | ---------------------------- |
-| **Publish** | Upload a setup from local disk to the Coati platform via CLI or API                  | Upload, push, deploy         |
+| **Publish** | Upload a **Local copy**'s files to the Coati platform via CLI or API, creating a new **Revision** | Upload, push, deploy         |
 | **Clone**   | Download and install a setup's files to the local machine                            | Download, install, pull      |
 | **Star**    | Bookmark a setup as a favorite (one per user per setup, toggleable)                  | Like, favorite, upvote       |
 | **Follow**  | Subscribe to another user's activity (one per pair, toggleable)                      | Subscribe, watch             |
@@ -126,7 +129,10 @@ These four tiers are the only canonical environment names. All scripts, configur
 - A **Setup** has exactly one **Visibility** (**public** or **private**)
 - A **private** **Setup** is accessible to its owner, the members of its **Team** (if any), and any **User** named in a **SetupShare** for it
 - A **Setup** contains one or more **SetupFiles**, each tagged with a **ComponentType**
-- A **Setup** has one **Manifest** (`coati.json`) that describes it
+- A **Setup** has one set of **Setup Metadata**, owned and edited on the platform (never stored in a file on disk)
+- A **Setup** has one or more **Revisions**; each **Publish** creates one
+- A **Setup** may have many **Local copies**, identified by its **Setup path** — nothing on disk records which **Setup** a **Local copy** belongs to
+- A **Revision** has zero or one **Repo fingerprint** (none when published from outside a git repo with a remote)
 - A **Setup** is associated with one or more **Agents** (which AI tools it targets)
 - A **Setup** has zero or more **Tags** for discovery
 - A **Setup** has exactly one **Placement** (global or project)
@@ -166,7 +172,8 @@ These four tiers are the only canonical environment names. All scripts, configur
 - **"Clone"** is used as both a verb ("clone a setup") and implicitly as a noun ("clone count"). This is generally clear from context but could confuse in logging. **Recommendation:** Use "clone" as a verb and "clone count" for the metric; avoid "a clone" as a noun referring to the installed copy.
 - **"Post-install"** suggests a single command, but the field is actually an array of shell commands. **Recommendation:** Refer to "post-install commands" (plural) in docs and UI copy.
 - **"Explore" vs "Search"** — the Explore page includes search functionality, and a separate search API exists. **Recommendation:** Use **Explore** for the browsable UI page; use **Search** for the full-text query operation within it.
-- **"Version"** exists in the **Manifest** schema but is not persisted server-side. The platform stores only the current state of a **Setup** with no version history. **Recommendation:** Acknowledge this is a client-side-only field for MVP; do not imply version tracking exists on the platform.
+- **"Version"** was a semver field in the retired `coati.json` and was never persisted. **Recommendation:** Say **Revision** for the platform-created record of each **Publish**; don't use "version" for setups.
+- **"Manifest"** (`coati.json`) is retired. A **Setup**'s descriptive attributes are **Setup Metadata**, owned by the platform; its file list lives in its latest **Revision**. **Recommendation:** Never imply a setup needs a file on disk to describe it.
 - **"Org" vs "Team"** — the URL path segment for team pages and team-owned setups uses `org` (e.g., `/org/<team-slug>`), so "org" and **Team** refer to the same entity in routing context. **Recommendation:** Use **Team** in all user-facing copy, docs, and code identifiers; treat `org` as a URL-only synonym and do not introduce it into UI labels or conversation.
 - **"Share"** is overloaded. It can mean the generic social act of linking a setup ("share this URL"), or the specific **SetupShare** grant to a user for a **private** setup. **Recommendation:** Use **SetupShare** (or "share access") for the access-granting action; prefer "link" or "copy URL" for the social act.
 - **"Admin"** is overloaded. At the platform level (`users.isAdmin`) it means a Coati site administrator; at the team level it is a **Team Member** role. **Recommendation:** Say **Platform Admin** when referring to `users.isAdmin`; use **Admin** alone only in a team context, or qualify as **Team Admin**.
