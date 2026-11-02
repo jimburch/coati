@@ -2,18 +2,18 @@
 
 ## Core entities
 
-| Term          | Definition                                                                                                                    | Aliases to avoid                  |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| **Setup**     | A shareable, installable package of AI coding tool configuration — the platform's atomic unit                                 | Workflow, config, repo, package   |
-| **SetupFile** | An individual file within a setup, tagged by component type and optional agent scope                                          | Asset, attachment, config file    |
-| **Setup Metadata** | The descriptive attributes of a **Setup** owned by the platform: name, description, category, tags, license, agents, post-install commands, prerequisites, visibility, team | Manifest, coati.json, config, settings |
-| **Revision**  | The record a **Publish** creates: the set of file paths and their content hashes at that moment. Numbered sequentially per **Setup** (e.g. `alice/x@7`); only the latest keeps full file contents. Editing **Setup Metadata** never creates one, and publishing files identical to the latest **Revision** doesn't either, unless it comes from a new **Repo fingerprint** | Version, commit, snapshot, release |
-| **Local copy** | A **Setup**'s files as they exist on one machine: its project files under one root directory, plus its global files under `~/` — whether the owner published from it or a user cloned into it. Each git worktree and each sandbox checkout is a separate **Local copy**, even when they share a **Repo fingerprint** | Working copy, install, checkout, "a clone" |
-| **Repo fingerprint** | An opaque identifier of where a **Revision** was published from: its git remote plus its directory within that repo. It lets **Publish** recognize a **Local copy**'s **Setup** without anything stored on disk | Repo ID, link, binding, remote |
-| **User**      | A person with a Coati account, authenticated via GitHub OAuth                                                                 | Account, member, developer        |
-| **Team**      | A named group of users that can co-own setups and share private setups among its members (appears as `org` in URL paths only) | Organization, workspace, group    |
-| **Tag**       | A freeform lowercase label for categorizing and discovering setups                                                            | Label, keyword, topic             |
-| **Agent**     | An AI coding harness whose config files a **Setup** targets (e.g., Claude Code, Codex, Cursor), identified by the files it reads. The same harness running in a terminal, an IDE, a cloud sandbox or a background job is one **Agent** | Tool, assistant, provider, editor, IDE |
+| Term                 | Definition                                                                                                                                                                                                                                                                                                                                                                 | Aliases to avoid                           |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| **Setup**            | A shareable, installable package of AI coding tool configuration — the platform's atomic unit                                                                                                                                                                                                                                                                              | Workflow, config, repo, package            |
+| **SetupFile**        | An individual file within a setup, tagged by component type and optional agent scope                                                                                                                                                                                                                                                                                       | Asset, attachment, config file             |
+| **Setup Metadata**   | The descriptive attributes of a **Setup** owned by the platform: name, description, category, tags, license, agents, post-install commands, prerequisites, visibility, team                                                                                                                                                                                                | Manifest, coati.json, config, settings     |
+| **Revision**         | The record a **Publish** creates: the set of file paths and their content hashes at that moment. Numbered sequentially per **Setup** (e.g. `alice/x@7`); only the latest keeps full file contents. Editing **Setup Metadata** never creates one, and publishing files identical to the latest **Revision** doesn't either, unless it comes from a new **Repo fingerprint** | Version, commit, snapshot, release         |
+| **Local copy**       | A **Setup**'s files as they exist on one machine: its project files under one root directory, plus its global files under `~/` — whether the owner published from it or a user cloned into it. Each git worktree and each sandbox checkout is a separate **Local copy**, even when they share a **Repo fingerprint**                                                       | Working copy, install, checkout, "a clone" |
+| **Repo fingerprint** | An opaque identifier of where a **Revision** was published from: its git remote plus its directory within that repo. It lets **Publish** recognize a **Local copy**'s **Setup** without anything stored on disk                                                                                                                                                            | Repo ID, link, binding, remote             |
+| **User**             | A person with a Coati account, authenticated via GitHub OAuth                                                                                                                                                                                                                                                                                                              | Account, member, developer                 |
+| **Team**             | A named group of users that can co-own setups and share private setups among its members (appears as `org` in URL paths only)                                                                                                                                                                                                                                              | Organization, workspace, group             |
+| **Tag**              | A freeform lowercase label for categorizing and discovering setups                                                                                                                                                                                                                                                                                                         | Label, keyword, topic                      |
+| **Agent**            | An AI coding harness whose config files a **Setup** targets (e.g., Claude Code, Codex, Cursor), identified by the files it reads. The same harness running in a terminal, an IDE, a cloud sandbox or a background job is one **Agent**                                                                                                                                     | Tool, assistant, provider, editor, IDE     |
 
 ## File taxonomy (ComponentType)
 
@@ -29,14 +29,14 @@
 
 ## Setup lifecycle (verbs)
 
-| Term        | Definition                                                                           | Aliases to avoid             |
-| ----------- | ------------------------------------------------------------------------------------ | ---------------------------- |
-| **Publish** | Upload a **Local copy**'s files to the Coati platform via CLI or API, creating a new **Revision** | Upload, push, deploy         |
-| **Clone**   | Download and install a setup's files to the local machine                            | Download, install, pull      |
-| **Star**    | Bookmark a setup as a favorite (one per user per setup, toggleable)                  | Like, favorite, upvote       |
-| **Follow**  | Subscribe to another user's activity (one per pair, toggleable)                      | Subscribe, watch             |
-| **Feature** | Admin action to editorially highlight a setup (sets `featuredAt` timestamp)          | Promote, pin, spotlight      |
-| **Share**   | Grant a specific user direct access to a **private** setup owned by the current user | Invite-to-setup, give access |
+| Term        | Definition                                                                                                                                                                                                                                                      | Aliases to avoid                      |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| **Publish** | Upload a **Local copy**'s files to the Coati platform via CLI or API, creating a new **Revision**                                                                                                                                                               | Upload, push, deploy                  |
+| **Clone**   | Bring a **Local copy** up to date with a **Setup**'s latest **Revision**: write what's new or behind, delete what was removed upstream, and keep what the user edited. Cloning into an empty directory and updating an existing **Local copy** are the same act | Download, install, pull, update, sync |
+| **Star**    | Bookmark a setup as a favorite (one per user per setup, toggleable)                                                                                                                                                                                             | Like, favorite, upvote                |
+| **Follow**  | Subscribe to another user's activity (one per pair, toggleable)                                                                                                                                                                                                 | Subscribe, watch                      |
+| **Feature** | Admin action to editorially highlight a setup (sets `featuredAt` timestamp)                                                                                                                                                                                     | Promote, pin, spotlight               |
+| **Share**   | Grant a specific user direct access to a **private** setup owned by the current user                                                                                                                                                                            | Invite-to-setup, give access          |
 
 ## Visibility and access
 
@@ -61,11 +61,11 @@
 
 ## Placement and scope
 
-| Term          | Definition                                                                                 | Aliases to avoid    |
-| ------------- | ------------------------------------------------------------------------------------------ | ------------------- |
+| Term          | Definition                                                                                                                                                                       | Aliases to avoid    |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
 | **Placement** | Where a **SetupFile** installs: **global** (under `~/`) or **project** (under the **Local copy**'s root). Set per file, not per **Setup**; a global file's path starts with `~/` | Scope, target, mode |
-| **Global**    | Placement value meaning the file installs to the user's home directory, shared across projects | System-wide, user   |
-| **Project**   | Placement value meaning the file installs relative to the **Local copy**'s root: the directory **Publish** or **Clone** runs in | Local, repo-level   |
+| **Global**    | Placement value meaning the file installs to the user's home directory, shared across projects                                                                                   | System-wide, user   |
+| **Project**   | Placement value meaning the file installs relative to the **Local copy**'s root: the directory **Publish** or **Clone** runs in                                                  | Local, repo-level   |
 
 ## Discovery and ranking
 
@@ -169,7 +169,7 @@ These four tiers are the only canonical environment names. All scripts, configur
 
 - **"Agent"** is overloaded. In the database and manifest it means an AI coding tool (Claude Code, Cursor). In casual discussion and some older docs, "tool" is used interchangeably. **Recommendation:** Always use **Agent** for AI coding tools; use **MCP Server** for external tool integrations.
 - **"Tool"** appeared in early documentation (`"tool"` field in SETUP.md) to mean what is now called **Agent**. Code has been migrated to "agent" but stale docs may still say "tool." **Recommendation:** Update remaining docs; never use "tool" for this concept.
-- **"Clone"** is used as both a verb ("clone a setup") and implicitly as a noun ("clone count"). This is generally clear from context but could confuse in logging. **Recommendation:** Use "clone" as a verb and "clone count" for the metric; avoid "a clone" as a noun referring to the installed copy.
+- **"Clone"** is used as both a verb ("clone a setup") and implicitly as a noun ("clone count"). This is generally clear from context but could confuse in logging. **Recommendation:** Use "clone" as a verb and "clone count" for the metric; say **Local copy**, not "a clone", for the installed files. The clone count counts distinct cloners, not clone runs, so cloning again never raises it.
 - **"Post-install"** suggests a single command, but the field is actually an array of shell commands. **Recommendation:** Refer to "post-install commands" (plural) in docs and UI copy.
 - **"Explore" vs "Search"** — the Explore page includes search functionality, and a separate search API exists. **Recommendation:** Use **Explore** for the browsable UI page; use **Search** for the full-text query operation within it.
 - **"Version"** was a semver field in the retired `coati.json` and was never persisted. **Recommendation:** Say **Revision** for the platform-created record of each **Publish**; don't use "version" for setups.
