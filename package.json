@@ -24,7 +24,6 @@
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
 		"db:migrate:test": "tsx scripts/migrate-test-db.ts",
-		"dispatch": "./scripts/dispatch.sh",
 		"seed:dev": "tsx scripts/seed-dev.ts"
 	},
 	"devDependencies": {

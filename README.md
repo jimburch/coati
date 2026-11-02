@@ -321,8 +321,9 @@ See [`CLAUDE.md`](CLAUDE.md) for the complete project conventions — it's writt
 
 ### Issue labels
 
-- `ralph` — tasks queued for an automated worker agent (see `scripts/dispatch.sh`). If you'd rather pick one up yourself, comment on the issue so nobody duplicates the work.
-- `HITL` (human-in-the-loop) — tasks the automated worker couldn't finish and that need manual review. These are a great place to contribute.
+If you'd like to pick one up, comment on the issue so nobody duplicates the work.
+
+- `HITL` (human-in-the-loop) — tasks that need manual review or a human decision. These are a great place to contribute.
 - `good first issue` — scoped starter tasks
 
 ### Commit style
