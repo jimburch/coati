@@ -7,13 +7,13 @@
 | **Setup**     | A shareable, installable package of AI coding tool configuration — the platform's atomic unit                                 | Workflow, config, repo, package   |
 | **SetupFile** | An individual file within a setup, tagged by component type and optional agent scope                                          | Asset, attachment, config file    |
 | **Setup Metadata** | The descriptive attributes of a **Setup** owned by the platform: name, description, category, tags, license, agents, post-install commands, prerequisites, visibility, team | Manifest, coati.json, config, settings |
-| **Revision**  | The record each **Publish** creates: the set of file paths and their content hashes at that moment. Numbered sequentially per **Setup** (e.g. `alice/x@7`); only the latest keeps full file contents | Version, commit, snapshot, release |
-| **Local copy** | A **Setup**'s files as they exist in one directory on one machine — whether the owner published from it or a user cloned into it | Working copy, install, checkout, "a clone" |
+| **Revision**  | The record a **Publish** creates: the set of file paths and their content hashes at that moment. Numbered sequentially per **Setup** (e.g. `alice/x@7`); only the latest keeps full file contents. Editing **Setup Metadata** never creates one, and publishing files identical to the latest **Revision** doesn't either, unless it comes from a new **Repo fingerprint** | Version, commit, snapshot, release |
+| **Local copy** | A **Setup**'s files as they exist on one machine: its project files under one root directory, plus its global files under `~/` — whether the owner published from it or a user cloned into it. Each git worktree and each sandbox checkout is a separate **Local copy**, even when they share a **Repo fingerprint** | Working copy, install, checkout, "a clone" |
 | **Repo fingerprint** | An opaque identifier of where a **Revision** was published from: its git remote plus its directory within that repo. It lets **Publish** recognize a **Local copy**'s **Setup** without anything stored on disk | Repo ID, link, binding, remote |
 | **User**      | A person with a Coati account, authenticated via GitHub OAuth                                                                 | Account, member, developer        |
 | **Team**      | A named group of users that can co-own setups and share private setups among its members (appears as `org` in URL paths only) | Organization, workspace, group    |
 | **Tag**       | A freeform lowercase label for categorizing and discovering setups                                                            | Label, keyword, topic             |
-| **Agent**     | An AI coding tool that a setup targets (e.g., Claude Code, Cursor, Windsurf)                                                  | Tool, assistant, provider, editor |
+| **Agent**     | An AI coding harness whose config files a **Setup** targets (e.g., Claude Code, Codex, Cursor), identified by the files it reads. The same harness running in a terminal, an IDE, a cloud sandbox or a background job is one **Agent** | Tool, assistant, provider, editor, IDE |
 
 ## File taxonomy (ComponentType)
 
@@ -63,9 +63,9 @@
 
 | Term          | Definition                                                                                 | Aliases to avoid    |
 | ------------- | ------------------------------------------------------------------------------------------ | ------------------- |
-| **Placement** | Where a setup's files install: **global** (`~/`) or **project** (`./`)                     | Scope, target, mode |
-| **Global**    | Placement value meaning files install to the user's home directory, shared across projects | System-wide, user   |
-| **Project**   | Placement value meaning files install to the current working directory                     | Local, repo-level   |
+| **Placement** | Where a **SetupFile** installs: **global** (under `~/`) or **project** (under the **Local copy**'s root). Set per file, not per **Setup**; a global file's path starts with `~/` | Scope, target, mode |
+| **Global**    | Placement value meaning the file installs to the user's home directory, shared across projects | System-wide, user   |
+| **Project**   | Placement value meaning the file installs relative to the **Local copy**'s root: the directory **Publish** or **Clone** runs in | Local, repo-level   |
 
 ## Discovery and ranking
 
@@ -130,12 +130,12 @@ These four tiers are the only canonical environment names. All scripts, configur
 - A **private** **Setup** is accessible to its owner, the members of its **Team** (if any), and any **User** named in a **SetupShare** for it
 - A **Setup** contains one or more **SetupFiles**, each tagged with a **ComponentType**
 - A **Setup** has one set of **Setup Metadata**, owned and edited on the platform (never stored in a file on disk)
-- A **Setup** has one or more **Revisions**; each **Publish** creates one
+- A **Setup** has one or more **Revisions**; each **Publish** that changes its files creates one
 - A **Setup** may have many **Local copies**, identified by its **Setup path** — nothing on disk records which **Setup** a **Local copy** belongs to
 - A **Revision** has zero or one **Repo fingerprint** (none when published from outside a git repo with a remote)
 - A **Setup** is associated with one or more **Agents** (which AI tools it targets)
 - A **Setup** has zero or more **Tags** for discovery
-- A **Setup** has exactly one **Placement** (global or project)
+- Each **SetupFile** has exactly one **Placement** (global or project); a **Setup** may mix both
 - A **Setup** belongs to exactly one **Category** (optional but recommended)
 - A **User** can **Star** a **Setup** exactly once
 - A **User** can **Follow** another **User** exactly once
