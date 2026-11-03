@@ -5,6 +5,12 @@ import { createSetupWithFilesSchema } from '$lib/types';
 import type { ExploreSort } from '$lib/types';
 import { setupRepo } from '$lib/server/queries/setupRepository';
 import { getTeamByIdForAuth, getTeamMemberRole } from '$lib/server/queries/teams';
+import { getSetupSummary, publishErrorResponse } from '$lib/server/publishApi';
+import {
+	PublishError,
+	resolveClassification,
+	validatePublishFiles
+} from '$lib/server/publishValidation';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const q = url.searchParams.get('q') ?? undefined;
@@ -41,13 +47,27 @@ export const POST: RequestHandler = async (event) => {
 		}
 	}
 
-	// Server refinement: team setups are always private regardless of payload
-	const createData = parsed.teamId ? { ...parsed, visibility: 'private' as const } : parsed;
-
 	try {
-		const setup = await setupRepo.create(user.id, createData);
-		return success(setup, 201);
+		validatePublishFiles(parsed.files);
+		const files = parsed.files.map((f) => ({ ...f, ...resolveClassification(f) }));
+		// Team Setups start private (Decided #16); visibility changes need a Team Admin.
+		const setup = await setupRepo.create(user.id, {
+			...parsed,
+			...(parsed.teamId && { visibility: 'private' as const }),
+			files
+		});
+		return success(
+			{
+				setup: await getSetupSummary(setup.id, event.url.origin),
+				revision: 1,
+				revisionCreated: true,
+				changes: { added: files.map((f) => f.path), updated: [], removed: [] },
+				metadataUpdated: []
+			},
+			201
+		);
 	} catch (err: unknown) {
+		if (err instanceof PublishError) return publishErrorResponse(err);
 		if (isUniqueViolation(err)) {
 			return error('A setup with this slug already exists', 'SLUG_TAKEN', 409);
 		}

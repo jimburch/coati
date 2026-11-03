@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockGetByOwnerSlug = vi.fn();
 const mockGetSlugRedirect = vi.fn();
-const mockUpdate = vi.fn();
 const mockRemove = vi.fn();
 const mockGetTeamMemberRole = vi.fn();
 const mockDeleteSetupForce = vi.fn();
@@ -12,7 +11,6 @@ vi.mock('$lib/server/queries/setupRepository', () => ({
 	setupRepo: {
 		getByOwnerSlug: (...args: unknown[]) => mockGetByOwnerSlug(...args),
 		getSlugRedirect: (...args: unknown[]) => mockGetSlugRedirect(...args),
-		update: (...args: unknown[]) => mockUpdate(...args),
 		remove: (...args: unknown[]) => mockRemove(...args)
 	}
 }));
@@ -113,24 +111,6 @@ describe('GET /api/v1/setups/[owner]/[slug]', () => {
 	});
 });
 
-function makePatchEvent(
-	owner: string,
-	slug: string,
-	userId: string,
-	body: Record<string, unknown> = {}
-) {
-	mockRequireApiAuth.mockReturnValue({ id: userId, username: 'testuser' });
-	return {
-		params: { owner, slug },
-		locals: { user: { id: userId } },
-		request: new Request(`http://localhost/api/v1/setups/${owner}/${slug}`, {
-			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(body)
-		})
-	} as Parameters<(typeof import('./+server'))['PATCH']>[0];
-}
-
 function makeDeleteEvent(owner: string, slug: string, userId: string) {
 	mockRequireApiAuth.mockReturnValue({ id: userId, username: 'testuser' });
 	return {
@@ -153,66 +133,7 @@ const TEAM_SETUP = {
 	visibility: 'private' as const
 };
 
-describe('PATCH /api/v1/setups/[owner]/[slug]', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	it('returns 404 when setup not found', async () => {
-		mockGetByOwnerSlug.mockResolvedValue(null);
-		const { PATCH } = await import('./+server');
-		const res = await PATCH(makePatchEvent('alice', 'my-setup', 'user-uuid-1'));
-		expect(res.status).toBe(404);
-	});
-
-	it('allows setup owner to edit their setup', async () => {
-		mockGetByOwnerSlug.mockResolvedValue(PERSONAL_SETUP);
-		mockUpdate.mockResolvedValue({ ...PERSONAL_SETUP, name: 'Updated' });
-		const { PATCH } = await import('./+server');
-		const res = await PATCH(
-			makePatchEvent('alice', 'my-setup', 'user-uuid-1', { name: 'Updated' })
-		);
-		expect(res.status).toBe(200);
-	});
-
-	it('returns 403 when non-owner tries to edit personal setup', async () => {
-		mockGetByOwnerSlug.mockResolvedValue(PERSONAL_SETUP);
-		mockGetTeamMemberRole.mockResolvedValue(null);
-		const { PATCH } = await import('./+server');
-		const res = await PATCH(makePatchEvent('alice', 'my-setup', 'other-user-id'));
-		expect(res.status).toBe(403);
-	});
-
-	it('allows team admin to edit any team setup', async () => {
-		mockGetByOwnerSlug.mockResolvedValue(TEAM_SETUP);
-		mockGetTeamMemberRole.mockResolvedValue('admin');
-		mockUpdate.mockResolvedValue({ ...TEAM_SETUP, name: 'Updated' });
-		const { PATCH } = await import('./+server');
-		const res = await PATCH(
-			makePatchEvent('alice', 'my-setup', 'admin-user-id', { name: 'Updated' })
-		);
-		expect(res.status).toBe(200);
-	});
-
-	it('returns 403 when team member tries to edit another member setup', async () => {
-		mockGetByOwnerSlug.mockResolvedValue(TEAM_SETUP);
-		mockGetTeamMemberRole.mockResolvedValue('member');
-		const { PATCH } = await import('./+server');
-		const res = await PATCH(makePatchEvent('alice', 'my-setup', 'different-member-id'));
-		expect(res.status).toBe(403);
-	});
-
-	it('allows team member to edit their own team setup', async () => {
-		const ownSetup = { ...TEAM_SETUP, userId: 'member-user-id' };
-		mockGetByOwnerSlug.mockResolvedValue(ownSetup);
-		mockUpdate.mockResolvedValue({ ...ownSetup, name: 'Updated' });
-		const { PATCH } = await import('./+server');
-		const res = await PATCH(
-			makePatchEvent('alice', 'my-setup', 'member-user-id', { name: 'Updated' })
-		);
-		expect(res.status).toBe(200);
-	});
-});
+// PATCH runs the shared publish handler; see publish.integration.test.ts and setup-id.test.ts.
 
 describe('DELETE /api/v1/setups/[owner]/[slug]', () => {
 	beforeEach(() => {

@@ -13,34 +13,59 @@ import {
 	users,
 	activities
 } from '$lib/server/db/schema';
-import { hashSetupFile } from '@coati/content-hash';
-import type { z } from 'zod';
-import type { createSetupWithFilesSchema, updateSetupSchema, ExploreSort } from '$lib/types';
+import type { Category, ComponentType } from '@coati/validation';
+import type { ExploreSort } from '$lib/types';
+import {
+	hashFiles,
+	insertRevision,
+	normalizeTagInput,
+	replaceSetupTags,
+	syncSetupAgents
+} from './publish';
 
-type CreateSetupInput = z.infer<typeof createSetupWithFilesSchema>;
-type UpdateSetupInput = z.infer<typeof updateSetupSchema>;
-type FileInput = CreateSetupInput['files'];
+/**
+ * A new Setup. Files carry their resolved Classification: the API route checks
+ * paths and Classification (`publishValidation.ts`) before calling `createSetup`.
+ */
+export type CreateSetupInput = {
+	slug: string;
+	description?: string;
+	display?: string;
+	category?: Category;
+	tags?: string[];
+	license?: string;
+	postInstall?: string[];
+	prerequisites?: string[];
+	visibility?: 'public' | 'private';
+	teamId?: string;
+	fingerprint?: string;
+	files?: Array<{
+		path: string;
+		content: string;
+		componentType: ComponentType;
+		agent?: string | null;
+		description?: string | null;
+	}>;
+};
+
+/** Web-only Setup edits (README, Display name, visibility, rename). Never touches files. */
+export type SetupWebUpdate = {
+	slug?: string;
+	description?: string;
+	readme?: string | null;
+	display?: string | null;
+	category?: Category | null;
+	license?: string | null;
+	postInstall?: string[] | null;
+	prerequisites?: string[] | null;
+	visibility?: 'public' | 'private';
+};
 
 function buildVisibilitySQL(viewerId?: string | null) {
 	if (!viewerId) {
 		return sql`${setups.visibility} = 'public'`;
 	}
 	return sql`(${setups.visibility} = 'public' OR ${setups.userId} = ${viewerId} OR (${setups.teamId} IS NOT NULL AND ${setups.teamId} IN (SELECT team_id FROM team_members WHERE user_id = ${viewerId})))`;
-}
-
-/** The server computes every stored hash from the content it receives (spec §3). */
-async function toSetupFileRows(setupId: string, files: NonNullable<FileInput>) {
-	return Promise.all(
-		files.map(async (f) => ({
-			setupId,
-			path: f.path,
-			componentType: f.componentType,
-			description: f.description,
-			agent: f.agent,
-			content: f.content,
-			hash: await hashSetupFile(f.path, f.content)
-		}))
-	);
 }
 
 export async function getSetupsByUserId(userId: string, viewerIsOwner = false) {
@@ -138,14 +163,23 @@ export async function getSetupById(id: string) {
 	return result[0] ?? null;
 }
 
+/**
+ * Creates a Setup with Revision 1 (spec §5 "Publish: create"): server-computed
+ * hashes, tags by name, derived `setup_agents`, the owner's `setups_count` and
+ * `created_setup` Activity. A Team Setup is always created private (Decided #16).
+ * Taking a slug that's a redirect of the same owner deletes the redirect (#400).
+ */
 export async function createSetup(userId: string, data: CreateSetupInput) {
+	const files = await hashFiles(data.files ?? []);
+	const tagNames = normalizeTagInput(data.tags ?? []);
+
 	return db.transaction(async (tx) => {
 		const [setup] = await tx
 			.insert(setups)
 			.values({
 				userId,
 				slug: data.slug,
-				description: data.description,
+				description: data.description ?? '',
 				display: data.display,
 				category: data.category,
 				license: data.license,
@@ -160,25 +194,36 @@ export async function createSetup(userId: string, data: CreateSetupInput) {
 			})
 			.returning();
 
-		if (data.files && data.files.length > 0) {
-			await tx.insert(setupFiles).values(await toSetupFileRows(setup.id, data.files));
-		}
+		await tx
+			.delete(setupSlugRedirects)
+			.where(
+				and(
+					data.teamId
+						? eq(setupSlugRedirects.teamId, data.teamId)
+						: eq(setupSlugRedirects.userId, userId),
+					eq(setupSlugRedirects.oldSlug, data.slug)
+				)
+			);
 
-		// Resolve agent slugs from files and populate setupAgents junction table
-		const fileSlugs = [
-			...new Set((data.files ?? []).map((f) => f.agent).filter(Boolean))
-		] as string[];
-		if (fileSlugs.length > 0) {
-			const matched = await tx
-				.select({ id: agents.id })
-				.from(agents)
-				.where(inArray(agents.slug, fileSlugs));
-			if (matched.length > 0) {
-				await tx
-					.insert(setupAgents)
-					.values(matched.map((a) => ({ setupId: setup.id, agentId: a.id })));
-			}
+		if (files.length > 0) {
+			await tx.insert(setupFiles).values(
+				files.map((f) => ({
+					setupId: setup.id,
+					path: f.path,
+					content: f.content,
+					hash: f.hash,
+					componentType: f.componentType ?? 'instruction',
+					agent: f.agent ?? null,
+					description: f.description ?? null
+				}))
+			);
 		}
+		await insertRevision(tx, setup.id, 1, files, {
+			fingerprint: data.fingerprint,
+			publishedBy: userId
+		});
+		await syncSetupAgents(tx, setup.id);
+		await replaceSetupTags(tx, setup.id, tagNames);
 
 		await counters.setupCreated(tx, userId);
 
@@ -188,7 +233,8 @@ export async function createSetup(userId: string, data: CreateSetupInput) {
 	});
 }
 
-export async function updateSetup(id: string, data: UpdateSetupInput) {
+/** Web metadata edits. Files only change through publish (`publishSetupUpdate`). */
+export async function updateSetup(id: string, data: SetupWebUpdate) {
 	return db.transaction(async (tx) => {
 		const updateFields = {
 			...(data.slug !== undefined && { slug: data.slug }),
@@ -204,26 +250,6 @@ export async function updateSetup(id: string, data: UpdateSetupInput) {
 		};
 
 		const [setup] = await tx.update(setups).set(updateFields).where(eq(setups.id, id)).returning();
-
-		if (data.files !== undefined) {
-			await tx.delete(setupFiles).where(eq(setupFiles.setupId, id));
-			if (data.files.length > 0) {
-				await tx.insert(setupFiles).values(await toSetupFileRows(id, data.files));
-			}
-
-			// Refresh setupAgents from file agent slugs
-			const fileSlugs = [...new Set(data.files.map((f) => f.agent).filter(Boolean))] as string[];
-			await tx.delete(setupAgents).where(eq(setupAgents.setupId, id));
-			if (fileSlugs.length > 0) {
-				const matched = await tx
-					.select({ id: agents.id })
-					.from(agents)
-					.where(inArray(agents.slug, fileSlugs));
-				if (matched.length > 0) {
-					await tx.insert(setupAgents).values(matched.map((a) => ({ setupId: id, agentId: a.id })));
-				}
-			}
-		}
 
 		return setup;
 	});
@@ -804,7 +830,7 @@ export async function getSetupByIdWithOwner(id: string) {
 
 export async function updateSetupByIdWithSlugRedirects(
 	id: string,
-	data: UpdateSetupInput,
+	data: SetupWebUpdate,
 	/** `teamId` is set for a Team Setup: its redirects are keyed by the Team, not the user. */
 	context: { userId: string; teamId: string | null; currentSlug: string }
 ) {
@@ -826,26 +852,6 @@ export async function updateSetupByIdWithSlugRedirects(
 		};
 
 		const [setup] = await tx.update(setups).set(updateFields).where(eq(setups.id, id)).returning();
-
-		if (data.files !== undefined) {
-			await tx.delete(setupFiles).where(eq(setupFiles.setupId, id));
-			if (data.files.length > 0) {
-				await tx.insert(setupFiles).values(await toSetupFileRows(id, data.files));
-			}
-
-			// Refresh setupAgents from file agent slugs
-			const fileSlugs = [...new Set(data.files.map((f) => f.agent).filter(Boolean))] as string[];
-			await tx.delete(setupAgents).where(eq(setupAgents.setupId, id));
-			if (fileSlugs.length > 0) {
-				const matched = await tx
-					.select({ id: agents.id })
-					.from(agents)
-					.where(inArray(agents.slug, fileSlugs));
-				if (matched.length > 0) {
-					await tx.insert(setupAgents).values(matched.map((a) => ({ setupId: id, agentId: a.id })));
-				}
-			}
-		}
 
 		if (slugChanged && newSlug !== undefined) {
 			// Insert the old slug as a redirect

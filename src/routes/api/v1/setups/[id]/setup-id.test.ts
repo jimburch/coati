@@ -1,185 +1,191 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+/**
+ * PATCH /api/v1/setups/[id] with the queries mocked: auth, permissions and
+ * error mapping. The Revision rules run against a real database in
+ * `../publish.integration.test.ts`.
+ */
 
-const mockGetSetupByIdWithOwner = vi.fn();
-const mockUpdateSetupByIdWithSlugRedirects = vi.fn();
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { PublishError } from '$lib/server/publishValidation';
+
+const mockGetSetupById = vi.fn();
+const mockGetTeamMemberRole = vi.fn();
+const mockGetTeamByIdForAuth = vi.fn();
+const mockPublishSetupUpdate = vi.fn();
 
 vi.mock('$lib/server/queries/setups', () => ({
-	getSetupByIdWithOwner: (...args: unknown[]) => mockGetSetupByIdWithOwner(...args),
-	updateSetupByIdWithSlugRedirects: (...args: unknown[]) =>
-		mockUpdateSetupByIdWithSlugRedirects(...args)
+	getSetupById: (...args: unknown[]) => mockGetSetupById(...args)
 }));
 
-vi.mock('$lib/server/responses', async (importOriginal) => {
-	return await importOriginal();
+vi.mock('$lib/server/queries/teams', () => ({
+	getTeamMemberRole: (...args: unknown[]) => mockGetTeamMemberRole(...args),
+	getTeamByIdForAuth: (...args: unknown[]) => mockGetTeamByIdForAuth(...args)
+}));
+
+vi.mock('$lib/server/queries/publish', () => ({
+	publishSetupUpdate: (...args: unknown[]) => mockPublishSetupUpdate(...args)
+}));
+
+// getSetupSummary's select chain resolves to one summary row.
+vi.mock('$lib/server/db', () => {
+	const row = {
+		id: 'setup-1',
+		slug: 'my-setup',
+		display: null,
+		description: 'd',
+		visibility: 'public',
+		teamSlug: null,
+		ownerUsername: 'alice'
+	};
+	const chain: Record<string, unknown> = {};
+	for (const m of ['select', 'from', 'innerJoin', 'leftJoin', 'where']) chain[m] = () => chain;
+	chain.limit = async () => [row];
+	return { db: chain };
 });
 
-vi.mock('$lib/server/guards', () => ({
-	requireApiAuth: vi.fn()
-}));
+const PERSONAL = { id: 'setup-1', userId: 'alice', teamId: null, visibility: 'public' };
+const TEAM = { id: 'setup-1', userId: 'alice', teamId: 'team-1', visibility: 'private' };
 
-const MOCK_USER = { id: 'user-uuid-1', username: 'alice' };
-const MOCK_SETUP = {
-	id: 'setup-uuid-1',
-	userId: 'user-uuid-1',
-	teamId: null,
-	slug: 'my-setup',
-	description: 'A great setup',
-	readme: null,
-	category: null,
-	license: null,
-	postInstall: null,
-	prerequisites: null,
-	starsCount: 0,
-	clonesCount: 0,
-	commentsCount: 0,
-	featuredAt: null,
-	createdAt: new Date('2026-01-01'),
-	updatedAt: new Date('2026-01-01'),
-	ownerUsername: 'alice'
-};
-
-function makePatchEvent(id: string, body: unknown, overrideParams?: Record<string, string>) {
+function makeEvent(userId: string | null, body: unknown) {
 	return {
-		params: overrideParams ?? { id },
-		request: new Request(`http://localhost/api/v1/setups/${id}`, {
+		params: { id: 'setup-1' },
+		locals: { user: userId ? { id: userId } : null },
+		url: new URL('http://localhost/api/v1/setups/setup-1'),
+		request: new Request('http://localhost/api/v1/setups/setup-1', {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(body)
-		}),
-		locals: {}
-	} as Parameters<(typeof import('./+server'))['PATCH']>[0];
+			body: typeof body === 'string' ? body : JSON.stringify(body)
+		})
+	} as unknown as Parameters<(typeof import('./+server'))['PATCH']>[0];
 }
 
+async function call(userId: string | null, body: unknown) {
+	const { PATCH } = await import('./+server');
+	const res = await PATCH(makeEvent(userId, body));
+	return { status: res.status, body: await res.json() };
+}
+
+const RESULT = {
+	revision: 2,
+	revisionCreated: true,
+	changes: { added: [], updated: ['CLAUDE.md'], removed: [] },
+	metadataUpdated: []
+};
+
 describe('PATCH /api/v1/setups/[id]', () => {
-	beforeEach(async () => {
+	beforeEach(() => {
 		vi.clearAllMocks();
-		const { requireApiAuth } = await import('$lib/server/guards');
-		vi.mocked(requireApiAuth).mockReturnValue(MOCK_USER as never);
+		mockPublishSetupUpdate.mockResolvedValue(RESULT);
+		mockGetTeamByIdForAuth.mockResolvedValue({ id: 'team-1', ownerId: 'owner' });
 	});
 
 	it('returns 401 when not authenticated', async () => {
-		const { requireApiAuth } = await import('$lib/server/guards');
-		vi.mocked(requireApiAuth).mockReturnValue(
-			new Response(JSON.stringify({ error: 'Authentication required', code: 'UNAUTHORIZED' }), {
-				status: 401,
-				headers: { 'Content-Type': 'application/json' }
-			})
-		);
-		const { PATCH } = await import('./+server');
-		const res = await PATCH(makePatchEvent('setup-uuid-1', { description: 'Updated' }));
-		expect(res.status).toBe(401);
+		mockGetSetupById.mockResolvedValue(PERSONAL);
+		expect((await call(null, { baseRevision: 1 })).status).toBe(401);
 	});
 
-	it('returns 404 when setup not found', async () => {
-		mockGetSetupByIdWithOwner.mockResolvedValue(null);
-		const { PATCH } = await import('./+server');
-		const res = await PATCH(makePatchEvent('nonexistent-uuid', { description: 'Updated' }));
+	it('returns 404 when the setup does not exist', async () => {
+		mockGetSetupById.mockResolvedValue(null);
+		const res = await call('alice', { baseRevision: 1 });
 		expect(res.status).toBe(404);
-		const body = await res.json();
-		expect(body.code).toBe('NOT_FOUND');
+		expect(res.body.code).toBe('NOT_FOUND');
 	});
 
-	it('returns 403 when authenticated user does not own the setup', async () => {
-		mockGetSetupByIdWithOwner.mockResolvedValue({
-			...MOCK_SETUP,
-			userId: 'other-user-uuid',
-			ownerUsername: 'bob'
-		});
-		const { PATCH } = await import('./+server');
-		const res = await PATCH(makePatchEvent('setup-uuid-1', { description: 'Updated' }));
+	it('returns 403 for a non-owner of a personal setup', async () => {
+		mockGetSetupById.mockResolvedValue(PERSONAL);
+		const res = await call('bob', { baseRevision: 1 });
 		expect(res.status).toBe(403);
-		const body = await res.json();
-		expect(body.code).toBe('FORBIDDEN');
+		expect(mockPublishSetupUpdate).not.toHaveBeenCalled();
 	});
 
-	it('returns 200 with updated setup on successful update', async () => {
-		mockGetSetupByIdWithOwner.mockResolvedValue(MOCK_SETUP);
-		const updatedSetup = { ...MOCK_SETUP, description: 'Updated description' };
-		mockUpdateSetupByIdWithSlugRedirects.mockResolvedValue(updatedSetup);
-
-		const { PATCH } = await import('./+server');
-		const res = await PATCH(makePatchEvent('setup-uuid-1', { description: 'Updated description' }));
+	it('returns the summary and publish result for the owner', async () => {
+		mockGetSetupById.mockResolvedValue(PERSONAL);
+		const res = await call('alice', {
+			baseRevision: 1,
+			fingerprint: 'f'.repeat(64),
+			description: 'new',
+			slug: 'ignored',
+			files: [{ path: 'CLAUDE.md', content: 'x', hash: 'ignored' }]
+		});
 		expect(res.status).toBe(200);
-		const body = await res.json();
-		expect(body.data.description).toBe('Updated description');
-		expect(body.data.ownerUsername).toBe('alice');
-	});
-
-	it('returns 400 when body is invalid JSON', async () => {
-		mockGetSetupByIdWithOwner.mockResolvedValue(MOCK_SETUP);
-		const event = {
-			params: { id: 'setup-uuid-1' },
-			request: new Request('http://localhost/api/v1/setups/setup-uuid-1', {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
-				body: 'not-json'
+		expect(res.body.data).toEqual({
+			setup: expect.objectContaining({
+				path: 'alice/my-setup',
+				url: 'http://localhost/alice/my-setup'
 			}),
-			locals: {}
-		} as Parameters<(typeof import('./+server'))['PATCH']>[0];
-		const { PATCH } = await import('./+server');
-		const res = await PATCH(event);
+			...RESULT
+		});
+		expect(mockPublishSetupUpdate).toHaveBeenCalledWith('setup-1', 'alice', {
+			baseRevision: 1,
+			fingerprint: 'f'.repeat(64),
+			files: [{ path: 'CLAUDE.md', content: 'x' }],
+			metadata: { description: 'new' }
+		});
+	});
+
+	it('requires baseRevision', async () => {
+		mockGetSetupById.mockResolvedValue(PERSONAL);
+		const res = await call('alice', { description: 'x' });
 		expect(res.status).toBe(400);
+		expect(res.body.code).toBe('VALIDATION_ERROR');
 	});
 
-	it('calls updateSetupByIdWithSlugRedirects with correct arguments', async () => {
-		mockGetSetupByIdWithOwner.mockResolvedValue(MOCK_SETUP);
-		const updatedSetup = { ...MOCK_SETUP, slug: 'new-name' };
-		mockUpdateSetupByIdWithSlugRedirects.mockResolvedValue(updatedSetup);
+	it('returns 400 for invalid JSON', async () => {
+		mockGetSetupById.mockResolvedValue(PERSONAL);
+		expect((await call('alice', '{nope')).status).toBe(400);
+	});
 
-		const { PATCH } = await import('./+server');
-		await PATCH(makePatchEvent('setup-uuid-1', { slug: 'new-name' }));
+	it('rejects a bad path before writing', async () => {
+		mockGetSetupById.mockResolvedValue(PERSONAL);
+		const res = await call('alice', {
+			baseRevision: 1,
+			files: [{ path: '.claude/settings.json', content: '{}' }]
+		});
+		expect(res.status).toBe(400);
+		expect(res.body.code).toBe('SETTINGS_FILE_WHOLE');
+		expect(mockPublishSetupUpdate).not.toHaveBeenCalled();
+	});
 
-		expect(mockUpdateSetupByIdWithSlugRedirects).toHaveBeenCalledWith(
-			'setup-uuid-1',
-			expect.objectContaining({ slug: 'new-name' }),
-			expect.objectContaining({
-				userId: 'user-uuid-1',
-				teamId: null,
-				currentSlug: 'my-setup'
-			})
+	it('maps REVISION_CONFLICT to 409 with latestRevision', async () => {
+		mockGetSetupById.mockResolvedValue(PERSONAL);
+		mockPublishSetupUpdate.mockRejectedValue(
+			new PublishError('stale', 'REVISION_CONFLICT', 409, { data: null, latestRevision: 3 })
 		);
-	});
-
-	it('returns updated setup including current slug and ownerUsername', async () => {
-		mockGetSetupByIdWithOwner.mockResolvedValue(MOCK_SETUP);
-		const updatedSetup = { ...MOCK_SETUP, slug: 'renamed-setup' };
-		mockUpdateSetupByIdWithSlugRedirects.mockResolvedValue(updatedSetup);
-
-		const { PATCH } = await import('./+server');
-		const res = await PATCH(makePatchEvent('setup-uuid-1', { slug: 'renamed-setup' }));
-		expect(res.status).toBe(200);
-		const body = await res.json();
-		expect(body.data.slug).toBe('renamed-setup');
-		expect(body.data.ownerUsername).toBe('alice');
-	});
-
-	it('PATCH ignores placement field (stripped by schema)', async () => {
-		mockGetSetupByIdWithOwner.mockResolvedValue(MOCK_SETUP);
-		const updatedSetup = { ...MOCK_SETUP, description: 'Updated' };
-		mockUpdateSetupByIdWithSlugRedirects.mockResolvedValue(updatedSetup);
-
-		const { PATCH } = await import('./+server');
-		const res = await PATCH(
-			makePatchEvent('setup-uuid-1', { description: 'Updated', placement: 'global' })
-		);
-		expect(res.status).toBe(200);
-		// placement should not be forwarded to the update function
-		expect(mockUpdateSetupByIdWithSlugRedirects).toHaveBeenCalledWith(
-			'setup-uuid-1',
-			expect.not.objectContaining({ placement: expect.anything() }),
-			expect.any(Object)
-		);
-	});
-
-	it('returns 409 when slug already taken', async () => {
-		mockGetSetupByIdWithOwner.mockResolvedValue(MOCK_SETUP);
-		const uniqueViolationError = Object.assign(new Error('unique violation'), { code: '23505' });
-		mockUpdateSetupByIdWithSlugRedirects.mockRejectedValue(uniqueViolationError);
-
-		const { PATCH } = await import('./+server');
-		const res = await PATCH(makePatchEvent('setup-uuid-1', { slug: 'taken-name' }));
+		const res = await call('alice', { baseRevision: 1 });
 		expect(res.status).toBe(409);
-		const body = await res.json();
-		expect(body.code).toBe('SLUG_TAKEN');
+		expect(res.body).toEqual({
+			data: null,
+			latestRevision: 3,
+			error: 'stale',
+			code: 'REVISION_CONFLICT'
+		});
+	});
+
+	describe('Team Setups', () => {
+		beforeEach(() => mockGetSetupById.mockResolvedValue(TEAM));
+
+		it('lets any Team Member publish, including to another member’s setup', async () => {
+			mockGetTeamMemberRole.mockResolvedValue('member');
+			expect((await call('carol', { baseRevision: 1, description: 'x' })).status).toBe(200);
+		});
+
+		it('rejects someone outside the Team', async () => {
+			mockGetTeamMemberRole.mockResolvedValue(null);
+			expect((await call('eve', { baseRevision: 1 })).status).toBe(403);
+		});
+
+		it('rejects a visibility change from a non-Admin member', async () => {
+			mockGetTeamMemberRole.mockResolvedValue('member');
+			const res = await call('carol', { baseRevision: 1, visibility: 'public' });
+			expect(res.status).toBe(403);
+			expect(res.body.code).toBe('FORBIDDEN');
+			expect(mockPublishSetupUpdate).not.toHaveBeenCalled();
+		});
+
+		it('allows a visibility change from a Team Admin or the Team Owner', async () => {
+			mockGetTeamMemberRole.mockResolvedValue('admin');
+			expect((await call('dave', { baseRevision: 1, visibility: 'public' })).status).toBe(200);
+			mockGetTeamMemberRole.mockResolvedValue('member');
+			expect((await call('owner', { baseRevision: 1, visibility: 'public' })).status).toBe(200);
+		});
 	});
 });

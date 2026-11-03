@@ -39,6 +39,33 @@ export const SLUG_NAME_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 /** Semantic version: MAJOR.MINOR.PATCH */
 export const SEMVER_REGEX = /^\d+\.\d+\.\d+$/;
 
+// ─── Tags ─────────────────────────────────────────────────────────────────────
+
+/** A Setup has at most this many tags (spec §2). */
+export const MAX_TAGS = 10;
+
+/** A normalized tag name is at most this long (the column is wider). */
+export const MAX_TAG_LENGTH = 30;
+
+/**
+ * Normalizes a tag to slug form (spec §2): lowercase, runs of anything other
+ * than `a-z0-9` become one hyphen, no leading/trailing hyphens, at most
+ * `MAX_TAG_LENGTH` characters. Returns `''` when nothing usable is left.
+ */
+export function normalizeTag(raw: string): string {
+	return raw
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '')
+		.slice(0, MAX_TAG_LENGTH)
+		.replace(/-+$/, '');
+}
+
+/** Normalizes a tag list: drops empties and duplicates, keeping first-seen order. */
+export function normalizeTags(raw: readonly string[]): string[] {
+	return [...new Set(raw.map(normalizeTag).filter((t) => t.length > 0))];
+}
+
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
 
 export const componentTypeSchema = z.enum(COMPONENT_TYPE_VALUES);

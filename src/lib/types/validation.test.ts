@@ -16,7 +16,8 @@ function makeFile(content: string = 'x') {
 
 const validSetupBase = {
 	slug: 'my-setup',
-	description: 'A setup'
+	description: 'A setup',
+	files: []
 };
 import { z } from 'zod';
 
@@ -59,9 +60,10 @@ describe('Input validation schemas', () => {
 		const created = createSetupWithFilesSchema.parse({
 			slug: 'my-setup',
 			description: 'd',
+			files: [],
 			...retired
 		});
-		const updated = updateSetupSchema.parse({ description: 'd', ...retired });
+		const updated = updateSetupSchema.parse({ baseRevision: 1, description: 'd', ...retired });
 		for (const key of Object.keys(retired)) {
 			expect(created).not.toHaveProperty(key);
 			expect(updated).not.toHaveProperty(key);
@@ -101,28 +103,36 @@ describe('File size limit schemas', () => {
 		expect(createSetupFileSchema.safeParse(makeFile('a'.repeat(102401))).success).toBe(false);
 	});
 
-	it('createSetupFileSchema rejects unsafe paths and names the offending path', () => {
-		const result = createSetupFileSchema.safeParse({
+	it('createSetupFileSchema leaves path rules to publishValidation and strips a client hash', () => {
+		// INVALID_PATH and friends come from publishValidation.ts so they get their own codes.
+		const parsed = createSetupFileSchema.parse({
 			path: '../etc/passwd',
-			content: 'x'
+			content: 'x',
+			hash: '0'.repeat(64)
 		});
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			const joined = result.error.issues.map((i) => i.message).join(' | ');
-			expect(joined).toContain('../etc/passwd');
-		}
+		expect(parsed.path).toBe('../etc/passwd');
+		expect(parsed).not.toHaveProperty('hash');
 	});
 
-	it('createSetupFileSchema rejects an absolute path and names it', () => {
-		const result = createSetupFileSchema.safeParse({
-			path: '/etc/passwd',
-			content: 'x'
+	it('createSetupWithFilesSchema requires files, defaults description, and takes tags and a fingerprint', () => {
+		expect(createSetupWithFilesSchema.safeParse({ slug: 'x' }).success).toBe(false);
+		const parsed = createSetupWithFilesSchema.parse({
+			slug: 'x',
+			files: [],
+			tags: ['Web Dev'],
+			fingerprint: 'a'.repeat(64)
 		});
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			const joined = result.error.issues.map((i) => i.message).join(' | ');
-			expect(joined).toContain('/etc/passwd');
-		}
+		expect(parsed.description).toBe('');
+		expect(parsed.tags).toEqual(['Web Dev']);
+		expect(
+			createSetupWithFilesSchema.safeParse({ slug: 'x', files: [], fingerprint: 'nothex' }).success
+		).toBe(false);
+	});
+
+	it('updateSetupSchema requires baseRevision and drops slug (renames are web-only)', () => {
+		expect(updateSetupSchema.safeParse({ description: 'x' }).success).toBe(false);
+		const parsed = updateSetupSchema.parse({ baseRevision: 2, slug: 'renamed' });
+		expect(parsed).not.toHaveProperty('slug');
 	});
 
 	it('createSetupFileSchema accepts a normal nested path', () => {
@@ -205,19 +215,21 @@ describe('File size limit schemas', () => {
 		if (withFiles.success) expect(withFiles.data.display).toBe('Display Name');
 
 		// updateSetupSchema (nullable, trimmed, max 150)
-		const updated = updateSetupSchema.safeParse({ display: 'Updated Display' });
+		const updated = updateSetupSchema.safeParse({ baseRevision: 1, display: 'Updated Display' });
 		expect(updated.success).toBe(true);
 		if (updated.success) expect(updated.data.display).toBe('Updated Display');
 
-		const updatedNull = updateSetupSchema.safeParse({ display: null });
+		const updatedNull = updateSetupSchema.safeParse({ baseRevision: 1, display: null });
 		expect(updatedNull.success).toBe(true);
 		if (updatedNull.success) expect(updatedNull.data.display).toBeNull();
 
-		const updatedTrimmed = updateSetupSchema.safeParse({ display: '  trimmed  ' });
+		const updatedTrimmed = updateSetupSchema.safeParse({ baseRevision: 1, display: '  trimmed  ' });
 		expect(updatedTrimmed.success).toBe(true);
 		if (updatedTrimmed.success) expect(updatedTrimmed.data.display).toBe('trimmed');
 
-		expect(updateSetupSchema.safeParse({ display: 'a'.repeat(151) }).success).toBe(false);
+		expect(updateSetupSchema.safeParse({ baseRevision: 1, display: 'a'.repeat(151) }).success).toBe(
+			false
+		);
 	});
 
 	it('strips the removed placement field from create/update schemas', () => {
@@ -228,7 +240,7 @@ describe('File size limit schemas', () => {
 		expect(created.success).toBe(true);
 		if (created.success) expect(created.data).not.toHaveProperty('placement');
 
-		const updated = updateSetupSchema.safeParse({ placement: 'project' });
+		const updated = updateSetupSchema.safeParse({ baseRevision: 1, placement: 'project' });
 		expect(updated.success).toBe(true);
 		if (updated.success) expect(updated.data).not.toHaveProperty('placement');
 
@@ -238,16 +250,19 @@ describe('File size limit schemas', () => {
 	it('updateSetupSchema enforces the same per-file and total limits as create', () => {
 		expect(
 			updateSetupSchema.safeParse({
+				baseRevision: 1,
 				description: 'Updated',
 				files: [makeFile('hello'), makeFile('world')]
 			}).success
 		).toBe(true);
 
-		expect(updateSetupSchema.safeParse({ files: [makeFile('a'.repeat(102401))] }).success).toBe(
-			false
-		);
+		expect(
+			updateSetupSchema.safeParse({ baseRevision: 1, files: [makeFile('a'.repeat(102401))] })
+				.success
+		).toBe(false);
 
 		const tooMany = updateSetupSchema.safeParse({
+			baseRevision: 1,
 			files: Array.from({ length: 51 }, (_, i) => makeFile(`content-${i}`))
 		});
 		expect(tooMany.success).toBe(false);
@@ -256,6 +271,7 @@ describe('File size limit schemas', () => {
 		}
 
 		const tooBig = updateSetupSchema.safeParse({
+			baseRevision: 1,
 			files: Array.from({ length: 11 }, () => makeFile('a'.repeat(102400)))
 		});
 		expect(tooBig.success).toBe(false);

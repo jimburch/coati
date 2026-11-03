@@ -37,7 +37,6 @@ import {
 } from '$lib/server/db/schema';
 import {
 	createSetup,
-	updateSetup,
 	deleteSetup,
 	deleteSetupForce,
 	getSetupByIdWithOwner,
@@ -129,7 +128,7 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		expect(activityRows[0].actionType).toBe('created_setup');
 	});
 
-	it('createSetup and updateSetup store the server-computed hash of every file', async () => {
+	it('createSetup stores the server-computed hash of every file', async () => {
 		const owner = await createTestUser();
 		createdUserIds.push(owner.id);
 
@@ -164,11 +163,6 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 			'CLAUDE.md': sha256('# hi\n'),
 			'.mcp.json#mcpServers.github': sha256('{"args":["-y","gh"],"command":"npx"}')
 		});
-
-		await updateSetup(created.id, {
-			files: [{ path: 'AGENTS.md', componentType: 'instruction', content: 'agents' }]
-		});
-		expect(await hashesOf()).toEqual({ 'AGENTS.md': sha256('agents') });
 	});
 
 	it('searchSetups matches on slug, Display name and description', async () => {
@@ -242,63 +236,6 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		} finally {
 			await db.delete(teams).where(eq(teams.id, team.id));
 		}
-	});
-
-	it('updateSetup with files does not touch the readme column', async () => {
-		const owner = await createTestUser();
-		createdUserIds.push(owner.id);
-
-		const created = await createSetup(owner.id, {
-			slug: `preserve-${Date.now()}`,
-			description: 'desc',
-			files: [{ path: 'old.md', componentType: 'instruction', content: 'old' }]
-		});
-
-		// Seed a hand-written readme directly on the row
-		const ownerReadme = '# My carefully-written README\n\nWith real content.';
-		await db.update(setups).set({ readme: ownerReadme }).where(eq(setups.id, created.id));
-
-		await updateSetup(created.id, {
-			files: [{ path: 'new.md', componentType: 'instruction', content: 'new' }]
-		});
-
-		const [row] = await db
-			.select({ readme: setups.readme })
-			.from(setups)
-			.where(eq(setups.id, created.id));
-		expect(row.readme).toBe(ownerReadme);
-	});
-
-	it('updateSetup with files replaces setupFiles and refreshes setupAgents from new agent slugs', async () => {
-		const owner = await createTestUser();
-		const oldAgent = await createTestAgent();
-		const newAgent = await createTestAgent();
-		createdUserIds.push(owner.id);
-		createdAgentIds.push(oldAgent.id, newAgent.id);
-
-		const created = await createSetup(owner.id, {
-			slug: `update-${Date.now()}`,
-			description: 'desc',
-			files: [
-				{ path: 'old.md', componentType: 'instruction', content: 'old', agent: oldAgent.slug }
-			]
-		});
-
-		await updateSetup(created.id, {
-			files: [
-				{ path: 'new.md', componentType: 'instruction', content: 'new', agent: newAgent.slug },
-				{ path: 'shared.md', componentType: 'instruction', content: 'shared' }
-			]
-		});
-
-		const files = await db.select().from(setupFiles).where(eq(setupFiles.setupId, created.id));
-		expect(files.map((f) => f.path).sort()).toEqual(['new.md', 'shared.md']);
-
-		const agentRows = await db
-			.select()
-			.from(setupAgents)
-			.where(eq(setupAgents.setupId, created.id));
-		expect(agentRows.map((r) => r.agentId)).toEqual([newAgent.id]);
 	});
 
 	it('deleteSetup removes the setup, cascades to files/agents/tags/activities, and decrements setupsCount', async () => {
@@ -490,89 +427,6 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 			.from(setupSlugRedirects)
 			.where(eq(setupSlugRedirects.setupId, created.id));
 		expect(redirects).toHaveLength(0);
-	});
-
-	it('updateSetupByIdWithSlugRedirects replaces files and refreshes setupAgents from file slugs without touching the readme', async () => {
-		const owner = await createTestUser();
-		const oldAgent = await createTestAgent();
-		const newAgent = await createTestAgent();
-		createdUserIds.push(owner.id);
-		createdAgentIds.push(oldAgent.id, newAgent.id);
-
-		const created = await createSetup(owner.id, {
-			slug: `file-update-${Date.now()}`,
-			description: 'a nice description',
-			files: [
-				{ path: 'old.md', componentType: 'instruction', content: 'old', agent: oldAgent.slug }
-			]
-		});
-
-		const ownerReadme = '# File Update\n\nOwner-authored content.';
-		await db.update(setups).set({ readme: ownerReadme }).where(eq(setups.id, created.id));
-
-		await updateSetupByIdWithSlugRedirects(
-			created.id,
-			{
-				files: [
-					{ path: 'new.md', componentType: 'instruction', content: 'new', agent: newAgent.slug },
-					{ path: 'plain.md', componentType: 'instruction', content: 'plain' }
-				]
-			},
-			{ userId: owner.id, teamId: null, currentSlug: created.slug }
-		);
-
-		const files = await db.select().from(setupFiles).where(eq(setupFiles.setupId, created.id));
-		expect(files.map((f) => f.path).sort()).toEqual(['new.md', 'plain.md']);
-
-		const agentRows = await db
-			.select()
-			.from(setupAgents)
-			.where(eq(setupAgents.setupId, created.id));
-		expect(agentRows.map((r) => r.agentId)).toEqual([newAgent.id]);
-
-		// Readme is not touched by file updates — owner edits survive
-		const [row] = await db
-			.select({ readme: setups.readme })
-			.from(setups)
-			.where(eq(setups.id, created.id));
-		expect(row.readme).toBe(ownerReadme);
-	});
-
-	it('updateSetupByIdWithSlugRedirects handles slug change and file replacement in a single call', async () => {
-		const owner = await createTestUser();
-		createdUserIds.push(owner.id);
-
-		const created = await createSetup(owner.id, {
-			slug: `combined-${Date.now()}`,
-			description: 'desc',
-			files: [{ path: 'one.md', componentType: 'instruction', content: 'one' }]
-		});
-		const originalSlug = created.slug;
-
-		const renamed = `renamed-combined-${Date.now()}`;
-		await updateSetupByIdWithSlugRedirects(
-			created.id,
-			{
-				slug: renamed,
-				files: [{ path: 'two.md', componentType: 'instruction', content: 'two' }]
-			},
-			{ userId: owner.id, teamId: null, currentSlug: originalSlug }
-		);
-
-		const [row] = await db
-			.select({ slug: setups.slug })
-			.from(setups)
-			.where(eq(setups.id, created.id));
-		expect(row.slug).toBe(renamed);
-
-		const files = await db.select().from(setupFiles).where(eq(setupFiles.setupId, created.id));
-		expect(files.map((f) => f.path)).toEqual(['two.md']);
-
-		const redirects = await db
-			.select()
-			.from(setupSlugRedirects)
-			.where(eq(setupSlugRedirects.setupId, created.id));
-		expect(redirects.map((r) => r.oldSlug)).toEqual([originalSlug]);
 	});
 
 	it('recordClone increments the setup clonesCount', async () => {

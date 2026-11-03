@@ -26,6 +26,11 @@ vi.mock('$lib/server/responses', async (importOriginal) => {
 	return await importOriginal();
 });
 
+vi.mock('$lib/server/publishApi', async (importOriginal) => ({
+	...(await importOriginal<typeof import('$lib/server/publishApi')>()),
+	getSetupSummary: async (id: string) => ({ id, slug: 'my-setup', path: 'testuser/my-setup' })
+}));
+
 vi.mock('$lib/server/guards', () => ({
 	requireApiAuth: () => ({ id: 'user-id', username: 'testuser', hasBetaFeatures: true })
 }));
@@ -149,8 +154,9 @@ function makePostEvent(body: Record<string, unknown>) {
 		request: new Request('http://localhost/api/v1/setups', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(body)
+			body: JSON.stringify({ files: [], ...body })
 		}),
+		url: new URL('http://localhost/api/v1/setups'),
 		locals: { user: { id: 'user-id', username: 'testuser', hasBetaFeatures: true } }
 	} as Parameters<(typeof import('./+server'))['POST']>[0];
 }
@@ -163,9 +169,7 @@ describe('POST /api/v1/setups', () => {
 	it('creates setup without teamId and returns 201', async () => {
 		mockCreateSetup.mockResolvedValue(MOCK_CREATED_SETUP);
 		const { POST } = await import('./+server');
-		const res = await POST(
-			makePostEvent({ name: 'My Setup', slug: 'my-setup', description: 'desc' })
-		);
+		const res = await POST(makePostEvent({ slug: 'my-setup', description: 'desc' }));
 		expect(res.status).toBe(201);
 	});
 
@@ -174,7 +178,6 @@ describe('POST /api/v1/setups', () => {
 		const { POST } = await import('./+server');
 		const res = await POST(
 			makePostEvent({
-				name: 'My Setup',
 				slug: 'my-setup',
 				description: 'desc',
 				teamId: '00000000-0000-4000-8000-000000000001'
@@ -196,7 +199,6 @@ describe('POST /api/v1/setups', () => {
 		const { POST } = await import('./+server');
 		const res = await POST(
 			makePostEvent({
-				name: 'My Setup',
 				slug: 'my-setup',
 				description: 'desc',
 				teamId: '00000000-0000-4000-8000-000000000001'
@@ -223,15 +225,16 @@ describe('POST /api/v1/setups', () => {
 		const { POST } = await import('./+server');
 		const res = await POST(
 			makePostEvent({
-				name: 'My Setup',
 				slug: 'my-setup',
 				description: 'desc',
 				teamId: '00000000-0000-4000-8000-000000000001'
 			})
 		);
 		expect(res.status).toBe(201);
-		const body = await res.json();
-		expect(body.data.teamId).toBe('00000000-0000-4000-8000-000000000001');
+		expect(mockCreateSetup).toHaveBeenCalledWith(
+			'user-id',
+			expect.objectContaining({ teamId: '00000000-0000-4000-8000-000000000001' })
+		);
 	});
 
 	it('creates team setup when user is an admin', async () => {
@@ -250,7 +253,6 @@ describe('POST /api/v1/setups', () => {
 		const { POST } = await import('./+server');
 		const res = await POST(
 			makePostEvent({
-				name: 'My Setup',
 				slug: 'my-setup',
 				description: 'desc',
 				teamId: '00000000-0000-4000-8000-000000000001'
@@ -285,7 +287,6 @@ describe('POST /api/v1/setups — forced-private when teamId is present', () => 
 		const { POST } = await import('./+server');
 		const res = await POST(
 			makePostEvent({
-				name: 'My Setup',
 				slug: 'my-setup',
 				description: 'desc',
 				teamId: TEAM_ID,
@@ -303,7 +304,6 @@ describe('POST /api/v1/setups — forced-private when teamId is present', () => 
 		const { POST } = await import('./+server');
 		const res = await POST(
 			makePostEvent({
-				name: 'My Setup',
 				slug: 'my-setup',
 				description: 'desc',
 				teamId: TEAM_ID
@@ -321,7 +321,6 @@ describe('POST /api/v1/setups — forced-private when teamId is present', () => 
 		const { POST } = await import('./+server');
 		const res = await POST(
 			makePostEvent({
-				name: 'My Setup',
 				slug: 'my-setup',
 				description: 'desc',
 				visibility: 'public'
@@ -340,7 +339,6 @@ describe('POST /api/v1/setups — forced-private when teamId is present', () => 
 		const { POST } = await import('./+server');
 		const res = await POST(
 			makePostEvent({
-				name: 'My Setup',
 				slug: 'my-setup',
 				description: 'desc',
 				teamId: TEAM_ID,
@@ -364,7 +362,6 @@ describe('POST /api/v1/setups — rejects unsafe file paths', () => {
 		const { POST } = await import('./+server');
 		const res = await POST(
 			makePostEvent({
-				name: 'My Setup',
 				slug: 'my-setup',
 				description: 'desc',
 				files: [
@@ -375,7 +372,7 @@ describe('POST /api/v1/setups — rejects unsafe file paths', () => {
 		);
 		expect(res.status).toBe(400);
 		const body = await res.json();
-		expect(body.code).toBe('VALIDATION_ERROR');
+		expect(body.code).toBe('INVALID_PATH');
 		expect(body.error).toContain('../../.ssh/authorized_keys');
 		expect(mockCreateSetup).not.toHaveBeenCalled();
 	});
@@ -384,7 +381,6 @@ describe('POST /api/v1/setups — rejects unsafe file paths', () => {
 		const { POST } = await import('./+server');
 		const res = await POST(
 			makePostEvent({
-				name: 'My Setup',
 				slug: 'my-setup',
 				description: 'desc',
 				files: [{ path: '/etc/passwd', content: 'pwn' }]
