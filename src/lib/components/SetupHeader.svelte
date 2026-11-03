@@ -8,7 +8,6 @@
 
 	interface SetupProp {
 		display: string | null;
-		name: string;
 		slug: string;
 		description: string | null;
 		ownerUsername: string;
@@ -40,7 +39,7 @@
 	let localAboutDescription = $state<string | null>(null);
 
 	const displayedAboutDisplay = $derived(
-		localAboutDisplay !== null ? localAboutDisplay : (setup.display ?? setup.name)
+		localAboutDisplay !== null ? localAboutDisplay : (setup.display ?? setup.slug)
 	);
 	const displayedAboutDescription = $derived(
 		localAboutDescription !== null ? localAboutDescription : (setup.description ?? '')

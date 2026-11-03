@@ -15,7 +15,6 @@ function makeFile(content: string = 'x') {
 }
 
 const validSetupBase = {
-	name: 'My Setup',
 	slug: 'my-setup',
 	description: 'A setup'
 };
@@ -36,21 +35,37 @@ describe('API response schemas', () => {
 });
 
 describe('Input validation schemas', () => {
-	it('createSetupSchema: accepts valid input and rejects bad name/slug/description', () => {
+	it('createSetupSchema: accepts valid input and rejects bad slug/description', () => {
 		const valid = {
-			name: 'My Claude Setup',
 			slug: 'my-claude-setup',
 			description: 'A great setup for Claude Code'
 		};
 		expect(createSetupSchema.safeParse(valid).success).toBe(true);
-		expect(createSetupSchema.safeParse({ ...valid, name: '' }).success).toBe(false);
-		expect(createSetupSchema.safeParse({ ...valid, name: 'a'.repeat(101) }).success).toBe(false);
 		expect(createSetupSchema.safeParse({ ...valid, slug: 'My-Setup' }).success).toBe(false);
 		expect(createSetupSchema.safeParse({ ...valid, slug: 'my setup' }).success).toBe(false);
 		expect(createSetupSchema.safeParse({ ...valid, slug: 'a'.repeat(101) }).success).toBe(false);
 		expect(createSetupSchema.safeParse({ ...valid, description: 'a'.repeat(301) }).success).toBe(
 			false
 		);
+	});
+
+	it('setup create and update schemas drop name, minToolVersion, agentIds and tagIds', () => {
+		const retired = {
+			name: 'My Setup',
+			minToolVersion: '1.0.0',
+			agentIds: ['00000000-0000-0000-0000-000000000001'],
+			tagIds: ['00000000-0000-0000-0000-000000000002']
+		};
+		const created = createSetupWithFilesSchema.parse({
+			slug: 'my-setup',
+			description: 'd',
+			...retired
+		});
+		const updated = updateSetupSchema.parse({ description: 'd', ...retired });
+		for (const key of Object.keys(retired)) {
+			expect(created).not.toHaveProperty(key);
+			expect(updated).not.toHaveProperty(key);
+		}
 	});
 
 	it('createCommentSchema: validates body length and optional UUID parentId', () => {
@@ -162,7 +177,7 @@ describe('File size limit schemas', () => {
 	});
 
 	it('display field: optional, max 150 chars, trimmed, and nullable on update across all schemas', () => {
-		const setupBase = { name: 'My Setup', slug: 'my-setup', description: 'A setup' };
+		const setupBase = { slug: 'my-setup', description: 'A setup' };
 
 		// createSetupSchema
 		const created = createSetupSchema.safeParse({ ...setupBase, display: 'My Display Name' });
@@ -223,7 +238,7 @@ describe('File size limit schemas', () => {
 	it('updateSetupSchema enforces the same per-file and total limits as create', () => {
 		expect(
 			updateSetupSchema.safeParse({
-				name: 'Updated Name',
+				description: 'Updated',
 				files: [makeFile('hello'), makeFile('world')]
 			}).success
 		).toBe(true);

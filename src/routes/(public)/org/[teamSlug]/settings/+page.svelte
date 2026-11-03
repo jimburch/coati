@@ -3,6 +3,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
+	import DeleteTeamSetupsWarning from '$lib/components/DeleteTeamSetupsWarning.svelte';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import {
 		AlertDialog,
@@ -125,7 +126,8 @@
 		<div class="mt-8 rounded-lg border border-destructive/40 p-6">
 			<h2 class="mb-1 text-lg font-semibold text-destructive">Danger zone</h2>
 			<p class="mb-4 text-sm text-muted-foreground">
-				Deleting a team is permanent and removes all its setups, members, and invites.
+				Deleting a team is permanent and removes all its setups, members, and invites. Setups
+				published to the team are deleted, not moved to their creators.
 			</p>
 			<Button variant="destructive" size="sm" onclick={() => (deleteDialogOpen = true)}>
 				Delete team
@@ -143,6 +145,8 @@
 				setups, members, and invites.
 			</AlertDialogDescription>
 		</AlertDialogHeader>
+
+		<DeleteTeamSetupsWarning setupsCount={data.setupsCount} />
 
 		<div class="my-2 space-y-1.5">
 			<Label for="delete-confirm-input">

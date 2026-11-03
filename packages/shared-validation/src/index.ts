@@ -2,8 +2,6 @@ import { z } from 'zod';
 
 // ─── Const Arrays ─────────────────────────────────────────────────────────────
 
-export const PLACEMENT_VALUES = ['global', 'project'] as const;
-
 export const COMPONENT_TYPE_VALUES = [
 	'instruction',
 	'command',
@@ -28,7 +26,8 @@ export const CATEGORY_VALUES = [
 
 // ─── TypeScript Types ──────────────────────────────────────────────────────────
 
-export type Placement = (typeof PLACEMENT_VALUES)[number];
+/** `global` for a `~/` path, `project` otherwise. Derived from the path (spec §3). */
+export type Placement = 'global' | 'project';
 export type ComponentType = (typeof COMPONENT_TYPE_VALUES)[number];
 export type Category = (typeof CATEGORY_VALUES)[number];
 

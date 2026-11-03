@@ -48,7 +48,6 @@ export interface Manifest {
 	tags?: string[];
 	category?: ManifestCategory;
 	license?: string;
-	minToolVersion?: string;
 	postInstall?: string[];
 	prerequisites?: string[];
 	visibility?: ManifestVisibility;

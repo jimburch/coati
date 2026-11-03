@@ -8,14 +8,11 @@
 
 import { z } from 'zod';
 import {
-	PLACEMENT_VALUES,
 	COMPONENT_TYPE_VALUES,
 	CATEGORY_VALUES,
 	SLUG_NAME_REGEX,
 	SEMVER_REGEX
 } from '@coati/validation';
-
-export const manifestFilePlacementSchema = z.enum(PLACEMENT_VALUES);
 
 export const manifestFileComponentTypeSchema = z.enum(COMPONENT_TYPE_VALUES);
 
@@ -46,7 +43,6 @@ export const manifestSchema = z.object({
 	files: z.array(manifestFileEntrySchema).min(1, 'Must contain at least one file'),
 	category: manifestCategorySchema.optional(),
 	license: z.string().max(50, 'Must be a string of 50 characters or fewer').optional(),
-	minToolVersion: z.string().max(20, 'Must be a string of 20 characters or fewer').optional(),
 	postInstall: z.array(z.string()).optional(),
 	prerequisites: z.array(z.string()).optional(),
 	agents: z.array(z.string()).optional(),

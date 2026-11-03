@@ -6,7 +6,7 @@
 
 	interface SetupProp {
 		slug: string;
-		name: string;
+		display: string | null;
 		featuredAt: Date | string | null;
 	}
 
@@ -206,7 +206,7 @@
 	<DeleteSetupDialog
 		open={deleteDialogOpen}
 		slug={setup.slug}
-		setupName={setup.name}
+		setupName={setup.display ?? setup.slug}
 		onOpenChange={(v) => (deleteDialogOpen = v)}
 	/>
 {/if}

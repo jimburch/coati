@@ -17,7 +17,7 @@
 </script>
 
 <svelte:head>
-	<title>Settings — {data.setup.display ?? data.setup.name} - Coati</title>
+	<title>Settings — {data.setup.display ?? data.setup.slug} - Coati</title>
 </svelte:head>
 
 <div class="mx-auto max-w-2xl px-4 py-8">
@@ -26,7 +26,7 @@
 			href="/{data.setup.ownerUsername}/{data.setup.slug}"
 			class="text-sm text-muted-foreground hover:text-foreground"
 		>
-			← Back to {data.setup.display ?? data.setup.name}
+			← Back to {data.setup.display ?? data.setup.slug}
 		</a>
 	</div>
 

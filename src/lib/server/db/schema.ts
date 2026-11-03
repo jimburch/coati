@@ -11,6 +11,7 @@ import {
 	primaryKey,
 	uniqueIndex,
 	index,
+	check,
 	customType
 } from 'drizzle-orm/pg-core';
 
@@ -152,18 +153,16 @@ export const setups = pgTable(
 		userId: uuid('user_id')
 			.references(() => users.id, { onDelete: 'cascade' })
 			.notNull(),
-		name: varchar('name', { length: 100 }).notNull(),
 		slug: varchar('slug', { length: 100 }).notNull(),
 		description: varchar('description', { length: 300 }).notNull(),
 		display: varchar('display', { length: 150 }),
 		readme: text('readme'),
 		category: categoryEnum('category'),
 		license: varchar('license', { length: 50 }),
-		minToolVersion: varchar('min_tool_version', { length: 20 }),
 		postInstall: text('post_install').array(),
 		prerequisites: text('prerequisites').array(),
 		visibility: setupVisibilityEnum('visibility').default('public').notNull(),
-		teamId: uuid('team_id').references(() => teams.id, { onDelete: 'set null' }),
+		teamId: uuid('team_id').references(() => teams.id, { onDelete: 'cascade' }),
 		starsCount: integer('stars_count').default(0).notNull(),
 		clonesCount: integer('clones_count').default(0).notNull(),
 		commentsCount: integer('comments_count').default(0).notNull(),
@@ -171,11 +170,17 @@ export const setups = pgTable(
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 		searchVector: tsvector('search_vector').generatedAlwaysAs(
-			sql`setweight(to_tsvector('english', coalesce(name, '')), 'A') || setweight(to_tsvector('english', coalesce(description, '')), 'B') || setweight(to_tsvector('english', coalesce(display, '')), 'C')`
+			sql`setweight(to_tsvector('english', coalesce(slug, '')), 'A') || setweight(to_tsvector('english', coalesce(display, '')), 'A') || setweight(to_tsvector('english', coalesce(description, '')), 'B')`
 		)
 	},
 	(table) => [
-		uniqueIndex('setups_user_id_slug_idx').on(table.userId, table.slug),
+		// Slugs are unique per Setup path owner: the user, or the Team for Team Setups.
+		uniqueIndex('setups_user_slug_idx')
+			.on(table.userId, table.slug)
+			.where(sql`${table.teamId} IS NULL`),
+		uniqueIndex('setups_team_slug_idx')
+			.on(table.teamId, table.slug)
+			.where(sql`${table.teamId} IS NOT NULL`),
 		index('setups_user_id_idx').on(table.userId),
 		index('setups_created_at_idx').on(table.createdAt),
 		index('setups_search_vector_idx').using('gin', table.searchVector)
@@ -220,16 +225,86 @@ export const setupFiles = pgTable(
 			.references(() => setups.id, { onDelete: 'cascade' })
 			.notNull(),
 		path: text('path').notNull(),
-		componentType: componentTypeEnum('component_type').notNull().default('instruction'),
+		componentType: componentTypeEnum('component_type').notNull(),
 		description: text('description'),
 		content: text('content').notNull(),
+		/** Server-computed `hashSetupFile(path, content)`. */
+		hash: varchar('hash', { length: 64 }).notNull(),
 		agent: varchar('agent', { length: 100 }).references(() => agents.slug, {
 			onDelete: 'set null',
 			onUpdate: 'cascade'
 		}),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 	},
-	(table) => [index('setup_files_setup_id_idx').on(table.setupId)]
+	(table) => [
+		index('setup_files_setup_id_idx').on(table.setupId),
+		uniqueIndex('setup_files_setup_id_path_idx').on(table.setupId, table.path)
+	]
+);
+
+export const setupRevisions = pgTable(
+	'setup_revisions',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		setupId: uuid('setup_id')
+			.references(() => setups.id, { onDelete: 'cascade' })
+			.notNull(),
+		/** Starts at 1 per Setup. The latest is `ORDER BY number DESC LIMIT 1`. */
+		number: integer('number').notNull(),
+		repoFingerprint: varchar('repo_fingerprint', { length: 64 }),
+		publishedBy: uuid('published_by').references(() => users.id, { onDelete: 'set null' }),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(table) => [
+		uniqueIndex('setup_revisions_setup_id_number_idx').on(table.setupId, table.number),
+		index('setup_revisions_repo_fingerprint_idx').on(table.repoFingerprint)
+	]
+);
+
+/** The full path/hash set of each Revision, kept forever. */
+export const setupRevisionFiles = pgTable(
+	'setup_revision_files',
+	{
+		revisionId: uuid('revision_id')
+			.references(() => setupRevisions.id, { onDelete: 'cascade' })
+			.notNull(),
+		setupId: uuid('setup_id')
+			.references(() => setups.id, { onDelete: 'cascade' })
+			.notNull(),
+		path: text('path').notNull(),
+		hash: varchar('hash', { length: 64 }).notNull()
+	},
+	(table) => [
+		primaryKey({ columns: [table.revisionId, table.path] }),
+		index('setup_revision_files_setup_id_path_hash_idx').on(table.setupId, table.path, table.hash)
+	]
+);
+
+/** One row per cloner per Setup: an authenticated user or an anonymous key. */
+export const setupClones = pgTable(
+	'setup_clones',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		setupId: uuid('setup_id')
+			.references(() => setups.id, { onDelete: 'cascade' })
+			.notNull(),
+		userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+		anonKey: varchar('anon_key', { length: 64 }),
+		firstClonedAt: timestamp('first_cloned_at', { withTimezone: true }).notNull(),
+		lastClonedAt: timestamp('last_cloned_at', { withTimezone: true }).notNull()
+	},
+	(table) => [
+		check(
+			'setup_clones_exactly_one_cloner',
+			sql`(${table.userId} IS NULL) <> (${table.anonKey} IS NULL)`
+		),
+		uniqueIndex('setup_clones_setup_id_user_id_idx')
+			.on(table.setupId, table.userId)
+			.where(sql`${table.userId} IS NOT NULL`),
+		uniqueIndex('setup_clones_setup_id_anon_key_idx')
+			.on(table.setupId, table.anonKey)
+			.where(sql`${table.anonKey} IS NOT NULL`)
+	]
 );
 
 export const setupTags = pgTable(
@@ -442,9 +517,10 @@ export const setupSlugRedirects = pgTable(
 	'setup_slug_redirects',
 	{
 		id: uuid('id').defaultRandom().primaryKey(),
-		userId: uuid('user_id')
-			.references(() => users.id, { onDelete: 'cascade' })
-			.notNull(),
+		/** Owner key for a personal Setup. Exactly one of `userId` and `teamId` is set. */
+		userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+		/** Owner key for a Team Setup. */
+		teamId: uuid('team_id').references(() => teams.id, { onDelete: 'cascade' }),
 		oldSlug: varchar('old_slug', { length: 100 }).notNull(),
 		setupId: uuid('setup_id')
 			.references(() => setups.id, { onDelete: 'cascade' })
@@ -452,7 +528,16 @@ export const setupSlugRedirects = pgTable(
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 	},
 	(table) => [
-		uniqueIndex('setup_slug_redirects_user_id_old_slug_idx').on(table.userId, table.oldSlug),
+		check(
+			'setup_slug_redirects_exactly_one_owner',
+			sql`(${table.userId} IS NULL) <> (${table.teamId} IS NULL)`
+		),
+		uniqueIndex('setup_slug_redirects_user_id_old_slug_idx')
+			.on(table.userId, table.oldSlug)
+			.where(sql`${table.userId} IS NOT NULL`),
+		uniqueIndex('setup_slug_redirects_team_id_old_slug_idx')
+			.on(table.teamId, table.oldSlug)
+			.where(sql`${table.teamId} IS NOT NULL`),
 		index('setup_slug_redirects_setup_id_idx').on(table.setupId)
 	]
 );
@@ -521,6 +606,8 @@ export const setupsRelations = relations(setups, ({ one, many }) => ({
 	user: one(users, { fields: [setups.userId], references: [users.id] }),
 	team: one(teams, { fields: [setups.teamId], references: [teams.id] }),
 	files: many(setupFiles),
+	revisions: many(setupRevisions),
+	clones: many(setupClones),
 	setupTags: many(setupTags),
 	setupAgents: many(setupAgents),
 	stars: many(stars),
@@ -550,6 +637,25 @@ export const deviceFlowStatesRelations = relations(deviceFlowStates, ({ one }) =
 export const setupFilesRelations = relations(setupFiles, ({ one }) => ({
 	setup: one(setups, { fields: [setupFiles.setupId], references: [setups.id] }),
 	agent: one(agents, { fields: [setupFiles.agent], references: [agents.slug] })
+}));
+
+export const setupRevisionsRelations = relations(setupRevisions, ({ one, many }) => ({
+	setup: one(setups, { fields: [setupRevisions.setupId], references: [setups.id] }),
+	publisher: one(users, { fields: [setupRevisions.publishedBy], references: [users.id] }),
+	files: many(setupRevisionFiles)
+}));
+
+export const setupRevisionFilesRelations = relations(setupRevisionFiles, ({ one }) => ({
+	revision: one(setupRevisions, {
+		fields: [setupRevisionFiles.revisionId],
+		references: [setupRevisions.id]
+	}),
+	setup: one(setups, { fields: [setupRevisionFiles.setupId], references: [setups.id] })
+}));
+
+export const setupClonesRelations = relations(setupClones, ({ one }) => ({
+	setup: one(setups, { fields: [setupClones.setupId], references: [setups.id] }),
+	user: one(users, { fields: [setupClones.userId], references: [users.id] })
 }));
 
 export const setupTagsRelations = relations(setupTags, ({ one }) => ({
@@ -629,6 +735,15 @@ export type NewDeviceFlowState = typeof deviceFlowStates.$inferInsert;
 
 export type SetupFile = typeof setupFiles.$inferSelect;
 export type NewSetupFile = typeof setupFiles.$inferInsert;
+
+export type SetupRevision = typeof setupRevisions.$inferSelect;
+export type NewSetupRevision = typeof setupRevisions.$inferInsert;
+
+export type SetupRevisionFile = typeof setupRevisionFiles.$inferSelect;
+export type NewSetupRevisionFile = typeof setupRevisionFiles.$inferInsert;
+
+export type SetupClone = typeof setupClones.$inferSelect;
+export type NewSetupClone = typeof setupClones.$inferInsert;
 
 export type SetupTag = typeof setupTags.$inferSelect;
 export type NewSetupTag = typeof setupTags.$inferInsert;

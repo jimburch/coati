@@ -217,7 +217,6 @@ describe('create new setup (no id in manifest)', () => {
 		expect(ctx.api.post).toHaveBeenCalledWith(
 			'/setups',
 			expect.objectContaining({
-				name: 'my-setup',
 				slug: 'my-setup',
 				description: 'A test setup',
 				files: expect.arrayContaining([
@@ -313,7 +312,7 @@ describe('update existing setup (has id in manifest)', () => {
 		expect(ctx.api.patch).toHaveBeenCalledWith(
 			'/setups/setup-uuid-123',
 			expect.objectContaining({
-				name: 'my-setup',
+				slug: 'my-setup',
 				files: expect.arrayContaining([expect.objectContaining({ content: 'file content here' })])
 			})
 		);

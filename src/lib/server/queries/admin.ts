@@ -62,8 +62,3 @@ export async function getAllTeamsWithAdminDetails(search?: string) {
 
 	return baseQuery;
 }
-
-export async function adminDeleteTeam(teamId: string) {
-	const deleted = await db.delete(teams).where(eq(teams.id, teamId)).returning();
-	return deleted.length;
-}

@@ -42,7 +42,6 @@ const SETUP = {
 	readme: null,
 	category: null,
 	license: null,
-	minToolVersion: null,
 	postInstall: null,
 	prerequisites: null,
 	ownerUsername: 'alice',

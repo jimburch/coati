@@ -24,7 +24,6 @@ vi.mock('$lib/server/db/schema', () => ({
 	setups: {
 		id: 'setups.id',
 		userId: 'setups.userId',
-		name: 'setups.name',
 		slug: 'setups.slug',
 		description: 'setups.description',
 		starsCount: 'setups.starsCount',
@@ -78,7 +77,6 @@ function makeTrendingRow(
 ): Record<string, unknown> {
 	return {
 		id: 'setup-1',
-		name: 'Trending Setup',
 		slug: 'trending-setup',
 		description: 'A trending setup',
 		stars_count: 20,
@@ -117,7 +115,6 @@ describe('getTrendingSetups', () => {
 		const result = await getTrendingSetups(3);
 		expect(result[0]).toMatchObject({
 			id: 'setup-1',
-			name: 'Trending Setup',
 			slug: 'trending-setup',
 			description: 'A trending setup',
 			starsCount: 20,

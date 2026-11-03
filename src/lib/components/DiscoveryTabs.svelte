@@ -3,7 +3,6 @@
 
 	type Setup = {
 		id: string;
-		name: string;
 		slug: string;
 		description: string;
 		display?: string | null;

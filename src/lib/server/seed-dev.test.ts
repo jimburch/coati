@@ -36,14 +36,6 @@ function makeUsers(count = 10) {
 	}));
 }
 
-function makeTags(names = TAG_NAMES) {
-	return names.map((name, i) => ({ id: `tag-${i}`, name }));
-}
-
-function makeAgents(slugs = ['claude-code', 'cursor', 'copilot', 'codex', 'gemini', 'opencode']) {
-	return slugs.map((slug, i) => ({ id: `agent-${i}`, slug }));
-}
-
 function makeGitHubProfile(overrides: Partial<GitHubProfile> = {}): GitHubProfile {
 	return {
 		login: 'testuser',
@@ -103,19 +95,16 @@ describe('seed constants (GITHUB_USERNAMES, TAG_NAMES, COMMENT_BODIES_*)', () =>
 
 describe('generateSetups', () => {
 	const users = makeUsers(10);
-	const tags = makeTags();
-	const agents = makeAgents();
 
 	it('generates a realistic setup fleet with correct shape and valid references', () => {
 		const manyUsers = makeUsers(35);
-		const setups = generateSetups(manyUsers, tags, agents);
+		const setups = generateSetups(manyUsers);
 
 		// Size bucket (35 users → 90–150 setups)
 		expect(setups.length).toBeGreaterThanOrEqual(90);
 		expect(setups.length).toBeLessThanOrEqual(150);
 
 		const userIds = new Set(manyUsers.map((u) => u.id));
-		const validTagNames = new Set(tags.map((t) => t.name));
 		const validSlugs = new Set(['claude-code', 'cursor', 'copilot', 'codex', 'gemini', 'opencode']);
 
 		const slugs = new Set<string>();
@@ -129,7 +118,12 @@ describe('generateSetups', () => {
 			expect(setup.tagNames.length).toBeGreaterThanOrEqual(1);
 			slugs.add(setup.slug);
 
-			for (const tagName of setup.tagNames) expect(validTagNames.has(tagName)).toBe(true);
+			expect(setup.tagNames.length).toBeLessThanOrEqual(10);
+			expect(setup.earlierRevisions).toEqual([]);
+			for (const tagName of setup.tagNames) {
+				expect(tagName).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+				expect(tagName.length).toBeLessThanOrEqual(30);
+			}
 			for (const slug of setup.agentSlugs) expect(validSlugs.has(slug)).toBe(true);
 			for (const file of setup.files) {
 				expect(new Set([...validSlugs, undefined]).has(file.agent)).toBe(true);
@@ -140,7 +134,7 @@ describe('generateSetups', () => {
 
 	it('covers every componentType and every agent across the fleet', () => {
 		const manyUsers = makeUsers(35);
-		const setups = generateSetups(manyUsers, tags, agents);
+		const setups = generateSetups(manyUsers);
 
 		const componentTypes: Set<string> = new Set(
 			setups.flatMap((s) => s.files.map((f) => f.componentType as string))
@@ -170,7 +164,7 @@ describe('generateSetups', () => {
 
 	it('includes realistic edge cases (long desc, max tags, orphan users, varied engagement, boilerplate/custom readmes)', () => {
 		const manyUsers = makeUsers(35);
-		const setups = generateSetups(manyUsers, tags, agents);
+		const setups = generateSetups(manyUsers);
 
 		expect(setups.find((s) => s.description.length >= 200)).toBeDefined();
 		expect(setups.find((s) => s.tagNames.length >= 5)).toBeDefined();
@@ -192,12 +186,12 @@ describe('generateSetups', () => {
 	});
 
 	it('is deterministic (same inputs → same outputs)', () => {
-		const run1 = generateSetups(users, tags, agents);
-		const run2 = generateSetups(users, tags, agents);
+		const run1 = generateSetups(users);
+		const run2 = generateSetups(users);
 		expect(run1.length).toBe(run2.length);
 		for (let i = 0; i < run1.length; i++) {
 			expect(run1[i].slug).toBe(run2[i].slug);
-			expect(run1[i].name).toBe(run2[i].name);
+			expect(run1[i].display).toBe(run2[i].display);
 			expect(run1[i].description).toBe(run2[i].description);
 			expect(run1[i].files.length).toBe(run2[i].files.length);
 			expect(run1[i].tagNames).toEqual(run2[i].tagNames);
@@ -388,112 +382,6 @@ describe('seed()', () => {
 
 		// TRUNCATE ran before the profile count check
 		expect(mockDb.execute).toHaveBeenCalled();
-	});
-
-	it('returns social counts (stars/follows/comments/activities) after a full run', async () => {
-		let commentInsertCount = 0;
-		const insertedData: Record<string, unknown[]> = {};
-
-		const mockInsert = vi.fn((table: unknown) => {
-			const tableName = (table as { _?: { name?: string } })._?.name ?? 'unknown';
-			return {
-				values: vi.fn((rows: unknown | unknown[]) => {
-					const arr = Array.isArray(rows) ? rows : [rows];
-					insertedData[tableName] = [...(insertedData[tableName] ?? []), ...arr];
-					if (tableName === 'comments') commentInsertCount++;
-					const idx = commentInsertCount;
-					return {
-						returning: vi.fn(() =>
-							Promise.resolve(
-								arr.map((r, i) => ({ id: `inserted-${tableName}-${idx}-${i}`, ...r }))
-							)
-						),
-						then: (resolve: (v: unknown[]) => unknown) =>
-							resolve(arr.map((r, i) => ({ id: `inserted-${tableName}-${idx}-${i}`, ...r })))
-					};
-				})
-			};
-		});
-
-		const mockUsers = Array.from({ length: 5 }, (_, i) => ({
-			id: `u${i}`,
-			username: `user${i}`,
-			githubId: i + 1,
-			setupsCount: 0,
-			followersCount: 0,
-			followingCount: 0
-		}));
-		const mockSetups = Array.from({ length: 6 }, (_, i) => ({
-			id: `s${i}`,
-			userId: `u${i % 5}`,
-			starsCount: i === 0 ? 3 : i === 1 ? 0 : 1,
-			clonesCount: i
-		}));
-		const mockSelectData: Record<string, unknown[]> = {
-			agents: [{ id: 'a1', slug: 'claude-code' }],
-			users: mockUsers,
-			tags: TAG_NAMES.slice(0, 3).map((n, i) => ({ id: `t${i}`, name: n })),
-			setups: mockSetups
-		};
-
-		const mockSelect = vi.fn(() => ({
-			from: vi.fn((table: unknown) => {
-				const tableName = (table as { _?: { name?: string } })._?.name ?? 'unknown';
-				return Promise.resolve(mockSelectData[tableName] ?? []);
-			})
-		}));
-
-		const mockUpdate = vi.fn(() => ({
-			set: vi.fn(() => ({
-				where: vi.fn(() => Promise.resolve())
-			}))
-		}));
-
-		const mockDb = {
-			execute: vi.fn(),
-			insert: mockInsert,
-			select: mockSelect,
-			update: mockUpdate
-		};
-
-		const mockProfiles = Array.from({ length: 5 }, (_, i) => ({
-			login: `user${i}`,
-			id: i + 1,
-			avatar_url: `https://avatars.githubusercontent.com/u/${i + 1}`,
-			name: `User ${i}`,
-			bio: null,
-			email: null,
-			blog: null,
-			location: null
-		}));
-
-		let fetchCallIdx = 0;
-		const cyclicFetch = vi.fn().mockImplementation(() => {
-			const profile = mockProfiles[fetchCallIdx % mockProfiles.length];
-			fetchCallIdx++;
-			return Promise.resolve({
-				ok: true,
-				status: 200,
-				json: async () => ({ ...profile, id: fetchCallIdx }),
-				headers: { get: () => null }
-			});
-		});
-
-		const result = await seed(
-			mockDb as unknown as ReturnType<typeof import('drizzle-orm/postgres-js').drizzle>,
-			{ fetcher: cyclicFetch, delayMs: 0 }
-		);
-
-		const counts = result as unknown as Record<string, number>;
-		for (const field of [
-			'starsInserted',
-			'followsInserted',
-			'commentsInserted',
-			'activitiesInserted'
-		]) {
-			expect(result).toHaveProperty(field);
-			expect(counts[field]).toBeGreaterThanOrEqual(0);
-		}
 	});
 });
 

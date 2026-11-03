@@ -28,7 +28,6 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 
 	let setups: {
 		id: string;
-		name: string;
 		slug: string;
 		description: string;
 		display: string | null;
@@ -41,7 +40,6 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 
 	let starredSetups: {
 		id: string;
-		name: string;
 		slug: string;
 		description: string;
 		display: string | null;

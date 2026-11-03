@@ -20,12 +20,12 @@
 </script>
 
 <svelte:head>
-	<title>{setup.display ?? setup.name} by {team.name} - Coati</title>
+	<title>{setup.display ?? setup.slug} by {team.name} - Coati</title>
 	<meta name="description" content={setup.description} />
 </svelte:head>
 
 <OgMeta
-	title="{setup.display ?? setup.name} by {team.name} - Coati"
+	title="{setup.display ?? setup.slug} by {team.name} - Coati"
 	description={setup.description}
 	url="/org/{team.slug}/{setup.slug}"
 	type="article"
@@ -38,7 +38,7 @@
 		<div class="flex items-start justify-between gap-4">
 			<div class="min-w-0 flex-1">
 				<div class="flex items-center gap-2">
-					<h1 class="text-xl font-bold lg:text-2xl">{setup.display ?? setup.name}</h1>
+					<h1 class="text-xl font-bold lg:text-2xl">{setup.display ?? setup.slug}</h1>
 					{#if setup.visibility === 'private'}
 						<span
 							class="inline-flex items-center rounded-full border border-border bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground"

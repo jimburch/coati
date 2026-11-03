@@ -56,7 +56,7 @@ vi.mock('$lib/server/responses', async (importOriginal) => {
 
 const MOCK_SETUP = {
 	id: 'setup-id',
-	name: 'Test Setup',
+	display: 'Test Setup',
 	slug: 'test-setup',
 	userId: 'owner-id',
 	ownerUsername: 'alice',

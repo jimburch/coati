@@ -202,7 +202,10 @@ export const actions: Actions = {
 		}
 
 		await deleteSetup(setup.id, locals.user.id);
-		throw redirect(303, `/${params.username}?deleted=${encodeURIComponent(setup.name)}`);
+		throw redirect(
+			303,
+			`/${params.username}?deleted=${encodeURIComponent(setup.display ?? setup.slug)}`
+		);
 	},
 
 	report: async ({ locals, params, request }) => {

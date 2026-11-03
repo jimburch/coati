@@ -11,8 +11,8 @@ import type { CommandContext } from '../context.js';
 
 interface SetupMeta {
 	id: string;
-	name: string;
 	slug: string;
+	display?: string | null;
 	version?: string;
 	description: string;
 	ownerUsername: string;
@@ -140,8 +140,12 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 				if (ctx.io.isJson()) {
 					ctx.io.json({
 						setup: isTeam
-							? { teamSlug: parsed.teamSlug, setupSlug: parsed.setupSlug, name: setup.name }
-							: { owner: parsed.owner, slug: parsed.slug, name: setup.name },
+							? {
+									teamSlug: parsed.teamSlug,
+									setupSlug: parsed.setupSlug,
+									name: setup.display ?? setup.slug
+								}
+							: { owner: parsed.owner, slug: parsed.slug, name: setup.display ?? setup.slug },
 						files: [],
 						written: 0,
 						skipped: 0,
@@ -327,8 +331,12 @@ export function registerClone(program: Command, ctx: CommandContext): void {
 			if (ctx.io.isJson()) {
 				ctx.io.json({
 					setup: isTeam
-						? { teamSlug: parsed.teamSlug, setupSlug: parsed.setupSlug, name: setup.name }
-						: { owner: parsed.owner, slug: parsed.slug, name: setup.name },
+						? {
+								teamSlug: parsed.teamSlug,
+								setupSlug: parsed.setupSlug,
+								name: setup.display ?? setup.slug
+							}
+						: { owner: parsed.owner, slug: parsed.slug, name: setup.display ?? setup.slug },
 					projectDir,
 					dryRun: opts.dryRun ?? false,
 					written: writeResult.written,

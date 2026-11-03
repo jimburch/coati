@@ -49,7 +49,6 @@ export async function createTestSetup(userId: string): Promise<Setup> {
 		.insert(setups)
 		.values({
 			userId,
-			name: `Test Setup ${id}`,
 			slug: `test-setup-${id}`,
 			description: 'Integration test setup'
 		})

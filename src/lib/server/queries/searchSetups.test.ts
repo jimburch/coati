@@ -24,7 +24,6 @@ vi.mock('$lib/server/db/schema', () => ({
 	setups: {
 		id: 'setups.id',
 		userId: 'setups.userId',
-		name: 'setups.name',
 		slug: 'setups.slug',
 		description: 'setups.description',
 		starsCount: 'setups.starsCount',
@@ -75,7 +74,6 @@ import { searchSetups } from './setups';
 function makeItemRow(overrides: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
 	return {
 		id: 'setup-1',
-		name: 'My Setup',
 		slug: 'my-setup',
 		description: 'A great configuration setup',
 		stars_count: 5,
@@ -166,7 +164,6 @@ describe('searchSetups', () => {
 		const item = result.items[0];
 		expect(item).toMatchObject({
 			id: 'setup-1',
-			name: 'My Setup',
 			slug: 'my-setup',
 			description: 'A great configuration setup',
 			starsCount: 5,

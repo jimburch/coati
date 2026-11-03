@@ -46,13 +46,11 @@ import { setupRepo } from './setupRepository';
 const MOCK_SETUP = {
 	id: 'setup-1',
 	userId: 'user-1',
-	name: 'My Setup',
 	slug: 'my-setup',
 	description: 'A great setup',
 	readme: null,
 	category: null,
 	license: null,
-	minToolVersion: null,
 	postInstall: null,
 	prerequisites: null,
 	visibility: 'public' as const,
@@ -113,7 +111,7 @@ describe('setupRepo.getDetail', () => {
 		const anon = await setupRepo.getDetail('alice', 'my-setup');
 		expect(anon).not.toBeNull();
 		expect(anon!.id).toBe('setup-1');
-		expect(anon!.name).toBe(MOCK_SETUP.name);
+		expect(anon!.slug).toBe(MOCK_SETUP.slug);
 		expect(anon!.ownerUsername).toBe(MOCK_SETUP.ownerUsername);
 		expect(anon!.starsCount).toBe(MOCK_SETUP.starsCount);
 		expect(anon!.files).toEqual(MOCK_FILES);
@@ -198,7 +196,6 @@ describe('setupRepo — delegating methods', () => {
 		expect(mockSearchSetups).toHaveBeenCalledWith(filters);
 
 		const createData: Parameters<typeof setupRepo.create>[1] = {
-			name: 'My Setup',
 			slug: 'my-setup',
 			description: 'A setup',
 			files: []
@@ -208,8 +205,8 @@ describe('setupRepo — delegating methods', () => {
 		expect(mockCreateSetup).toHaveBeenCalledWith('user-1', createData);
 
 		mockUpdateSetup.mockResolvedValue(MOCK_SETUP);
-		expect(await setupRepo.update('setup-1', { name: 'Updated' })).toEqual(MOCK_SETUP);
-		expect(mockUpdateSetup).toHaveBeenCalledWith('setup-1', { name: 'Updated' });
+		expect(await setupRepo.update('setup-1', { description: 'Updated' })).toEqual(MOCK_SETUP);
+		expect(mockUpdateSetup).toHaveBeenCalledWith('setup-1', { description: 'Updated' });
 
 		mockDeleteSetup.mockResolvedValue(1);
 		expect(await setupRepo.remove('setup-1', 'user-1')).toBe(1);

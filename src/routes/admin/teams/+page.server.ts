@@ -1,7 +1,7 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import { getAllTeamsWithAdminDetails, adminDeleteTeam } from '$lib/server/queries/admin';
-import { getTeamBySlugForAuth } from '$lib/server/queries/teams';
+import { getAllTeamsWithAdminDetails } from '$lib/server/queries/admin';
+import { deleteTeam, getTeamBySlugForAuth } from '$lib/server/queries/teams';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	if (!locals.user) {
@@ -42,7 +42,7 @@ export const actions: Actions = {
 			return fail(400, { deleteError: 'Team name does not match' });
 		}
 
-		await adminDeleteTeam(team.id);
+		await deleteTeam(team.id);
 		return { deleted: true };
 	}
 };

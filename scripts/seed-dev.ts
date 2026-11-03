@@ -4,6 +4,12 @@
  * Idempotent development seed script. Truncates all tables then populates
  * the database with realistic mock data: real GitHub user profiles + setups.
  *
+ * Setups follow the manifest-less model (spec #402 §2, §10): every Setup has
+ * Revisions with server-function hashes, Settings files ship only as
+ * fragments, tags are created by name, and clones are `setup_clones` rows.
+ * A few showcase Setups cover Revision history with a removed path, `~/`
+ * files, fragments, Antigravity and a renamed Team Setup.
+ *
  * Usage:
  *   DATABASE_URL=postgres://... pnpm run seed:dev
  *   GITHUB_TOKEN=ghp_... DATABASE_URL=postgres://... pnpm run seed:dev
@@ -13,11 +19,18 @@
  */
 
 import 'dotenv/config';
+import { createHash } from 'node:crypto';
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { sql } from 'drizzle-orm';
 import * as schema from '../src/lib/server/db/schema.js';
-import { AGENTS as AGENT_DEFS } from '@coati/agents-registry';
+import {
+	AGENTS as AGENT_DEFS,
+	allowedAgentsFor,
+	getOfferedSelector,
+	getSettingsFile
+} from '@coati/agents-registry';
+import { formatSelector, hashSetupFile, type Selector } from '@coati/content-hash';
 import type { ComponentType, Category } from '@coati/validation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -42,17 +55,24 @@ export interface GeneratedFile {
 }
 
 export interface GeneratedSetup {
-	name: string;
 	slug: string;
+	/** Display name; the web falls back to the slug when null. */
+	display: string | null;
 	description: string;
 	readme: string | null;
 	category: Category | null;
 	license: string | null;
 	starsCount: number;
-	clonesCount: number;
+	/** The latest Revision's files. */
 	files: GeneratedFile[];
+	/** File sets of earlier Revisions, oldest first. Empty for a single-Revision Setup. */
+	earlierRevisions: GeneratedFile[][];
 	tagNames: string[];
 	agentSlugs: string[];
+	/** Team Setups only: the Team's slug. The creator is `userId`. */
+	teamSlug?: string;
+	/** Slugs the Setup was renamed from, which become redirects. */
+	oldSlugs?: string[];
 }
 
 export interface CommentGroup {
@@ -68,6 +88,9 @@ export interface SeedResult {
 	tagsInserted: number;
 	setupsInserted: number;
 	filesInserted: number;
+	revisionsInserted: number;
+	clonesInserted: number;
+	redirectsInserted: number;
 	starsInserted: number;
 	followsInserted: number;
 	commentsInserted: number;
@@ -2610,13 +2633,10 @@ function pick<T>(arr: T[], count: number, offset: number): T[] {
 	return result;
 }
 
-/** Generate all setup data for seeding. */
+/** Generate the fleet of ordinary, single-Revision personal Setups. */
 export function generateSetups(
-	seedUsers: Array<{ id: string; username: string }>,
-	seedTags: Array<{ id: string; name: string }>,
-	seedAgents: Array<{ id: string; slug: string }>
+	seedUsers: Array<{ id: string; username: string }>
 ): Array<GeneratedSetup & { userId: string }> {
-	void seedAgents;
 	const generated: Array<GeneratedSetup & { userId: string }> = [];
 	const templates = getTemplates();
 
@@ -2630,7 +2650,7 @@ export function generateSetups(
 		const numSetups = 3 + (ui % 3); // 3-5 setups per user
 
 		for (let si = 0; si < numSetups; si++) {
-			generated.push(buildSetup(user.id, user.username, idx, seedTags, templates));
+			generated.push(buildSetup(user.id, idx, templates));
 			idx++;
 		}
 	}
@@ -2638,11 +2658,12 @@ export function generateSetups(
 	return generated;
 }
 
+/** A Setup has at most 10 tags (spec §2). */
+const MAX_TAGS_PER_SETUP = 10;
+
 function buildSetup(
 	userId: string,
-	_username: string,
 	idx: number,
-	seedTags: Array<{ id: string; name: string }>,
 	templates: AgentTemplate[]
 ): GeneratedSetup & { userId: string } {
 	const template = templates[idx % templates.length];
@@ -2652,23 +2673,22 @@ function buildSetup(
 	const stackIdx = template.compatibleStackIndices[compatIdx];
 	const params = STACK_VARIATIONS[stackIdx];
 
-	// Build name and slug with stack variation
+	// Build display name and slug with stack variation
 	const frameworkLabel =
 		params.framework === 'next'
 			? 'nextjs'
 			: params.framework === 'react-native'
 				? 'react-native'
 				: params.framework;
-	const name = `${template.name} — ${frameworkLabel} ${params.language}`;
+	const display = `${template.name} — ${frameworkLabel} ${params.language}`;
 	const slug = `${template.baseSlug}-${frameworkLabel}-${idx}`;
 
 	// Vary engagement: some highly starred (trending), some brand new
 	const isTrending = idx % 7 === 0;
 	const isNew = idx % 11 === 0;
 	const starsCount = isTrending ? 50 + idx * 3 : isNew ? 0 : 2 + (idx % 20);
-	const clonesCount = isTrending ? 200 + idx * 5 : isNew ? 0 : idx % 30;
 
-	// Tags: template base tags + framework/language tags + extras
+	// Tags by name: template base tags + framework/language tags + extras
 	const tagSet = new Set(template.baseTags);
 	tagSet.add(params.language);
 	if (
@@ -2679,20 +2699,16 @@ function buildSetup(
 		tagSet.add(frameworkLabel);
 	}
 	// Add 0-2 extra tags based on idx
-	const extraCount = idx % 3;
-	const validTagNames = new Set(seedTags.map((t) => t.name));
-	const extraTags = pick(seedTags, extraCount, idx * 7).map((t) => t.name);
-	for (const t of extraTags) {
+	for (const t of pick(TAG_NAMES, idx % 3, idx * 7)) {
 		tagSet.add(t);
 	}
-	// Filter to only valid tags
-	const tagNames = [...tagSet].filter((t) => validTagNames.has(t));
 
 	// Edge case: one setup with maximum tags
 	const isMaxTags = idx === 3;
-	const finalTagNames = isMaxTags
-		? seedTags.slice(0, Math.min(seedTags.length, 10)).map((t) => t.name)
-		: tagNames;
+	const tagNames = (isMaxTags ? TAG_NAMES : [...tagSet])
+		.map(normalizeTagName)
+		.filter((t): t is string => t !== null);
+	const finalTagNames = [...new Set(tagNames)].slice(0, MAX_TAGS_PER_SETUP);
 
 	// Edge case: very long description (near 300 char max)
 	const longDesc = idx === 2;
@@ -2703,26 +2719,430 @@ function buildSetup(
 				300
 			);
 
-	// Generate files
-	const files = template.generateFiles(params);
+	// Generate files, then reshape them the way publish would store them
+	const files = toPublishedFiles(template.generateFiles(params));
 
 	// Generate readme
-	const readme = generateReadmeContent(params, name, description, idx);
+	const readme = generateReadmeContent(params, display, description, idx);
 
 	return {
 		userId,
-		name,
 		slug,
+		display,
 		description,
 		readme,
 		category: template.category,
 		license: null,
 		starsCount,
-		clonesCount,
 		files,
+		earlierRevisions: [],
 		tagNames: finalTagNames,
-		agentSlugs: template.agentSlugs
+		agentSlugs: agentSlugsOf(files)
 	};
+}
+
+/** Tag names are slug form, at most 30 characters (spec §2). Null if nothing is left. */
+export function normalizeTagName(name: string): string | null {
+	const slug = name
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.slice(0, 30)
+		.replace(/^-+|-+$/g, '');
+	return slug === '' ? null : slug;
+}
+
+function agentSlugsOf(files: GeneratedFile[]): string[] {
+	return [...new Set(files.map((f) => f.agent).filter((a): a is string => !!a))];
+}
+
+// ─── Publishable files ────────────────────────────────────────────────────────
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+const key = (k: string) => ({ kind: 'key', key: k }) as const;
+
+/**
+ * Splits a parsed Settings file into the fragments the registry offers: one
+ * per named entry, hook handler or permission rule, else one per top-level
+ * key. Anything the registry doesn't offer is dropped, as publish would.
+ */
+function fragmentsOf(hostPath: string, tree: Record<string, unknown>) {
+	const fragments: Array<{ path: string; value: unknown }> = [];
+	const offered = (selector: Selector, value: unknown) => {
+		const path = `${hostPath}#${formatSelector(selector)}`;
+		return getOfferedSelector(path) ? [{ path, value }] : [];
+	};
+
+	for (const [topKey, value] of Object.entries(tree)) {
+		const nested: Array<{ path: string; value: unknown }> = [];
+		if (topKey === 'hooks' && isRecord(value)) {
+			for (const [event, groups] of Object.entries(value)) {
+				if (!Array.isArray(groups)) continue;
+				for (const group of groups) {
+					if (!isRecord(group) || !Array.isArray(group.hooks)) continue;
+					const matcher = typeof group.matcher === 'string' ? group.matcher : '';
+					for (const handler of group.hooks) {
+						if (!isRecord(handler) || typeof handler.command !== 'string') continue;
+						nested.push(
+							...offered(
+								[
+									key('hooks'),
+									key(event),
+									{ kind: 'match', field: 'matcher', value: matcher },
+									key('hooks'),
+									{ kind: 'match', field: 'command', value: handler.command }
+								],
+								handler
+							)
+						);
+					}
+				}
+			}
+		} else if (isRecord(value)) {
+			for (const [child, childValue] of Object.entries(value)) {
+				if (Array.isArray(childValue)) {
+					for (const item of childValue) {
+						if (typeof item !== 'string') continue;
+						nested.push(
+							...offered([key(topKey), key(child), { kind: 'value', value: item }], item)
+						);
+					}
+				} else {
+					nested.push(...offered([key(topKey), key(child)], childValue));
+				}
+			}
+		}
+		fragments.push(...(nested.length > 0 ? nested : offered([key(topKey)], value)));
+	}
+	return fragments;
+}
+
+/** An Agent the path may be classified as: the preferred one if allowed, else the only one. */
+function classifyAgent(path: string, preferred: string | undefined): string | undefined {
+	const allowed: string[] = allowedAgentsFor(path);
+	if (preferred && allowed.includes(preferred)) return preferred;
+	return allowed.length === 1 ? allowed[0] : undefined;
+}
+
+/**
+ * Reshapes generated files the way publish stores them: a Settings file never
+ * ships whole, so it becomes its offered fragments (TOML hosts are dropped,
+ * the seed has no TOML parser), and each Agent is one the path allows.
+ */
+export function toPublishedFiles(files: GeneratedFile[]): GeneratedFile[] {
+	const out = new Map<string, GeneratedFile>();
+	for (const file of files) {
+		const host = getSettingsFile(file.path);
+		if (!host) {
+			out.set(file.path, { ...file, agent: classifyAgent(file.path, file.agent) });
+			continue;
+		}
+		if (host.format === 'toml') continue;
+		let tree: unknown;
+		try {
+			tree = JSON.parse(file.content);
+		} catch {
+			continue;
+		}
+		if (!isRecord(tree)) continue;
+		for (const fragment of fragmentsOf(file.path, tree)) {
+			out.set(fragment.path, {
+				path: fragment.path,
+				componentType: getOfferedSelector(fragment.path)!.componentType,
+				content: JSON.stringify(fragment.value, null, 2),
+				description: file.description,
+				agent: classifyAgent(fragment.path, file.agent)
+			});
+		}
+	}
+	return [...out.values()];
+}
+
+/** A Settings fragment as the CLI uploads it: the JSON value, pretty-printed. */
+function fragment(
+	path: string,
+	value: unknown,
+	agent: string,
+	description?: string
+): GeneratedFile {
+	const offered = getOfferedSelector(path);
+	if (!offered) throw new Error(`Seed fragment isn't offered by the registry: ${path}`);
+	return {
+		path,
+		componentType: offered.componentType,
+		content: JSON.stringify(value, null, 2),
+		description,
+		agent
+	};
+}
+
+function wholeFile(
+	path: string,
+	componentType: ComponentType,
+	content: string,
+	agent: string | undefined,
+	description?: string
+): GeneratedFile {
+	return { path, componentType, content, description, agent: classifyAgent(path, agent) };
+}
+
+// ─── Showcase Setups ──────────────────────────────────────────────────────────
+
+/**
+ * Hand-written Setups that cover the cases the fleet doesn't (spec §10):
+ * three Revisions with a removed path, a mixed project + `~/` Setup, Settings
+ * fragments (MCP, a Claude hook handler, a Codex TOML entry), an Antigravity
+ * Setup, and a renamed Team Setup with a redirect.
+ */
+export function generateShowcaseSetups(
+	ownerId: string,
+	team: { slug: string; ownerId: string } | undefined
+): Array<GeneratedSetup & { userId: string }> {
+	const claudeMdV1 = '# Revision history demo\n\n- Run `pnpm test` before every commit.\n';
+	const claudeMdV2 =
+		'# Revision history demo\n\n- Run `pnpm test` before every commit.\n- Keep PRs under 400 lines.\n';
+	const reviewV1 = '# Review\n\nReview the staged diff for bugs.\n';
+	const reviewV2 = '# Review\n\nReview the staged diff for bugs, then for missing tests.\n';
+	const oldHelper = '---\nname: old-helper\n---\n\nAn agent that has since been retired.\n';
+	const releaseSkill = '---\nname: release\n---\n\nCut a release: bump, changelog, tag.\n';
+
+	const revisionsDemo: GeneratedSetup & { userId: string } = {
+		userId: ownerId,
+		slug: 'revision-history-demo',
+		display: 'Revision history demo',
+		description: 'Three Revisions: an edited CLAUDE.md, a retired agent and a new skill.',
+		readme:
+			'# Revision history demo\n\nPublished three times, with one file removed along the way.\n',
+		category: 'general',
+		license: 'MIT',
+		starsCount: 12,
+		earlierRevisions: [
+			[
+				wholeFile('CLAUDE.md', 'instruction', claudeMdV1, 'claude-code'),
+				wholeFile('.claude/commands/review.md', 'command', reviewV1, 'claude-code'),
+				wholeFile('.claude/agents/old-helper.md', 'agent_def', oldHelper, 'claude-code')
+			],
+			[
+				wholeFile('CLAUDE.md', 'instruction', claudeMdV2, 'claude-code'),
+				wholeFile('.claude/commands/review.md', 'command', reviewV1, 'claude-code')
+			]
+		],
+		files: [
+			wholeFile('CLAUDE.md', 'instruction', claudeMdV2, 'claude-code'),
+			wholeFile('.claude/commands/review.md', 'command', reviewV2, 'claude-code'),
+			wholeFile('.claude/skills/release/SKILL.md', 'skill', releaseSkill, 'claude-code')
+		],
+		tagNames: ['claude-code', 'code-review'],
+		agentSlugs: []
+	};
+
+	const mixed: GeneratedSetup & { userId: string } = {
+		userId: ownerId,
+		slug: 'home-and-project',
+		display: 'Home and project',
+		description: 'Project instructions plus personal ~/ skills and a global Codex MCP server.',
+		readme: null,
+		category: 'general',
+		license: null,
+		starsCount: 4,
+		earlierRevisions: [],
+		files: [
+			wholeFile('CLAUDE.md', 'instruction', '# Project rules\n\nUse pnpm.\n', 'claude-code'),
+			wholeFile(
+				'~/.claude/CLAUDE.md',
+				'instruction',
+				'# Personal rules\n\nExplain trade-offs before large edits.\n',
+				'claude-code'
+			),
+			wholeFile(
+				'~/.claude/skills/review/SKILL.md',
+				'skill',
+				'---\nname: review\n---\n\nReview a diff for bugs and missing tests.\n',
+				'claude-code'
+			),
+			fragment(
+				'~/.codex/config.toml#mcp_servers.context7',
+				{ command: 'npx', args: ['-y', '@upstash/context7-mcp'] },
+				'codex',
+				'Docs lookup for Codex'
+			)
+		],
+		tagNames: ['claude-code', 'codex', 'mcp'],
+		agentSlugs: []
+	};
+
+	const lintHook = '#!/bin/bash\nset -e\npnpm exec prettier --write "$1"\n';
+	const fragments: GeneratedSetup & { userId: string } = {
+		userId: ownerId,
+		slug: 'settings-fragments',
+		display: 'Settings fragments',
+		description: 'MCP servers, a format-on-edit hook and a permission rule, shipped as fragments.',
+		readme: null,
+		category: 'web-dev',
+		license: 'MIT',
+		starsCount: 20,
+		earlierRevisions: [],
+		files: [
+			fragment(
+				'.mcp.json#mcpServers.github',
+				{
+					command: 'npx',
+					args: ['-y', '@modelcontextprotocol/server-github'],
+					env: { GITHUB_TOKEN: '${GITHUB_TOKEN}' }
+				},
+				'claude-code',
+				'GitHub MCP server'
+			),
+			fragment(
+				'.claude/settings.json#hooks.PostToolUse[matcher=Edit].hooks[command="${CLAUDE_PROJECT_DIR}/.claude/hooks/format.sh"]',
+				{
+					type: 'command',
+					command: '${CLAUDE_PROJECT_DIR}/.claude/hooks/format.sh',
+					timeout: 30
+				},
+				'claude-code',
+				'Format files after every edit'
+			),
+			wholeFile('.claude/hooks/format.sh', 'hook', lintHook, 'claude-code'),
+			fragment(
+				'.claude/settings.json#permissions.allow[="Bash(pnpm test)"]',
+				'Bash(pnpm test)',
+				'claude-code'
+			),
+			fragment(
+				'.codex/config.toml#mcp_servers.github',
+				{
+					command: 'npx',
+					args: ['-y', '@modelcontextprotocol/server-github'],
+					env_vars: ['GITHUB_TOKEN']
+				},
+				'codex',
+				'GitHub MCP server for Codex'
+			),
+			wholeFile(
+				'AGENTS.md',
+				'instruction',
+				'# Agents\n\nRun `pnpm test` before you finish.\n',
+				'codex'
+			)
+		],
+		tagNames: ['mcp', 'claude-code', 'codex'],
+		agentSlugs: []
+	};
+
+	const antigravity: GeneratedSetup & { userId: string } = {
+		userId: ownerId,
+		slug: 'antigravity-workflow',
+		display: 'Antigravity workflow',
+		description: 'Rules, a skill and an MCP server for Antigravity.',
+		readme: null,
+		category: 'general',
+		license: null,
+		starsCount: 7,
+		earlierRevisions: [],
+		files: [
+			wholeFile('GEMINI.md', 'instruction', '# Gemini\n\nPrefer small commits.\n', 'antigravity'),
+			wholeFile(
+				'.agents/rules/testing.md',
+				'instruction',
+				'# Testing\n\nWrite the failing test first.\n',
+				'antigravity'
+			),
+			wholeFile(
+				'.agents/skills/review/SKILL.md',
+				'skill',
+				'---\nname: review\n---\n\nReview a diff.\n',
+				'antigravity'
+			),
+			fragment(
+				'.agents/mcp_config.json#mcpServers.filesystem',
+				{ command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem', '.'] },
+				'antigravity',
+				'Filesystem MCP server'
+			)
+		],
+		tagNames: ['antigravity', 'mcp'],
+		agentSlugs: []
+	};
+
+	const showcase = [revisionsDemo, mixed, fragments, antigravity];
+
+	if (team) {
+		showcase.push({
+			userId: team.ownerId,
+			teamSlug: team.slug,
+			slug: 'team-playbook',
+			display: 'Team playbook',
+			description: 'Shared conventions for the whole Team. Renamed from team-handbook.',
+			readme: null,
+			category: 'general',
+			license: null,
+			starsCount: 0,
+			earlierRevisions: [],
+			files: [
+				wholeFile(
+					'AGENTS.md',
+					'instruction',
+					'# Team conventions\n\nSmall PRs, green CI.\n',
+					'codex'
+				),
+				wholeFile(
+					'CLAUDE.md',
+					'instruction',
+					'# Team conventions\n\nSee AGENTS.md.\n',
+					'claude-code'
+				)
+			],
+			tagNames: ['multi-agent'],
+			agentSlugs: [],
+			oldSlugs: ['team-handbook']
+		});
+	}
+
+	return showcase.map((s) => ({ ...s, agentSlugs: agentSlugsOf(s.files) }));
+}
+
+// ─── Clones ───────────────────────────────────────────────────────────────────
+
+export interface GeneratedClone {
+	setupId: string;
+	userId: string | null;
+	anonKey: string | null;
+}
+
+/**
+ * Clone rows instead of a made-up count: some signed-in cloners (never the
+ * Setup's creator) and some anonymous keys, which only public Setups get.
+ */
+export function generateClones(
+	seedSetups: Array<{ id: string; userId: string; visibility: 'public' | 'private' }>,
+	seedUsers: Array<{ id: string }>
+): GeneratedClone[] {
+	const clones: GeneratedClone[] = [];
+	for (let si = 0; si < seedSetups.length; si++) {
+		const setup = seedSetups[si];
+		const userClones = si % 6;
+		const cloners = seedUsers.filter((u) => u.id !== setup.userId);
+		for (let i = 0; i < Math.min(userClones, cloners.length); i++) {
+			clones.push({
+				setupId: setup.id,
+				userId: cloners[(si + i) % cloners.length].id,
+				anonKey: null
+			});
+		}
+		if (setup.visibility !== 'public') continue;
+		const anonClones = (si * 3) % 5;
+		for (let i = 0; i < anonClones; i++) {
+			clones.push({
+				setupId: setup.id,
+				userId: null,
+				anonKey: createHash('sha256').update(`seed-anon:${setup.id}:${i}`).digest('hex')
+			});
+		}
+	}
+	return clones;
 }
 
 // ─── Social Data Constants ────────────────────────────────────────────────────
@@ -3024,99 +3444,13 @@ export async function seed(
 	const insertedUsers = await db.select().from(schema.users);
 	console.log(`  ✓ Inserted ${insertedUsers.length} users`);
 
-	// 5. Insert tags
-	console.log('\n→ Inserting tags...');
-	const tagRows = generateTagNames().map((name) => ({ name }));
-	await db.insert(schema.tags).values(tagRows);
-	const insertedTags = await db.select().from(schema.tags);
-	console.log(`  ✓ Inserted ${insertedTags.length} tags`);
-
-	// 6. Generate and insert setups
-	console.log('\n→ Generating setups...');
-	const setupDataList = generateSetups(insertedUsers, insertedTags, insertedAgents);
-
-	// Build tag lookup
-	const tagByName = new Map(insertedTags.map((t) => [t.name, t]));
-	// Build agent lookup
-	const agentBySlug = new Map(insertedAgents.map((a) => [a.slug, a]));
-
-	let totalFiles = 0;
-
-	for (const setupData of setupDataList) {
-		// Insert setup
-		const [inserted] = await db
-			.insert(schema.setups)
-			.values({
-				userId: setupData.userId,
-				name: setupData.name,
-				slug: setupData.slug,
-				description: setupData.description,
-				readme: setupData.readme,
-				category: setupData.category ?? undefined,
-				license: setupData.license ?? undefined,
-				starsCount: setupData.starsCount,
-				clonesCount: setupData.clonesCount
-			})
-			.returning({ id: schema.setups.id });
-
-		const setupId = inserted.id;
-
-		// Insert files
-		if (setupData.files.length > 0) {
-			const fileRows = setupData.files.map((f) => ({
-				setupId,
-				path: f.path,
-				componentType: f.componentType,
-				content: f.content,
-				description: f.description ?? null,
-				agent: f.agent ?? null
-			}));
-			await db.insert(schema.setupFiles).values(fileRows);
-			totalFiles += fileRows.length;
-		}
-
-		// Insert setup-tag relations
-		const tagRelations = setupData.tagNames
-			.map((name) => tagByName.get(name))
-			.filter((t) => t !== undefined)
-			.map((t) => ({ setupId, tagId: t!.id }));
-		if (tagRelations.length > 0) {
-			await db.insert(schema.setupTags).values(tagRelations);
-		}
-
-		// Insert setup-agent relations
-		const agentRelations = setupData.agentSlugs
-			.map((slug) => agentBySlug.get(slug))
-			.filter((a) => a !== undefined)
-			.map((a) => ({ setupId, agentId: a!.id }));
-		if (agentRelations.length > 0) {
-			await db.insert(schema.setupAgents).values(agentRelations);
-		}
-	}
-
-	// 7. Update user setups_count
-	for (const user of insertedUsers) {
-		const userSetups = setupDataList.filter((s) => s.userId === user.id);
-		if (userSetups.length > 0) {
-			await db
-				.update(schema.users)
-				.set({ setupsCount: userSetups.length })
-				.where(sql`id = ${user.id}`);
-		}
-	}
-
-	const insertedSetups = await db.select().from(schema.setups);
-	console.log(`  ✓ Inserted ${insertedSetups.length} setups with ${totalFiles} files`);
-
-	// 7.5. Teams + team memberships
-	console.log('\n→ Inserting teams + team memberships...');
-
-	// Resolve the dev owner's user ID if SEED_OWNER_LOGIN is set
 	const ownerUserRow = ownerLogin
 		? insertedUsers.find((u) => u.username.toLowerCase() === ownerLogin.toLowerCase())
 		: undefined;
 	const ownerUserId = ownerUserRow?.id;
 
+	// 5. Teams + team memberships (before Setups, so Team Setups have a Team)
+	console.log('\n→ Inserting teams + team memberships...');
 	const teamDataRows = generateTeams(insertedUsers, ownerUserId);
 	const insertedTeamsRaw = teamDataRows.length
 		? await db
@@ -3146,7 +3480,6 @@ export async function seed(
 				role: m.role
 			}))
 		);
-		// Update membersCount on each team
 		const membersCountByTeam = new Map<string, number>();
 		for (const m of teamMembershipRows) {
 			membersCountByTeam.set(m.teamId, (membersCountByTeam.get(m.teamId) ?? 0) + 1);
@@ -3162,18 +3495,156 @@ export async function seed(
 		`  ✓ Inserted ${insertedTeamsRaw.length} teams with ${teamMembershipRows.length} memberships`
 	);
 
-	// 8. Social graph: stars, follows, comments, activities
-	console.log('\n→ Inserting social graph...');
+	// 6. Setups: each with its Revisions, latest files, tags by name and Agents
+	console.log('\n→ Generating setups...');
+	const showcaseOwnerId = ownerUserId ?? insertedUsers[0].id;
+	const showcaseTeam = insertedTeamsRaw[0];
+	const setupDataList = [
+		...generateShowcaseSetups(
+			showcaseOwnerId,
+			showcaseTeam ? { slug: showcaseTeam.slug, ownerId: showcaseTeam.ownerId } : undefined
+		),
+		...generateSetups(insertedUsers)
+	];
+
+	const teamBySlug = new Map(insertedTeamsRaw.map((t) => [t.slug, t]));
+	const agentBySlug = new Map(insertedAgents.map((a) => [a.slug, a]));
+	const tagIdByName = new Map<string, string>();
 	const baseDateMs = Date.now();
+
+	let totalFiles = 0;
+	let totalRevisions = 0;
+	let totalRedirects = 0;
+
+	for (let si = 0; si < setupDataList.length; si++) {
+		const setupData = setupDataList[si];
+		const team = setupData.teamSlug ? teamBySlug.get(setupData.teamSlug) : undefined;
+
+		const [inserted] = await db
+			.insert(schema.setups)
+			.values({
+				userId: setupData.userId,
+				slug: setupData.slug,
+				display: setupData.display,
+				description: setupData.description,
+				readme: setupData.readme,
+				category: setupData.category ?? undefined,
+				license: setupData.license ?? undefined,
+				starsCount: setupData.starsCount,
+				// Team Setups start private (Decided while writing #16).
+				...(team ? { teamId: team.id, visibility: 'private' as const } : {})
+			})
+			.returning({ id: schema.setups.id });
+		const setupId = inserted.id;
+
+		// Revisions, oldest first; each stores its full path/hash set.
+		const revisions = [...setupData.earlierRevisions, setupData.files];
+		const publishedAt = seedTimestamp(si, baseDateMs, 60);
+		for (let ri = 0; ri < revisions.length; ri++) {
+			const [revision] = await db
+				.insert(schema.setupRevisions)
+				.values({
+					setupId,
+					number: ri + 1,
+					publishedBy: setupData.userId,
+					createdAt: new Date(publishedAt.getTime() + ri * 24 * 60 * 60 * 1000)
+				})
+				.returning({ id: schema.setupRevisions.id });
+			const revisionFiles = await Promise.all(
+				revisions[ri].map(async (f) => ({
+					revisionId: revision.id,
+					setupId,
+					path: f.path,
+					hash: await hashSetupFile(f.path, f.content)
+				}))
+			);
+			if (revisionFiles.length > 0) {
+				await db.insert(schema.setupRevisionFiles).values(revisionFiles);
+			}
+			totalRevisions++;
+		}
+
+		// Latest contents, hashed by the server function.
+		if (setupData.files.length > 0) {
+			const fileRows = await Promise.all(
+				setupData.files.map(async (f) => ({
+					setupId,
+					path: f.path,
+					componentType: f.componentType,
+					content: f.content,
+					hash: await hashSetupFile(f.path, f.content),
+					description: f.description ?? null,
+					agent: f.agent ?? null
+				}))
+			);
+			await db.insert(schema.setupFiles).values(fileRows);
+			totalFiles += fileRows.length;
+		}
+
+		// Tags are created on first use.
+		for (const name of setupData.tagNames) {
+			let tagId = tagIdByName.get(name);
+			if (!tagId) {
+				const [tag] = await db
+					.insert(schema.tags)
+					.values({ name })
+					.returning({ id: schema.tags.id });
+				tagId = tag.id;
+				tagIdByName.set(name, tagId);
+			}
+			await db.insert(schema.setupTags).values({ setupId, tagId });
+		}
+
+		// setup_agents is derived from the files' Agents.
+		const agentRelations = setupData.agentSlugs
+			.map((slug) => agentBySlug.get(slug))
+			.filter((a) => a !== undefined)
+			.map((a) => ({ setupId, agentId: a!.id }));
+		if (agentRelations.length > 0) {
+			await db.insert(schema.setupAgents).values(agentRelations);
+		}
+
+		// Old slugs redirect by the Setup path owner: the Team, or the user.
+		for (const oldSlug of setupData.oldSlugs ?? []) {
+			await db.insert(schema.setupSlugRedirects).values({
+				...(team ? { teamId: team.id } : { userId: setupData.userId }),
+				oldSlug,
+				setupId
+			});
+			totalRedirects++;
+		}
+	}
+
+	// 7. Update user setups_count (the creator, Team Setups included)
+	const setupsCountByUser = new Map<string, number>();
+	for (const s of setupDataList) {
+		setupsCountByUser.set(s.userId, (setupsCountByUser.get(s.userId) ?? 0) + 1);
+	}
+	for (const [userId, count] of setupsCountByUser) {
+		await db
+			.update(schema.users)
+			.set({ setupsCount: count })
+			.where(sql`id = ${userId}`);
+	}
+
+	const insertedSetups = await db.select().from(schema.setups);
+	console.log(
+		`  ✓ Inserted ${insertedSetups.length} setups with ${totalRevisions} revisions, ${totalFiles} files and ${tagIdByName.size} tags`
+	);
+
+	// 8. Social graph: stars, follows, comments, clones, activities.
+	// Stars and comments only land on public Setups.
+	console.log('\n→ Inserting social graph...');
+	const publicSetups = insertedSetups.filter((s) => s.visibility === 'public');
 	const activityRows: Array<typeof schema.activities.$inferInsert> = [];
 	let activityIdx = 0;
 
 	// 8a. Stars
-	const starDataRows = generateStars(insertedSetups, insertedUsers);
+	const starDataRows = generateStars(publicSetups, insertedUsers);
 	if (starDataRows.length > 0) {
 		await db.insert(schema.stars).values(starDataRows);
 	}
-	// Update starsCount to match actual rows (cap may differ from generated value)
+	// starsCount matches the actual rows (the cap may differ from the generated value)
 	const starCountBySetup = new Map<string, number>();
 	for (const row of starDataRows) {
 		starCountBySetup.set(row.setupId, (starCountBySetup.get(row.setupId) ?? 0) + 1);
@@ -3184,7 +3655,6 @@ export async function seed(
 			.set({ starsCount: starCountBySetup.get(setup.id) ?? 0 })
 			.where(sql`id = ${setup.id}`);
 	}
-	// Collect star activities
 	for (let i = 0; i < starDataRows.length; i++) {
 		activityRows.push({
 			userId: starDataRows[i].userId,
@@ -3221,7 +3691,7 @@ export async function seed(
 	console.log(`  ✓ Inserted ${followDataRows.length} follows`);
 
 	// 8c. Comments (two-pass: top-level first, then replies with real parentIds)
-	const commentGroups = generateCommentGroups(insertedSetups, insertedUsers);
+	const commentGroups = generateCommentGroups(publicSetups, insertedUsers);
 	let totalComments = 0;
 	const commentCountBySetup = new Map<string, number>();
 
@@ -3269,7 +3739,39 @@ export async function seed(
 	}
 	console.log(`  ✓ Inserted ${totalComments} comments`);
 
-	// 8d. created_setup activities (one per setup by its owner)
+	// 8d. Clones: one row per cloner; clonesCount is the row count
+	const cloneRows = generateClones(insertedSetups, insertedUsers);
+	const cloneCountBySetup = new Map<string, number>();
+	for (let i = 0; i < cloneRows.length; i++) {
+		const clone = cloneRows[i];
+		const clonedAt = seedTimestamp(activityIdx++, baseDateMs, 14);
+		await db.insert(schema.setupClones).values({
+			setupId: clone.setupId,
+			userId: clone.userId,
+			anonKey: clone.anonKey,
+			firstClonedAt: clonedAt,
+			lastClonedAt: clonedAt
+		});
+		cloneCountBySetup.set(clone.setupId, (cloneCountBySetup.get(clone.setupId) ?? 0) + 1);
+		// Only signed-in clones write Activity (spec §5).
+		if (clone.userId) {
+			activityRows.push({
+				userId: clone.userId,
+				setupId: clone.setupId,
+				actionType: 'cloned_setup',
+				createdAt: clonedAt
+			});
+		}
+	}
+	for (const setup of insertedSetups) {
+		await db
+			.update(schema.setups)
+			.set({ clonesCount: cloneCountBySetup.get(setup.id) ?? 0 })
+			.where(sql`id = ${setup.id}`);
+	}
+	console.log(`  ✓ Inserted ${cloneRows.length} clones`);
+
+	// 8e. created_setup activities (one per Setup by its creator)
 	for (let i = 0; i < insertedSetups.length; i++) {
 		const setup = insertedSetups[i];
 		activityRows.push({
@@ -3278,18 +3780,6 @@ export async function seed(
 			actionType: 'created_setup',
 			// Spread setup creation over past 60 days
 			createdAt: seedTimestamp(i, baseDateMs, 60)
-		});
-	}
-
-	// 8e. cloned_setup activities — some users cloning some setups
-	for (let i = 0; i < insertedSetups.length; i++) {
-		if (i % 4 === 0) continue; // skip every 4th setup (no clones)
-		const clonerIdx = (i + insertedUsers.length - 1) % insertedUsers.length;
-		activityRows.push({
-			userId: insertedUsers[clonerIdx].id,
-			setupId: insertedSetups[i].id,
-			actionType: 'cloned_setup',
-			createdAt: seedTimestamp(activityIdx++, baseDateMs, 14)
 		});
 	}
 
@@ -3322,9 +3812,12 @@ export async function seed(
 	const result: SeedResult = {
 		usersInserted: insertedUsers.length,
 		agentsInserted: insertedAgents.length,
-		tagsInserted: insertedTags.length,
+		tagsInserted: tagIdByName.size,
 		setupsInserted: insertedSetups.length,
 		filesInserted: totalFiles,
+		revisionsInserted: totalRevisions,
+		clonesInserted: cloneRows.length,
+		redirectsInserted: totalRedirects,
 		starsInserted: starDataRows.length,
 		followsInserted: followDataRows.length,
 		commentsInserted: totalComments,
@@ -3338,7 +3831,10 @@ export async function seed(
 	console.log(`   Agents:           ${result.agentsInserted}`);
 	console.log(`   Tags:             ${result.tagsInserted}`);
 	console.log(`   Setups:           ${result.setupsInserted}`);
+	console.log(`   Revisions:        ${result.revisionsInserted}`);
 	console.log(`   Files:            ${result.filesInserted}`);
+	console.log(`   Clones:           ${result.clonesInserted}`);
+	console.log(`   Redirects:        ${result.redirectsInserted}`);
 	console.log(`   Stars:            ${result.starsInserted}`);
 	console.log(`   Follows:          ${result.followsInserted}`);
 	console.log(`   Comments:         ${result.commentsInserted}`);

@@ -4,6 +4,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
+	import DeleteTeamSetupsWarning from '$lib/components/DeleteTeamSetupsWarning.svelte';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import {
 		AlertDialog,
@@ -23,11 +24,11 @@
 	let deleting = $state(false);
 
 	let deleteDialogOpen = $state(false);
-	let deleteTarget = $state<{ slug: string; name: string } | null>(null);
+	let deleteTarget = $state<{ slug: string; name: string; setupsCount: number } | null>(null);
 	let deleteConfirmInput = $state('');
 
-	function openDeleteDialog(slug: string, name: string) {
-		deleteTarget = { slug, name };
+	function openDeleteDialog(slug: string, name: string, setupsCount: number) {
+		deleteTarget = { slug, name, setupsCount };
 		deleteConfirmInput = '';
 		deleteDialogOpen = true;
 	}
@@ -161,7 +162,7 @@
 							<Button
 								variant="destructive"
 								size="sm"
-								onclick={() => openDeleteDialog(team.slug, team.name)}
+								onclick={() => openDeleteDialog(team.slug, team.name, team.setupsCount)}
 							>
 								Delete
 							</Button>
@@ -190,6 +191,8 @@
 				setups, members, and invites.
 			</AlertDialogDescription>
 		</AlertDialogHeader>
+
+		<DeleteTeamSetupsWarning setupsCount={deleteTarget?.setupsCount ?? 0} />
 
 		<div class="my-2 space-y-1.5">
 			<Label for="delete-confirm-input">

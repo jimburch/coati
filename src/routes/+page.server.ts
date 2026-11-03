@@ -18,7 +18,6 @@ import type { FeedItem } from '$lib/server/queries/activities';
 
 type DashboardSetup = {
 	id: string;
-	name: string;
 	slug: string;
 	description: string;
 	display?: string | null;
@@ -68,7 +67,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 		const toCard = (s: {
 			id: string;
-			name: string;
 			slug: string;
 			description: string;
 			display?: string | null;
@@ -79,7 +77,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			ownerAvatarUrl: string | null;
 		}): DashboardSetup => ({
 			id: s.id,
-			name: s.name,
 			slug: s.slug,
 			description: s.description,
 			display: s.display,
@@ -98,7 +95,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			trendingSetups: trending.map(
 				(s): DashboardSetup => ({
 					id: s.id,
-					name: s.name,
 					slug: s.slug,
 					description: s.description,
 					display: s.display,
@@ -113,7 +109,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			forYouSetups: forYou.map(
 				(s): DashboardSetup => ({
 					id: s.id,
-					name: s.name,
 					slug: s.slug,
 					description: s.description,
 					display: s.display,
@@ -128,7 +123,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			followingSetups: following.map(
 				(s): DashboardSetup => ({
 					id: s.id,
-					name: s.name,
 					slug: s.slug,
 					description: s.description,
 					display: s.display,
@@ -163,7 +157,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		trendingSetups: results.items.slice(0, 6).map(
 			(s): DashboardSetup => ({
 				id: s.id,
-				name: s.name,
 				slug: s.slug,
 				description: s.description,
 				display: s.display,
@@ -180,7 +173,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		userStats: null,
 		userSetups: [] as {
 			id: string;
-			name: string;
 			slug: string;
 			description: string;
 			display: string | null | undefined;

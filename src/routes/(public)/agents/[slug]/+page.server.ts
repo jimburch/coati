@@ -15,7 +15,6 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	const setups = rawSetups.map((s) => ({
 		id: s.id,
-		name: s.name,
 		slug: s.slug,
 		description: s.description,
 		display: s.display,

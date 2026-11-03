@@ -3,7 +3,6 @@ import {
 	manifestCategorySchema,
 	manifestFileComponentTypeSchema,
 	manifestFileEntrySchema,
-	manifestFilePlacementSchema,
 	manifestSchema,
 	zodPathToField
 } from './validation.js';
@@ -29,15 +28,8 @@ describe('zodPathToField', () => {
 	});
 });
 
-describe('enum schemas (placement, componentType, category)', () => {
+describe('enum schemas (componentType, category)', () => {
 	it('accept their full value set and reject unknowns', () => {
-		for (const v of ['global', 'project']) {
-			expect(manifestFilePlacementSchema.safeParse(v).success).toBe(true);
-		}
-		for (const v of ['relative', 'nowhere']) {
-			expect(manifestFilePlacementSchema.safeParse(v).success).toBe(false);
-		}
-
 		for (const v of [
 			'instruction',
 			'command',
@@ -112,7 +104,6 @@ describe('manifestSchema', () => {
 				...VALID_MANIFEST,
 				category: 'devops',
 				license: 'MIT',
-				minToolVersion: '1.0',
 				postInstall: ['chmod +x script.sh'],
 				prerequisites: ['node >= 18'],
 				agents: ['claude-code'],
@@ -234,8 +225,5 @@ describe('manifestSchema', () => {
 		expect(manifestSchema.safeParse({ ...VALID_MANIFEST, license: 'L'.repeat(51) }).success).toBe(
 			false
 		);
-		expect(
-			manifestSchema.safeParse({ ...VALID_MANIFEST, minToolVersion: '1'.repeat(21) }).success
-		).toBe(false);
 	});
 });

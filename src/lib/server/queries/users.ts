@@ -153,7 +153,6 @@ export async function getUserSetups(userId: string, limit: number) {
 	return db
 		.select({
 			id: setups.id,
-			name: setups.name,
 			slug: setups.slug,
 			description: setups.description,
 			display: setups.display,

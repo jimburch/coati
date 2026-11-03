@@ -15,13 +15,11 @@ export interface PublishFileContent {
 }
 
 export interface PublishPayload {
-	name: string;
 	slug: string;
 	description: string;
 	display?: string;
 	category?: string;
 	license?: string;
-	minToolVersion?: string;
 	visibility?: 'public' | 'private';
 	teamId?: string;
 	files: PublishFileContent[];
@@ -61,13 +59,11 @@ export function buildPublishPayload(
 	const visibility = teamId ? 'private' : manifest.visibility;
 
 	return {
-		name: manifest.name,
 		slug: manifest.name,
 		description: manifest.description,
 		...(manifest.display ? { display: manifest.display } : {}),
 		...(manifest.category ? { category: manifest.category } : {}),
 		...(manifest.license ? { license: manifest.license } : {}),
-		...(manifest.minToolVersion ? { minToolVersion: manifest.minToolVersion } : {}),
 		...(visibility ? { visibility } : {}),
 		...(teamId ? { teamId } : {}),
 		files: fileContents

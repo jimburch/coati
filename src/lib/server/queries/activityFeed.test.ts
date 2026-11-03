@@ -44,7 +44,6 @@ vi.mock('$lib/server/db/schema', () => ({
 	setups: {
 		id: 'setups.id',
 		userId: 'setups.userId',
-		name: 'setups.name',
 		slug: 'setups.slug',
 		visibility: 'setups.visibility',
 		teamId: 'setups.teamId',

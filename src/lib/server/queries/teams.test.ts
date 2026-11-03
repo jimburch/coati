@@ -73,7 +73,6 @@ vi.mock('$lib/server/db/schema', () => ({
 	},
 	setups: {
 		id: 'setups.id',
-		name: 'setups.name',
 		slug: 'setups.slug',
 		description: 'setups.description',
 		display: 'setups.display',
@@ -192,7 +191,6 @@ import {
 	getTeamBySlugForAuth,
 	getTeamMemberRole,
 	updateTeam,
-	deleteTeam,
 	getUserTeams,
 	getTeamMembers,
 	removeTeamMember,
@@ -335,25 +333,6 @@ describe('updateTeam', () => {
 		state.rows = [{ id: 'team-1', name: 'New Name' }];
 		await updateTeam('team-1', { name: 'New Name' });
 		expect(mockUpdateSet).toHaveBeenCalledWith(expect.objectContaining({ name: 'New Name' }));
-	});
-});
-
-describe('deleteTeam', () => {
-	beforeEach(() => {
-		state.txDeleteRows = 0;
-		vi.clearAllMocks();
-	});
-
-	it('returns 0 when team not found', async () => {
-		state.txDeleteRows = 0;
-		const result = await deleteTeam('nonexistent');
-		expect(result).toBe(0);
-	});
-
-	it('returns 1 when team deleted', async () => {
-		state.txDeleteRows = 1;
-		const result = await deleteTeam('team-1');
-		expect(result).toBe(1);
 	});
 });
 
@@ -550,7 +529,6 @@ describe('getTeamSetupBySlug', () => {
 				readme: null,
 				category: null,
 				license: null,
-				minToolVersion: null,
 				postInstall: null,
 				prerequisites: null,
 				visibility: 'private',

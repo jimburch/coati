@@ -97,32 +97,32 @@ describe('SetupCard variant logic', () => {
 	});
 });
 
-// Title resolution: display ?? name
-function resolveTitle(setup: { name: string; display?: string | null }): string {
-	return setup.display ?? setup.name;
+// Title resolution: display ?? slug
+function resolveTitle(setup: { slug: string; display?: string | null }): string {
+	return setup.display ?? setup.slug;
 }
 
-describe('resolveTitle (display ?? name)', () => {
+describe('resolveTitle (display ?? slug)', () => {
 	it('returns display when display is a non-empty string', () => {
-		expect(resolveTitle({ name: 'my-slug', display: 'My Setup Name' })).toBe('My Setup Name');
+		expect(resolveTitle({ slug: 'my-slug', display: 'My Setup Name' })).toBe('My Setup Name');
 	});
 
-	it('falls back to name when display is null', () => {
-		expect(resolveTitle({ name: 'my-slug', display: null })).toBe('my-slug');
+	it('falls back to slug when display is null', () => {
+		expect(resolveTitle({ slug: 'my-slug', display: null })).toBe('my-slug');
 	});
 
-	it('falls back to name when display is undefined', () => {
-		expect(resolveTitle({ name: 'my-slug' })).toBe('my-slug');
+	it('falls back to slug when display is undefined', () => {
+		expect(resolveTitle({ slug: 'my-slug' })).toBe('my-slug');
 	});
 
-	it('returns display even when it differs from name', () => {
-		expect(resolveTitle({ name: 'cool-setup-v2', display: 'Cool Setup (v2)' })).toBe(
+	it('returns display even when it differs from slug', () => {
+		expect(resolveTitle({ slug: 'cool-setup-v2', display: 'Cool Setup (v2)' })).toBe(
 			'Cool Setup (v2)'
 		);
 	});
 
-	it('name is returned unchanged when display is absent', () => {
+	it('slug is returned unchanged when display is absent', () => {
 		const slug = 'my-complex-setup-slug';
-		expect(resolveTitle({ name: slug })).toBe(slug);
+		expect(resolveTitle({ slug })).toBe(slug);
 	});
 });

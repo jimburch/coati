@@ -13,8 +13,8 @@
 
 	type SetupResult = {
 		id: string;
-		name: string;
 		slug: string;
+		display: string | null;
 		starsCount: number;
 		ownerUsername: string;
 		agents: string[];
@@ -270,7 +270,9 @@
 										</div>
 									{/if}
 									<div class="min-w-0 flex-1">
-										<div class="text-foreground truncate text-sm font-medium">{item.name}</div>
+										<div class="text-foreground truncate text-sm font-medium">
+											{item.display ?? item.slug}
+										</div>
 										<div class="text-muted-foreground truncate text-xs">{item.ownerUsername}</div>
 									</div>
 									<div class="text-muted-foreground flex shrink-0 items-center gap-1 text-xs">

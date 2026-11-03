@@ -27,9 +27,8 @@ function makeManifest(overrides: Partial<Manifest> = {}): Manifest {
 // ── personal setup ────────────────────────────────────────────────────────────
 
 describe('buildPublishPayload — personal setup (no org)', () => {
-	it('returns name, slug, description, files', () => {
+	it('sends the manifest name as the slug, with description and files', () => {
 		const payload = buildPublishPayload(makeManifest(), [], [FILE]);
-		expect(payload.name).toBe('my-setup');
 		expect(payload.slug).toBe('my-setup');
 		expect(payload.description).toBe('A test setup');
 		expect(payload.files).toEqual([FILE]);
@@ -58,6 +57,12 @@ describe('buildPublishPayload — personal setup (no org)', () => {
 	it('includes display when present', () => {
 		const payload = buildPublishPayload(makeManifest({ display: 'My Setup' }), [], [FILE]);
 		expect(payload.display).toBe('My Setup');
+	});
+
+	it('sends no setup name or min tool version (dropped from the API)', () => {
+		const payload = buildPublishPayload(makeManifest(), [], [FILE]);
+		expect(payload).not.toHaveProperty('name');
+		expect(payload).not.toHaveProperty('minToolVersion');
 	});
 
 	it('includes category when present', () => {

@@ -21,6 +21,7 @@ vi.mock('$env/dynamic/private', () => ({
 	}
 }));
 
+import { createHash } from 'node:crypto';
 import { eq, and, inArray } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import {
@@ -41,7 +42,8 @@ import {
 	deleteSetupForce,
 	getSetupByIdWithOwner,
 	updateSetupByIdWithSlugRedirects,
-	recordClone
+	recordClone,
+	searchSetups
 } from './setups';
 import {
 	createTestUser,
@@ -78,7 +80,7 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		}
 	});
 
-	it('createSetup writes setup, files, tags, agents (from file slugs), activity, and increments owner setupsCount', async () => {
+	it('createSetup writes setup, files, agents (from file slugs), activity, and increments owner setupsCount', async () => {
 		const owner = await createTestUser();
 		const agent = await createTestAgent();
 		const tag = await createTestTag(`tag-${Date.now()}`);
@@ -89,15 +91,14 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		const initialCount = await getSetupsCount(owner.id);
 
 		const created = await createSetup(owner.id, {
-			name: 'Created Setup',
 			slug: `created-${Date.now()}`,
 			description: 'desc',
 			files: [
 				{ path: 'CLAUDE.md', componentType: 'instruction', content: '# hi', agent: agent.slug },
 				{ path: 'README.md', componentType: 'instruction', content: '# readme' }
-			],
-			tagIds: [tag.id]
+			]
 		});
+		await db.insert(setupTags).values({ setupId: created.id, tagId: tag.id });
 
 		expect(created.id).toBeTruthy();
 
@@ -128,12 +129,80 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		expect(activityRows[0].actionType).toBe('created_setup');
 	});
 
+	it('createSetup and updateSetup store the server-computed hash of every file', async () => {
+		const owner = await createTestUser();
+		createdUserIds.push(owner.id);
+
+		// Expected hashes come from node:crypto over the hash input the spec defines:
+		// normalized text for whole files, RFC 8785 canonical JSON for fragments.
+		const sha256 = (s: string) => createHash('sha256').update(s, 'utf8').digest('hex');
+
+		const created = await createSetup(owner.id, {
+			slug: `hashed-${Date.now()}`,
+			description: 'desc',
+			files: [
+				{ path: 'CLAUDE.md', componentType: 'instruction', content: '\uFEFF# hi\r\n' },
+				{
+					path: '.mcp.json#mcpServers.github',
+					componentType: 'mcp_server',
+					content: '{\n  "command": "npx",\n  "args": ["-y", "gh"]\n}'
+				}
+			]
+		});
+
+		const hashesOf = async () =>
+			Object.fromEntries(
+				(
+					await db
+						.select({ path: setupFiles.path, hash: setupFiles.hash })
+						.from(setupFiles)
+						.where(eq(setupFiles.setupId, created.id))
+				).map((f) => [f.path, f.hash])
+			);
+
+		expect(await hashesOf()).toEqual({
+			'CLAUDE.md': sha256('# hi\n'),
+			'.mcp.json#mcpServers.github': sha256('{"args":["-y","gh"],"command":"npx"}')
+		});
+
+		await updateSetup(created.id, {
+			files: [{ path: 'AGENTS.md', componentType: 'instruction', content: 'agents' }]
+		});
+		expect(await hashesOf()).toEqual({ 'AGENTS.md': sha256('agents') });
+	});
+
+	it('searchSetups matches on slug, Display name and description', async () => {
+		const owner = await createTestUser();
+		createdUserIds.push(owner.id);
+		const stamp = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
+
+		const bySlug = await createSetup(owner.id, {
+			slug: `zebraslug${stamp}`,
+			description: 'nothing to see'
+		});
+		const byDisplay = await createSetup(owner.id, {
+			slug: `plain-a-${stamp}`,
+			display: `Quokka Display ${stamp}`,
+			description: 'nothing to see'
+		});
+		const byDescription = await createSetup(owner.id, {
+			slug: `plain-b-${stamp}`,
+			description: `A wombatdesc${stamp} workflow`
+		});
+
+		const idsFor = async (q: string) =>
+			(await searchSetups({ q, sort: 'newest', page: 1 })).items.map((i) => i.id);
+
+		expect(await idsFor(`zebraslug${stamp}`)).toEqual([bySlug.id]);
+		expect(await idsFor(`Quokka Display ${stamp}`)).toEqual([byDisplay.id]);
+		expect(await idsFor(`wombatdesc${stamp}`)).toEqual([byDescription.id]);
+	});
+
 	it('createSetup leaves readme null when no readme is passed', async () => {
 		const owner = await createTestUser();
 		createdUserIds.push(owner.id);
 
 		const created = await createSetup(owner.id, {
-			name: 'No Readme',
 			slug: `no-readme-${Date.now()}`,
 			description: 'desc',
 			files: [{ path: 'CLAUDE.md', componentType: 'instruction', content: '# hi' }]
@@ -144,36 +213,6 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 			.from(setups)
 			.where(eq(setups.id, created.id));
 		expect(row.readme).toBeNull();
-	});
-
-	it('createSetup prefers explicit agentIds over inferring from file agent slugs', async () => {
-		const owner = await createTestUser();
-		const explicitAgent = await createTestAgent();
-		const fileAgent = await createTestAgent();
-		createdUserIds.push(owner.id);
-		createdAgentIds.push(explicitAgent.id, fileAgent.id);
-
-		const created = await createSetup(owner.id, {
-			name: 'Explicit Agents',
-			slug: `explicit-${Date.now()}`,
-			description: 'desc',
-			agentIds: [explicitAgent.id],
-			files: [
-				{
-					path: 'a.md',
-					componentType: 'instruction',
-					content: 'x',
-					agent: fileAgent.slug
-				}
-			]
-		});
-
-		const agentRows = await db
-			.select()
-			.from(setupAgents)
-			.where(eq(setupAgents.setupId, created.id));
-		// Only the explicit agent was linked; file-slug inference was skipped
-		expect(agentRows.map((r) => r.agentId)).toEqual([explicitAgent.id]);
 	});
 
 	it('createSetup with teamId forces private visibility regardless of visibility input', async () => {
@@ -188,7 +227,6 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 
 		try {
 			const created = await createSetup(owner.id, {
-				name: 'Team Setup',
 				slug: `team-${Date.now()}`,
 				description: 'desc',
 				teamId: team.id,
@@ -211,7 +249,6 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		createdUserIds.push(owner.id);
 
 		const created = await createSetup(owner.id, {
-			name: 'Preserve Readme',
 			slug: `preserve-${Date.now()}`,
 			description: 'desc',
 			files: [{ path: 'old.md', componentType: 'instruction', content: 'old' }]
@@ -240,7 +277,6 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		createdAgentIds.push(oldAgent.id, newAgent.id);
 
 		const created = await createSetup(owner.id, {
-			name: 'Update Me',
 			slug: `update-${Date.now()}`,
 			description: 'desc',
 			files: [
@@ -274,12 +310,11 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		createdTagIds.push(tag.id);
 
 		const created = await createSetup(owner.id, {
-			name: 'Delete Me',
 			slug: `delete-${Date.now()}`,
 			description: 'desc',
-			files: [{ path: 'a.md', componentType: 'instruction', content: 'a', agent: agent.slug }],
-			tagIds: [tag.id]
+			files: [{ path: 'a.md', componentType: 'instruction', content: 'a', agent: agent.slug }]
 		});
+		await db.insert(setupTags).values({ setupId: created.id, tagId: tag.id });
 		const afterCreate = await getSetupsCount(owner.id);
 
 		const deletedCount = await deleteSetup(created.id, owner.id);
@@ -308,7 +343,6 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		createdUserIds.push(owner.id, imposter.id);
 
 		const created = await createSetup(owner.id, {
-			name: 'Owned',
 			slug: `owned-${Date.now()}`,
 			description: 'desc'
 		});
@@ -325,7 +359,6 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		createdUserIds.push(owner.id);
 
 		const created = await createSetup(owner.id, {
-			name: 'Force Delete',
 			slug: `force-${Date.now()}`,
 			description: 'desc'
 		});
@@ -346,7 +379,6 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		createdUserIds.push(owner.id);
 
 		const created = await createSetup(owner.id, {
-			name: 'Owned Setup',
 			slug: `owned-${Date.now()}`,
 			description: 'desc'
 		});
@@ -367,7 +399,6 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		createdUserIds.push(owner.id);
 
 		const created = await createSetup(owner.id, {
-			name: 'Stable Name',
 			slug: `stable-${Date.now()}`,
 			description: 'old desc'
 		});
@@ -375,7 +406,7 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		await updateSetupByIdWithSlugRedirects(
 			created.id,
 			{ description: 'new desc', readme: '# new', license: 'MIT' },
-			{ userId: owner.id, currentSlug: created.slug }
+			{ userId: owner.id, teamId: null, currentSlug: created.slug }
 		);
 
 		const [row] = await db
@@ -399,29 +430,28 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		expect(redirects).toHaveLength(0);
 	});
 
-	it('updateSetupByIdWithSlugRedirects regenerates slug from new name and inserts a redirect from the old slug', async () => {
+	it('updateSetupByIdWithSlugRedirects renames the slug and inserts a redirect from the old slug', async () => {
 		const owner = await createTestUser();
 		createdUserIds.push(owner.id);
 
 		const created = await createSetup(owner.id, {
-			name: 'Original Name',
 			slug: `original-${Date.now()}`,
 			description: 'desc'
 		});
 		const originalSlug = created.slug;
+		const newSlug = `brand-new-${Date.now()}`;
 
 		await updateSetupByIdWithSlugRedirects(
 			created.id,
-			{ name: 'Brand New Name' },
-			{ userId: owner.id, currentSlug: originalSlug }
+			{ slug: newSlug },
+			{ userId: owner.id, teamId: null, currentSlug: originalSlug }
 		);
 
 		const [row] = await db
-			.select({ name: setups.name, slug: setups.slug })
+			.select({ slug: setups.slug })
 			.from(setups)
 			.where(eq(setups.id, created.id));
-		expect(row.name).toBe('Brand New Name');
-		expect(row.slug).toBe('brand-new-name');
+		expect(row.slug).toBe(newSlug);
 
 		const redirects = await db
 			.select()
@@ -430,34 +460,30 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		expect(redirects).toHaveLength(1);
 		expect(redirects[0].oldSlug).toBe(originalSlug);
 		expect(redirects[0].userId).toBe(owner.id);
+		expect(redirects[0].teamId).toBeNull();
 	});
 
-	it('updateSetupByIdWithSlugRedirects skips redirect insertion when the normalized slug is unchanged', async () => {
+	it('updateSetupByIdWithSlugRedirects skips redirect insertion when the slug is unchanged', async () => {
 		const owner = await createTestUser();
 		createdUserIds.push(owner.id);
 
-		const stamp = Date.now();
 		const created = await createSetup(owner.id, {
-			name: 'Hello World',
-			slug: `hello-world-${stamp}`,
+			slug: `hello-world-${Date.now()}`,
 			description: 'desc'
 		});
 
-		// slugFromName('Hello World') === 'hello-world'. The stored slug includes a timestamp
-		// suffix, so the new slug IS different here — choose a name that normalizes to the
-		// exact stored slug to hit the slugChanged === false branch.
 		await updateSetupByIdWithSlugRedirects(
 			created.id,
-			{ name: `hello world ${stamp}` },
-			{ userId: owner.id, currentSlug: created.slug }
+			{ slug: created.slug, description: 'changed' },
+			{ userId: owner.id, teamId: null, currentSlug: created.slug }
 		);
 
 		const [row] = await db
-			.select({ name: setups.name, slug: setups.slug })
+			.select({ slug: setups.slug, description: setups.description })
 			.from(setups)
 			.where(eq(setups.id, created.id));
 		expect(row.slug).toBe(created.slug);
-		expect(row.name).toBe(`hello world ${stamp}`);
+		expect(row.description).toBe('changed');
 
 		const redirects = await db
 			.select()
@@ -474,7 +500,6 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		createdAgentIds.push(oldAgent.id, newAgent.id);
 
 		const created = await createSetup(owner.id, {
-			name: 'File Update',
 			slug: `file-update-${Date.now()}`,
 			description: 'a nice description',
 			files: [
@@ -493,7 +518,7 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 					{ path: 'plain.md', componentType: 'instruction', content: 'plain' }
 				]
 			},
-			{ userId: owner.id, currentSlug: created.slug }
+			{ userId: owner.id, teamId: null, currentSlug: created.slug }
 		);
 
 		const files = await db.select().from(setupFiles).where(eq(setupFiles.setupId, created.id));
@@ -518,27 +543,27 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		createdUserIds.push(owner.id);
 
 		const created = await createSetup(owner.id, {
-			name: 'Combined',
 			slug: `combined-${Date.now()}`,
 			description: 'desc',
 			files: [{ path: 'one.md', componentType: 'instruction', content: 'one' }]
 		});
 		const originalSlug = created.slug;
 
+		const renamed = `renamed-combined-${Date.now()}`;
 		await updateSetupByIdWithSlugRedirects(
 			created.id,
 			{
-				name: 'Renamed Combined',
+				slug: renamed,
 				files: [{ path: 'two.md', componentType: 'instruction', content: 'two' }]
 			},
-			{ userId: owner.id, currentSlug: originalSlug }
+			{ userId: owner.id, teamId: null, currentSlug: originalSlug }
 		);
 
 		const [row] = await db
 			.select({ slug: setups.slug })
 			.from(setups)
 			.where(eq(setups.id, created.id));
-		expect(row.slug).toBe('renamed-combined');
+		expect(row.slug).toBe(renamed);
 
 		const files = await db.select().from(setupFiles).where(eq(setupFiles.setupId, created.id));
 		expect(files.map((f) => f.path)).toEqual(['two.md']);
@@ -555,7 +580,6 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 		createdUserIds.push(owner.id);
 
 		const created = await createSetup(owner.id, {
-			name: 'Clone Me',
 			slug: `clone-me-${Date.now()}`,
 			description: 'desc'
 		});

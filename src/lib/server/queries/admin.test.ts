@@ -2,13 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockSelect = vi.fn();
 const mockUpdate = vi.fn();
-const mockDelete = vi.fn();
 
 vi.mock('$lib/server/db', () => ({
 	db: {
 		select: (...args: unknown[]) => mockSelect(...args),
-		update: (...args: unknown[]) => mockUpdate(...args),
-		delete: (...args: unknown[]) => mockDelete(...args)
+		update: (...args: unknown[]) => mockUpdate(...args)
 	}
 }));
 
@@ -71,13 +69,6 @@ function makeChain(result: unknown) {
 	chain.where = vi.fn().mockResolvedValue(result);
 	// Make the chain itself thenable so awaiting it works when .where is not called
 	chain.then = (resolve: (v: unknown) => void) => Promise.resolve(result).then(resolve);
-	return chain;
-}
-
-function makeDeleteChain(result: unknown) {
-	const chain: Record<string, unknown> = {};
-	chain.where = vi.fn().mockReturnValue(chain);
-	chain.returning = vi.fn().mockResolvedValue(result);
 	return chain;
 }
 
@@ -247,34 +238,5 @@ describe('getAllTeamsWithAdminDetails', () => {
 		const result = await getAllTeamsWithAdminDetails('zzz');
 
 		expect(result).toEqual([]);
-	});
-});
-
-describe('adminDeleteTeam', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	it('deletes the team and returns 1 on success', async () => {
-		const chain = makeDeleteChain([{ id: 'team-1' }]);
-		mockDelete.mockReturnValue(chain);
-
-		const { adminDeleteTeam } = await import('./admin');
-		const result = await adminDeleteTeam('team-1');
-
-		expect(mockDelete).toHaveBeenCalled();
-		expect(chain.where).toHaveBeenCalled();
-		expect(chain.returning).toHaveBeenCalled();
-		expect(result).toBe(1);
-	});
-
-	it('returns 0 when team not found', async () => {
-		const chain = makeDeleteChain([]);
-		mockDelete.mockReturnValue(chain);
-
-		const { adminDeleteTeam } = await import('./admin');
-		const result = await adminDeleteTeam('nonexistent-id');
-
-		expect(result).toBe(0);
 	});
 });

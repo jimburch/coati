@@ -158,7 +158,7 @@ function baseSelect() {
 			actorUsername: actorUser.username,
 			actorAvatarUrl: actorUser.avatarUrl,
 			setupId: activities.setupId,
-			setupName: setups.name,
+			setupName: sql<string | null>`coalesce(${setups.display}, ${setups.slug})`,
 			setupSlug: setups.slug,
 			setupOwnerUsername: setupOwnerUser.username,
 			targetUserId: activities.targetUserId,

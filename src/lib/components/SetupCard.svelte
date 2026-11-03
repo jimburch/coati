@@ -45,7 +45,7 @@
 	>
 		<div class="flex min-w-0 flex-1 flex-col gap-3">
 			<span class="block truncate text-sm font-semibold text-foreground"
-				>{setup.display ?? setup.name}</span
+				>{setup.display ?? setup.slug}</span
 			>
 			{#if setup.description}
 				<span class="block truncate text-xs text-muted-foreground">{setup.description}</span>
@@ -86,7 +86,7 @@
 					? 'truncate text-base font-semibold text-foreground lg:text-lg'
 					: 'truncate text-sm font-semibold text-foreground lg:text-base'}
 			>
-				{setup.display ?? setup.name}
+				{setup.display ?? setup.slug}
 			</h3>
 			{#if setup.visibility === 'private'}
 				<span

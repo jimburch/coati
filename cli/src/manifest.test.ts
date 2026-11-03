@@ -44,7 +44,7 @@ describe('validateManifest', () => {
 		expect(validateManifest(42).valid).toBe(false);
 	});
 
-	it('rejects top-level field constraints (name, version, description, files, license, category, minToolVersion)', () => {
+	it('rejects top-level field constraints (name, version, description, files, license, category)', () => {
 		const cases: Array<[Partial<Manifest> & Record<string, unknown>, string]> = [
 			[{ name: '' }, 'name'],
 			[{ name: 'a'.repeat(101) }, 'name'],
@@ -54,7 +54,6 @@ describe('validateManifest', () => {
 			[{ description: 'x'.repeat(301) }, 'description'],
 			[{ files: [] }, 'files'],
 			[{ license: 'L'.repeat(51) }, 'license'],
-			[{ minToolVersion: '1'.repeat(21) }, 'minToolVersion'],
 			[{ category: 'robotics' }, 'category']
 		];
 		for (const [override, field] of cases) {

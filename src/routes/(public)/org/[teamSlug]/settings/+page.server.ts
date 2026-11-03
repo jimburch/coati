@@ -6,7 +6,8 @@ import {
 	getTeamBySlugForAuth,
 	getTeamMemberRole,
 	updateTeam,
-	deleteTeam
+	deleteTeam,
+	getTeamSetupsCount
 } from '$lib/server/queries/teams';
 import { db } from '$lib/server/db';
 import { teams } from '$lib/server/db/schema';
@@ -37,7 +38,10 @@ export const load: PageServerLoad = async (event) => {
 		.where(eq(teams.id, authTeam.id))
 		.limit(1);
 
-	return { team, isOwner };
+	// Deleting the Team deletes its Setups, so the dialog says how many.
+	const setupsCount = await getTeamSetupsCount(authTeam.id);
+
+	return { team, isOwner, setupsCount };
 };
 
 export const actions: Actions = {

@@ -148,6 +148,13 @@
 			"when": 1745020800000,
 			"tag": "0019_activities_setup_id_idx",
 			"breakpoints": true
+		},
+		{
+			"idx": 21,
+			"version": "7",
+			"when": 1793577600000,
+			"tag": "0020_manifestless_cutover",
+			"breakpoints": true
 		}
 	]
 }

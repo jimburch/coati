@@ -26,6 +26,7 @@ export const PATCH: RequestHandler = async (event) => {
 	try {
 		const updated = await updateSetupByIdWithSlugRedirects(event.params.id, parsed, {
 			userId: user.id,
+			teamId: setup.teamId,
 			currentSlug: setup.slug
 		});
 		return success({ ...updated, ownerUsername: setup.ownerUsername });

@@ -13,7 +13,7 @@
 </script>
 
 <svelte:head>
-	<title>Files - {setup.name} - Coati</title>
+	<title>Files - {setup.display ?? setup.slug} - Coati</title>
 </svelte:head>
 
 <div class="mx-auto max-w-7xl px-4 py-6 lg:py-8">

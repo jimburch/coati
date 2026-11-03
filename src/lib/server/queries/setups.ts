@@ -13,6 +13,7 @@ import {
 	users,
 	activities
 } from '$lib/server/db/schema';
+import { hashSetupFile } from '@coati/content-hash';
 import type { z } from 'zod';
 import type { createSetupWithFilesSchema, updateSetupSchema, ExploreSort } from '$lib/types';
 
@@ -27,22 +28,25 @@ function buildVisibilitySQL(viewerId?: string | null) {
 	return sql`(${setups.visibility} = 'public' OR ${setups.userId} = ${viewerId} OR (${setups.teamId} IS NOT NULL AND ${setups.teamId} IN (SELECT team_id FROM team_members WHERE user_id = ${viewerId})))`;
 }
 
-function toSetupFileRows(setupId: string, files: NonNullable<FileInput>) {
-	return files.map((f) => ({
-		setupId,
-		path: f.path,
-		componentType: f.componentType,
-		description: f.description,
-		agent: f.agent,
-		content: f.content
-	}));
+/** The server computes every stored hash from the content it receives (spec §3). */
+async function toSetupFileRows(setupId: string, files: NonNullable<FileInput>) {
+	return Promise.all(
+		files.map(async (f) => ({
+			setupId,
+			path: f.path,
+			componentType: f.componentType,
+			description: f.description,
+			agent: f.agent,
+			content: f.content,
+			hash: await hashSetupFile(f.path, f.content)
+		}))
+	);
 }
 
 export async function getSetupsByUserId(userId: string, viewerIsOwner = false) {
 	return db
 		.select({
 			id: setups.id,
-			name: setups.name,
 			slug: setups.slug,
 			description: setups.description,
 			display: setups.display,
@@ -65,14 +69,12 @@ export async function getSetupByOwnerSlug(ownerUsername: string, slug: string) {
 		.select({
 			id: setups.id,
 			userId: setups.userId,
-			name: setups.name,
 			slug: setups.slug,
 			description: setups.description,
 			display: setups.display,
 			readme: setups.readme,
 			category: setups.category,
 			license: setups.license,
-			minToolVersion: setups.minToolVersion,
 			postInstall: setups.postInstall,
 			prerequisites: setups.prerequisites,
 			visibility: setups.visibility,
@@ -113,14 +115,12 @@ export async function getSetupById(id: string) {
 		.select({
 			id: setups.id,
 			userId: setups.userId,
-			name: setups.name,
 			slug: setups.slug,
 			description: setups.description,
 			display: setups.display,
 			readme: setups.readme,
 			category: setups.category,
 			license: setups.license,
-			minToolVersion: setups.minToolVersion,
 			postInstall: setups.postInstall,
 			prerequisites: setups.prerequisites,
 			visibility: setups.visibility,
@@ -144,13 +144,11 @@ export async function createSetup(userId: string, data: CreateSetupInput) {
 			.insert(setups)
 			.values({
 				userId,
-				name: data.name,
 				slug: data.slug,
 				description: data.description,
 				display: data.display,
 				category: data.category,
 				license: data.license,
-				minToolVersion: data.minToolVersion,
 				postInstall: data.postInstall,
 				prerequisites: data.prerequisites,
 				...(data.teamId
@@ -163,18 +161,14 @@ export async function createSetup(userId: string, data: CreateSetupInput) {
 			.returning();
 
 		if (data.files && data.files.length > 0) {
-			await tx.insert(setupFiles).values(toSetupFileRows(setup.id, data.files));
+			await tx.insert(setupFiles).values(await toSetupFileRows(setup.id, data.files));
 		}
 
 		// Resolve agent slugs from files and populate setupAgents junction table
 		const fileSlugs = [
 			...new Set((data.files ?? []).map((f) => f.agent).filter(Boolean))
 		] as string[];
-		if (data.agentIds && data.agentIds.length > 0) {
-			await tx
-				.insert(setupAgents)
-				.values(data.agentIds.map((agentId) => ({ setupId: setup.id, agentId })));
-		} else if (fileSlugs.length > 0) {
+		if (fileSlugs.length > 0) {
 			const matched = await tx
 				.select({ id: agents.id })
 				.from(agents)
@@ -184,10 +178,6 @@ export async function createSetup(userId: string, data: CreateSetupInput) {
 					.insert(setupAgents)
 					.values(matched.map((a) => ({ setupId: setup.id, agentId: a.id })));
 			}
-		}
-
-		if (data.tagIds && data.tagIds.length > 0) {
-			await tx.insert(setupTags).values(data.tagIds.map((tagId) => ({ setupId: setup.id, tagId })));
 		}
 
 		await counters.setupCreated(tx, userId);
@@ -201,14 +191,12 @@ export async function createSetup(userId: string, data: CreateSetupInput) {
 export async function updateSetup(id: string, data: UpdateSetupInput) {
 	return db.transaction(async (tx) => {
 		const updateFields = {
-			...(data.name !== undefined && { name: data.name }),
 			...(data.slug !== undefined && { slug: data.slug }),
 			...(data.description !== undefined && { description: data.description }),
 			...(data.readme !== undefined && { readme: data.readme }),
 			...(data.display !== undefined && { display: data.display }),
 			...(data.category !== undefined && { category: data.category }),
 			...(data.license !== undefined && { license: data.license }),
-			...(data.minToolVersion !== undefined && { minToolVersion: data.minToolVersion }),
 			...(data.postInstall !== undefined && { postInstall: data.postInstall }),
 			...(data.prerequisites !== undefined && { prerequisites: data.prerequisites }),
 			...(data.visibility !== undefined && { visibility: data.visibility }),
@@ -220,7 +208,7 @@ export async function updateSetup(id: string, data: UpdateSetupInput) {
 		if (data.files !== undefined) {
 			await tx.delete(setupFiles).where(eq(setupFiles.setupId, id));
 			if (data.files.length > 0) {
-				await tx.insert(setupFiles).values(toSetupFileRows(id, data.files));
+				await tx.insert(setupFiles).values(await toSetupFileRows(id, data.files));
 			}
 
 			// Refresh setupAgents from file agent slugs
@@ -346,7 +334,6 @@ export async function setStar(
 export async function getTrendingSetups(limit: number, viewerId?: string) {
 	type SetupRow = {
 		id: string;
-		name: string;
 		slug: string;
 		description: string;
 		display: string | null;
@@ -360,7 +347,7 @@ export async function getTrendingSetups(limit: number, viewerId?: string) {
 	const visibilityCondition = buildVisibilitySQL(viewerId);
 
 	const trendingRows = await db.execute<SetupRow>(
-		sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
+		sql`SELECT ${setups.id}, ${setups.slug}, ${setups.description},
 			${setups.display}, ${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
 			${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
 			FROM ${setups}
@@ -376,7 +363,7 @@ export async function getTrendingSetups(limit: number, viewerId?: string) {
 	if (allRows.length < limit) {
 		const backfillLimit = limit - allRows.length;
 		const backfillRows = await db.execute<SetupRow>(
-			sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
+			sql`SELECT ${setups.id}, ${setups.slug}, ${setups.description},
 				${setups.display}, ${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
 				${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
 				FROM ${setups}
@@ -394,7 +381,6 @@ export async function getTrendingSetups(limit: number, viewerId?: string) {
 
 	return allRows.map((row) => ({
 		id: row.id,
-		name: row.name,
 		slug: row.slug,
 		description: row.description,
 		display: row.display,
@@ -428,7 +414,6 @@ export async function getForYouSetups(userId: string, limit: number) {
 
 	type SetupRow = {
 		id: string;
-		name: string;
 		slug: string;
 		description: string;
 		display: string | null;
@@ -444,7 +429,7 @@ export async function getForYouSetups(userId: string, limit: number) {
 	if (hasAgents) {
 		// Step 2a: Trending setups whose agents overlap with the user's agents
 		rows = await db.execute<SetupRow>(
-			sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
+			sql`SELECT ${setups.id}, ${setups.slug}, ${setups.description},
 				${setups.display}, ${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
 				${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
 				FROM ${setups}
@@ -464,7 +449,7 @@ export async function getForYouSetups(userId: string, limit: number) {
 	} else {
 		// Step 2b: Fallback — global trending with same exclusions
 		rows = await db.execute<SetupRow>(
-			sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
+			sql`SELECT ${setups.id}, ${setups.slug}, ${setups.description},
 				${setups.display}, ${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
 				${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
 				FROM ${setups}
@@ -484,7 +469,7 @@ export async function getForYouSetups(userId: string, limit: number) {
 
 		if (hasAgents) {
 			backfillRows = await db.execute<SetupRow>(
-				sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
+				sql`SELECT ${setups.id}, ${setups.slug}, ${setups.description},
 					${setups.display}, ${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
 					${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
 					FROM ${setups}
@@ -503,7 +488,7 @@ export async function getForYouSetups(userId: string, limit: number) {
 			);
 		} else {
 			backfillRows = await db.execute<SetupRow>(
-				sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
+				sql`SELECT ${setups.id}, ${setups.slug}, ${setups.description},
 					${setups.display}, ${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
 					${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
 					FROM ${setups}
@@ -524,7 +509,6 @@ export async function getForYouSetups(userId: string, limit: number) {
 
 	return rows.map((row) => ({
 		id: row.id,
-		name: row.name,
 		slug: row.slug,
 		description: row.description,
 		display: row.display,
@@ -540,7 +524,6 @@ export async function getForYouSetups(userId: string, limit: number) {
 export async function getSetupsFromFollowedUsers(userId: string, limit: number) {
 	type SetupRow = {
 		id: string;
-		name: string;
 		slug: string;
 		description: string;
 		display: string | null;
@@ -553,7 +536,7 @@ export async function getSetupsFromFollowedUsers(userId: string, limit: number) 
 	};
 
 	const rows = await db.execute<SetupRow>(
-		sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
+		sql`SELECT ${setups.id}, ${setups.slug}, ${setups.description},
 			${setups.display}, ${setups.starsCount}, ${setups.clonesCount},
 			${setups.createdAt}, ${setups.updatedAt},
 			${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
@@ -573,7 +556,6 @@ export async function getSetupsFromFollowedUsers(userId: string, limit: number) 
 
 	return rows.map((row) => ({
 		id: row.id,
-		name: row.name,
 		slug: row.slug,
 		description: row.description,
 		display: row.display,
@@ -591,7 +573,6 @@ export async function getRecentSetups(limit = 12, viewerId?: string) {
 	return db
 		.select({
 			id: setups.id,
-			name: setups.name,
 			slug: setups.slug,
 			description: setups.description,
 			display: setups.display,
@@ -637,7 +618,6 @@ export async function getAgentBySlugWithSetups(slug: string) {
 	const setupRows = await db
 		.select({
 			id: setups.id,
-			name: setups.name,
 			slug: setups.slug,
 			description: setups.description,
 			display: setups.display,
@@ -696,7 +676,8 @@ export async function searchSetups(filters: {
 		if (prefixQuery) {
 			conditions.push(
 				sql`(${setups.searchVector} @@ to_tsquery('english', ${prefixQuery})
-				OR ${setups.name} ILIKE ${'%' + q.trim() + '%'}
+				OR ${setups.slug} ILIKE ${'%' + q.trim() + '%'}
+				OR ${setups.display} ILIKE ${'%' + q.trim() + '%'}
 				OR ${setups.id} IN (
 					SELECT ${setupTags.setupId} FROM ${setupTags}
 					INNER JOIN ${tags} ON ${setupTags.tagId} = ${tags.id}
@@ -739,7 +720,6 @@ export async function searchSetups(filters: {
 	const [items, countResult] = await Promise.all([
 		db.execute<{
 			id: string;
-			name: string;
 			slug: string;
 			description: string;
 			display: string | null;
@@ -749,7 +729,7 @@ export async function searchSetups(filters: {
 			owner_username: string;
 			owner_avatar_url: string;
 		}>(
-			sql`SELECT ${setups.id}, ${setups.name}, ${setups.slug}, ${setups.description},
+			sql`SELECT ${setups.id}, ${setups.slug}, ${setups.description},
 				${setups.display},
 				${setups.starsCount}, ${setups.clonesCount}, ${setups.updatedAt},
 				${users.username} AS owner_username, ${users.avatarUrl} AS owner_avatar_url
@@ -775,7 +755,6 @@ export async function searchSetups(filters: {
 	return {
 		items: items.map((row) => ({
 			id: row.id,
-			name: row.name,
 			slug: row.slug,
 			description: row.description,
 			display: row.display ?? null,
@@ -793,26 +772,17 @@ export async function searchSetups(filters: {
 	};
 }
 
-function slugFromName(name: string): string {
-	return name
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, '-')
-		.replace(/^-|-$/g, '');
-}
-
 export async function getSetupByIdWithOwner(id: string) {
 	const result = await db
 		.select({
 			id: setups.id,
 			userId: setups.userId,
-			name: setups.name,
 			slug: setups.slug,
 			description: setups.description,
 			display: setups.display,
 			readme: setups.readme,
 			category: setups.category,
 			license: setups.license,
-			minToolVersion: setups.minToolVersion,
 			postInstall: setups.postInstall,
 			prerequisites: setups.prerequisites,
 			visibility: setups.visibility,
@@ -835,21 +805,20 @@ export async function getSetupByIdWithOwner(id: string) {
 export async function updateSetupByIdWithSlugRedirects(
 	id: string,
 	data: UpdateSetupInput,
-	context: { userId: string; currentSlug: string }
+	/** `teamId` is set for a Team Setup: its redirects are keyed by the Team, not the user. */
+	context: { userId: string; teamId: string | null; currentSlug: string }
 ) {
 	return db.transaction(async (tx) => {
-		const newSlug = data.name !== undefined ? slugFromName(data.name) : undefined;
+		const newSlug = data.slug;
 		const slugChanged = newSlug !== undefined && newSlug !== context.currentSlug;
 
 		const updateFields = {
-			...(data.name !== undefined && { name: data.name }),
 			...(slugChanged && { slug: newSlug }),
 			...(data.description !== undefined && { description: data.description }),
 			...(data.readme !== undefined && { readme: data.readme }),
 			...(data.display !== undefined && { display: data.display }),
 			...(data.category !== undefined && { category: data.category }),
 			...(data.license !== undefined && { license: data.license }),
-			...(data.minToolVersion !== undefined && { minToolVersion: data.minToolVersion }),
 			...(data.postInstall !== undefined && { postInstall: data.postInstall }),
 			...(data.prerequisites !== undefined && { prerequisites: data.prerequisites }),
 			...(data.visibility !== undefined && { visibility: data.visibility }),
@@ -861,7 +830,7 @@ export async function updateSetupByIdWithSlugRedirects(
 		if (data.files !== undefined) {
 			await tx.delete(setupFiles).where(eq(setupFiles.setupId, id));
 			if (data.files.length > 0) {
-				await tx.insert(setupFiles).values(toSetupFileRows(id, data.files));
+				await tx.insert(setupFiles).values(await toSetupFileRows(id, data.files));
 			}
 
 			// Refresh setupAgents from file agent slugs
@@ -883,7 +852,7 @@ export async function updateSetupByIdWithSlugRedirects(
 			await tx
 				.insert(setupSlugRedirects)
 				.values({
-					userId: context.userId,
+					...(context.teamId ? { teamId: context.teamId } : { userId: context.userId }),
 					oldSlug: context.currentSlug,
 					setupId: id
 				})
@@ -912,7 +881,6 @@ export async function getStarredSetupsByUserId(userId: string) {
 	return db
 		.select({
 			id: setups.id,
-			name: setups.name,
 			slug: setups.slug,
 			description: setups.description,
 			display: setups.display,
@@ -934,7 +902,6 @@ export async function getFeaturedSetups(limit: number, viewerId?: string) {
 		.select({
 			id: setups.id,
 			userId: setups.userId,
-			name: setups.name,
 			slug: setups.slug,
 			description: setups.description,
 			display: setups.display,

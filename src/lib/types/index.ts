@@ -46,7 +46,6 @@ export type ExploreSort = 'trending' | 'stars' | 'newest';
 
 export type SetupCardProps = {
 	id: string;
-	name: string;
 	slug: string;
 	description: string;
 	display?: string | null;
@@ -94,7 +93,6 @@ export const apiErrorSchema = z.object({
 });
 
 export const createSetupSchema = z.object({
-	name: z.string().min(1).max(100),
 	slug: z.string().min(1).max(100).regex(SLUG_NAME_REGEX),
 	description: z.string().max(300),
 	display: z.string().trim().max(150).optional()
@@ -123,13 +121,10 @@ export const createSetupWithFilesSchema = createSetupSchema
 	.extend({
 		category: categorySchema.optional(),
 		license: z.string().max(50).optional(),
-		minToolVersion: z.string().max(20).optional(),
 		postInstall: postInstallSchema.optional(),
 		prerequisites: z.array(z.string()).optional(),
 		visibility: z.enum(['public', 'private']).optional(),
 		files: z.array(createSetupFileSchema).optional(),
-		agentIds: z.array(z.string().uuid()).optional(),
-		tagIds: z.array(z.string().uuid()).optional(),
 		teamId: z.string().uuid().optional()
 	})
 	.refine((data) => !data.files || data.files.length <= 50, {
@@ -142,14 +137,12 @@ export const createSetupWithFilesSchema = createSetupSchema
 
 export const updateSetupSchema = z
 	.object({
-		name: z.string().min(1).max(100).optional(),
 		slug: z.string().min(1).max(100).regex(SLUG_NAME_REGEX).optional(),
 		description: z.string().max(300).optional(),
 		readme: z.string().nullable().optional(),
 		display: z.string().trim().max(150).nullable().optional(),
 		category: categorySchema.nullable().optional(),
 		license: z.string().max(50).nullable().optional(),
-		minToolVersion: z.string().max(20).nullable().optional(),
 		postInstall: postInstallSchema.nullable().optional(),
 		prerequisites: z.array(z.string()).nullable().optional(),
 		visibility: z.enum(['public', 'private']).optional(),

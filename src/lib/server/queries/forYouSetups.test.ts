@@ -24,7 +24,6 @@ vi.mock('$lib/server/db/schema', () => ({
 	setups: {
 		id: 'setups.id',
 		userId: 'setups.userId',
-		name: 'setups.name',
 		slug: 'setups.slug',
 		description: 'setups.description',
 		display: 'setups.display',
@@ -77,7 +76,6 @@ import { getForYouSetups } from './setups';
 function makeSetupRow(overrides: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
 	return {
 		id: 'setup-1',
-		name: 'My Setup',
 		slug: 'my-setup',
 		description: 'A great setup',
 		display: null,
@@ -114,7 +112,6 @@ describe('getForYouSetups', () => {
 		const result = await getForYouSetups('user-1', 1);
 		expect(result[0]).toMatchObject({
 			id: 'setup-1',
-			name: 'My Setup',
 			slug: 'my-setup',
 			description: 'A great setup',
 			display: null,

@@ -66,7 +66,6 @@ export async function getTeamBySlug(slug: string, viewerId?: string | null) {
 	const teamSetups = await db
 		.select({
 			id: setups.id,
-			name: setups.name,
 			slug: setups.slug,
 			description: setups.description,
 			display: setups.display,
@@ -151,9 +150,35 @@ export async function updateTeam(teamId: string, data: UpdateTeamInput) {
 	return updated ?? null;
 }
 
+/** How many Setups the Team owns. They are deleted with it. */
+export async function getTeamSetupsCount(teamId: string): Promise<number> {
+	const [row] = await db.select({ count: count() }).from(setups).where(eq(setups.teamId, teamId));
+	return row?.count ?? 0;
+}
+
+/**
+ * Deletes the Team. Its Setups go with it (the FK cascades, Decided while
+ * writing #2), so each creator's Setup count drops by the Setups they made there.
+ */
 export async function deleteTeam(teamId: string) {
-	const deleted = await db.delete(teams).where(eq(teams.id, teamId)).returning();
-	return deleted.length;
+	return db.transaction(async (tx) => {
+		const creators = await tx
+			.select({ userId: setups.userId, count: count() })
+			.from(setups)
+			.where(eq(setups.teamId, teamId))
+			.groupBy(setups.userId);
+
+		const deleted = await tx.delete(teams).where(eq(teams.id, teamId)).returning();
+		if (deleted.length === 0) return 0;
+
+		for (const creator of creators) {
+			await tx
+				.update(users)
+				.set({ setupsCount: sql`GREATEST(${users.setupsCount} - ${creator.count}, 0)` })
+				.where(eq(users.id, creator.userId));
+		}
+		return deleted.length;
+	});
 }
 
 export async function getUserTeams(userId: string) {
@@ -166,6 +191,7 @@ export async function getUserTeams(userId: string) {
 			avatarUrl: teams.avatarUrl,
 			ownerId: teams.ownerId,
 			membersCount: teams.membersCount,
+			setupsCount: sql<number>`(SELECT count(*)::int FROM ${setups} WHERE ${setups.teamId} = ${teams.id})`,
 			role: teamMembers.role,
 			joinedAt: teamMembers.joinedAt
 		})
@@ -237,14 +263,12 @@ export async function getTeamSetupBySlug(teamSlug: string, setupSlug: string) {
 		.select({
 			id: setups.id,
 			userId: setups.userId,
-			name: setups.name,
 			slug: setups.slug,
 			description: setups.description,
 			display: setups.display,
 			readme: setups.readme,
 			category: setups.category,
 			license: setups.license,
-			minToolVersion: setups.minToolVersion,
 			postInstall: setups.postInstall,
 			prerequisites: setups.prerequisites,
 			visibility: setups.visibility,
@@ -519,7 +543,6 @@ export async function getTeamSetups(teamId: string, viewerIsMember: boolean) {
 	return db
 		.select({
 			id: setups.id,
-			name: setups.name,
 			slug: setups.slug,
 			description: setups.description,
 			display: setups.display,

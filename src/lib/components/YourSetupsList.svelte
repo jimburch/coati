@@ -3,7 +3,6 @@
 
 	type UserSetup = {
 		id: string;
-		name: string;
 		slug: string;
 		description: string;
 		display: string | null | undefined;
@@ -39,7 +38,7 @@
 				>
 					<div class="min-w-0">
 						<p class="truncate text-sm font-medium text-foreground">
-							{setup.display ?? setup.name}
+							{setup.display ?? setup.slug}
 						</p>
 						<p class="truncate text-xs text-muted-foreground">{timeAgo(setup.updatedAt)}</p>
 					</div>

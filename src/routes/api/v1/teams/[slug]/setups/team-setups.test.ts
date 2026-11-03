@@ -22,7 +22,6 @@ const MOCK_TEAM_SETUP = {
 	readme: null,
 	category: null,
 	license: null,
-	minToolVersion: null,
 	postInstall: null,
 	prerequisites: null,
 	visibility: 'private',

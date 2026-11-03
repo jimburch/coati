@@ -21,13 +21,12 @@ const MOCK_USER = { id: 'user-uuid-1', username: 'alice' };
 const MOCK_SETUP = {
 	id: 'setup-uuid-1',
 	userId: 'user-uuid-1',
-	name: 'My Setup',
+	teamId: null,
 	slug: 'my-setup',
 	description: 'A great setup',
 	readme: null,
 	category: null,
 	license: null,
-	minToolVersion: null,
 	postInstall: null,
 	prerequisites: null,
 	starsCount: 0,
@@ -124,17 +123,18 @@ describe('PATCH /api/v1/setups/[id]', () => {
 
 	it('calls updateSetupByIdWithSlugRedirects with correct arguments', async () => {
 		mockGetSetupByIdWithOwner.mockResolvedValue(MOCK_SETUP);
-		const updatedSetup = { ...MOCK_SETUP, name: 'New Name', slug: 'new-name' };
+		const updatedSetup = { ...MOCK_SETUP, slug: 'new-name' };
 		mockUpdateSetupByIdWithSlugRedirects.mockResolvedValue(updatedSetup);
 
 		const { PATCH } = await import('./+server');
-		await PATCH(makePatchEvent('setup-uuid-1', { name: 'New Name' }));
+		await PATCH(makePatchEvent('setup-uuid-1', { slug: 'new-name' }));
 
 		expect(mockUpdateSetupByIdWithSlugRedirects).toHaveBeenCalledWith(
 			'setup-uuid-1',
-			expect.objectContaining({ name: 'New Name' }),
+			expect.objectContaining({ slug: 'new-name' }),
 			expect.objectContaining({
 				userId: 'user-uuid-1',
+				teamId: null,
 				currentSlug: 'my-setup'
 			})
 		);
@@ -142,11 +142,11 @@ describe('PATCH /api/v1/setups/[id]', () => {
 
 	it('returns updated setup including current slug and ownerUsername', async () => {
 		mockGetSetupByIdWithOwner.mockResolvedValue(MOCK_SETUP);
-		const updatedSetup = { ...MOCK_SETUP, name: 'Renamed Setup', slug: 'renamed-setup' };
+		const updatedSetup = { ...MOCK_SETUP, slug: 'renamed-setup' };
 		mockUpdateSetupByIdWithSlugRedirects.mockResolvedValue(updatedSetup);
 
 		const { PATCH } = await import('./+server');
-		const res = await PATCH(makePatchEvent('setup-uuid-1', { name: 'Renamed Setup' }));
+		const res = await PATCH(makePatchEvent('setup-uuid-1', { slug: 'renamed-setup' }));
 		expect(res.status).toBe(200);
 		const body = await res.json();
 		expect(body.data.slug).toBe('renamed-setup');
@@ -177,7 +177,7 @@ describe('PATCH /api/v1/setups/[id]', () => {
 		mockUpdateSetupByIdWithSlugRedirects.mockRejectedValue(uniqueViolationError);
 
 		const { PATCH } = await import('./+server');
-		const res = await PATCH(makePatchEvent('setup-uuid-1', { name: 'Taken Name' }));
+		const res = await PATCH(makePatchEvent('setup-uuid-1', { slug: 'taken-name' }));
 		expect(res.status).toBe(409);
 		const body = await res.json();
 		expect(body.code).toBe('SLUG_TAKEN');

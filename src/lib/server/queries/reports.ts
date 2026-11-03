@@ -1,4 +1,4 @@
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '$lib/server/db';
 import { setupReports, setups, users } from '$lib/server/db/schema';
@@ -27,7 +27,7 @@ export async function getPendingReportsWithDetails() {
 			status: setupReports.status,
 			createdAt: setupReports.createdAt,
 			setupId: setupReports.setupId,
-			setupName: setups.name,
+			setupName: sql<string>`coalesce(${setups.display}, ${setups.slug})`,
 			setupSlug: setups.slug,
 			ownerUsername: users.username,
 			reporterId: setupReports.reporterId,

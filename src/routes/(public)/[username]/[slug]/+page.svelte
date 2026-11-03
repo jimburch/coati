@@ -16,12 +16,12 @@
 </script>
 
 <svelte:head>
-	<title>{data.setup.display ?? data.setup.name} by {data.setup.ownerUsername} - Coati</title>
+	<title>{data.setup.display ?? data.setup.slug} by {data.setup.ownerUsername} - Coati</title>
 	<meta name="description" content={data.setup.description} />
 </svelte:head>
 
 <OgMeta
-	title="{data.setup.display ?? data.setup.name} by {data.setup.ownerUsername} - Coati"
+	title="{data.setup.display ?? data.setup.slug} by {data.setup.ownerUsername} - Coati"
 	description={data.setup.description}
 	url="/{data.setup.ownerUsername}/{data.setup.slug}"
 	type="article"
