@@ -51,12 +51,6 @@ export const postInstallSchema = z.array(z.string());
 // ─── Path Safety ──────────────────────────────────────────────────────────────
 
 /**
- * Returns true if `pathStr` is safe to treat as a relative path that stays
- * inside its intended root. Canonical for both server-side publish validation
- * and CLI-side clone validation — no layer is allowed to accept a path this
- * function rejects.
- */
-/**
  * Returns true if `value` is a safe same-origin redirect target — exactly one
  * leading `/` followed by a non-separator character. Blocks protocol-relative
  * URLs (`//evil.com`), backslash escapes (`/\evil.com`), absolute URLs, and
@@ -68,16 +62,29 @@ export function isSafeInternalRedirect(value: unknown): boolean {
 	return /^\/(?![/\\])/.test(value);
 }
 
+/**
+ * Returns true if `pathStr` is a safe file path for a SetupFile: it stays inside
+ * its root and never touches a git directory. A leading `~/` makes it a global
+ * path, resolved against the home directory; `~` anywhere else is rejected.
+ * Canonical for both server-side publish validation and CLI-side clone
+ * validation — no layer is allowed to accept a path this function rejects.
+ *
+ * This checks the file part only. A Setup path's `#selector` is handled by
+ * `parseSetupPath` in `@coati/content-hash`.
+ */
 export function isSafeRelativePath(pathStr: string): boolean {
 	if (typeof pathStr !== 'string' || pathStr.length === 0) return false;
-	if (pathStr.includes('\0')) return false;
-	if (pathStr.startsWith('/') || pathStr.startsWith('\\')) return false;
+	const rest = pathStr.startsWith('~/') ? pathStr.slice(2) : pathStr;
+	if (rest.length === 0 || rest.includes('~')) return false;
+	if (rest.includes('\0')) return false;
+	if (rest.startsWith('/') || rest.startsWith('\\')) return false;
 	// Windows drive letter (e.g. "C:\foo" or "C:/foo")
-	if (/^[a-zA-Z]:[\\/]/.test(pathStr)) return false;
+	if (/^[a-zA-Z]:[\\/]/.test(rest)) return false;
 	// Split on both separators so Windows-style `..\..\foo` is also caught on posix.
-	const segments = pathStr.split(/[\\/]+/);
-	for (const seg of segments) {
+	for (const seg of rest.split(/[\\/]+/)) {
 		if (seg === '..') return false;
+		// Case-insensitive: `.GIT` is the same directory on macOS and Windows.
+		if (seg.toLowerCase() === '.git') return false;
 	}
 	return true;
 }

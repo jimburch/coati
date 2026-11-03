@@ -11,6 +11,9 @@ importers:
       '@coati/agents-registry':
         specifier: workspace:*
         version: link:packages/agents-registry
+      '@coati/content-hash':
+        specifier: workspace:*
+        version: link:packages/content-hash
       '@coati/validation':
         specifier: workspace:*
         version: link:packages/shared-validation
@@ -217,6 +220,9 @@ importers:
       '@coati/agents-registry':
         specifier: workspace:*
         version: link:../packages/agents-registry
+      '@coati/content-hash':
+        specifier: workspace:*
+        version: link:../packages/content-hash
       '@coati/validation':
         specifier: workspace:*
         version: link:../packages/shared-validation
@@ -237,6 +243,22 @@ importers:
         version: 2.1.9(@types/node@22.19.15)(jsdom@28.1.0)(lightningcss@1.31.1)
 
   packages/agents-registry:
+    devDependencies:
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.9
+        version: 2.1.9(@types/node@22.19.15)(jsdom@28.1.0)(lightningcss@1.31.1)
+
+  packages/content-hash:
+    dependencies:
+      '@coati/validation':
+        specifier: workspace:*
+        version: link:../shared-validation
+      canonicalize:
+        specifier: ^5.1.0
+        version: 5.1.0
     devDependencies:
       typescript:
         specifier: ^5.9.3
@@ -2998,6 +3020,11 @@ packages:
 
   caniuse-lite@1.0.30001788:
     resolution: {integrity: sha512-6q8HFp+lOQtcf7wBK+uEenxymVWkGKkjFpCvw5W25cmMwEDU45p1xQFBQv8JDlMMry7eNxyBaR+qxgmTUZkIRQ==}
+
+  canonicalize@5.1.0:
+    resolution: {integrity: sha512-bab9+WefZljqQ8jT0qRwVmTyzAUU63K97QIQD3agynIBrb6sa5M2eAy8Hv8K3p4V9+ONVYZKtGYl4Dg+/5Gumw==}
+    engines: {node: '>=22'}
+    hasBin: true
 
   ccount@2.0.1:
     resolution: {integrity: sha512-eyrF0jiFpY+3drT6383f1qhkbGsLSifNAjA61IUjZjmLCWjItY6LB9ft9YhoDgwfmclB2zhu51Lc7+95b8NRAg==}
@@ -8318,6 +8345,8 @@ snapshots:
   callsites@3.1.0: {}
 
   caniuse-lite@1.0.30001788: {}
+
+  canonicalize@5.1.0: {}
 
   ccount@2.0.1: {}
 

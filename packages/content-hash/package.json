@@ -1,0 +1,22 @@
+{
+	"name": "@coati/content-hash",
+	"version": "0.1.0",
+	"description": "Content hashing, Setup path grammar, Settings fragment selectors and Repo fingerprints shared by the Coati server and CLI",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"test": "vitest run",
+		"test:unit": "vitest run",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@coati/validation": "workspace:*",
+		"canonicalize": "^5.1.0"
+	},
+	"devDependencies": {
+		"typescript": "^5.9.3",
+		"vitest": "^2.1.9"
+	}
+}

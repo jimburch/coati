@@ -70,6 +70,7 @@
 	},
 	"dependencies": {
 		"@coati/agents-registry": "workspace:*",
+		"@coati/content-hash": "workspace:*",
 		"@coati/validation": "workspace:*",
 		"@sentry/cloudflare": "^10.48.0",
 		"@sentry/sveltekit": "^10.48.0",

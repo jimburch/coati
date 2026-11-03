@@ -34,6 +34,7 @@
 	"license": "MIT",
 	"devDependencies": {
 		"@coati/agents-registry": "workspace:*",
+		"@coati/content-hash": "workspace:*",
 		"@coati/validation": "workspace:*",
 		"@types/diff": "^7.0.2",
 		"tsup": "^8.5.1",
