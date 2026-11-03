@@ -219,3 +219,31 @@ Facts only.
 - Home-directory relocation env vars: `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `COPILOT_HOME`, `GEMINI_CLI_HOME`, `OPENCODE_CONFIG_DIR`/`OPENCODE_CONFIG`. OpenCode's global dir is `~/.config/opencode` per its docs, which do not mention `XDG_CONFIG_HOME`. Cursor has no documented override.
 - Windows: Claude Code `~/.claude` is `%USERPROFILE%\.claude`; Copilot CLI `%USERPROFILE%\.copilot`; Gemini `~/.gemini` on all OSes per its table; other agents' Windows paths for user config were not stated on the pages fetched.
 - Registry state: Copilot is `scopes: ['project']` only (`:172`), and several mapped paths (Copilot `.github/copilot/*`, OpenCode `opencode.md`/`.opencode.json`/`config.json`, Cursor global files) are not confirmed by current docs (see Registry discrepancies).
+
+## Hook layouts verified for the registry (2026-11-02)
+
+Checked for #404, so the registry offers hook selectors only where the on-disk shape is confirmed (spec #402 Decided #9).
+
+- **Codex: confirmed from source**, which settles the weak doc-site citations above. Read at `openai/codex` main@dbaead01: `codex-rs/protocol/src/hooks.rs`, `codex-rs/config/src/hook_config.rs`, `codex-rs/config/src/hooks_tests.rs`.
+  - `hooks.json` is `{ "description"?: string, "hooks": { "<Event>": [{ "matcher"?: string, "hooks": [handler] }] } }`, and unknown top-level keys are rejected.
+  - Events are PascalCase: `PreToolUse`, `PostToolUse`, `SessionStart`, `Stop`, and so on.
+  - A handler is tagged by `type`. `"command"` takes `command`, `commandWindows`, `timeout` (seconds), `async`, `statusMessage` and `additionalContextLimit`. `"mcp_tool"`, `"prompt"` and `"agent"` handlers have no `command`.
+  - `[hooks]` in `config.toml` has the same event layout (`[[hooks.PreToolUse]]` / `[[hooks.PreToolUse.hooks]]`) next to a `state` map.
+  - If one layer has both forms, both load with a warning (`codex-rs/hooks/src/engine/discovery.rs`).
+  - MCP is `mcp_servers.<name>`. Its `env_vars` entries are a string or `{ name, source? }` (`codex-rs/config/src/mcp_types.rs`).
+  - Registry selector, for both files: `hooks.<Event>[matcher=<m>].hooks[command=<cmd>]`.
+- **Cursor: confirmed** ([hooks](https://cursor.com/docs/hooks)).
+  - The shape is `{ "version": 1, "hooks": { "<event>": [{ "command", "type"?, "timeout"?, "matcher"?, "loop_limit"?, "failClosed"? }] } }`.
+  - Events are camelCase (`preToolUse`, `afterFileEdit`, ...).
+  - `matcher` is a field on each handler, not a group.
+  - Project hooks run from the project root, and user hooks run from `~/.cursor/`.
+  - Registry selector: `hooks.<event>[command=<cmd>]`.
+- **Gemini CLI: confirmed** ([hooks](https://geminicli.com/docs/hooks/)).
+  - The shape is `hooks.<Event>[{ matcher, hooks: [{ type: "command", command, name?, timeout?, description? }] }]`.
+  - Events are PascalCase (`BeforeTool`, `AfterTool`, ...).
+  - `timeout` is in milliseconds. Codex, Cursor and Antigravity use seconds.
+
+Known limits of these selectors:
+
+- Two Codex handlers without a `command` (`prompt`/`agent` types) in one matcher group can't be told apart.
+- Two Cursor handlers with the same `command` and different `matcher`s can't be told apart either.

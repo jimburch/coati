@@ -11,6 +11,10 @@
 		"test:unit": "vitest run",
 		"typecheck": "tsc --noEmit"
 	},
+	"dependencies": {
+		"@coati/content-hash": "workspace:*",
+		"@coati/validation": "workspace:*"
+	},
 	"devDependencies": {
 		"typescript": "^5.9.3",
 		"vitest": "^2.1.9"

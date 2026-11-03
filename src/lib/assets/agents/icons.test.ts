@@ -11,7 +11,7 @@ describe('agent SVG icons', () => {
 		}
 	});
 
-	it('covers all six launch agents', () => {
+	it('covers the six launch agents and antigravity', () => {
 		const slugs = AGENTS.map((a) => a.slug);
 		expect(slugs).toContain('claude-code');
 		expect(slugs).toContain('codex');
@@ -19,5 +19,6 @@ describe('agent SVG icons', () => {
 		expect(slugs).toContain('cursor');
 		expect(slugs).toContain('gemini');
 		expect(slugs).toContain('opencode');
+		expect(slugs).toContain('antigravity');
 	});
 });

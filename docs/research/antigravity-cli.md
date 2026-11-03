@@ -129,3 +129,20 @@ Open design points for whoever implements it:
 - `~/.agents/skills` and `.claude/skills` support. Neither is mentioned, so treat as not read.
 - Whether the install script's "alias purging" removes a `gemini` alias.
 - Docs pages were read through a summarizing fetcher, and the Gemini CLI migration guide was summarized rather than quoted in full. The `antigravity.google` docs are a JS site whose content was rendered for the fetcher, so a re-check in a browser is cheap insurance before implementing.
+
+## Recheck (2026-11-02, for #404)
+
+The docs pages were refetched and render as server-side HTML. The CHANGELOG was rechecked too.
+
+- **`hooks.json` shape: confirmed** ([hooks](https://antigravity.google/docs/hooks/)).
+  - Each top-level key is a hook name holding an optional `enabled` plus event keys.
+  - `PreToolUse`/`PostToolUse` take `[{ matcher, hooks: [{ type?, command, timeout? }] }]`.
+  - `SessionStart`, `PreInvocation`, `PostInvocation` and `Stop` take handlers directly, and the matcher is ignored.
+  - The registry ships one fragment per named hook (`<hookName>`).
+- **Still unconfirmed:**
+  - whether `agy` reads a project `.gemini/settings.json` at runtime
+  - whether it reads loose `.gemini/commands/*.toml` (leans no; only `agy plugin import gemini` converts commands)
+  - the base dir for relative commands in `.agents/hooks.json`
+  - `${VAR}` interpolation in non-plugin `mcp_config.json` (documented only for plugin MCP servers)
+  - `~/.agents/skills` (leans no; `/skills` and `/customization-discovery` list only `.agents/skills/`, `~/.gemini/config/skills/`, `~/.gemini/antigravity-cli/skills/` and `~/.gemini/skills/`)
+- **Effect on the registry:** none of these are added, and Antigravity uses Coati tokens with no `envRef` (spec #402 §4).

@@ -1,3 +1,4 @@
+import antigravitySvg from '$lib/assets/agents/antigravity.svg?raw';
 import claudeCodeSvg from '$lib/assets/agents/claude-code.svg?raw';
 import codexSvg from '$lib/assets/agents/codex.svg?raw';
 import copilotSvg from '$lib/assets/agents/copilot.svg?raw';
@@ -12,7 +13,8 @@ export const agentIcons: Record<string, string> = {
 	copilot: copilotSvg,
 	cursor: cursorSvg,
 	gemini: geminiSvg,
-	opencode: opencodeSvg
+	opencode: opencodeSvg,
+	antigravity: antigravitySvg
 };
 
 /** Returns the raw SVG string for the given agent slug, or undefined if not found. */

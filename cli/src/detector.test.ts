@@ -85,96 +85,127 @@ describe('detectFiles — isEmpty flag', () => {
 describe('detectFiles — claude-code', () => {
 	it('detects all known claude-code paths with the right componentType', () => {
 		mkfile('CLAUDE.md', '# project');
-		mkfile('.claude/settings.json', '{}');
-		mkfile('.claude/CLAUDE.md', '# global');
+		mkfile('.claude/CLAUDE.md', '# project, nested');
+		mkfile('.claude/rules/frontend/react.md', '# rule');
+		mkfile('.claude/agents/reviewer.md', '# agent');
 		mkfile('.claude/commands/review.md', '# review');
-		mkfile('.claude/commands/deploy.md', '# deploy');
 		mkfile('.claude/commands/sub/helper.md', '# helper');
-		mkfile('.claude/skills/test-helper.md', '# skill');
+		mkfile('.claude/skills/test-helper/SKILL.md', '# skill');
+		mkfile('.claude/skills/test-helper/scripts/run.sh', '#!/bin/bash');
 		mkfile('.claude/hooks/pre-commit.sh', '#!/bin/bash');
-		mkfile('.claude/hooks/post-tool-use.py', '# hook');
-		mkfile('.mcp.json', '{}');
 		// decoys
 		mkfile('.claude/commands/script.sh', '#!/bin/bash');
 
 		const files = detectFiles(tmpDir);
 		assertDetected(files, [
 			{ path: 'CLAUDE.md', tool: 'claude-code', componentType: 'instruction' },
-			{ path: '.claude/settings.json', tool: 'claude-code', componentType: 'instruction' },
 			{ path: '.claude/CLAUDE.md', tool: 'claude-code', componentType: 'instruction' },
+			{
+				path: '.claude/rules/frontend/react.md',
+				tool: 'claude-code',
+				componentType: 'instruction'
+			},
+			{ path: '.claude/agents/reviewer.md', tool: 'claude-code', componentType: 'instruction' },
 			{ path: '.claude/commands/review.md', tool: 'claude-code', componentType: 'command' },
-			{ path: '.claude/commands/deploy.md', tool: 'claude-code', componentType: 'command' },
 			{ path: '.claude/commands/sub/helper.md', tool: 'claude-code', componentType: 'command' },
-			{ path: '.claude/skills/test-helper.md', tool: 'claude-code', componentType: 'skill' },
-			{ path: '.claude/hooks/pre-commit.sh', tool: 'claude-code', componentType: 'hook' },
-			{ path: '.claude/hooks/post-tool-use.py', tool: 'claude-code', componentType: 'hook' },
-			{ path: '.mcp.json', tool: 'claude-code', componentType: 'mcp_server' }
+			{ path: '.claude/skills/test-helper/SKILL.md', tool: 'claude-code', componentType: 'skill' },
+			{
+				path: '.claude/skills/test-helper/scripts/run.sh',
+				tool: 'claude-code',
+				componentType: 'skill'
+			},
+			{ path: '.claude/hooks/pre-commit.sh', tool: 'claude-code', componentType: 'hook' }
 		]);
-		// decoy: non-.md scripts in commands/ are not detected
 		expect(find(files, '.claude/commands/script.sh')).toBeUndefined();
+	});
+
+	it('never detects Settings files or personal files whole', () => {
+		mkfile('.claude/settings.json', '{}');
+		mkfile('.claude/settings.local.json', '{}');
+		mkfile('CLAUDE.local.md', '# mine');
+		mkfile('.mcp.json', '{}');
+		expect(detectFiles(tmpDir)).toEqual([]);
 	});
 });
 
 describe('detectFiles — codex', () => {
 	it('detects all known codex paths', () => {
-		mkfile('AGENTS.md', '# agents');
-		mkfile('.codex/config.toml', '');
+		mkfile('AGENTS.override.md', '# override');
 		mkfile('.codex/agents/my-agent.toml', '');
+		mkfile('.codex/config.toml', '');
+		mkfile('.codex/hooks.json', '{}');
 
 		const files = detectFiles(tmpDir);
 		assertDetected(files, [
-			{ path: 'AGENTS.md', tool: 'codex', componentType: 'instruction' },
+			{ path: 'AGENTS.override.md', tool: 'codex', componentType: 'instruction' },
 			{ path: '.codex/agents/my-agent.toml', tool: 'codex', componentType: 'instruction' }
 		]);
-		// .codex/config.toml is detected as codex; exact componentType is not asserted here
-		expect(findAll(files, '.codex/config.toml').some((f) => f.tool === 'codex')).toBe(true);
+		expect(find(files, '.codex/config.toml')).toBeUndefined();
+		expect(find(files, '.codex/hooks.json')).toBeUndefined();
 	});
 });
 
-describe('detectFiles — shared (.agents/skills)', () => {
-	it('tags .agents/skills/**/*.md as shared (tool=null), not codex', () => {
+describe('detectFiles — shared paths', () => {
+	it('tags .agents/skills/** and AGENTS.md as shared (tool=null)', () => {
+		mkfile('AGENTS.md', '# agents');
 		mkfile('.agents/skills/api-patterns/SKILL.md', '# api-patterns');
-		mkfile('.agents/skills/testing/SKILL.md', '# testing');
+		mkfile('.agents/skills/api-patterns/scripts/check.sh', '#!/bin/bash');
 		mkfile('.agents/skills/deep/nested/helper.md', '# nested');
 
 		const files = detectFiles(tmpDir);
 		assertDetected(files, [
+			{ path: 'AGENTS.md', tool: null, componentType: 'instruction' },
 			{ path: '.agents/skills/api-patterns/SKILL.md', tool: null, componentType: 'skill' },
-			{ path: '.agents/skills/testing/SKILL.md', tool: null, componentType: 'skill' },
+			{ path: '.agents/skills/api-patterns/scripts/check.sh', tool: null, componentType: 'skill' },
 			{ path: '.agents/skills/deep/nested/helper.md', tool: null, componentType: 'skill' }
 		]);
-		// no entry should be misattributed to codex
-		expect(files.every((f) => f.tool !== 'codex')).toBe(true);
+		expect(files.every((f) => f.tool === null)).toBe(true);
 	});
 });
 
 describe('detectFiles — copilot', () => {
 	it('detects all known copilot paths and ignores arbitrary .github files', () => {
 		mkfile('.github/copilot-instructions.md', '# copilot');
-		mkfile('.github/copilot/instructions.md', '# instructions');
-		mkfile('.github/copilot/mcp.json', '{}');
-		mkfile('.github/copilot/agents.json', '{}');
-		mkfile('.github/copilot/setup.sh', '#!/bin/bash');
-		mkfile('.github/copilot/prompts/my-prompt.md', '# prompt');
-		mkfile('.vscode/settings.json', '{}');
-		// decoys
+		mkfile('.github/instructions/react.instructions.md', '# react');
+		mkfile('.github/agents/reviewer.agent.md', '# agent');
+		mkfile('.github/prompts/review.prompt.md', '# prompt');
+		mkfile('.github/hooks/lint.json', '{}');
+		mkfile('.github/skills/x/SKILL.md', '# skill');
+		mkfile('.github/workflows/copilot-setup-steps.yml', '');
+		// decoys, including the dropped .github/copilot/* and .vscode/settings.json paths
 		mkfile('.github/workflows/ci.yml', '');
 		mkfile('.github/PULL_REQUEST_TEMPLATE.md', '');
+		mkfile('.github/copilot/mcp.json', '{}');
+		mkfile('.vscode/settings.json', '{}');
+		mkfile('.vscode/mcp.json', '{}');
 
 		const files = detectFiles(tmpDir);
 		assertDetected(files, [
 			{ path: '.github/copilot-instructions.md', tool: 'copilot', componentType: 'instruction' },
-			{ path: '.github/copilot/instructions.md', tool: 'copilot', componentType: 'instruction' },
-			{ path: '.github/copilot/mcp.json', tool: 'copilot', componentType: 'mcp_server' },
-			{ path: '.github/copilot/setup.sh', tool: 'copilot', componentType: 'hook' },
-			{ path: '.github/copilot/prompts/my-prompt.md', tool: 'copilot', componentType: 'command' },
-			{ path: '.vscode/settings.json', tool: 'copilot', componentType: 'instruction' }
+			{
+				path: '.github/instructions/react.instructions.md',
+				tool: 'copilot',
+				componentType: 'instruction'
+			},
+			{ path: '.github/agents/reviewer.agent.md', tool: 'copilot', componentType: 'instruction' },
+			{ path: '.github/prompts/review.prompt.md', tool: 'copilot', componentType: 'command' },
+			{ path: '.github/hooks/lint.json', tool: 'copilot', componentType: 'hook' },
+			{ path: '.github/skills/x/SKILL.md', tool: 'copilot', componentType: 'skill' },
+			{
+				path: '.github/workflows/copilot-setup-steps.yml',
+				tool: 'copilot',
+				componentType: 'setup_script'
+			}
 		]);
-		// agents.json is copilot-tagged (componentType not asserted)
-		expect(find(files, '.github/copilot/agents.json')?.tool).toBe('copilot');
-		// decoys
-		expect(find(files, '.github/workflows/ci.yml')).toBeUndefined();
-		expect(find(files, '.github/PULL_REQUEST_TEMPLATE.md')).toBeUndefined();
+		for (const p of [
+			'.github/workflows/ci.yml',
+			'.github/PULL_REQUEST_TEMPLATE.md',
+			'.github/copilot/mcp.json',
+			'.vscode/settings.json',
+			'.vscode/mcp.json'
+		]) {
+			expect(find(files, p), p).toBeUndefined();
+		}
 	});
 });
 
@@ -182,86 +213,150 @@ describe('detectFiles — cursor', () => {
 	it('detects all known cursor paths', () => {
 		mkfile('.cursorrules', 'always write tests');
 		mkfile('.cursorignore', 'node_modules/');
-		mkfile('.cursorindexingignore', '*.log');
 		mkfile('.cursor/rules/my-rule.mdc', '# rule');
+		mkfile('.cursor/agents/reviewer.md', '# agent');
+		mkfile('.cursor/commands/refactor.md', '# refactor');
+		mkfile('.cursor/skills/my-skill/SKILL.md', '# skill');
+		// dropped or Settings files
+		mkfile('.cursorindexingignore', '*.log');
 		mkfile('.cursor/rules/coding-style.md', '# style');
 		mkfile('.cursor/mcp.json', '{}');
 		mkfile('.cursor/hooks.json', '{}');
-		mkfile('.cursor/commands/refactor.md', '# refactor');
-		mkfile('.cursor/skills/my-skill.md', '# skill');
 
 		const files = detectFiles(tmpDir);
 		assertDetected(files, [
 			{ path: '.cursorrules', tool: 'cursor', componentType: 'instruction' },
-			{ path: '.cursor/mcp.json', tool: 'cursor', componentType: 'mcp_server' },
-			{ path: '.cursor/hooks.json', tool: 'cursor', componentType: 'hook' },
+			{ path: '.cursorignore', tool: 'cursor', componentType: 'instruction' },
+			{ path: '.cursor/rules/my-rule.mdc', tool: 'cursor', componentType: 'instruction' },
+			{ path: '.cursor/agents/reviewer.md', tool: 'cursor', componentType: 'instruction' },
 			{ path: '.cursor/commands/refactor.md', tool: 'cursor', componentType: 'command' },
-			{ path: '.cursor/skills/my-skill.md', tool: 'cursor', componentType: 'skill' }
+			{ path: '.cursor/skills/my-skill/SKILL.md', tool: 'cursor', componentType: 'skill' }
 		]);
-		// .cursorignore / .cursorindexingignore tagged as cursor
-		expect(find(files, '.cursorignore')?.tool).toBe('cursor');
-		expect(find(files, '.cursorindexingignore')?.tool).toBe('cursor');
-		// .mdc and .md rules both detected as cursor instruction
-		for (const p of ['.cursor/rules/my-rule.mdc', '.cursor/rules/coding-style.md']) {
-			const match = findAll(files, p).find((f) => f.tool === 'cursor');
-			expect(match, `missing cursor match for ${p}`).toBeDefined();
-			expect(match!.componentType).toBe('instruction');
+		for (const p of [
+			'.cursorindexingignore',
+			'.cursor/rules/coding-style.md',
+			'.cursor/mcp.json',
+			'.cursor/hooks.json'
+		]) {
+			expect(find(files, p), p).toBeUndefined();
 		}
 	});
 });
 
 describe('detectFiles — gemini', () => {
 	it('detects all known gemini paths', () => {
-		mkfile('GEMINI.md', '# gemini');
 		mkfile('.geminiignore', '*.log');
-		mkfile('.gemini/settings.json', '{}');
 		mkfile('.gemini/commands/build.toml', '');
-		mkfile('.gemini/skills/analyze.md', '');
+		mkfile('.gemini/skills/analyze/SKILL.md', '');
 		mkfile('.gemini/policies/security.toml', '');
+		mkfile('.gemini/settings.json', '{}');
 
 		const files = detectFiles(tmpDir);
 		assertDetected(files, [
-			{ path: 'GEMINI.md', tool: 'gemini', componentType: 'instruction' },
+			{ path: '.geminiignore', tool: 'gemini', componentType: 'instruction' },
 			{ path: '.gemini/commands/build.toml', tool: 'gemini', componentType: 'command' },
-			{ path: '.gemini/skills/analyze.md', tool: 'gemini', componentType: 'skill' },
+			{ path: '.gemini/skills/analyze/SKILL.md', tool: 'gemini', componentType: 'skill' },
 			{ path: '.gemini/policies/security.toml', tool: 'gemini', componentType: 'instruction' }
 		]);
-		expect(find(files, '.geminiignore')?.tool).toBe('gemini');
-		expect(findAll(files, '.gemini/settings.json').some((f) => f.tool === 'gemini')).toBe(true);
+		expect(find(files, '.gemini/settings.json')).toBeUndefined();
+	});
+
+	it('detects GEMINI.md for both gemini and antigravity', () => {
+		mkfile('GEMINI.md', '# gemini');
+		const tools = findAll(detectFiles(tmpDir), 'GEMINI.md').map((f) => f.tool);
+		expect(tools).toEqual(['gemini', 'antigravity']);
 	});
 });
 
 describe('detectFiles — opencode', () => {
 	it('detects all known opencode paths', () => {
+		mkfile('.opencode/commands/deploy.md', '# deploy');
+		mkfile('.opencode/agents/reviewer.md', '# agent');
+		mkfile('.opencode/skills/x/SKILL.md', '# skill');
+		mkfile('.opencode/plugins/notify.ts', '');
+		// stale names from the archived Go project, and the Settings file
 		mkfile('opencode.md', '# opencode');
 		mkfile('.opencode.json', '{}');
-		mkfile('.opencode/commands/deploy.md', '# deploy');
+		mkfile('opencode.json', '{}');
 
-		assertDetected(detectFiles(tmpDir), [
-			{ path: 'opencode.md', tool: 'opencode', componentType: 'instruction' },
-			{ path: '.opencode.json', tool: 'opencode', componentType: 'instruction' },
-			{ path: '.opencode/commands/deploy.md', tool: 'opencode', componentType: 'command' }
+		const files = detectFiles(tmpDir);
+		assertDetected(files, [
+			{ path: '.opencode/commands/deploy.md', tool: 'opencode', componentType: 'command' },
+			{ path: '.opencode/agents/reviewer.md', tool: 'opencode', componentType: 'instruction' },
+			{ path: '.opencode/skills/x/SKILL.md', tool: 'opencode', componentType: 'skill' },
+			{ path: '.opencode/plugins/notify.ts', tool: 'opencode', componentType: 'hook' }
 		]);
+		for (const p of ['opencode.md', '.opencode.json', 'opencode.json']) {
+			expect(find(files, p), p).toBeUndefined();
+		}
+	});
+});
+
+describe('detectFiles — antigravity', () => {
+	it('detects all known antigravity workspace paths', () => {
+		mkfile('.agents/AGENTS.md', '# agents');
+		mkfile('.agents/GEMINI.md', '# gemini');
+		mkfile('.agents/rules/style.md', '---\ntrigger: always_on\n---');
+		mkfile('.agents/agents/reviewer/agent.md', '# agent');
+		mkfile('.agents/rules.json', '{}');
+		mkfile('.agents/agents.json', '{}');
+		mkfile('.agents/skills.json', '{}');
+		mkfile('.agents/plugins/lint/plugin.json', '{}');
+		// Settings files, and the sunset workflows dir
+		mkfile('.agents/mcp_config.json', '{}');
+		mkfile('.agents/hooks.json', '{}');
+		mkfile('.agents/workflows/deploy.md', '# deploy');
+
+		const files = detectFiles(tmpDir);
+		assertDetected(files, [
+			{ path: '.agents/AGENTS.md', tool: 'antigravity', componentType: 'instruction' },
+			{ path: '.agents/GEMINI.md', tool: 'antigravity', componentType: 'instruction' },
+			{ path: '.agents/rules/style.md', tool: 'antigravity', componentType: 'instruction' },
+			{
+				path: '.agents/agents/reviewer/agent.md',
+				tool: 'antigravity',
+				componentType: 'instruction'
+			},
+			{ path: '.agents/rules.json', tool: 'antigravity', componentType: 'config' },
+			{ path: '.agents/agents.json', tool: 'antigravity', componentType: 'config' },
+			{ path: '.agents/skills.json', tool: 'antigravity', componentType: 'config' },
+			{ path: '.agents/plugins/lint/plugin.json', tool: 'antigravity', componentType: 'hook' }
+		]);
+		for (const p of [
+			'.agents/mcp_config.json',
+			'.agents/hooks.json',
+			'.agents/workflows/deploy.md'
+		]) {
+			expect(find(files, p), p).toBeUndefined();
+		}
 	});
 });
 
 // ─── Multi-agent invariants ──────────────────────────────────────────────────
 
 describe('detectFiles — multi-agent projects', () => {
-	it('detects files from all six agents and excludes unrelated files in the same project', () => {
+	it('detects files from all seven agents and excludes unrelated files in the same project', () => {
 		mkfile('CLAUDE.md', '# claude');
-		mkfile('.claude/commands/review.md', '# review');
-		mkfile('AGENTS.md', '# agents');
+		mkfile('AGENTS.override.md', '# codex');
 		mkfile('.github/copilot-instructions.md', '# copilot');
 		mkfile('.cursorrules', 'rules');
 		mkfile('GEMINI.md', '# gemini');
-		mkfile('opencode.md', '# opencode');
+		mkfile('.opencode/commands/review.md', '# opencode');
+		mkfile('.agents/rules/style.md', '# antigravity');
 		mkfile('README.md', '# readme');
 		mkfile('src/index.ts', '');
 
 		const files = detectFiles(tmpDir);
 		const agents = new Set(files.map((f) => f.tool));
-		for (const a of ['claude-code', 'codex', 'copilot', 'cursor', 'gemini', 'opencode']) {
+		for (const a of [
+			'claude-code',
+			'codex',
+			'copilot',
+			'cursor',
+			'gemini',
+			'opencode',
+			'antigravity'
+		]) {
 			expect(agents).toContain(a);
 		}
 		expect(find(files, 'README.md')).toBeUndefined();
@@ -269,35 +364,26 @@ describe('detectFiles — multi-agent projects', () => {
 	});
 
 	it('produces at most one entry per (path, agent) pair and allows same path under different agents', () => {
-		mkfile('.claude/settings.json', '{}');
-		mkfile('.claude/skills/my-skill.md', '# skill');
-		mkfile('.cursor/skills/my-skill.md', '# skill');
+		// .claude/CLAUDE.md matches both claude-code's project and global globs
+		mkfile('.claude/CLAUDE.md', '# claude');
+		mkfile('.claude/skills/my-skill/SKILL.md', '# skill');
+		mkfile('.cursor/skills/my-skill/SKILL.md', '# skill');
 		const files = detectFiles(tmpDir);
 
-		const claudeSettings = files.filter(
-			(f) => f.path === '.claude/settings.json' && f.tool === 'claude-code'
-		);
-		expect(claudeSettings).toHaveLength(1);
-
-		const claudeSkill = files.find(
-			(f) => f.path === '.claude/skills/my-skill.md' && f.tool === 'claude-code'
-		);
-		const cursorSkill = files.find(
-			(f) => f.path === '.cursor/skills/my-skill.md' && f.tool === 'cursor'
-		);
-		expect(claudeSkill).toBeDefined();
-		expect(cursorSkill).toBeDefined();
+		expect(
+			files.filter((f) => f.path === '.claude/CLAUDE.md' && f.tool === 'claude-code')
+		).toHaveLength(1);
+		expect(find(files, '.claude/skills/my-skill/SKILL.md')?.tool).toBe('claude-code');
+		expect(find(files, '.cursor/skills/my-skill/SKILL.md')?.tool).toBe('cursor');
 	});
 
-	it('does not duplicate root-level agent files (CLAUDE.md, .mcp.json, etc.)', () => {
+	it('does not duplicate root-level agent files (CLAUDE.md, AGENTS.md, etc.)', () => {
 		mkfile('CLAUDE.md', '# claude');
-		mkfile('.mcp.json', '{}');
 		mkfile('AGENTS.md', '# agents');
 		mkfile('.cursorrules', 'rules');
-		mkfile('.claude/settings.json', '{}');
 		const files = detectFiles(tmpDir);
 
-		for (const p of ['CLAUDE.md', '.mcp.json', 'AGENTS.md', '.cursorrules']) {
+		for (const p of ['CLAUDE.md', 'AGENTS.md', '.cursorrules']) {
 			expect(findAll(files, p), `${p} should be detected exactly once`).toHaveLength(1);
 		}
 	});
