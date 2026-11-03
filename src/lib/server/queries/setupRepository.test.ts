@@ -12,7 +12,6 @@ const mockCreateSetup = vi.fn();
 const mockUpdateSetup = vi.fn();
 const mockDeleteSetup = vi.fn();
 const mockSetStar = vi.fn();
-const mockRecordClone = vi.fn();
 const mockSearchSetups = vi.fn();
 const mockGetAllAgentsWithSetupCount = vi.fn();
 const mockGetAgentBySlugWithSetups = vi.fn();
@@ -31,7 +30,6 @@ vi.mock('$lib/server/queries/setups', () => ({
 	updateSetup: (...args: unknown[]) => mockUpdateSetup(...args),
 	deleteSetup: (...args: unknown[]) => mockDeleteSetup(...args),
 	setStar: (...args: unknown[]) => mockSetStar(...args),
-	recordClone: (...args: unknown[]) => mockRecordClone(...args),
 	searchSetups: (...args: unknown[]) => mockSearchSetups(...args),
 	getAllAgentsWithSetupCount: (...args: unknown[]) => mockGetAllAgentsWithSetupCount(...args),
 	getAgentBySlugWithSetups: (...args: unknown[]) => mockGetAgentBySlugWithSetups(...args)
@@ -211,10 +209,6 @@ describe('setupRepo — delegating methods', () => {
 		mockDeleteSetup.mockResolvedValue(1);
 		expect(await setupRepo.remove('setup-1', 'user-1')).toBe(1);
 		expect(mockDeleteSetup).toHaveBeenCalledWith('setup-1', 'user-1');
-
-		mockRecordClone.mockResolvedValue(undefined);
-		await setupRepo.recordClone('setup-1');
-		expect(mockRecordClone).toHaveBeenCalledWith('setup-1');
 
 		const countsData = [
 			{ id: 'a1', slug: 'claude-code', displayName: 'Claude Code', setupsCount: 3 }

@@ -8,6 +8,19 @@ vi.mock('$lib/server/queries/setupRepository', () => ({
 	}
 }));
 
+// The lookup and read extras have their own tests; here they defer to getTeamSetupDetail.
+vi.mock('$lib/server/setupLookup', () => ({
+	resolveTeamSetup: async (team: string, slug: string, viewer?: string) => {
+		const setup = await mockGetTeamSetupDetail(team, slug, viewer);
+		return setup ? { setup, renamed: false } : null;
+	},
+	movedPermanently: () => new Response(null, { status: 301 })
+}));
+
+vi.mock('$lib/server/readApi', () => ({
+	setupReadExtras: async () => ({ revision: 1, revisionPublishedAt: null, tags: [] })
+}));
+
 vi.mock('$lib/server/responses', async (importOriginal) => {
 	return await importOriginal();
 });

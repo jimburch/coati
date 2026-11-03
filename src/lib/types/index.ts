@@ -158,6 +158,20 @@ export const updateSetupSchema = z.object({
 	visibility: z.enum(['public', 'private']).optional()
 });
 
+/** `POST /api/v1/setups/match` (spec §5). Hashes are the CLI's local `hashSetupFile` results. */
+export const matchSetupsSchema = z.object({
+	fingerprint: fingerprintSchema.optional(),
+	files: z
+		.array(
+			z.object({
+				path: z.string().min(1).max(1000),
+				hash: z.string().regex(/^[0-9a-f]{64}$/, 'hash must be 64 hex characters')
+			})
+		)
+		.max(1000)
+		.default([])
+});
+
 export const updateProfileSchema = z.object({
 	name: z.string().max(100).optional(),
 	bio: z.string().max(500).optional(),

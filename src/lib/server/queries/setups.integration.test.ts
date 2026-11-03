@@ -41,7 +41,6 @@ import {
 	deleteSetupForce,
 	getSetupByIdWithOwner,
 	updateSetupByIdWithSlugRedirects,
-	recordClone,
 	searchSetups
 } from './setups';
 import {
@@ -427,30 +426,5 @@ describe.skipIf(!hasDatabase)('setups queries — integration', () => {
 			.from(setupSlugRedirects)
 			.where(eq(setupSlugRedirects.setupId, created.id));
 		expect(redirects).toHaveLength(0);
-	});
-
-	it('recordClone increments the setup clonesCount', async () => {
-		const owner = await createTestUser();
-		createdUserIds.push(owner.id);
-
-		const created = await createSetup(owner.id, {
-			slug: `clone-me-${Date.now()}`,
-			description: 'desc'
-		});
-
-		const [before] = await db
-			.select({ clonesCount: setups.clonesCount })
-			.from(setups)
-			.where(eq(setups.id, created.id));
-
-		await recordClone(created.id);
-		await recordClone(created.id);
-
-		const [after] = await db
-			.select({ clonesCount: setups.clonesCount })
-			.from(setups)
-			.where(eq(setups.id, created.id));
-
-		expect(after.clonesCount).toBe(before.clonesCount + 2);
 	});
 });

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockGetTeamSetupBySlug = vi.fn();
 const mockCanViewSetup = vi.fn();
-const mockGetSetupFiles = vi.fn();
+const mockFilesResponse = vi.fn();
 
 vi.mock('$lib/server/queries/teams', () => ({
 	getTeamSetupBySlug: (...args: unknown[]) => mockGetTeamSetupBySlug(...args)
@@ -13,7 +13,12 @@ vi.mock('$lib/server/queries/access', () => ({
 }));
 
 vi.mock('$lib/server/queries/setups', () => ({
-	getSetupFiles: (...args: unknown[]) => mockGetSetupFiles(...args)
+	getSlugRedirect: async () => null,
+	getTeamSlugRedirect: async () => null
+}));
+
+vi.mock('$lib/server/readApi', () => ({
+	filesResponse: (...args: unknown[]) => mockFilesResponse(...args)
 }));
 
 vi.mock('$lib/server/responses', async (importOriginal) => {
@@ -43,8 +48,10 @@ const MOCK_FILES = [
 function makeGetEvent(slug: string, setupSlug: string, userId?: string) {
 	return {
 		params: { slug, setupSlug },
-		locals: { user: userId ? { id: userId } : null }
-	} as Parameters<(typeof import('./+server'))['GET']>[0];
+		locals: { user: userId ? { id: userId } : null },
+		url: new URL(`http://localhost/api/v1/teams/${slug}/setups/${setupSlug}/files`),
+		request: new Request('http://localhost/x', { headers: { 'X-Coati-CLI': '1.0.0' } })
+	} as unknown as Parameters<(typeof import('./+server'))['GET']>[0];
 }
 
 describe('GET /api/v1/teams/[slug]/setups/[setupSlug]/files — access matrix', () => {
@@ -55,19 +62,25 @@ describe('GET /api/v1/teams/[slug]/setups/[setupSlug]/files — access matrix', 
 	it('returns 200 with files for public setup — anonymous viewer', async () => {
 		mockGetTeamSetupBySlug.mockResolvedValue(PUBLIC_SETUP);
 		mockCanViewSetup.mockResolvedValue(true);
-		mockGetSetupFiles.mockResolvedValue(MOCK_FILES);
+		mockFilesResponse.mockImplementation(
+			async () =>
+				new Response(JSON.stringify({ data: { revision: 1, files: MOCK_FILES, history: {} } }))
+		);
 
 		const { GET } = await import('./+server');
 		const res = await GET(makeGetEvent('acme', 'shared-setup'));
 		expect(res.status).toBe(200);
 		const body = await res.json();
-		expect(body.data).toHaveLength(2);
+		expect(body.data.files).toHaveLength(2);
 	});
 
 	it('returns 200 with files for public setup — authenticated non-member', async () => {
 		mockGetTeamSetupBySlug.mockResolvedValue(PUBLIC_SETUP);
 		mockCanViewSetup.mockResolvedValue(true);
-		mockGetSetupFiles.mockResolvedValue(MOCK_FILES);
+		mockFilesResponse.mockImplementation(
+			async () =>
+				new Response(JSON.stringify({ data: { revision: 1, files: MOCK_FILES, history: {} } }))
+		);
 
 		const { GET } = await import('./+server');
 		const res = await GET(makeGetEvent('acme', 'shared-setup', 'other-user'));
@@ -77,13 +90,16 @@ describe('GET /api/v1/teams/[slug]/setups/[setupSlug]/files — access matrix', 
 	it('returns 200 with files for private setup — team member', async () => {
 		mockGetTeamSetupBySlug.mockResolvedValue(PRIVATE_SETUP);
 		mockCanViewSetup.mockResolvedValue(true);
-		mockGetSetupFiles.mockResolvedValue(MOCK_FILES);
+		mockFilesResponse.mockImplementation(
+			async () =>
+				new Response(JSON.stringify({ data: { revision: 1, files: MOCK_FILES, history: {} } }))
+		);
 
 		const { GET } = await import('./+server');
 		const res = await GET(makeGetEvent('acme', 'shared-setup', 'member-user'));
 		expect(res.status).toBe(200);
 		const body = await res.json();
-		expect(body.data).toHaveLength(2);
+		expect(body.data.files).toHaveLength(2);
 	});
 
 	it('returns 404 for private setup — anonymous viewer', async () => {
@@ -132,6 +148,6 @@ describe('GET /api/v1/teams/[slug]/setups/[setupSlug]/files — access matrix', 
 
 		const { GET } = await import('./+server');
 		await GET(makeGetEvent('acme', 'shared-setup'));
-		expect(mockGetSetupFiles).not.toHaveBeenCalled();
+		expect(mockFilesResponse).not.toHaveBeenCalled();
 	});
 });

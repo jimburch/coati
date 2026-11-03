@@ -6,6 +6,7 @@ import type { ExploreSort } from '$lib/types';
 import { setupRepo } from '$lib/server/queries/setupRepository';
 import { getTeamByIdForAuth, getTeamMemberRole } from '$lib/server/queries/teams';
 import { getSetupSummary, publishErrorResponse } from '$lib/server/publishApi';
+import { requireCliVersion } from '$lib/server/cliVersion';
 import {
 	PublishError,
 	resolveClassification,
@@ -28,6 +29,9 @@ export const GET: RequestHandler = async ({ url }) => {
 };
 
 export const POST: RequestHandler = async (event) => {
+	const outdated = requireCliVersion(event.request);
+	if (outdated) return outdated;
+
 	const authResult = requireApiAuth(event);
 	if (authResult instanceof Response) return authResult;
 	const user = authResult;

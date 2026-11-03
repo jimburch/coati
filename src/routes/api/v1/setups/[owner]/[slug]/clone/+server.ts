@@ -1,16 +1,19 @@
 import type { RequestHandler } from './$types';
-import { success, error } from '$lib/server/responses';
-import { setupRepo } from '$lib/server/queries/setupRepository';
-import { track } from '$lib/server/observability/mixpanel';
+import { error } from '$lib/server/responses';
+import { requireCliVersion } from '$lib/server/cliVersion';
+import { resolvePersonalSetup } from '$lib/server/setupLookup';
+import { cloneResponse } from '$lib/server/readApi';
 
-export const POST: RequestHandler = async ({ params, locals }) => {
-	const setup = await setupRepo.getByOwnerSlug(params.owner, params.slug, locals.user?.id);
-	if (!setup) {
-		return error('Setup not found', 'NOT_FOUND', 404);
-	}
-	await setupRepo.recordClone(setup.id);
+/** Records a clone (spec §5 "Clone"). A renamed slug resolves without a redirect. */
+export const POST: RequestHandler = async (event) => {
+	const outdated = requireCliVersion(event.request);
+	if (outdated) return outdated;
 
-	track('Setup Cloned', { setup_id: setup.id }, { locals });
-
-	return success({ cloned: true, clonesCount: setup.clonesCount + 1 });
+	const found = await resolvePersonalSetup(
+		event.params.owner,
+		event.params.slug,
+		event.locals.user?.id
+	);
+	if (!found) return error('Setup not found', 'NOT_FOUND', 404);
+	return cloneResponse(event, found.setup);
 };

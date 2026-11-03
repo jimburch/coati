@@ -18,13 +18,6 @@ export const counters = {
 			.where(eq(users.id, userId));
 	},
 
-	async cloneRecorded(tx: Tx, setupId: string): Promise<void> {
-		await tx
-			.update(setups)
-			.set({ clonesCount: sql`${setups.clonesCount} + 1` })
-			.where(eq(setups.id, setupId));
-	},
-
 	async star(tx: Tx, setupId: string, added: boolean): Promise<void> {
 		await tx
 			.update(setups)

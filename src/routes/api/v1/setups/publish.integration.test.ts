@@ -60,7 +60,7 @@ function makeEvent(
 		url,
 		request: new Request(url, {
 			method,
-			headers: { 'Content-Type': 'application/json' },
+			headers: { 'Content-Type': 'application/json', 'X-Coati-CLI': '1.0.0' },
 			body: JSON.stringify(body)
 		})
 	} as unknown as Event;

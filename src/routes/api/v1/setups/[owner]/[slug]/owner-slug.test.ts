@@ -20,7 +20,13 @@ vi.mock('$lib/server/queries/teams', () => ({
 }));
 
 vi.mock('$lib/server/queries/setups', () => ({
-	deleteSetupForce: (...args: unknown[]) => mockDeleteSetupForce(...args)
+	deleteSetupForce: (...args: unknown[]) => mockDeleteSetupForce(...args),
+	getSlugRedirect: (...args: unknown[]) => mockGetSlugRedirect(...args),
+	getTeamSlugRedirect: async () => null
+}));
+
+vi.mock('$lib/server/readApi', () => ({
+	setupReadExtras: async () => ({ revision: 1, revisionPublishedAt: null, tags: [] })
 }));
 
 vi.mock('$lib/server/responses', async (importOriginal) => {
@@ -56,6 +62,7 @@ function makeGetEvent(owner: string, slug: string) {
 	return {
 		params: { owner, slug },
 		locals: { user: null },
+		url: new URL(`http://localhost/api/v1/setups/${owner}/${slug}`),
 		request: new Request(`http://localhost/api/v1/setups/${owner}/${slug}`)
 	} as Parameters<(typeof import('./+server'))['GET']>[0];
 }
@@ -72,6 +79,15 @@ describe('GET /api/v1/setups/[owner]/[slug]', () => {
 		expect(res.status).toBe(200);
 		const body = await res.json();
 		expect(body.data.slug).toBe('my-setup');
+		expect(body.data.revision).toBe(1);
+	});
+
+	it('returns 404 rather than redirecting to a Setup the viewer cannot see', async () => {
+		mockGetByOwnerSlug.mockResolvedValue(null);
+		mockGetSlugRedirect.mockResolvedValue('private-now');
+		const { GET } = await import('./+server');
+		const res = await GET(makeGetEvent('alice', 'old-slug'));
+		expect(res.status).toBe(404);
 	});
 
 	it('GET response does not include placement field', async () => {
@@ -83,7 +99,9 @@ describe('GET /api/v1/setups/[owner]/[slug]', () => {
 	});
 
 	it('returns 301 redirect to current slug when old slug found in redirects', async () => {
-		mockGetByOwnerSlug.mockResolvedValue(null);
+		mockGetByOwnerSlug
+			.mockResolvedValueOnce(null)
+			.mockResolvedValueOnce({ ...MOCK_SETUP, slug: 'renamed-setup' });
 		mockGetSlugRedirect.mockResolvedValue('renamed-setup');
 		const { GET } = await import('./+server');
 		const res = await GET(makeGetEvent('alice', 'old-slug'));
@@ -102,7 +120,9 @@ describe('GET /api/v1/setups/[owner]/[slug]', () => {
 	});
 
 	it('redirect Location points directly to current slug (no chains)', async () => {
-		mockGetByOwnerSlug.mockResolvedValue(null);
+		mockGetByOwnerSlug
+			.mockResolvedValueOnce(null)
+			.mockResolvedValueOnce({ ...MOCK_SETUP, slug: 'current-slug' });
 		mockGetSlugRedirect.mockResolvedValue('current-slug');
 		const { GET } = await import('./+server');
 		const res = await GET(makeGetEvent('alice', 'first-old-slug'));

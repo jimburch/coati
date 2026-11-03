@@ -153,7 +153,7 @@ function makePostEvent(body: Record<string, unknown>) {
 	return {
 		request: new Request('http://localhost/api/v1/setups', {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: { 'Content-Type': 'application/json', 'X-Coati-CLI': '1.0.0' },
 			body: JSON.stringify({ files: [], ...body })
 		}),
 		url: new URL('http://localhost/api/v1/setups'),

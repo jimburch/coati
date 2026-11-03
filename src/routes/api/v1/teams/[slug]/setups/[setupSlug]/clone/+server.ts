@@ -1,17 +1,19 @@
 import type { RequestHandler } from './$types';
 import { error } from '$lib/server/responses';
-import { getTeamSetupBySlug } from '$lib/server/queries/teams';
-import { canViewSetup } from '$lib/server/queries/access';
-import { recordClone } from '$lib/server/queries/setups';
+import { requireCliVersion } from '$lib/server/cliVersion';
+import { resolveTeamSetup } from '$lib/server/setupLookup';
+import { cloneResponse } from '$lib/server/readApi';
 
-export const POST: RequestHandler = async ({ params, locals }) => {
-	const setup = await getTeamSetupBySlug(params.slug, params.setupSlug);
-	if (!setup) {
-		return error('Setup not found', 'NOT_FOUND', 404);
-	}
-	if (!(await canViewSetup(setup, locals.user?.id))) {
-		return error('Setup not found', 'NOT_FOUND', 404);
-	}
-	await recordClone(setup.id);
-	return new Response(null, { status: 204 });
+/** Records a clone of a Team Setup. A renamed slug resolves without a redirect. */
+export const POST: RequestHandler = async (event) => {
+	const outdated = requireCliVersion(event.request);
+	if (outdated) return outdated;
+
+	const found = await resolveTeamSetup(
+		event.params.slug,
+		event.params.setupSlug,
+		event.locals.user?.id
+	);
+	if (!found) return error('Setup not found', 'NOT_FOUND', 404);
+	return cloneResponse(event, found.setup);
 };

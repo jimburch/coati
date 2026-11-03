@@ -5,7 +5,7 @@
  */
 
 import type { RequestEvent } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { setups, teams, users } from '$lib/server/db/schema';
 import { requireApiAuth } from '$lib/server/guards';
@@ -46,8 +46,13 @@ export function buildSetupSummary(
 	return { ...row, path, url: `${origin}/${path}` };
 }
 
-export async function getSetupSummary(setupId: string, origin: string): Promise<SetupSummary> {
-	const [row] = await db
+/** Summaries for `setupIds`, in the order given. Unknown ids are skipped. */
+export async function getSetupSummaries(
+	setupIds: readonly string[],
+	origin: string
+): Promise<SetupSummary[]> {
+	if (setupIds.length === 0) return [];
+	const rows = await db
 		.select({
 			id: setups.id,
 			slug: setups.slug,
@@ -60,9 +65,14 @@ export async function getSetupSummary(setupId: string, origin: string): Promise<
 		.from(setups)
 		.innerJoin(users, eq(setups.userId, users.id))
 		.leftJoin(teams, eq(setups.teamId, teams.id))
-		.where(eq(setups.id, setupId))
-		.limit(1);
-	return buildSetupSummary(row, origin);
+		.where(inArray(setups.id, [...setupIds]));
+	const byId = new Map(rows.map((r) => [r.id, buildSetupSummary(r, origin)]));
+	return setupIds.flatMap((id) => byId.get(id) ?? []);
+}
+
+export async function getSetupSummary(setupId: string, origin: string): Promise<SetupSummary> {
+	const [summary] = await getSetupSummaries([setupId], origin);
+	return summary;
 }
 
 /**

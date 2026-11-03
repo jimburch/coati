@@ -10,3 +10,5 @@ GITHUB_FEEDBACK_TOKEN=
 PUBLIC_SENTRY_DSN=
 # Set to true to skip the rate-limit binding while developing.
 DISABLE_RATE_LIMIT=
+# Anonymous clone counting salt (see .env.example). Unset means anonymous clones aren't counted.
+CLONE_SALT_SECRET=

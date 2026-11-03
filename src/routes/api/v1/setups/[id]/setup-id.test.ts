@@ -25,7 +25,7 @@ vi.mock('$lib/server/queries/publish', () => ({
 	publishSetupUpdate: (...args: unknown[]) => mockPublishSetupUpdate(...args)
 }));
 
-// getSetupSummary's select chain resolves to one summary row.
+// getSetupSummaries' select chain resolves to one summary row.
 vi.mock('$lib/server/db', () => {
 	const row = {
 		id: 'setup-1',
@@ -37,8 +37,8 @@ vi.mock('$lib/server/db', () => {
 		ownerUsername: 'alice'
 	};
 	const chain: Record<string, unknown> = {};
-	for (const m of ['select', 'from', 'innerJoin', 'leftJoin', 'where']) chain[m] = () => chain;
-	chain.limit = async () => [row];
+	for (const m of ['select', 'from', 'innerJoin', 'leftJoin']) chain[m] = () => chain;
+	chain.where = async () => [row];
 	return { db: chain };
 });
 
@@ -52,7 +52,7 @@ function makeEvent(userId: string | null, body: unknown) {
 		url: new URL('http://localhost/api/v1/setups/setup-1'),
 		request: new Request('http://localhost/api/v1/setups/setup-1', {
 			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
+			headers: { 'Content-Type': 'application/json', 'X-Coati-CLI': '1.0.0' },
 			body: typeof body === 'string' ? body : JSON.stringify(body)
 		})
 	} as unknown as Parameters<(typeof import('./+server'))['PATCH']>[0];

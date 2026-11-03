@@ -1,4 +1,4 @@
-import { eq, and, desc, sql, inArray, isNotNull } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { counters } from '$lib/server/counters';
 import {
@@ -11,7 +11,8 @@ import {
 	agents,
 	stars,
 	users,
-	activities
+	activities,
+	teams
 } from '$lib/server/db/schema';
 import type { Category, ComponentType } from '@coati/validation';
 import type { ExploreSort } from '$lib/types';
@@ -115,10 +116,26 @@ export async function getSetupByOwnerSlug(ownerUsername: string, slug: string) {
 		})
 		.from(setups)
 		.innerJoin(users, eq(setups.userId, users.id))
-		.where(and(eq(users.username, ownerUsername), eq(setups.slug, slug)))
+		// The personal route only names personal Setups; Team Setups live at org/<team>/<slug>.
+		.where(and(eq(users.username, ownerUsername), eq(setups.slug, slug), isNull(setups.teamId)))
 		.limit(1);
 
 	return result[0] ?? null;
+}
+
+/** The current slug of a Team Setup that used to be `oldSlug` (redirects keyed by the Team, #400). */
+export async function getTeamSlugRedirect(
+	teamSlug: string,
+	oldSlug: string
+): Promise<string | null> {
+	const result = await db
+		.select({ currentSlug: setups.slug })
+		.from(setupSlugRedirects)
+		.innerJoin(teams, eq(setupSlugRedirects.teamId, teams.id))
+		.innerJoin(setups, eq(setupSlugRedirects.setupId, setups.id))
+		.where(and(eq(teams.slug, teamSlug), eq(setupSlugRedirects.oldSlug, oldSlug)))
+		.limit(1);
+	return result[0]?.currentSlug ?? null;
 }
 
 export async function getSlugRedirect(
@@ -874,12 +891,6 @@ export async function updateSetupByIdWithSlugRedirects(
 		}
 
 		return setup;
-	});
-}
-
-export async function recordClone(setupId: string): Promise<void> {
-	await db.transaction(async (tx) => {
-		await counters.cloneRecorded(tx, setupId);
 	});
 }
 

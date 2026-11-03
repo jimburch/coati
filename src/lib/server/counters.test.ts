@@ -50,20 +50,6 @@ describe('counters', () => {
 		});
 	});
 
-	// --- Cycle 3: cloneRecorded ---
-	describe('cloneRecorded', () => {
-		it('calls tx.update once', async () => {
-			const { tx, mockUpdate } = makeTx();
-			await counters.cloneRecorded(tx, 'setup-1');
-			expect(mockUpdate).toHaveBeenCalledTimes(1);
-		});
-
-		it('resolves without throwing', async () => {
-			const { tx } = makeTx();
-			await expect(counters.cloneRecorded(tx, 'setup-1')).resolves.toBeUndefined();
-		});
-	});
-
 	// --- Cycle 4: star ---
 	describe('star', () => {
 		it('calls tx.update once when adding a star', async () => {

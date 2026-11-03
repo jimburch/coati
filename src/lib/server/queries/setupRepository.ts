@@ -11,7 +11,6 @@ import {
 	updateSetup,
 	deleteSetup,
 	setStar,
-	recordClone,
 	searchSetups,
 	getAllAgentsWithSetupCount,
 	getAgentBySlugWithSetups,
@@ -103,10 +102,6 @@ export const setupRepo = {
 		desired: boolean
 	): Promise<{ starred: boolean; starsCount: number }> {
 		return setStar(userId, setupId, desired);
-	},
-
-	async recordClone(setupId: string): Promise<void> {
-		return recordClone(setupId);
 	},
 
 	async getAllAgents() {

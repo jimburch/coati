@@ -8,7 +8,10 @@
  * clone rows and tags created by name.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+
+vi.mock('$env/dynamic/private', () => ({ env: {} }));
+
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { hashSetupFile, parseSetupPath } from '@coati/content-hash';
 import {
@@ -18,6 +21,9 @@ import {
 	isAllowedHomePath
 } from '@coati/agents-registry';
 import * as schema from '$lib/server/db/schema';
+import { runWithDatabase } from '$lib/server/db';
+import { GET as getPersonalFiles } from '../../routes/api/v1/setups/[owner]/[slug]/files/+server';
+import { GET as getTeamFiles } from '../../routes/api/v1/teams/[slug]/setups/[setupSlug]/files/+server';
 import { seed } from '../../../scripts/seed-dev';
 import {
 	createScratchDatabase,
@@ -139,6 +145,47 @@ describe.skipIf(!hasTestDatabase)('seed() — integration', () => {
 			return [...everPublished].some((p) => !current.has(p as string));
 		});
 		expect(removed).toBeDefined();
+	});
+
+	it('serves `history` with a `null` entry for that removed path through the files endpoint', async () => {
+		const removed = setupRows.find((setup) => {
+			const everPublished = new Set(
+				revisionFileRows.filter((f) => f.setup_id === setup.id).map((f) => f.path as string)
+			);
+			const current = latestRevisionFiles(setup.id);
+			return [...everPublished].some((p) => !current.has(p));
+		})!;
+		const [owner] =
+			await scratch.sql`SELECT username FROM users WHERE id = ${removed.user_id as string}`;
+		const [team] = removed.team_id
+			? await scratch.sql`SELECT slug FROM teams WHERE id = ${removed.team_id as string}`
+			: [undefined];
+
+		const url = team
+			? `http://localhost/api/v1/teams/${team.slug}/setups/${removed.slug}/files`
+			: `http://localhost/api/v1/setups/${owner.username}/${removed.slug}/files`;
+		const event = {
+			params: team
+				? { slug: team.slug, setupSlug: removed.slug }
+				: { owner: owner.username, slug: removed.slug },
+			locals: { user: { id: removed.user_id } },
+			url: new URL(url),
+			request: new Request(url, { headers: { 'X-Coati-CLI': '1.0.0' } })
+		} as never;
+		const res = await runWithDatabase(drizzle(scratch.sql, { schema }), () =>
+			team ? getTeamFiles(event) : getPersonalFiles(event)
+		);
+		expect(res.status).toBe(200);
+		const { data } = await res.json();
+
+		const revisions = revisionRows.filter((r) => r.setup_id === removed.id);
+		expect(data.revision).toBe(Math.max(...revisions.map((r) => r.number as number)));
+		const current = new Set(data.files.map((f: { path: string }) => f.path));
+		const gone = Object.keys(data.history).filter((p) => !current.has(p));
+		expect(gone.length).toBeGreaterThan(0);
+		for (const path of gone) {
+			expect(data.history[path].at(-1).hash, path).toBeNull();
+		}
 	});
 
 	it('includes a mixed Setup with project and `~/` files', () => {

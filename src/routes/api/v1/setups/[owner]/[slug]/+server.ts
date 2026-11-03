@@ -2,6 +2,9 @@ import type { RequestHandler } from './$types';
 import { requireApiAuth } from '$lib/server/guards';
 import { success, error } from '$lib/server/responses';
 import { handleSetupUpdate } from '$lib/server/publishApi';
+import { requireCliVersion } from '$lib/server/cliVersion';
+import { movedPermanently, resolvePersonalSetup } from '$lib/server/setupLookup';
+import { setupReadExtras } from '$lib/server/readApi';
 import { setupRepo } from '$lib/server/queries/setupRepository';
 import { getTeamMemberRole } from '$lib/server/queries/teams';
 import { deleteSetupForce } from '$lib/server/queries/setups';
@@ -16,28 +19,28 @@ async function canMutateSetup(
 	return role === 'admin';
 }
 
-export const GET: RequestHandler = async ({ params, locals }) => {
-	const setup = await setupRepo.getByOwnerSlug(params.owner, params.slug, locals.user?.id);
-	if (!setup) {
-		const currentSlug = await setupRepo.getSlugRedirect(params.owner, params.slug);
-		if (currentSlug) {
-			return new Response(null, {
-				status: 301,
-				headers: { Location: `/api/v1/setups/${params.owner}/${currentSlug}` }
-			});
-		}
-		return error('Setup not found', 'NOT_FOUND', 404);
+export const GET: RequestHandler = async ({ params, locals, url }) => {
+	const found = await resolvePersonalSetup(params.owner, params.slug, locals.user?.id);
+	if (!found) return error('Setup not found', 'NOT_FOUND', 404);
+	if (found.renamed) {
+		return movedPermanently(
+			url,
+			`/api/v1/setups/${params.owner}/${params.slug}`,
+			`/api/v1/setups/${params.owner}/${found.setup.slug}`
+		);
 	}
-	return success(setup);
+	return success({ ...found.setup, ...(await setupReadExtras(found.setup.id)) });
 };
 
 /** Same handler as `PATCH /api/v1/setups/[id]`. */
 export const PATCH: RequestHandler = async (event) => {
+	const outdated = requireCliVersion(event.request);
+	if (outdated) return outdated;
 	const user = event.locals.user;
-	const setup = user
-		? await setupRepo.getByOwnerSlug(event.params.owner, event.params.slug, user.id)
+	const found = user
+		? await resolvePersonalSetup(event.params.owner, event.params.slug, user.id)
 		: null;
-	return handleSetupUpdate(event, setup);
+	return handleSetupUpdate(event, found?.setup ?? null);
 };
 
 export const DELETE: RequestHandler = async (event) => {

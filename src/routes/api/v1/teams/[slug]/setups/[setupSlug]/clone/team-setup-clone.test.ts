@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockGetTeamSetupBySlug = vi.fn();
 const mockCanViewSetup = vi.fn();
-const mockRecordClone = vi.fn();
+const mockCloneResponse = vi.fn();
 
 vi.mock('$lib/server/queries/teams', () => ({
 	getTeamSetupBySlug: (...args: unknown[]) => mockGetTeamSetupBySlug(...args)
@@ -13,7 +13,12 @@ vi.mock('$lib/server/queries/access', () => ({
 }));
 
 vi.mock('$lib/server/queries/setups', () => ({
-	recordClone: (...args: unknown[]) => mockRecordClone(...args)
+	getSlugRedirect: async () => null,
+	getTeamSlugRedirect: async () => null
+}));
+
+vi.mock('$lib/server/readApi', () => ({
+	cloneResponse: (...args: unknown[]) => mockCloneResponse(...args)
 }));
 
 vi.mock('$lib/server/responses', async (importOriginal) => {
@@ -33,24 +38,33 @@ const MOCK_SETUP = {
 function makePostEvent(slug: string, setupSlug: string, userId?: string) {
 	return {
 		params: { slug, setupSlug },
-		locals: { user: userId ? { id: userId } : null }
-	} as Parameters<(typeof import('./+server'))['POST']>[0];
+		locals: { user: userId ? { id: userId } : null },
+		request: new Request('http://localhost/x', {
+			method: 'POST',
+			headers: { 'X-Coati-CLI': '1.0.0' }
+		})
+	} as unknown as Parameters<(typeof import('./+server'))['POST']>[0];
 }
 
 describe('POST /api/v1/teams/[slug]/setups/[setupSlug]/clone', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mockRecordClone.mockResolvedValue(undefined);
+		mockCloneResponse.mockImplementation(
+			async () => new Response(JSON.stringify({ data: { firstClone: true, clonesCount: 1 } }))
+		);
 	});
 
-	it('returns 204 and increments clonesCount on success', async () => {
+	it('records the clone and returns 200 on success', async () => {
 		mockGetTeamSetupBySlug.mockResolvedValue(MOCK_SETUP);
 		mockCanViewSetup.mockResolvedValue(true);
 
 		const { POST } = await import('./+server');
 		const res = await POST(makePostEvent('acme', 'shared-setup', 'user-1'));
-		expect(res.status).toBe(204);
-		expect(mockRecordClone).toHaveBeenCalledWith('setup-1');
+		expect(res.status).toBe(200);
+		expect(mockCloneResponse).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({ id: 'setup-1' })
+		);
 	});
 
 	it('returns 404 when setup does not exist', async () => {
@@ -61,7 +75,7 @@ describe('POST /api/v1/teams/[slug]/setups/[setupSlug]/clone', () => {
 		expect(res.status).toBe(404);
 		const body = await res.json();
 		expect(body.code).toBe('NOT_FOUND');
-		expect(mockRecordClone).not.toHaveBeenCalled();
+		expect(mockCloneResponse).not.toHaveBeenCalled();
 	});
 
 	it('returns 404 when viewer cannot access private setup', async () => {
@@ -71,7 +85,7 @@ describe('POST /api/v1/teams/[slug]/setups/[setupSlug]/clone', () => {
 		const { POST } = await import('./+server');
 		const res = await POST(makePostEvent('acme', 'shared-setup'));
 		expect(res.status).toBe(404);
-		expect(mockRecordClone).not.toHaveBeenCalled();
+		expect(mockCloneResponse).not.toHaveBeenCalled();
 	});
 
 	it('passes teamSlug and setupSlug to getTeamSetupBySlug', async () => {
@@ -82,13 +96,25 @@ describe('POST /api/v1/teams/[slug]/setups/[setupSlug]/clone', () => {
 		expect(mockGetTeamSetupBySlug).toHaveBeenCalledWith('acme', 'shared-setup');
 	});
 
+	it('answers 426 for an outdated CLI before looking anything up', async () => {
+		const { POST } = await import('./+server');
+		const event = makePostEvent('acme', 'shared-setup');
+		Object.assign(event, { request: new Request('http://localhost/x', { method: 'POST' }) });
+		const res = await POST(event);
+		expect(res.status).toBe(426);
+		expect(mockGetTeamSetupBySlug).not.toHaveBeenCalled();
+	});
+
 	it('allows anonymous clone of public setup', async () => {
 		mockGetTeamSetupBySlug.mockResolvedValue(MOCK_SETUP);
 		mockCanViewSetup.mockResolvedValue(true);
 
 		const { POST } = await import('./+server');
 		const res = await POST(makePostEvent('acme', 'shared-setup'));
-		expect(res.status).toBe(204);
-		expect(mockRecordClone).toHaveBeenCalledWith('setup-1');
+		expect(res.status).toBe(200);
+		expect(mockCloneResponse).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({ id: 'setup-1' })
+		);
 	});
 });
