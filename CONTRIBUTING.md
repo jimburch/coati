@@ -86,17 +86,13 @@ docs: update env variable table
 - New features should include tests. Bug fixes should include a regression test that fails without the fix.
 - Run `pnpm test:unit` during development and `pnpm test:e2e` before opening a PR for UI-facing changes.
 
-## Issue labels and the worker system
+## Issue labels
 
-Coati uses an autonomous worker system ("Ralph") to pick up labeled issues. As a contributor, you may encounter these labels:
+If you'd like to pick up an issue, **comment on it** so nobody duplicates the work. As a contributor, you may encounter these labels:
 
-- **`ralph`** — queued for the automated worker. If you'd rather pick one up yourself, **comment on the issue** so nobody duplicates the work, then a maintainer will remove the `ralph` label.
-- **`AFK`** — a sub-classification of `ralph`: safe to run fully autonomously
-- **`HITL`** (human-in-the-loop) — tasks the worker either couldn't finish or that explicitly need manual review. These are a great place to contribute.
+- **`HITL`** (human-in-the-loop) — tasks that need manual review or a human decision. These are a great place to contribute.
 - **`good first issue`** — scoped starter tasks
 - **`priority:{low,medium,high}`** — maintainer-set priority
-
-Only maintainers dispatch the worker. You don't need to run `pnpm dispatch` yourself.
 
 ## Documentation
 

@@ -242,7 +242,7 @@ pnpm cf:types    # regenerate Worker binding types
 pnpm preview:cf  # production-shaped local Worker
 ```
 
-Custom domains in `wrangler.jsonc` stay commented until DNS for `develop.coati.sh` and `coati.sh` is moved off the VPS. Deploys run from `.github/workflows/deploy.yml`.
+`develop.coati.sh` is a Worker custom domain on `coati-dev`, and `coati.sh` is a Worker custom domain on `coati-prod` (`custom_domain: true` in `wrangler.jsonc`). `www.coati.sh` is a zone redirect rule, not a Worker route. Deploys run from `.github/workflows/deploy.yml`.
 
 The Neon database name is `neondb` and the role is `neondb_owner`. Migrations and `pnpm seed:dev` use a direct URL, `postgresql://neondb_owner:<password>@<host>/neondb?sslmode=require`, from `NEON_DEV_DIRECT_URL` or `NEON_PROD_DIRECT_URL`. Hyperdrive configs are `coati-dev` (`51967bcc2bfb4767b8bd84ac02c40794`) and `coati-prod` (`ac509d55d4a549b9935917e386df6e1e`). The Cloudflare account id `98e35850d8eb904f5f11f1b537132362` is in both wrangler configs. Local Docker Postgres in `.env` is a separate database (`coati` / `coati_dev`).
 
@@ -321,8 +321,9 @@ See [`CLAUDE.md`](CLAUDE.md) for the complete project conventions — it's writt
 
 ### Issue labels
 
-- `ralph` — tasks queued for an automated worker agent (see `scripts/dispatch.sh`). If you'd rather pick one up yourself, comment on the issue so nobody duplicates the work.
-- `HITL` (human-in-the-loop) — tasks the automated worker couldn't finish and that need manual review. These are a great place to contribute.
+If you'd like to pick one up, comment on the issue so nobody duplicates the work.
+
+- `HITL` (human-in-the-loop) — tasks that need manual review or a human decision. These are a great place to contribute.
 - `good first issue` — scoped starter tasks
 
 ### Commit style
